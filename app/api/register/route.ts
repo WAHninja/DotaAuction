@@ -1,25 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getDBConnection } from '@/lib/db';
+import db from '@/lib/db';
 
-export async function POST(request: Request) {
-  const { username, pin } = await request.json();
-
-  if (!username || !pin || pin.length < 4) {
-    return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
-  }
-
+export async function POST(req: Request) {
   try {
-    const db = await getDBConnection();
-    const [existing] = await db.execute('SELECT * FROM users WHERE username = ?', [username]);
-
-    if ((existing as any[]).length > 0) {
-      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+    const { username, pin } = await req.json();
+    if (!username || !pin || pin.length < 4) {
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
 
-    await db.execute('INSERT INTO users (username, pin, created_at) VALUES (?, ?, NOW())', [username, pin]);
-    return NextResponse.json({ message: 'User registered successfully' });
+    const query = 'INSERT INTO users (username, pin, created_at) VALUES ($1, $2, NOW()) RETURNING id';
+    const result = await db.query(query, [username, pin]);
+    return NextResponse.json({ message: 'User registered successfully!', userId: result.rows[0].id });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    console.error('Register error:', error);
+    return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
   }
 }
