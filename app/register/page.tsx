@@ -1,4 +1,3 @@
-// app/register/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -31,40 +30,44 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-4">Register</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <main className="min-h-screen bg-[#121212] bg-[url('/bg-smoke.jpg')] bg-cover bg-center flex items-center justify-center p-4 text-white font-[Cinzel]">
+      <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
+        <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
+          Dota Auctions Registration
+        </h1>
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
+            <label className="block text-sm mb-1">Username</label>
             <input
               type="text"
-              className="w-full border rounded p-2"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">PIN (4+ digits)</label>
+            <label className="block text-sm mb-1">PIN (4+ digits)</label>
             <input
               type="password"
               inputMode="numeric"
               pattern="\d{4,}"
-              className="w-full border rounded p-2"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
+            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold py-2 rounded shadow-lg transition-all duration-200"
           >
             Register
           </button>
         </form>
-        {message && <p className="mt-4 text-center text-sm">{message}</p>}
+        {message && (
+          <p className="mt-4 text-center text-sm text-orange-400">{message}</p>
+        )}
       </div>
     </main>
   );
