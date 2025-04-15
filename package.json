@@ -10,7 +10,7 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "pg": "latest"
+    "pg": "latest",
     "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
