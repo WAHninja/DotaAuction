@@ -11,6 +11,7 @@
     "react": "latest",
     "react-dom": "latest",
     "pg": "latest"
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
