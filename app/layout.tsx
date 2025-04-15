@@ -1,18 +1,28 @@
 import './globals.css';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
-import { getSession } from '../lib/session';
+import { getSessionIdFromCookies } from '../lib/session';
 import db from '../lib/db';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = cookies();
-  const sessionId = getSession();
-  const session = sessionId
-    ? await db.session.findUnique({
-        where: { id: sessionId },
-        include: { user: true },
-      })
-    : null;
+  const sessionId = await getSessionIdFromCookies(); // Await the promise for sessionId retrieval
+
+  let session = null;
+  if (sessionId) {
+    try {
+      // Fetch session from the database using raw SQL query
+      const result = await db.query(
+        'SELECT * FROM session WHERE id = $1 LIMIT 1',
+        [sessionId]
+      );
+
+      if (result.rows.length > 0) {
+        session = result.rows[0];
+      }
+    } catch (error) {
+      console.error('Error fetching session:', error);
+    }
+  }
 
   return (
     <html lang="en">
