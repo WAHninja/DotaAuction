@@ -1,21 +1,21 @@
 import './globals.css';
 import Link from 'next/link';
+import { getSession } from '@/lib/session';
+import { db } from '@/lib/db';
 
-export const metadata = {
-  title: 'Dota Auctions',
-  description: 'A place to manage your Dota Auctions',
-};
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sessionId = getSession();
+  const session = sessionId
+    ? await db.session.findUnique({
+        where: { id: sessionId },
+        include: { user: true },
+      })
+    : null;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
+        {/* Fonts */}
       </head>
       <body className="bg-gray-900 text-white font-sans">
         <header className="bg-blue-900 text-white p-4 shadow-md">
@@ -24,21 +24,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">Dota Auctions</Link>
             </h1>
             <nav className="space-x-4 text-lg">
-              <Link href="/" className="hover:underline">
-                Home
-              </Link>
-              <Link href="/register" className="hover:underline">
-                Register
-              </Link>
-              <Link href="/login" className="hover:underline">
-                Login
-              </Link>
+              <Link href="/">Home</Link>
+              {!session?.user && (
+                <>
+                  <Link href="/register">Register</Link>
+                  <Link href="/login">Login</Link>
+                </>
+              )}
+              {session?.user && (
+                <>
+                  <span className="italic">Welcome, {session.user.username}</span>
+                  <form action="/logout" method="POST" className="inline">
+                    <button className="ml-2 underline text-red-400">Logout</button>
+                  </form>
+                </>
+              )}
             </nav>
           </div>
         </header>
-
         <main className="min-h-screen container mx-auto p-4">{children}</main>
-
         <footer className="bg-blue-900 text-white p-4 text-center">
           <p>© 2025 Dota Auctions</p>
         </footer>
