@@ -21,7 +21,7 @@ export function createSession(userId: number) {
 
 export function getSession() {
   const cookieStore = cookies();
-  return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+  return cookieStore.get('session_id')?.value ?? null;
 }
 
 export function destroySession() {
