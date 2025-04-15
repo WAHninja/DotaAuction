@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSession } from '@/lib/session';
+import { createSession } from '../../../lib/session';
 import db from '../../../lib/db';
 import bcrypt from 'bcryptjs';
 
