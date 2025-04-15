@@ -1,10 +1,12 @@
 import './globals.css';
 import Link from 'next/link';
-import { getSession } from '../lib/session';
+import { cookies } from 'next/headers';
+import { getSessionIdFromCookies } from '../lib/session';
 import db from '../lib/db';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const sessionId = getSession();
+  const cookieStore = cookies();
+  const sessionId = getSessionIdFromCookies(cookieStore);
   const session = sessionId
     ? await db.session.findUnique({
         where: { id: sessionId },
