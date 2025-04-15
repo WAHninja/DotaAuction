@@ -4,8 +4,10 @@ import { SESSION_COOKIE_NAME } from '../../../lib/session';
 import { cookies } from 'next/headers';
 import db from '../../../lib/db';
 
+export const runtime = 'nodejs';
+
 export async function POST() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (sessionId) {
