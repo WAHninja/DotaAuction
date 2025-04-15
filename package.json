@@ -11,7 +11,9 @@
     "react": "latest",
     "react-dom": "latest",
     "pg": "latest",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "@prisma/client": "^5.x.x",
+    "prisma": "^5.x.x"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
