@@ -1,26 +1,24 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createSession } from '@/lib/session';
 import db from '../../../lib/db';
-import { NextResponse } from 'next/server';
+import bcrypt from 'bcrypt';
 
-export async function POST(req: Request) {
-  try {
-    const { username, pin } = await req.json();
+export async function POST(req: NextRequest) {
+  const { username, pin } = await req.json();
 
-    if (!username || !pin) {
-      return NextResponse.json({ error: 'Username and PIN required' }, { status: 400 });
-    }
-
-    const result = await db.query(
-      'SELECT * FROM users WHERE username = $1 AND pin = $2',
-      [username, pin]
-    );
-
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    }
-
-    return NextResponse.json({ success: true, userId: result.rows[0].id });
-  } catch (err) {
-    console.error('Login error:', err);
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+  const user = await db.user.findFirst({ where: { username } });
+  if (!user || !(await bcrypt.compare(pin, user.pin))) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
+
+  const { sessionId } = createSession(user.id);
+
+  await db.session.create({
+    data: {
+      id: sessionId,
+      user_id: user.id,
+    },
+  });
+
+  return NextResponse.json({ message: 'Logged in' });
 }
