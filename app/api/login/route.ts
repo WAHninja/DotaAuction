@@ -1,24 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSession } from '../../../lib/session';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { generateSessionId, SESSION_COOKIE_NAME } from '../../../lib/session';
 import db from '../../../lib/db';
 import bcrypt from 'bcryptjs';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const { username, pin } = await req.json();
 
-  const user = await db.user.findFirst({ where: { username } });
+  const user = await db.user.findUnique({ where: { username } });
+
   if (!user || !(await bcrypt.compare(pin, user.pin))) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  const { sessionId } = createSession(user.id);
+  const sessionId = generateSessionId();
 
   await db.session.create({
     data: {
       id: sessionId,
-      user_id: user.id,
+      userId: user.id,
     },
   });
 
-  return NextResponse.json({ message: 'Logged in' });
+  // ✅ Set cookie in route handler
+  cookies().set(SESSION_COOKIE_NAME, sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  return NextResponse.json({ success: true });
 }
