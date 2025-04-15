@@ -6,7 +6,7 @@ import db from '../lib/db';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
-  const sessionId = getSessionIdFromCookies(cookieStore);
+  const sessionId = getSession(cookieStore);
   const session = sessionId
     ? await db.session.findUnique({
         where: { id: sessionId },
