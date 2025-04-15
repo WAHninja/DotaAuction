@@ -1,6 +1,6 @@
 // app/logout/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { destroySession, getSession } from '../lib/session';
+import { destroySession, getSession } from '../../lib/session';
 import db from '../lib/db';
 
 export async function POST(req: NextRequest) {
