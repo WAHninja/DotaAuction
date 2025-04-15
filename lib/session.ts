@@ -9,12 +9,10 @@ export async function createSession(userId: number) {
   const sessionId = randomUUID();
 
   // Save session in database
-  await db.session.create({
-    data: {
-      id: sessionId,
-      userId,
-    },
-  });
+  await db.query(
+    'INSERT INTO sessions (id, user_id, created_at) VALUES ($1, $2, NOW())',
+    [sessionId, userId]
+  );
 
   const response = NextResponse.json({ success: true });
 
@@ -31,30 +29,25 @@ export async function createSession(userId: number) {
 }
 
 export async function getSessionIdFromCookies(): Promise<string | null> {
-  const cookieStore = await cookies(); // Await the promise
+  const cookieStore = cookies(); // ← cookies() is sync in App Router
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   return sessionCookie?.value || null;
 }
 
 export async function getSession() {
-  const sessionId = getSessionIdFromCookies();
+  const sessionId = await getSessionIdFromCookies();
   if (!sessionId) return null;
 
-  const session = await db.session.findUnique({
-    where: { id: sessionId },
-  });
-
-  return session;
+  const result = await db.query('SELECT * FROM sessions WHERE id = $1', [sessionId]);
+  return result.rows[0] || null;
 }
 
 export async function destroySession() {
-  const sessionId = getSessionIdFromCookies();
+  const sessionId = await getSessionIdFromCookies();
   const response = NextResponse.json({ success: true });
 
   if (sessionId) {
-    await db.session.deleteMany({
-      where: { id: sessionId },
-    });
+    await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
 
     // Remove the cookie
     response.cookies.set(SESSION_COOKIE_NAME, '', {
