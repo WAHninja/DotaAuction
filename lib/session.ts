@@ -28,14 +28,14 @@ export async function createSession(userId: number) {
   return response;
 }
 
-export async function getSessionIdFromCookies(): Promise<string | null> {
+export function getSessionIdFromCookies(): Promise<string | null> {
   const cookieStore = cookies(); // ← cookies() is sync in App Router
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   return sessionCookie?.value || null;
 }
 
 export async function getSession() {
-  const sessionId = await getSessionIdFromCookies();
+  const sessionId = getSessionIdFromCookies();
   if (!sessionId) return null;
 
   const result = await db.query('SELECT * FROM sessions WHERE id = $1', [sessionId]);
