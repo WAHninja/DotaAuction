@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import db from '../../../lib/db';
 
 export async function POST() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (sessionId) {
