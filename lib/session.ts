@@ -1,36 +1,70 @@
-// lib/session.ts
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import db from './db';
 
-export const SESSION_COOKIE_NAME = 'session_id';
+const SESSION_COOKIE_NAME = 'session_id';
 
-export function createSession(userId: number) {
+export async function createSession(userId: number) {
   const sessionId = randomUUID();
-  const cookieStore = cookies();
 
-  cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
+  // Save session in database
+  await db.session.create({
+    data: {
+      id: sessionId,
+      userId,
+    },
+  });
+
+  const response = NextResponse.json({ success: true });
+
+  // Set session cookie
+  response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 1 week
+    maxAge: 60 * 60 * 24 * 7, // 7 days
   });
 
-  return { sessionId };
+  return response;
 }
 
-export function getSession() {
+export function getSessionIdFromCookies(): string | null {
   const cookieStore = cookies();
-  return cookieStore.get('session_id')?.value ?? null;
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+  return sessionCookie?.value || null;
 }
 
-export function destroySession() {
-  const cookieStore = cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 0,
+export async function getSession() {
+  const sessionId = getSessionIdFromCookies();
+  if (!sessionId) return null;
+
+  const session = await db.session.findUnique({
+    where: { id: sessionId },
   });
+
+  return session;
+}
+
+export async function destroySession() {
+  const sessionId = getSessionIdFromCookies();
+  const response = NextResponse.json({ success: true });
+
+  if (sessionId) {
+    await db.session.deleteMany({
+      where: { id: sessionId },
+    });
+
+    // Remove the cookie
+    response.cookies.set(SESSION_COOKIE_NAME, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    });
+  }
+
+  return response;
 }
