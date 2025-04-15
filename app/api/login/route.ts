@@ -8,13 +8,11 @@ export async function POST(req: Request) {
   const { username, pin } = await req.json();
 
   const user = await db.user.findUnique({ where: { username } });
-
   if (!user || !(await bcrypt.compare(pin, user.pin))) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
   const sessionId = generateSessionId();
-
   await db.session.create({
     data: {
       id: sessionId,
@@ -22,8 +20,8 @@ export async function POST(req: Request) {
     },
   });
 
-  // ✅ Set cookie in route handler
-  cookies().set(SESSION_COOKIE_NAME, sessionId, {
+  const cookieStore = cookies(); // No need to await this unless you use edge runtime
+  cookieStore.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
