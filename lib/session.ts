@@ -28,7 +28,7 @@ export async function createSession(userId: number) {
   return response;
 }
 
-export function getSessionIdFromCookies(): Promise<string | null> {
+export function getSessionIdFromCookies(): string | null {
   const cookieStore = cookies(); // ← cookies() is sync in App Router
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   return sessionCookie?.value || null;
@@ -43,7 +43,7 @@ export async function getSession() {
 }
 
 export async function destroySession() {
-  const sessionId = await getSessionIdFromCookies();
+  const sessionId = getSessionIdFromCookies();
   const response = NextResponse.json({ success: true });
 
   if (sessionId) {
