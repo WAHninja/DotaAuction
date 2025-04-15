@@ -1,9 +1,9 @@
-// tsconfig.json
 {
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "typeRoots": ["./types", "./node_modules/@types"]
   }
 }
