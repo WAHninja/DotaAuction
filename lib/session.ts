@@ -10,7 +10,7 @@ export async function createSession(userId: number) {
 
   // Save session in database
   await db.query(
-    'INSERT INTO sessions (id, user_id, created_at) VALUES ($1, $2, NOW())',
+    'INSERT INTO session (id, user_id, created_at) VALUES ($1, $2, NOW())',
     [sessionId, userId]
   );
 
@@ -29,7 +29,7 @@ export async function createSession(userId: number) {
 }
 
 export function getSessionIdFromCookies(): string | null {
-  const cookieStore = cookies(); // ← cookies() is sync in App Router
+  const cookieStore = cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   return sessionCookie?.value || null;
 }
@@ -38,7 +38,11 @@ export async function getSession() {
   const sessionId = getSessionIdFromCookies();
   if (!sessionId) return null;
 
-  const result = await db.query('SELECT * FROM sessions WHERE id = $1', [sessionId]);
+  const result = await db.query(
+    'SELECT * FROM session WHERE id = $1 LIMIT 1',
+    [sessionId]
+  );
+
   return result.rows[0] || null;
 }
 
@@ -47,15 +51,14 @@ export async function destroySession() {
   const response = NextResponse.json({ success: true });
 
   if (sessionId) {
-    await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
+    await db.query('DELETE FROM session WHERE id = $1', [sessionId]);
 
-    // Remove the cookie
     response.cookies.set(SESSION_COOKIE_NAME, '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 0,
+      maxAge: 0, // delete cookie
     });
   }
 
