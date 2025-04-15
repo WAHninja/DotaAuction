@@ -1,7 +1,7 @@
 import './globals.css';
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
-import { db } from '@/lib/db';
+import db from '@/lib/db';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const sessionId = getSession();
