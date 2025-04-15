@@ -1,6 +1,6 @@
 import './globals.css';
 import Link from 'next/link';
-import { getSession } from '@/lib/session';
+import { getSession } from '../lib/session';
 import db from '@/lib/db';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
