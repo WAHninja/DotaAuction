@@ -30,8 +30,8 @@ export async function createSession(userId: number) {
   return response;
 }
 
-export function getSessionIdFromCookies(): string | null {
-  const cookieStore = cookies();
+export async function getSessionIdFromCookies(): Promise<string | null> {
+  const cookieStore = await cookies(); // Await the promise
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   return sessionCookie?.value || null;
 }
