@@ -1,17 +1,21 @@
-import { cookies } from 'next/headers';
+// app/logout/route.ts
 import { NextResponse } from 'next/server';
-import db from '../../../lib/db';
 import { SESSION_COOKIE_NAME } from '../../../lib/session';
+import { cookies } from 'next/headers';
+import db from '../../../lib/db';
 
 export async function POST() {
   const cookieStore = cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (sessionId) {
-    await db.session.delete({ where: { id: sessionId } });
+    await db.session.deleteMany({
+      where: { id: sessionId },
+    });
   }
 
-  cookieStore.set(SESSION_COOKIE_NAME, '', {
+  const res = NextResponse.redirect('/');
+  res.cookies.set(SESSION_COOKIE_NAME, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -19,5 +23,5 @@ export async function POST() {
     maxAge: 0,
   });
 
-  return NextResponse.json({ success: true });
+  return res;
 }
