@@ -28,14 +28,14 @@ export async function createSession(userId: number) {
   return response;
 }
 
-export function getSessionIdFromCookies(): string | null {
-  const cookieStore = cookies();
+export async function getSessionIdFromCookies(): Promise<string | null> {
+  const cookieStore = await cookies(); // Await the promise
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   return sessionCookie?.value || null;
 }
 
 export async function getSession() {
-  const sessionId = getSessionIdFromCookies();
+  const sessionId = await getSessionIdFromCookies(); // Await the promise
   if (!sessionId) return null;
 
   const result = await db.query(
@@ -47,7 +47,7 @@ export async function getSession() {
 }
 
 export async function destroySession() {
-  const sessionId = getSessionIdFromCookies();
+  const sessionId = await getSessionIdFromCookies(); // Await the promise
   const response = NextResponse.json({ success: true });
 
   if (sessionId) {
