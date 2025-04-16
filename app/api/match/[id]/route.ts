@@ -2,11 +2,13 @@
 import db from '../../../../lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { NextRequest, NextResponse } from 'next/server';
+
 export async function GET(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const matchId = parseInt(context.params.id);
+  const matchId = parseInt(params.id);
 
   if (isNaN(matchId)) {
     return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
