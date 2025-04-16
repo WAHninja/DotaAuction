@@ -59,31 +59,26 @@ export default function CreateMatchForm() {
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-lg mt-8">
-      <h2 className="text-xl font-bold mb-4">Create Match</h2>
+    <div className="bg-gray-800 p-6 rounded-xl shadow-lg max-w-xl mx-auto mt-4">
+      <h2 className="text-2xl mb-4 font-cinzel text-yellow-400">Create Match</h2>
       <form onSubmit={handleSubmit}>
-        {players.length === 0 ? (
-          <p>Loading players...</p>
-        ) : (
-          <div className="space-y-2">
-            {players.map((player) => (
-              <label key={player.id} className="block">
-                <input
-                  type="checkbox"
-                  value={player.id}
-                  onChange={() => handleCheckboxChange(player.id)}
-                  checked={selectedPlayerIds.includes(player.id)}
-                  className="mr-2"
-                />
-                {player.username}
-              </label>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {players.map(player => (
+            <label key={player.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                value={player.id}
+                checked={selected.includes(player.id)}
+                onChange={() => togglePlayer(player.id)}
+              />
+              <span>{player.username}</span>
+            </label>
+          ))}
+        </div>
         <button
           type="submit"
-          className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white disabled:opacity-50"
-          disabled={selectedPlayerIds.length < 4}
+          disabled={selected.length < 4}
+          className="w-full"
         >
           Create Match
         </button>
