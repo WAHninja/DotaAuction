@@ -1,6 +1,24 @@
-/* app/globals.css */
+/* styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #f9f9f9;
+  @apply bg-gray-950 text-gray-200 font-sans;
+}
+
+h1, h2, h3 {
+  @apply font-cinzel;
+}
+
+a {
+  @apply text-yellow-400 hover:text-yellow-300 transition;
+}
+
+button, input[type="submit"] {
+  @apply bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded shadow transition disabled:bg-gray-600 disabled:cursor-not-allowed;
+}
+
+input[type="checkbox"] {
+  @apply accent-yellow-500;
 }
