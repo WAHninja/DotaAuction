@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={cinzel.variable}>
       <head>
-        
+        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet" />
       </head>
       <body className="bg-gray-900 text-white font-sans">
       <header className="bg-gradient-to-r from-red-900 via-gray-900 to-blue-900 text-white p-4 shadow-lg border-b border-yellow-700">
