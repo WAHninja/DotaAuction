@@ -12,7 +12,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     try {
       // Fetch session from the database using raw SQL query
       const result = await db.query(
-        'SELECT * FROM session WHERE id = $1 LIMIT 1',
+        'SELECT * FROM sessions WHERE id = $1 LIMIT 1',
         [sessionId]
       );
 
