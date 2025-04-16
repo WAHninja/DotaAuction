@@ -2,6 +2,9 @@
 import { getSession } from '../../lib/session';
 import db from '../../lib/db';
 import { redirect } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const CreateMatchForm = dynamic(() => import('../components/CreateMatchForm'), { ssr: false });
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -14,10 +17,14 @@ export default async function DashboardPage() {
   const user = result.rows[0];
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6 text-white space-y-6">
       <h1 className="text-3xl font-bold">Welcome, {user.username}!</h1>
       <p className="mt-4">This is your dashboard.</p>
-      {/* Add relevant links or data here (matches, auctions, etc.) */}
+
+      <div className="mt-6">
+        <h2 className="text-2xl font-semibold mb-2">Create a Match</h2>
+        <CreateMatchForm />
+      </div>
     </div>
   );
 }
