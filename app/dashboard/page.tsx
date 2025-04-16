@@ -11,7 +11,7 @@ export default async function DashboardPage() {
     return redirect('/login');
   }
 
-  const result = await db.query('SELECT username FROM users WHERE id = $1', [sessions.user_id]);
+  const result = await db.query('SELECT username FROM users WHERE id = $1', [session.user_id]);
   const user = result.rows[0];
 
   return (
