@@ -1,64 +1,93 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+type Player = {
+  id: number;
+  username: string;
+};
+
 export default function CreateMatchForm() {
-  const [players, setPlayers] = useState<any[]>([]);
-  const [selected, setSelected] = useState<number[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/players')
-      .then(res => res.json())
-      .then(data => setPlayers(data.players));
+    const fetchPlayers = async () => {
+      try {
+        const res = await fetch('/api/players');
+        const data = await res.json();
+        setPlayers(data.players);
+      } catch (err) {
+        console.error('Error loading players:', err);
+      }
+    };
+
+    fetchPlayers();
   }, []);
 
-  const toggleSelection = (id: number) => {
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+  const handleCheckboxChange = (playerId: number) => {
+    setSelectedPlayerIds((prev) =>
+      prev.includes(playerId)
+        ? prev.filter((id) => id !== playerId)
+        : [...prev, playerId]
     );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selected.length < 4) return alert('Select at least 4 players');
+    if (selectedPlayerIds.length < 4) {
+      alert('Please select at least 4 players.');
+      return;
+    }
 
     const res = await fetch('/api/matches/create', {
       method: 'POST',
-      body: JSON.stringify({ playerIds: selected }),
-      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerIds: selectedPlayerIds }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
-    const data = await res.json();
     if (res.ok) {
+      const data = await res.json();
       router.push(`/match/${data.matchId}`);
     } else {
-      alert(data.error || 'Failed to create match');
+      alert('Failed to create match');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold">Select Players</h2>
-      <div className="grid grid-cols-2 gap-2">
-        {players.map(player => (
-          <label key={player.id} className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={selected.includes(player.id)}
-              onChange={() => toggleSelection(player.id)}
-            />
-            <span>{player.username}</span>
-          </label>
-        ))}
-      </div>
-      <button
-        type="submit"
-        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-      >
-        Create Match
-      </button>
-    </form>
+    <div className="bg-gray-800 p-4 rounded-lg shadow-lg mt-8">
+      <h2 className="text-xl font-bold mb-4">Create Match</h2>
+      <form onSubmit={handleSubmit}>
+        {players.length === 0 ? (
+          <p>Loading players...</p>
+        ) : (
+          <div className="space-y-2">
+            {players.map((player) => (
+              <label key={player.id} className="block">
+                <input
+                  type="checkbox"
+                  value={player.id}
+                  onChange={() => handleCheckboxChange(player.id)}
+                  checked={selectedPlayerIds.includes(player.id)}
+                  className="mr-2"
+                />
+                {player.username}
+              </label>
+            ))}
+          </div>
+        )}
+        <button
+          type="submit"
+          className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white disabled:opacity-50"
+          disabled={selectedPlayerIds.length < 4}
+        >
+          Create Match
+        </button>
+      </form>
+    </div>
   );
 }
