@@ -18,7 +18,13 @@ export default function CreateMatchForm() {
       try {
         const res = await fetch('/api/players');
         const data = await res.json();
-        setPlayers(data);
+
+        if (Array.isArray(data.players)) {
+          setPlayers(data.players);
+        } else {
+          console.error('Invalid response:', data);
+          setPlayers([]);
+        }
       } catch (error) {
         console.error('Failed to load players:', error);
       }
