@@ -1,8 +1,7 @@
-// app/api/matches/create/route.ts
+// app/api/matches/route.ts
 import { NextRequest } from 'next/server';
 import db from '../../../lib/db';
 import { getSession } from '../../../lib/session';
-import { redirect } from 'next/navigation';
 
 export async function POST(req: NextRequest) {
   const { playerIds } = await req.json();
@@ -25,12 +24,12 @@ export async function POST(req: NextRequest) {
         createMany: {
           data: playerIds.map((id: number) => ({
             player_id: id,
-            gold: 10000, // default starting gold
+            gold: 10000,
           })),
         },
       },
     },
   });
 
-  return new Response(JSON.stringify({ matchId: match.id }), { status: 200 });
+  return new Response(JSON.stringify({ id: match.id }), { status: 200 });
 }
