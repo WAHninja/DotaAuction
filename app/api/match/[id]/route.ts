@@ -2,30 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '../../../../lib/db';
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function GET(req: NextRequest) {
   try {
-    const matchId = parseInt(context.params.id);
+    const url = new URL(req.url);
+    const id = url.pathname.split('/').pop();
+    const matchId = parseInt(id || '');
 
     if (isNaN(matchId)) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
 
-    const matchRes = await db.query(
-      `SELECT * FROM Matches WHERE id = $1`,
-      [matchId]
-    );
+    const matchRes = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
 
     if (matchRes.rows.length === 0) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
-    const match = matchRes.rows[0];
-
-    // If you want to include players or game data too, here's where you’d join or query more tables
-    // Example: Fetch players for the match
     const playersRes = await db.query(
       `SELECT p.id, p.username, mp.gold
        FROM MatchPlayers mp
@@ -40,12 +32,12 @@ export async function GET(
     );
 
     return NextResponse.json({
-      match,
+      match: matchRes.rows[0],
       players: playersRes.rows,
       games: gamesRes.rows,
     });
   } catch (error) {
-    console.error('Error fetching match details:', error);
+    console.error('API error in match/[id]/route.ts:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
