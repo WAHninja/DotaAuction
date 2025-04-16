@@ -1,7 +1,7 @@
 // app/api/matches/create/route.ts
 import { NextRequest } from 'next/server';
-import db from '../../../lib/db';
-import { getSession } from '../../../lib/session';
+import db from '../../../../lib/db';
+import { getSession } from '../../../../lib/session';
 import { redirect } from 'next/navigation';
 
 export async function POST(req: NextRequest) {
