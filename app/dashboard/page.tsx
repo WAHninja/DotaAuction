@@ -2,9 +2,7 @@
 import { getSession } from '../../lib/session';
 import db from '../../lib/db';
 import { redirect } from 'next/navigation';
-import dynamic from 'next/dynamic';
-
-const CreateMatchForm = dynamic(() => import('../components/CreateMatchForm'), { ssr: false });
+import CreateMatchFormWrapper from './CreateMatchFormWrapper';
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -23,7 +21,7 @@ export default async function DashboardPage() {
 
       <div className="mt-6">
         <h2 className="text-2xl font-semibold mb-2">Create a Match</h2>
-        <CreateMatchForm />
+        <CreateMatchFormWrapper />
       </div>
     </div>
   );
