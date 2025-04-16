@@ -10,7 +10,7 @@ type Player = {
 
 export default function CreateMatchForm() {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const router = useRouter();
 
   useEffect(() => {
