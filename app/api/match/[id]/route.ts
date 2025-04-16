@@ -1,5 +1,5 @@
 // app/api/match/[id]/route.ts
-import { db } from '../../../../lib/db';
+import db from '../../../../lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
