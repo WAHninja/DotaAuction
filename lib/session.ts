@@ -10,7 +10,7 @@ export async function createSession(userId: number) {
 
   // Save session in database
   await db.query(
-    'INSERT INTO session (id, user_id, created_at) VALUES ($1, $2, NOW())',
+    'INSERT INTO sessions (id, user_id, created_at) VALUES ($1, $2, NOW())',
     [sessionId, userId]
   );
 
@@ -39,7 +39,7 @@ export async function getSession() {
   if (!sessionId) return null;
 
   const result = await db.query(
-    'SELECT * FROM session WHERE id = $1 LIMIT 1',
+    'SELECT * FROM sessions WHERE id = $1 LIMIT 1',
     [sessionId]
   );
 
@@ -51,7 +51,7 @@ export async function destroySession() {
   const response = NextResponse.json({ success: true });
 
   if (sessionId) {
-    await db.query('DELETE FROM session WHERE id = $1', [sessionId]);
+    await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
 
     response.cookies.set(SESSION_COOKIE_NAME, '', {
       httpOnly: true,
