@@ -1,6 +1,6 @@
 // app/dashboard/page.tsx
-import { getSession } from '@/lib/session';
-import db from '@/lib/db';
+import { getSession } from '../../lib/session';
+import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
