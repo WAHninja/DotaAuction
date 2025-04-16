@@ -4,17 +4,27 @@ import { NextRequest } from 'next/server';
 import db from '../../../lib/db';
 
 export async function POST(req: NextRequest) {
-  const { username, pin } = await req.json();
+  try {
+    const { username, pin } = await req.json();
 
-  const user = await db.user.findFirst({
-    where: { username, pin },
-  });
+    const result = await db.query(
+      'SELECT * FROM users WHERE username = $1 AND pin = $2 LIMIT 1',
+      [username, pin]
+    );
 
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
-      status: 401,
+    const user = result.rows[0];
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+        status: 401,
+      });
+    }
+
+    return await createSession(user.id);
+  } catch (err) {
+    console.error('Login error:', err);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
     });
   }
-
-  return await createSession(user.id);
 }
