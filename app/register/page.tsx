@@ -36,7 +36,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center p-4 text-white font-[Cinzel]">
       <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
         <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
-          Dota Auctions Registration
+          Register
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
