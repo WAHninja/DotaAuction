@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { getSession } from '@/lib/session';
 
 export async function POST(req: NextRequest, { params }: any) {
+  const matchId = parseInt(params.id);
   try {
     const session = await getSession();
     if (!session) {
