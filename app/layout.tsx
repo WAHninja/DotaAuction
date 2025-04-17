@@ -56,7 +56,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 alt="Dota Auctions Logo"
                 width={150}
                 height={50}
-                className="mr-4"
               />
               <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
                 <Link href="/">Defence of the Auctions</Link>
