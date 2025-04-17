@@ -72,8 +72,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </>
               ) : (
                 <>
-                  <Link href="/register" className="hover:text-radiant-green transition">Register</Link>
-                  <Link href="/login" className="hover:text-radiant-green transition">Login</Link>
                 </>
               )}
             </nav>
