@@ -1,9 +1,14 @@
 // app/page.tsx
-export default function Home() {
-  return (
-    <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Welcome to Dota Auctions</h1>
-      <p>This is the homepage of your new Next.js + Render app.</p>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session';
+import Dashboard from '@/components/Dashboard';
+
+export default async function HomePage() {
+  const session = await getSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  return <Dashboard />;
 }
