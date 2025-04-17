@@ -7,10 +7,10 @@ export default function BodyClassWrapper() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const isRegister = pathname === '/register';
+    const isAuthPage = pathname === '/register' || pathname === '/login';
 
     const body = document.body;
-    if (isRegister) {
+    if (isAuthPage) {
       body.classList.add('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
     } else {
       body.classList.remove('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
