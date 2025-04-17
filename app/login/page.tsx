@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,23 +27,26 @@ export default function LoginPage() {
     }
   };
 
-  <div className="min-h-screen flex items-center justify-center p-4 text-white font-[Cinzel]">
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 text-white font-[Cinzel]">
       <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
         <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
-          Register
+          Login
         </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label htmlFor="username" className="block text-sm mb-1">
               Username
             </label>
             <input
               type="text"
+              id="username"
               placeholder="Username"
               value={username}
               onChange={e => setUsername(e.target.value)}
               className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+              required
             />
           </div>
 
@@ -52,10 +56,14 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
+              id="pin"
               placeholder="PIN"
               value={pin}
               onChange={e => setPin(e.target.value)}
               className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+              pattern="\d{4,}"
+              inputMode="numeric"
+              required
             />
           </div>
 
@@ -66,14 +74,16 @@ export default function LoginPage() {
             Login
           </button>
         </form>
+
         <p className="mt-6 text-center text-sm text-gray-400">
           Not registered?{' '}
           <Link href="/register" className="text-[#e05228] hover:underline">
             Register here
           </Link>
         </p>
-        {message && (
-          <p className="mt-4 text-center text-sm text-orange-400">{message}</p>
+
+        {error && (
+          <p className="mt-4 text-center text-sm text-orange-400">{error}</p>
         )}
       </div>
     </div>
