@@ -2,43 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/lib/session';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Record<string, string> }
+) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const matchId = parseInt(params.id);
+    const matchId = parseInt(context.params.id);
     if (isNaN(matchId)) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
 
     const { offerId } = await req.json();
-
     if (!offerId) {
       return NextResponse.json({ error: 'Missing offerId' }, { status: 400 });
     }
 
-    // Fetch and validate the offer
     const offerRes = await db.query(`SELECT * FROM Offers WHERE id = $1`, [offerId]);
     if (offerRes.rows.length === 0) {
       return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
     }
 
     const offer = offerRes.rows[0];
-
     if (offer.target_player_id !== session.user_id) {
-      return NextResponse.json({ error: 'Forbidden: Not your offer to accept' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await db.query(`UPDATE Offers SET status = 'accepted' WHERE id = $1`, [offerId]);
-
     await db.query(
       `UPDATE Offers SET status = 'rejected' WHERE game_id = $1 AND target_player_id = $2 AND id != $3`,
       [offer.game_id, session.user_id, offerId]
     );
-
     await db.query(
       `UPDATE MatchPlayers SET gold = gold - $1 WHERE player_id = $2 AND match_id = $3`,
       [offer.offer_amount, offer.from_user_id, matchId]
