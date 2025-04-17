@@ -5,33 +5,13 @@ import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
 import Image from 'next/image';
 import Head from 'next/head';
+import BodyClassWrapper from '../components/BodyClassWrapper'; // ✅ Import client component
 
 const cinzel = Cinzel({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-cinzel',
 });
-
-// Subcomponent to add className based on pathname (client-only)
-function BodyClassWrapper() {
-  'use client';
-  import { useEffect } from 'react';
-  import { usePathname } from 'next/navigation';
-
-  useEffect(() => {
-    const pathname = usePathname();
-    const isRegister = pathname === '/register';
-
-    const body = document.body;
-    if (isRegister) {
-      body.classList.add('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
-    } else {
-      body.classList.remove('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
-    }
-  }, []);
-
-  return null;
-}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const sessionId = await getSessionIdFromCookies();
@@ -67,8 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </Head>
       <body className="bg-background text-text font-sans">
-        <BodyClassWrapper />
-
+        <BodyClassWrapper /> {/* ✅ Inject dynamic bg class */}
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
