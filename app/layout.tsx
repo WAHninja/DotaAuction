@@ -1,10 +1,8 @@
 import './globals.css';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { getSessionIdFromCookies } from '../lib/session';
 import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
-import Image from 'next/image'; // Import the Image component
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -13,44 +11,45 @@ const cinzel = Cinzel({
 });
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const sessionId = await getSessionIdFromCookies(); // Await the promise for sessionId retrieval
+  const sessionId = await getSessionIdFromCookies();
 
-  let session = null;
+  let user = null;
+
   if (sessionId) {
     try {
-      // Fetch session from the database using raw SQL query
       const result = await db.query(
-        'SELECT * FROM sessions WHERE id = $1 LIMIT 1',
+        `
+        SELECT users.username
+        FROM sessions
+        JOIN users ON users.id = sessions.user_id
+        WHERE sessions.id = $1
+        LIMIT 1
+        `,
         [sessionId]
       );
 
       if (result.rows.length > 0) {
-        session = result.rows[0];
+        user = result.rows[0];
       }
     } catch (error) {
-      console.error('Error fetching session:', error);
+      console.error('Error fetching session and user:', error);
     }
   }
 
   return (
-    <>
+    <html lang="en" className={cinzel.variable}>
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="bg-gray-900 text-white font-sans">
+      <body className="bg-background text-text font-sans">
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center">
-              <Image
-                src="/logo.png" // Adjust the path to your image file
-                alt="Dota Auctions Logo"
-                width={150} // Adjust width as needed
-                height={50} // Adjust height as needed
-              />
-              <h1 className="text-4xl font-cinzel tracking-wider text-yellow-400">
-                <Link href="/">Defence of the Auctions</Link>
-              </h1>
-            </div>
+            <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
+              <Link href="/">Dota Auctions</Link>
+            </h1>
             <nav className="space-x-4 text-lg">
               {user ? (
                 <>
