@@ -1,14 +1,12 @@
-// app/page.tsx
-import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
-import page from '@/app/dashboard';
+import { redirect } from 'next/navigation';
 
 export default async function HomePage() {
   const session = await getSession();
 
-  if (!session) {
+  if (session) {
+    redirect('/dashboard');
+  } else {
     redirect('/login');
   }
-
-  return <Dashboard />;
 }
