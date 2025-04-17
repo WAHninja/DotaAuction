@@ -11,6 +11,8 @@ const cinzel = Cinzel({
   weight: ['400', '700'],
   variable: '--font-cinzel',
 });
+const pathname = usePathname();
+const isRegister = pathname === '/register';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const sessionId = await getSessionIdFromCookies();
@@ -40,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={cinzel.variable}>
-      <body className="bg-background text-text font-sans">
+      <body className={`${isRegister ? "bg-[url('/bg-smoke.jpg')] bg-cover bg-center bg-no-repeat" : "bg-background"} text-text font-sans`}>
         <Head>
           <link
             href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
