@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSessionIdFromCookies } from '../lib/session';
 import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
+import Image from 'next/image'; // Import the Image component
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -47,14 +48,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="bg-background text-text font-sans">
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
+            <div className="flex items-center">
+              <Image
+                src="/logo.png" // Adjust the path to your image file
+                alt="Dota Auctions Logo"
+                width={150} // Adjust width as needed
+                height={50} // Adjust height as needed
+                className="mr-4" // Optional margin for spacing
+              />
             <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
               <Link href="/">Dota Auctions</Link>
             </h1>
             <nav className="space-x-4 text-lg">
               {user ? (
                 <>
-                  <Link href="/" className="hover:text-gold transition">Home</Link>
                   <span className="italic text-gold">Welcome, {user.username}</span>
+                  <Link href="/" className="hover:text-gold transition">Home</Link>
                   <form action="/logout" method="POST" className="inline">
                     <button className="ml-2 underline text-dire-red hover:text-gold transition">Logout</button>
                   </form>
