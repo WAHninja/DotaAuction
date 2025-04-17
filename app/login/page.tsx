@@ -26,29 +26,56 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-black bg-opacity-80 text-white flex items-center justify-center">
-      <form onSubmit={handleLogin} className="bg-gray-900 p-8 rounded-lg shadow-lg max-w-sm w-full">
-        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
-        {error && <p className="text-red-500 mb-2">{error}</p>}
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-gray-800 text-white border border-gray-700"
-        />
-        <input
-          type="password"
-          placeholder="PIN"
-          value={pin}
-          onChange={e => setPin(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-gray-800 text-white border border-gray-700"
-        />
-        <button type="submit" className="w-full bg-red-600 hover:bg-red-700 py-2 rounded font-bold">
-          Login
-        </button>
-      </form>
+  <div className="min-h-screen flex items-center justify-center p-4 text-white font-[Cinzel]">
+      <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
+        <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
+          Register
+        </h1>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="username" className="block text-sm mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="pin" className="block text-sm mb-1">
+              PIN (4+ digits)
+            </label>
+            <input
+              type="password"
+              placeholder="PIN"
+              value={pin}
+              onChange={e => setPin(e.target.value)}
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold py-2 rounded shadow-lg transition-all duration-200"
+          >
+            Login
+          </button>
+        </form>
+        <p className="mt-6 text-center text-sm text-gray-400">
+          Not registered?{' '}
+          <Link href="/register" className="text-[#e05228] hover:underline">
+            Register here
+          </Link>
+        </p>
+        {message && (
+          <p className="mt-4 text-center text-sm text-orange-400">{message}</p>
+        )}
+      </div>
     </div>
   );
 }
