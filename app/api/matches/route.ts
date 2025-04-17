@@ -17,19 +17,40 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 
-  const match = await db.match.create({
-    data: {
-      created_by: session.user_id,
-      match_players: {
-        createMany: {
-          data: playerIds.map((id: number) => ({
-            player_id: id,
-            gold: 10000,
-          })),
-        },
-      },
-    },
-  });
+  try {
+    // Start a transaction
+    const client = await db.connect();
 
-  return new Response(JSON.stringify({ id: match.id }), { status: 200 });
+    try {
+      await client.query('BEGIN');
+
+      // Insert the match
+      const matchResult = await client.query(
+        'INSERT INTO matches (created_by, created_at) VALUES ($1, NOW()) RETURNING id',
+        [session.user_id]
+      );
+      const matchId = matchResult.rows[0].id;
+
+      // Insert players into match_players
+      const insertPromises = playerIds.map((playerId) => {
+        return client.query(
+          'INSERT INTO match_players (match_id, player_id, gold) VALUES ($1, $2, $3)',
+          [matchId, playerId, 10000]
+        );
+      });
+      await Promise.all(insertPromises);
+
+      await client.query('COMMIT');
+      return new Response(JSON.stringify({ id: matchId }), { status: 200 });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Transaction failed:', err);
+      return new Response(JSON.stringify({ error: 'Failed to create match' }), { status: 500 });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Database connection error:', err);
+    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+  }
 }
