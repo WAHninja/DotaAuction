@@ -4,19 +4,37 @@ import { getSessionIdFromCookies } from '../lib/session';
 import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
 import Image from 'next/image';
-import Head from 'next/head'; // Import Head properly
+import Head from 'next/head';
 
 const cinzel = Cinzel({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-cinzel',
 });
-const pathname = usePathname();
-const isRegister = pathname === '/register';
+
+// Subcomponent to add className based on pathname (client-only)
+function BodyClassWrapper() {
+  'use client';
+  import { useEffect } from 'react';
+  import { usePathname } from 'next/navigation';
+
+  useEffect(() => {
+    const pathname = usePathname();
+    const isRegister = pathname === '/register';
+
+    const body = document.body;
+    if (isRegister) {
+      body.classList.add('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
+    } else {
+      body.classList.remove('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
+    }
+  }, []);
+
+  return null;
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const sessionId = await getSessionIdFromCookies();
-
   let user = null;
 
   if (sessionId) {
@@ -42,13 +60,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={cinzel.variable}>
-      <body className={`${isRegister ? "bg-[url('/bg-smoke.jpg')] bg-cover bg-center bg-no-repeat" : "bg-background"} text-text font-sans`}>
-        <Head>
-          <link
-            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
-            rel="stylesheet"
-          />
-        </Head>
+      <Head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
+      <body className="bg-background text-text font-sans">
+        <BodyClassWrapper />
+
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
