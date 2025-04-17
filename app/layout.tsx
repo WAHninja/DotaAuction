@@ -49,6 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
+              <>
               <Image
                 src="/logo.png" // Adjust the path to your image file
                 alt="Dota Auctions Logo"
@@ -56,6 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 height={50} // Adjust height as needed
                 className="mr-4" // Optional margin for spacing
               />
+              </>
             <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
               <Link href="/">Defence of the Auctions</Link>
             </h1>
