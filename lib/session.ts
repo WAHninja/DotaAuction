@@ -46,9 +46,8 @@ export async function getSession() {
   return result.rows[0] || null;
 }
 
-export async function destroySession() {
-  const sessionId = await getSessionIdFromCookies(); // Await the promise
-  const response = NextResponse.json({ success: true });
+export async function destroySession(response: NextResponse) {
+  const sessionId = await getSessionIdFromCookies();
 
   if (sessionId) {
     await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
