@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     const data = await res.json();
     if (res.ok) {
-      router.push('/dashboard'); // or wherever you want to redirect after login
+      return NextResponse.redirect('https://dotaauction.onrender.com/');
     } else {
       setError(data.error || 'Login failed');
     }
