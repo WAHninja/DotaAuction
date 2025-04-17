@@ -5,7 +5,7 @@ import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
 import Image from 'next/image';
 import Head from 'next/head';
-import BodyClassWrapper from '/components/BodyClassWrapper'; // ✅ Import client component
+import BodyClassWrapper from './components/BodyClassWrapper'; // ✅ Import client component
 
 const cinzel = Cinzel({
   subsets: ['latin'],
