@@ -47,7 +47,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             rel="stylesheet"
           />
         </Head>
-
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
@@ -64,8 +63,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <nav className="space-x-4 text-lg">
               {user ? (
                 <>
-                  <Link href="/" className="hover:text-gold transition">Home</Link>
                   <span className="italic text-gold">Welcome, {user.username}</span>
+                  <Link href="/" className="hover:text-gold transition">Home</Link>
                   <form action="/logout" method="POST" className="inline">
                     <button className="ml-2 underline text-dire-red hover:text-gold transition">Logout</button>
                   </form>
