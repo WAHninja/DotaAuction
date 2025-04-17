@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </Head>
       <body className="bg-background text-text font-sans">
         <BodyClassWrapper /> {/* ✅ Inject dynamic bg class */}
-        <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
+        <header className="bg-gradient-to-r from-radiant-green via-surface to-dire-red p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
               <Image
