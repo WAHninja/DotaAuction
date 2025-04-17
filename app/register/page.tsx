@@ -30,7 +30,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#121212] bg-[url('/bg-smoke.jpg')] bg-cover bg-center flex items-center justify-center p-4 text-white font-[Cinzel]">
+    <main className="min-h-screen w-screen bg-[url('/bg-smoke.jpg')] bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 text-white font-[Cinzel]">
       <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
         <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
           Dota Auctions Registration
