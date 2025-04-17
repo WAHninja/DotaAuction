@@ -59,4 +59,3 @@ module.exports = {
   },
   plugins: [],
 }
-export default config
