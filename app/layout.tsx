@@ -40,17 +40,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="bg-gray-900 text-white font-sans">
         <header className="bg-gradient-to-r from-red-900 via-gray-900 to-blue-900 text-white p-4 shadow-lg border-b border-yellow-700">
           <div className="container mx-auto flex justify-between items-center">
-            {/* Add the logo image here */}
             <div className="flex items-center">
               <Image
                 src="/logo.png" // Adjust the path to your image file
                 alt="Dota Auctions Logo"
                 width={150} // Adjust width as needed
                 height={50} // Adjust height as needed
-                className="mr-4" // Optional margin for spacing
               />
               <h1 className="text-4xl font-cinzel tracking-wider text-yellow-400">
-                <Link href="/">Dota Auctions</Link>
+                <Link href="/">Defence of the Auctions</Link>
               </h1>
             </div>
             <nav className="space-x-4 text-lg">
