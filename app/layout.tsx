@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { getSessionIdFromCookies } from '../lib/session';
 import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
-import Image from 'next/image'; // Import the Image component
+import Image from 'next/image';
+import Head from 'next/head'; // Import Head properly
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -39,28 +40,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={cinzel.variable}>
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body className="bg-background text-text font-sans">
+        <Head>
+          <link
+            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
+            rel="stylesheet"
+          />
+        </Head>
+
         <header className="bg-gradient-to-r from-dire-red via-surface to-radiant-green p-4 shadow-lg border-b border-gold">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
-              <>
               <Image
-                src="/logo.png" // Adjust the path to your image file
+                src="/logo.png"
                 alt="Dota Auctions Logo"
-                width={150} // Adjust width as needed
-                height={50} // Adjust height as needed
-                className="mr-4" // Optional margin for spacing
+                width={150}
+                height={50}
+                className="mr-4"
               />
-              </>
-            <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
-              <Link href="/">Defence of the Auctions</Link>
-            </h1>
+              <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
+                <Link href="/">Defence of the Auctions</Link>
+              </h1>
+            </div>
             <nav className="space-x-4 text-lg">
               {user ? (
                 <>
