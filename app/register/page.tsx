@@ -76,7 +76,12 @@ export default function RegisterPage() {
             Register
           </button>
         </form>
-
+        <p className="mt-6 text-center text-sm text-gray-400">
+          Already registered?{' '}
+          <Link href="/login" className="text-[#e05228] hover:underline">
+            Login here
+          </Link>
+        </p>
         {message && (
           <p className="mt-4 text-center text-sm text-orange-400">{message}</p>
         )}
