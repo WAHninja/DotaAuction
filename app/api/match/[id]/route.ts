@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     // All match players with gold
     const playersRes = await db.query(
       `SELECT p.id, p.username, mp.gold
-       FROM MatchPlayers mp
+       FROM match_players mp
        JOIN Players p ON mp.player_id = p.id
        WHERE mp.match_id = $1`,
       [matchId]
