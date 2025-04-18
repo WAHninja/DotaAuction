@@ -42,8 +42,8 @@ export async function GET(req: NextRequest) {
     let offers: any[] = [];
 
     if (latestGame) {
-      const team1Ids: number[] = latestGame.team_1_members;
-      const teamAIds: number[] = latestGame.team_a_members;
+      const team1Ids: number[] = JSON.parse(latestGame.team_1_members || '[]');
+      const teamAIds: number[] = JSON.parse(latestGame.team_a_members || '[]');
 
       // Join team members with their player info
       team1 = allPlayers.filter(p => team1Ids.includes(p.id));
