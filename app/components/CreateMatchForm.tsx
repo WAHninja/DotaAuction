@@ -11,6 +11,7 @@ interface Player {
 export default function CreateMatchForm() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function CreateMatchForm() {
         if (Array.isArray(data.players)) {
           setPlayers(data.players);
         } else {
-          console.error('Invalid response:', data);
+          console.error('Invalid response from /api/players:', data);
           setPlayers([]);
         }
       } catch (error) {
@@ -43,21 +44,43 @@ export default function CreateMatchForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedPlayerIds.length < 4) return;
+    setError(null);
 
-    const res = await fetch('/api/matches', {
-      method: 'POST',
-      body: JSON.stringify({ playerIds: selectedPlayerIds }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+    if (selectedPlayerIds.length < 4) {
+      setError('Please select at least 4 players.');
+      return;
+    }
 
-    const match = await res.json();
-    router.push(`/match/${match.id}`);
+    try {
+      const res = await fetch('/api/matches', {
+        method: 'POST',
+        body: JSON.stringify({ playerIds: selectedPlayerIds }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Unknown error occurred');
+        console.error('API error:', data);
+        return;
+      }
+
+      const match = await res.json();
+      router.push(`/match/${match.id}`);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('An unexpected error occurred');
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 p-4 bg-[#1b1b1b] text-white rounded-xl shadow-lg max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-orange-400">Create a Match</h2>
+
+      {error && (
+        <p className="text-red-400 mb-4">{error}</p>
+      )}
+
       <div className="grid grid-cols-2 gap-2 mb-4">
         {players.map((player) => (
           <label key={player.id} className="flex items-center space-x-2">
@@ -72,6 +95,7 @@ export default function CreateMatchForm() {
           </label>
         ))}
       </div>
+
       <button
         type="submit"
         disabled={selectedPlayerIds.length < 4}
