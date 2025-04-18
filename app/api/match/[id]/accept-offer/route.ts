@@ -7,7 +7,7 @@ import type { RouteHandlerContext } from 'next/dist/server/web/types';
 
 export async function POST(
   req: NextRequest,
-  context: RouteHandlerContext
+  { params }: { params: { id: string } }
 ) {
   const matchId = parseInt(context.params.id);
   if (isNaN(matchId)) {
