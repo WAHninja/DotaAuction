@@ -1,13 +1,12 @@
 // app/api/match/[id]/accept-offer/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const matchId = parseInt(context.params.id);
+    const matchId = parseInt(params.id);
     if (isNaN(matchId)) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
@@ -22,7 +21,7 @@ export async function POST(
       );
     }
 
-    // Optional: validate that offer exists and belongs to the match
+    // Validate the offer belongs to the match
     const existing = await db.query(
       `SELECT * FROM offers WHERE id = $1 AND game_id IN (
         SELECT game_id FROM games WHERE match_id = $2
@@ -37,15 +36,15 @@ export async function POST(
       );
     }
 
-    // Mark offer as accepted (you can customize logic as needed)
+    // Accept the offer
     await db.query(
       'UPDATE offers SET status = $1 WHERE id = $2',
       ['accepted', offerId]
     );
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('Error in accept-offer route:', err);
+  } catch (error) {
+    console.error('Error in accept-offer route:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
