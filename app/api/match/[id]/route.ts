@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     // Game history
     const gamesRes = await db.query(
-      `SELECT * FROM Games WHERE match_id = $1 ORDER BY game_id ASC`,
+      `SELECT * FROM Games WHERE match_id = $1 ORDER BY id ASC`,
       [matchId]
     );
     const games = gamesRes.rows;
