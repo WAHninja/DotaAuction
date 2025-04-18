@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
-import { getSession } from '@/lib/session';
+import type { NextApiRequest } from 'next';
+import type { NextRequest as MiddlewareRequest } from 'next/server';
 
-// 👇 this is the correct type signature for a dynamic route
+// ✅ Import the correct context type from next/server
+import type { RouteHandlerContext } from 'next/dist/server/web/types';
+
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: RouteHandlerContext
 ) {
   const matchId = parseInt(context.params.id);
   if (isNaN(matchId)) {
