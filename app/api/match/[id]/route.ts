@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const playersRes = await db.query(
       `SELECT p.id, p.username, mp.gold
        FROM match_players mp
-       JOIN users p ON mp.player_id = p.id
+       JOIN users p ON mp.user_id = p.id
        WHERE mp.match_id = $1`,
       [matchId]
     );
