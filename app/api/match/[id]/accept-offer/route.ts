@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/lib/session';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const matchId = parseInt(params.id); // ✅ correct usage
+// 👇 this is the correct type signature for a dynamic route
+export async function POST(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  const matchId = parseInt(context.params.id);
   if (isNaN(matchId)) {
     return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
   }
+
   try {
     const session = await getSession();
     if (!session) {
