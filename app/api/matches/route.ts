@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
       for (const playerId of playerIds) {
         await client.query(
-          'INSERT INTO match_players (match_id, player_id, gold) VALUES ($1, $2, $3)',
+          'INSERT INTO match_players (match_id, user_id, gold) VALUES ($1, $2, $3)',
           [matchId, playerId, 0]
         );
       }
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
       const insertPlayerPromises = playerIds.map((playerId) => {
         return client.query(
-    '      INSERT INTO match_players (match_id, player_id, gold) VALUES ($1, $2, $3)',
+    '      INSERT INTO match_players (match_id, user_id, gold) VALUES ($1, $2, $3)',
           [matchId, playerId, 0]
         );
       });
