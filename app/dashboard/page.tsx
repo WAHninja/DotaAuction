@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 import { getSession } from '../../lib/session';
 import db from '../../lib/db';
 import { redirect } from 'next/navigation';
@@ -8,35 +7,42 @@ import CreateMatchFormWrapper from './CreateMatchFormWrapper';
 export default async function DashboardPage() {
   const session = await getSession();
 
-  if (!session) {
-    return redirect('/login');
-  }
+  if (!session) return redirect('/login');
 
-  // Get user info
+  // Get current user
   const userResult = await db.query('SELECT username FROM users WHERE id = $1', [session.user_id]);
   const user = userResult.rows[0];
 
-  // Get ongoing matches
+  // Get Ongoing Matches with player usernames
   const ongoingResult = await db.query(
     `
-    SELECT m.id, m.created_at
+    SELECT 
+      m.id,
+      m.created_at,
+      ARRAY_AGG(u.username ORDER BY u.username) AS players
     FROM matches m
     JOIN match_players mp ON mp.match_id = m.id
-    WHERE mp.user_id = $1
-      AND m.winning_team IS NULL
+    JOIN users u ON u.id = mp.user_id
+    WHERE mp.user_id = $1 AND m.winning_team IS NULL
+    GROUP BY m.id
     ORDER BY m.created_at DESC
     `,
     [session.user_id]
   );
 
-  // Get completed matches
+  // Get Completed Matches with winner and players
   const completedResult = await db.query(
     `
-    SELECT m.id, m.created_at, m.winning_team
+    SELECT 
+      m.id,
+      m.created_at,
+      m.winning_team,
+      ARRAY_AGG(u.username ORDER BY u.username) AS players
     FROM matches m
     JOIN match_players mp ON mp.match_id = m.id
-    WHERE mp.user_id = $1
-      AND m.winning_team IS NOT NULL
+    JOIN users u ON u.id = mp.user_id
+    WHERE mp.user_id = $1 AND m.winning_team IS NOT NULL
+    GROUP BY m.id
     ORDER BY m.created_at DESC
     `,
     [session.user_id]
@@ -64,15 +70,20 @@ export default async function DashboardPage() {
             {ongoingMatches.map((match) => (
               <li
                 key={match.id}
-                className="bg-gray-800 p-4 rounded-xl shadow flex items-center justify-between"
+                className="bg-gray-800 p-4 rounded-xl shadow space-y-2"
               >
-                <span>Match #{match.id}</span>
-                <Link
-                  href={`/match/${match.id}`}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                >
-                  Continue
-                </Link>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Match #{match.id}</span>
+                  <Link
+                    href={`/match/${match.id}`}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                  >
+                    Continue
+                  </Link>
+                </div>
+                <p className="text-sm text-gray-300">
+                  Players: {match.players.join(', ')}
+                </p>
               </li>
             ))}
           </ul>
@@ -86,20 +97,25 @@ export default async function DashboardPage() {
             {completedMatches.map((match) => (
               <li
                 key={match.id}
-                className="bg-gray-700 p-4 rounded-xl shadow flex items-center justify-between"
+                className="bg-gray-700 p-4 rounded-xl shadow space-y-2"
               >
-                <span>
-                  Match #{match.id} - Winner:{' '}
-                  <span className="font-semibold">
-                    {match.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
+                <div className="flex justify-between items-center">
+                  <span>
+                    Match #{match.id} - Winner:{' '}
+                    <span className="font-semibold">
+                      {match.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
+                    </span>
                   </span>
-                </span>
-                <Link
-                  href={`/match/${match.id}`}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
-                >
-                  View
-                </Link>
+                  <Link
+                    href={`/match/${match.id}`}
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
+                  >
+                    View
+                  </Link>
+                </div>
+                <p className="text-sm text-gray-300">
+                  Players: {match.players.join(', ')}
+                </p>
               </li>
             ))}
           </ul>
