@@ -1,6 +1,6 @@
 // app/logout/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { destroySession } from '../../lib/session';
+import { destroySession } from '@/app/session';
 
 export async function POST(req: NextRequest) {
   const response = NextResponse.redirect(new URL('/', req.url));
