@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     SELECT m.id, m.created_at
     FROM matches m
     JOIN match_players mp ON mp.match_id = m.id
-    WHERE mp.player_id = $1
+    WHERE mp.user_id = $1
       AND m.winning_team IS NULL
     ORDER BY m.created_at DESC
     `,
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
     SELECT m.id, m.created_at, m.winning_team
     FROM matches m
     JOIN match_players mp ON mp.match_id = m.id
-    WHERE mp.player_id = $1
+    WHERE mp.user_id = $1
       AND m.winning_team IS NOT NULL
     ORDER BY m.created_at DESC
     `,
