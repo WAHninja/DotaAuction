@@ -1,6 +1,6 @@
 'use client';
 
-import { getSession } from '../app/session';
+import { getSession } from '@/app/session';
 import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
