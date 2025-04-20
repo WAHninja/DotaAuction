@@ -1,6 +1,6 @@
 import './globals.css';
 import Link from 'next/link';
-import { getSessionIdFromCookies } from '../lib/session';
+import { getSessionIdFromCookies } from '@/app/session';
 import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
 import Image from 'next/image';
