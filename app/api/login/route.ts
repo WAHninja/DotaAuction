@@ -1,5 +1,5 @@
 // app/api/login/route.ts
-import { createSession } from '../../../lib/session';
+import { createSession } from '@/app/session';
 import { NextRequest } from 'next/server';
 import db from '../../../lib/db';
 
