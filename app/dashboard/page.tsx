@@ -57,7 +57,12 @@ export default async function DashboardPage() {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
     {/* Left Column */}
     <div className="bg-gray-900 p-6 rounded-xl shadow-md">
-    <div className="space-y-6">
+      <CreateMatchFormWrapper />
+    </div>
+
+    {/* Right Column - Match Form */}
+    <div className="bg-gray-900 p-6 rounded-xl shadow-md">
+      <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold mb-2">Ongoing Matches</h2>
         {ongoingMatches.length > 0 ? (
@@ -79,11 +84,6 @@ export default async function DashboardPage() {
         )}
       </div>
     </div>
-    </div>
-
-    {/* Right Column - Match Form */}
-    <div className="bg-gray-900 p-6 rounded-xl shadow-md">
-      <CreateMatchFormWrapper />
     </div>
   </div>
 
