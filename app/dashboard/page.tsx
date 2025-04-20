@@ -53,74 +53,69 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 text-white space-y-10">
+  {/* Top Grid */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    {/* Left Column */}
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Welcome, {user.username}!</h1>
-        <p className="mt-2">This is your dashboard.</p>
+        <p className="text-gray-300">This is your dashboard.</p>
       </div>
 
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Create a Match</h2>
-        <CreateMatchFormWrapper />
-      </div>
-
-      {ongoingMatches.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-semibold mb-2">Ongoing Matches</h2>
-          <ul className="space-y-2">
-            {ongoingMatches.map((match) => (
-              <li
-                key={match.id}
-                className="bg-gray-800 p-4 rounded-xl shadow space-y-2"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Match #{match.id}</span>
-                  <Link
-                    href={`/match/${match.id}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                  >
+        <h2 className="text-2xl font-semibold mb-2">Ongoing Matches</h2>
+        {ongoingMatches.length > 0 ? (
+          ongoingMatches.map((match) => (
+            <div key={match.id} className="bg-blue-900 p-4 rounded-xl space-y-1 shadow-md">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Match #{match.id}</span>
+                <Link href={`/match/${match.id}`}>
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm">
                     Continue
-                  </Link>
-                </div>
-                <p className="text-sm text-gray-300">
-                  Players: {match.players.join(', ')}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {completedMatches.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-semibold mb-2">Completed Matches</h2>
-          <ul className="space-y-2">
-            {completedMatches.map((match) => (
-              <li
-                key={match.id}
-                className="bg-gray-700 p-4 rounded-xl shadow space-y-2"
-              >
-                <div className="flex justify-between items-center">
-                  <span>
-                    Match #{match.id} - Winner:{' '}
-                    <span className="font-semibold">
-                      {match.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
-                    </span>
-                  </span>
-                  <Link
-                    href={`/match/${match.id}`}
-                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
-                  >
-                    View
-                  </Link>
-                </div>
-                <p className="text-sm text-gray-300">
-                  Players: {match.players.join(', ')}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                  </button>
+                </Link>
+              </div>
+              <p className="text-sm text-gray-200">Players: {match.players.join(', ')}</p>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-400">No ongoing matches yet.</p>
+        )}
+      </div>
     </div>
+
+    {/* Right Column - Match Form */}
+    <div className="bg-gray-900 p-6 rounded-xl shadow-md">
+      <h2 className="text-2xl font-semibold mb-4">Create a Match</h2>
+      <CreateMatchFormWrapper />
+    </div>
+  </div>
+
+  {/* Completed Matches Full Width */}
+  {completedMatches.length > 0 && (
+    <div>
+      <h2 className="text-2xl font-semibold mb-2">Completed Matches</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {completedMatches.map((match) => (
+          <div key={match.id} className="bg-gray-800 p-4 rounded-xl space-y-1 shadow-md">
+            <div className="flex justify-between items-center">
+              <span>
+                Match #{match.id} - Winner:{' '}
+                <strong>{match.winning_team === 'team_1' ? 'Team 1' : 'Team A'}</strong>
+              </span>
+              <Link href={`/match/${match.id}`}>
+                <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
+                  View
+                </button>
+              </Link>
+            </div>
+            <p className="text-sm text-gray-300">Players: {match.players.join(', ')}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
   );
 }
