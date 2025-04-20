@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/session';
+import { getSession } from '@/app/session';
 import { redirect } from 'next/navigation';
 
 export default async function HomePage() {
