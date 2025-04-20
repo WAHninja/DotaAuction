@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { destroySession } from '../../../lib/session';
+import { destroySession } from '@/app/session';
 
 export async function POST(req: NextRequest) {
   const response = NextResponse.redirect('https://dotaauction.onrender.com');
