@@ -1,4 +1,6 @@
 // app/components/LogoutButton.tsx
+'use client';
+
 import { useRouter } from 'next/navigation';
 
 export default function LogoutButton() {
