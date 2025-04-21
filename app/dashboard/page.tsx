@@ -3,7 +3,7 @@ import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from './CreateMatchFormWrapper';
-import { Shield, Flag, Circle-Plus } from 'lucide-react';
+import { Shield, Flag, CirclePlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default async function DashboardPage() {
