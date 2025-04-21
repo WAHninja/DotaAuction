@@ -3,7 +3,7 @@ import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from './CreateMatchFormWrapper';
-import { Shield, Flag, CirclePlus } from 'lucide-react';
+import { Shield, Flag, Circle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default async function DashboardPage() {
@@ -68,7 +68,7 @@ export default async function DashboardPage() {
           {/* LEFT: Create Match */}
           <div className="flex-1 bg-gray-900/90 p-6 rounded-xl shadow-md space-y-4">
             <h2 className="flex items-center text-2xl font-semibold mb-2">
-              <CirclePlus className="w-6 h-6 mr-2 text-green-400" />
+              <Circle className="w-6 h-6 mr-2 text-green-400" />
               Create a Match
             </h2>
             <CreateMatchFormWrapper />
