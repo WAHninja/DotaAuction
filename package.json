@@ -12,7 +12,7 @@
     "react-dom": "latest",
     "pg": "latest",
     "bcryptjs": "^2.4.3",
-    "lucide-react": "^0.292.0",
+    "lucide-react": "latest",
     "framer-motion": "*"
   },
   "devDependencies": {
