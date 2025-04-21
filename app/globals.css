@@ -22,3 +22,19 @@ button, input[type="submit"] {
 input[type="checkbox"] {
   @apply accent-yellow-500;
 }
+
+@layer utilities {
+  .animate-fadeIn {
+    @apply opacity-0 animate-fade;
+  }
+
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .animate-fade {
+    animation: fade 0.5s ease-out forwards;
+  }
+}
+
