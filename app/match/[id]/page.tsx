@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import SelectWinnerForm from '@/components/SelectWinnerForm';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -35,7 +36,9 @@ export default function MatchPage() {
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
 
-  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
+  const getPlayer = (pid: number) => players.find((p: any) => p.id === pid);
+
+  const isInProgress = latestGame?.status === 'In progress';
 
   return (
     <div className="p-6">
@@ -74,6 +77,9 @@ export default function MatchPage() {
           </div>
         </>
       )}
+
+      {/* Select Winner Form */}
+      <SelectWinnerForm matchId={match.id} show={isInProgress} />
 
       {match.winning_team && (
         <div className="mb-6">
