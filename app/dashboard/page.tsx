@@ -3,7 +3,6 @@ import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from './CreateMatchFormWrapper';
-import { motion } from 'framer-motion';
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -52,12 +51,7 @@ export default async function DashboardPage() {
   const completedMatches = completedResult.rows;
 
   return (
-    <motion.div
-      className="relative min-h-screen"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="relative min-h-screen animate-fadeIn">
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 z-0" />
 
@@ -66,27 +60,19 @@ export default async function DashboardPage() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT: Create Match */}
           <div className="flex-1 bg-gray-900/90 p-6 rounded-xl shadow-md space-y-4">
-            <h2 className="text-2xl font-semibold mb-2">
-              {/* Icon removed */}
-              Create a Match
-            </h2>
+            <h2 className="text-2xl font-semibold mb-2">Create a Match</h2>
             <CreateMatchFormWrapper />
           </div>
 
-          {/* RIGHT: Welcome & Ongoing Matches */}
+          {/* RIGHT: Ongoing Matches */}
           <div className="flex-1 space-y-6">
-            {/* Ongoing Matches */}
             <div>
-              <h2 className="text-2xl font-semibold mb-2">
-                {/* Icon removed */}
-                Ongoing Matches
-              </h2>
+              <h2 className="text-2xl font-semibold mb-2">Ongoing Matches</h2>
               {ongoingMatches.length > 0 ? (
                 ongoingMatches.map((match) => (
-                  <motion.div
+                  <div
                     key={match.id}
-                    className="bg-blue-900/80 p-4 rounded-xl space-y-1 shadow-md"
-                    whileHover={{ scale: 1.02 }}
+                    className="bg-blue-900/80 p-4 rounded-xl space-y-1 shadow-md transform transition-transform duration-200 hover:scale-105"
                   >
                     <div className="flex justify-between items-center">
                       <span className="font-semibold">Match #{match.id}</span>
@@ -99,7 +85,7 @@ export default async function DashboardPage() {
                     <p className="text-sm text-gray-200">
                       Players: {match.players.join(', ')}
                     </p>
-                  </motion.div>
+                  </div>
                 ))
               ) : (
                 <p className="text-sm text-gray-400">No ongoing matches yet.</p>
@@ -111,16 +97,12 @@ export default async function DashboardPage() {
         {/* Completed Matches */}
         {completedMatches.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-2xl font-semibold mb-2">
-              {/* Icon removed */}
-              Completed Matches
-            </h2>
+            <h2 className="text-2xl font-semibold mb-2">Completed Matches</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {completedMatches.map((match) => (
-                <motion.div
+                <div
                   key={match.id}
-                  className="bg-gray-800/80 p-4 rounded-xl space-y-1 shadow-md"
-                  whileHover={{ scale: 1.02 }}
+                  className="bg-gray-800/80 p-4 rounded-xl space-y-1 shadow-md transform transition-transform duration-200 hover:scale-105"
                 >
                   <div className="flex justify-between items-center">
                     <span>
@@ -138,12 +120,12 @@ export default async function DashboardPage() {
                   <p className="text-sm text-gray-300">
                     Players: {match.players.join(', ')}
                   </p>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
