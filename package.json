@@ -13,7 +13,7 @@
     "pg": "latest",
     "bcryptjs": "^2.4.3",
     "lucide-react": "latest",
-    "framer-motion": "*"
+    "framer-motion": "latest"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
