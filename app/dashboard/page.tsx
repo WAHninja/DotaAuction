@@ -3,7 +3,6 @@ import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from './CreateMatchFormWrapper';
-import { Shield, Flag, Circle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default async function DashboardPage() {
@@ -67,8 +66,8 @@ export default async function DashboardPage() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT: Create Match */}
           <div className="flex-1 bg-gray-900/90 p-6 rounded-xl shadow-md space-y-4">
-            <h2 className="flex items-center text-2xl font-semibold mb-2">
-              <Circle className="w-6 h-6 mr-2 text-green-400" />
+            <h2 className="text-2xl font-semibold mb-2">
+              {/* Icon removed */}
               Create a Match
             </h2>
             <CreateMatchFormWrapper />
@@ -78,8 +77,8 @@ export default async function DashboardPage() {
           <div className="flex-1 space-y-6">
             {/* Ongoing Matches */}
             <div>
-              <h2 className="flex items-center text-2xl font-semibold mb-2">
-                <Shield className="w-6 h-6 mr-2 text-yellow-400" />
+              <h2 className="text-2xl font-semibold mb-2">
+                {/* Icon removed */}
                 Ongoing Matches
               </h2>
               {ongoingMatches.length > 0 ? (
@@ -112,8 +111,8 @@ export default async function DashboardPage() {
         {/* Completed Matches */}
         {completedMatches.length > 0 && (
           <div className="mt-8">
-            <h2 className="flex items-center text-2xl font-semibold mb-2">
-              <Flag className="w-6 h-6 mr-2 text-pink-400" />
+            <h2 className="text-2xl font-semibold mb-2">
+              {/* Icon removed */}
               Completed Matches
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
