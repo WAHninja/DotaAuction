@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
       const gameResult = await client.query(
         `INSERT INTO games (match_id, team_1_members, team_a_members, status)
-         VALUES ($1, $2::int[], $3::int[], 'Pending') RETURNING id`,
+         VALUES ($1, $2::int[], $3::int[], 'In progress') RETURNING id`,
         [matchId, team1, teamA]
       );
       const gameId = gameResult.rows[0].id;
