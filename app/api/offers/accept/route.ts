@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const offer = offerRes.rows[0];
 
     // Verify that the current user is the target of the offer
-    if (offer.target_player_id !== session.user_id) {
+    if (offer.target_player_id !== session.userId) {
       return NextResponse.json({ error: 'Forbidden: Not your offer to accept' }, { status: 403 });
     }
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Reject other offers for this user in the same game
     await db.query(
       `UPDATE Offers SET status = 'rejected' WHERE game_id = $1 AND target_player_id = $2 AND id != $3`,
-      [offer.game_id, session.user_id, offerId]
+      [offer.game_id, session.userid, offerId]
     );
 
     // Update gold of the offer sender (from_user_id)
