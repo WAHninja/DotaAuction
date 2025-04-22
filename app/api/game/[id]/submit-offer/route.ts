@@ -48,7 +48,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     const existing = await db.query(
-      'SELECT * FROM Offers WHERE from_user_id = $1 AND game_id = $2',
+      'SELECT * FROM Offers WHERE from_player_id = $1 AND game_id = $2',
       [userId, game.id]
     );
 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     const { rows: inserted } = await db.query(
-      'INSERT INTO Offers (game_id, from_user_id, target_player_id, offer_amount, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO Offers (game_id, from_player_id, target_player_id, offer_amount, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [game.id, userId, targetPlayerId, offerAmount, 'pending']
     );
 
