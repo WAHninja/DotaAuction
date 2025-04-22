@@ -10,7 +10,7 @@ export default async function DashboardPage() {
 
   const userResult = await db.query(
     'SELECT username FROM users WHERE id = $1',
-    [session.user_id]
+    [session.userId]
   );
   const user = userResult.rows[0];
 
@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     GROUP BY m.id
     ORDER BY m.created_at DESC
     `,
-    [session.user_id]
+    [session.userId]
   );
 
   const completedResult = await db.query(
@@ -44,7 +44,7 @@ export default async function DashboardPage() {
     GROUP BY m.id
     ORDER BY m.created_at DESC
     `,
-    [session.user_id]
+    [session.userId]
   );
 
   const ongoingMatches = ongoingResult.rows;
