@@ -1,15 +1,15 @@
 // app/api/game/[id]/offers/route.ts
 
-import { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: { params: { id: string } }
 ) {
-  const gameId = Number(params.id);
+  const gameId = Number(context.params.id);
   if (isNaN(gameId)) {
-    return new Response(JSON.stringify({ message: 'Invalid game ID' }), { status: 400 });
+    return NextResponse.json({ message: 'Invalid game ID' }, { status: 400 });
   }
 
   try {
@@ -20,12 +20,9 @@ export async function GET(
       ORDER BY created_at ASC
     `, [gameId]);
 
-    return new Response(JSON.stringify({ offers: result.rows }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ offers: result.rows });
   } catch (err) {
     console.error('Error fetching offers:', err);
-    return new Response(JSON.stringify({ message: 'Internal server error' }), { status: 500 });
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
