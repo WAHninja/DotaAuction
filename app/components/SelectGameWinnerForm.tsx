@@ -3,11 +3,11 @@
 import { useState } from 'react';
 
 type SelectWinnerFormProps = {
-  matchId: number;
-  show: boolean; // Only show form if the latest game is "In progress"
+  gameId: number;
+  show: boolean; // Only show form if the game is "In progress"
 };
 
-export default function SelectWinnerForm({ matchId, show }: SelectWinnerFormProps) {
+export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps) {
   const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -24,7 +24,7 @@ export default function SelectWinnerForm({ matchId, show }: SelectWinnerFormProp
     setMessage('');
 
     try {
-      const res = await fetch(`/api/match/${matchId}/select-winner`, {
+      const res = await fetch(`/api/game/${gameId}/select-winner`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,7 +35,7 @@ export default function SelectWinnerForm({ matchId, show }: SelectWinnerFormProp
       const data = await res.json();
 
       if (res.ok) {
-        setMessage('Winning team selected successfully!');
+        setMessage('Game winner selected successfully!');
       } else {
         setMessage(data.error || 'Something went wrong');
       }
@@ -49,7 +49,7 @@ export default function SelectWinnerForm({ matchId, show }: SelectWinnerFormProp
 
   return (
     <div className="border p-4 rounded-xl bg-white shadow-md mt-6">
-      <h2 className="text-xl font-bold mb-2">Select Winning Team</h2>
+      <h2 className="text-xl font-bold mb-2">Select Winning Team for Game</h2>
       <div className="flex gap-4 mb-4">
         <label className="flex items-center gap-2">
           <input
