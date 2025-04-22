@@ -1,7 +1,7 @@
 // app/api/match/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getSession } from '@/app/session'; // Make sure this is imported
+import { getSession } from '@/app/session';
 
 function safeParseArray(value: any): number[] {
   if (Array.isArray(value)) return value;
@@ -15,6 +15,9 @@ function safeParseArray(value: any): number[] {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getSession(req);
+    const currentUserId = session?.userId;
+
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
     const matchId = parseInt(id || '');
@@ -23,68 +26,51 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
 
-    const session = await getSession();
-    if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Fetch match metadata
-    const matchResult = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
-    if (matchResult.rows.length === 0) {
+    // Get match
+    const matchRes = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
+    if (matchRes.rowCount === 0) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
-    const match = matchResult.rows[0];
+    const match = matchRes.rows[0];
 
-    // Fetch all players with their gold
-    const playersResult = await db.query(
-      `SELECT p.id, p.username, mp.gold
+    // Get players
+    const playersRes = await db.query(
+      `SELECT u.id, u.username, mp.gold
        FROM match_players mp
-       JOIN users p ON mp.user_id = p.id
+       JOIN users u ON mp.user_id = u.id
        WHERE mp.match_id = $1`,
       [matchId]
     );
-    const allPlayers = playersResult.rows;
+    const players = playersRes.rows;
 
-    // Fetch games
-    const gamesResult = await db.query(
+    // Get games
+    const gamesRes = await db.query(
       `SELECT * FROM Games WHERE match_id = $1 ORDER BY id ASC`,
       [matchId]
     );
-    const games = gamesResult.rows;
-    const latestGame = games.at(-1);
+    const games = gamesRes.rows;
+    const latestGame = games.at(-1) || null;
 
-    let team1: any[] = [];
-    let teamA: any[] = [];
-    let offers: any[] = [];
-
-    if (latestGame) {
-      const team1Ids = safeParseArray(latestGame.team_1_members);
-      const teamAIds = safeParseArray(latestGame.team_a_members);
-
-      team1 = allPlayers.filter((p) => team1Ids.includes(p.id));
-      teamA = allPlayers.filter((p) => teamAIds.includes(p.id));
-
-      if (latestGame.status === 'Auction pending') {
-        const offersResult = await db.query(
-          `SELECT * FROM Offers WHERE game_id = $1`,
-          [latestGame.game_id]
-        );
-        offers = offersResult.rows;
-      }
+    // Get offers if auction pending
+    let offers = [];
+    if (latestGame?.status === 'Auction pending') {
+      const offersRes = await db.query(
+        `SELECT * FROM Offers WHERE game_id = $1`,
+        [latestGame.game_id]
+      );
+      offers = offersRes.rows;
     }
 
     return NextResponse.json({
       match,
-      players: allPlayers,
+      players,
       games,
       latestGame,
-      team1,
-      teamA,
       offers,
-      currentUserId: session.userId,
+      currentUserId, // ✅ included for frontend
     });
   } catch (error) {
-    console.error('API error in match/[id]/route.ts:', error);
+    console.error('API error in match/[id]:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
