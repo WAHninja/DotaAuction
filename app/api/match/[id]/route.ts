@@ -1,7 +1,7 @@
 // app/api/match/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getSession } from '@/lib/session';
+import { getSession } from '@/app/session';
 
 function safeParseArray(value: any): number[] {
   if (Array.isArray(value)) return value;
