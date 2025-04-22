@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (gameRows.length === 0) return res.status(404).json({ message: 'Game not found.' });
 
     const game = gameRows[0];
-    const winningTeam = game.winning_team_id;
+    const winningTeam = game.winning_team;
     const teamA = game.team_a_members;
     const team1 = game.team_1_members;
 
