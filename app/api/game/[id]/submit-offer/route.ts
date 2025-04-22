@@ -3,6 +3,16 @@ import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
+console.log({
+  gameId: id,
+  userId,
+  winningTeam,
+  teamA,
+  team1,
+  winningTeamMembers,
+});
+
+
 export async function POST(req: NextRequest): Promise<Response> {
   const url = new URL(req.url);
   const id = url.pathname.split('/').at(-2);
