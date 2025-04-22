@@ -1,14 +1,14 @@
-// app/api/game/[id]/offers/route.ts
+// app/api/game/offers/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const gameId = Number(params.id);
-  if (isNaN(gameId)) {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const idParam = searchParams.get('id');
+  const gameId = Number(idParam);
+
+  if (!idParam || isNaN(gameId)) {
     return NextResponse.json({ message: 'Invalid game ID' }, { status: 400 });
   }
 
@@ -17,7 +17,6 @@ export async function GET(
       `SELECT * FROM offers WHERE game_id = $1 ORDER BY created_at ASC`,
       [gameId]
     );
-
     return NextResponse.json({ offers: result.rows });
   } catch (err) {
     console.error('Error fetching offers:', err);
