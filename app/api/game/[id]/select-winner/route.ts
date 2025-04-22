@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     // Get the game
     const gameRes = await db.query(
-      `SELECT * FROM Games WHERE game_id = $1`,
+      `SELECT * FROM Games WHERE id = $1`,
       [gameId]
     );
 
