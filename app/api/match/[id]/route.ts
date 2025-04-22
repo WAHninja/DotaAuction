@@ -1,6 +1,7 @@
 // app/api/match/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '../../../../lib/db';
+import { getSession } from '../../../../lib/session'; // Make sure this is imported
 
 function safeParseArray(value: any): number[] {
   if (Array.isArray(value)) return value;
@@ -17,14 +18,15 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
     const matchId = parseInt(id || '');
+
+    if (isNaN(matchId)) {
+      return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
+    }
+
     const session = await getSession(req);
-      if (!session?.userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    const session = await getSession(req);
-      if (!session?.userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    if (!session?.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     // Fetch match metadata
     const matchResult = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
