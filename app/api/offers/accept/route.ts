@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Reject other offers for this user in the same game
     await db.query(
       `UPDATE Offers SET status = 'rejected' WHERE game_id = $1 AND target_player_id = $2 AND id != $3`,
-      [offer.game_id, session.userid, offerId]
+      [offer.game_id, session.userId, offerId]
     );
 
     // Update gold of the offer sender (from_user_id)
