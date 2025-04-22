@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ message: 'Offer amount must be between 250 and 2000.' });
   }
 
-  const session = await getSession(req);
+  const session = await getSession();
   const userId = session?.userId;
   if (!userId) {
     return res.status(401).json({ message: 'Not authenticated.' });
