@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import SelectWinnerForm from '../../components/SelectWinnerForm';
+import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 
 export default function MatchPage() {
   const { id } = useParams();
