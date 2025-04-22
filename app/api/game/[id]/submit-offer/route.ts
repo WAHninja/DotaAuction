@@ -4,9 +4,8 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
 export async function POST(req: NextRequest): Promise<Response> {
-  // ✅ Extract ID from URL path
   const url = new URL(req.url);
-  const id = url.pathname.split('/').at(-2); // e.g. `/api/game/123/submit-offer`
+  const id = url.pathname.split('/').at(-2);
 
   if (!id) {
     return new Response(JSON.stringify({ message: 'Missing game ID.' }), {
@@ -29,6 +28,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
       [id]
     );
+
     if (gameRows.length === 0) {
       return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
     }
@@ -44,3 +44,45 @@ export async function POST(req: NextRequest): Promise<Response> {
       return new Response(JSON.stringify({ message: 'You are not on the winning team.' }), {
         status: 403,
       });
+    }
+
+    if (!winningTeamMembers.includes(targetPlayerId) || targetPlayerId === userId) {
+      return new Response(
+        JSON.stringify({ message: 'You can only offer gold to another teammate.' }),
+        { status: 400 }
+      );
+    }
+
+    if (offerAmount < 250 || offerAmount > 2000) {
+      return new Response(
+        JSON.stringify({ message: 'Offer amount must be between 250 and 2000.' }),
+        { status: 400 }
+      );
+    }
+
+    const existing = await db.query(
+      'SELECT * FROM Offers WHERE from_user_id = $1 AND game_id = $2',
+      [userId, game.id]
+    );
+
+    if (existing.rows.length > 0) {
+      return new Response(
+        JSON.stringify({ message: 'You have already submitted an offer.' }),
+        { status: 400 }
+      );
+    }
+
+    const { rows: inserted } = await db.query(
+      'INSERT INTO Offers (game_id, from_user_id, target_player_id, offer_amount, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [game.id, userId, targetPlayerId, offerAmount, 'pending']
+    );
+
+    return new Response(JSON.stringify({ message: 'Offer submitted.', offer: inserted[0] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ message: 'Server error.' }), { status: 500 });
+  }
+}
