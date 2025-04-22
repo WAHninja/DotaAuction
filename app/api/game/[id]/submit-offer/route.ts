@@ -40,13 +40,6 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
 
-    if (!winningTeamMembers.includes(targetPlayerId) || targetPlayerId === userId) {
-      return new Response(
-        JSON.stringify({ message: 'You can only offer gold to another teammate.' }),
-        { status: 400 }
-      );
-    }
-
     if (offerAmount < 250 || offerAmount > 2000) {
       return new Response(
         JSON.stringify({ message: 'Offer amount must be between 250 and 2000.' }),
