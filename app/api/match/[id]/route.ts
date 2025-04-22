@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
 
-    const session = await getSession(req);
+    const session = await getSession();
     if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
