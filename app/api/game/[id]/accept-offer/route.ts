@@ -1,10 +1,10 @@
 // app/api/game/[id]/accept-offer/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
-export async function POST(req: NextRequest, context: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: { params: { id: string } }): Promise<Response> {
   const { id: matchId } = context.params;
   const { offerId } = await req.json();
 
@@ -12,7 +12,9 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
   const userId = session?.userId;
 
   if (!userId) {
-    return NextResponse.json({ message: 'Not authenticated.' }, { status: 401 });
+    return new Response(JSON.stringify({ message: 'Not authenticated.' }), {
+      status: 401,
+    });
   }
 
   try {
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
       [matchId]
     );
     if (gameRows.length === 0) {
-      return NextResponse.json({ message: 'Game not found.' }, { status: 404 });
+      return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
     }
 
     const game = gameRows[0];
@@ -32,7 +34,9 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     const losingTeamMembers = winningTeam === 'team_a' ? team1 : teamA;
 
     if (!losingTeamMembers.includes(userId)) {
-      return NextResponse.json({ message: 'You are not on the losing team.' }, { status: 403 });
+      return new Response(JSON.stringify({ message: 'You are not on the losing team.' }), {
+        status: 403,
+      });
     }
 
     const { rows: offerRows } = await db.query(
@@ -40,7 +44,9 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
       [offerId, game.id, 'pending']
     );
     if (offerRows.length === 0) {
-      return NextResponse.json({ message: 'Offer not found or already accepted.' }, { status: 404 });
+      return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), {
+        status: 404,
+      });
     }
 
     const result = await db.query(
@@ -48,9 +54,12 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
       ['accepted', offerId]
     );
 
-    return NextResponse.json({ message: 'Offer accepted.', offer: result.rows[0] }, { status: 200 });
+    return new Response(JSON.stringify({ message: 'Offer accepted.', offer: result.rows[0] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ message: 'Server error.' }, { status: 500 });
+    return new Response(JSON.stringify({ message: 'Server error.' }), { status: 500 });
   }
 }
