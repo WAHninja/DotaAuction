@@ -1,25 +1,47 @@
 // app/api/game/[id]/select-winner/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import db from '../../../../../lib/db';
 
-import { NextRequest } from 'next/server';
-import db from '@/lib/db';
-
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const gameId = parseInt(params.id, 10);
-  const { winningTeamId } = await req.json();
-
-  if (!gameId || !['team_1', 'team_a'].includes(winningTeamId)) {
-    return new Response(JSON.stringify({ error: 'Invalid input' }), { status: 400 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    await db.query(
-      'UPDATE Games SET winning_team_id = $1, status = $2 WHERE id = $3',
-      [winningTeamId, 'Auction pending', gameId]
+    const url = new URL(req.url);
+    const gameId = parseInt(url.pathname.split('/')[3]); // /api/game/[id]/select-winner
+
+    if (isNaN(gameId)) {
+      return NextResponse.json({ error: 'Invalid game ID' }, { status: 400 });
+    }
+
+    const { winningTeamId } = await req.json();
+
+    if (!['team_1', 'team_a'].includes(winningTeamId)) {
+      return NextResponse.json({ error: 'Invalid winningTeamId' }, { status: 400 });
+    }
+
+    // Get the game
+    const gameRes = await db.query(
+      `SELECT * FROM Games WHERE game_id = $1`,
+      [gameId]
     );
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    if (gameRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+    }
+
+    const game = gameRes.rows[0];
+
+    if (game.status !== 'In progress') {
+      return NextResponse.json({ error: 'Game already completed or auction already started' }, { status: 400 });
+    }
+
+    // Update the game status and winning team
+    await db.query(
+      `UPDATE Games SET status = 'Auction pending', winning_team_id = $1 WHERE game_id = $2`,
+      [winningTeamId, gameId]
+    );
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating game winner:', error);
-    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    console.error('Error selecting winning team for game:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
