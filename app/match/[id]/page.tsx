@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
-import AuctionPhase from '../../comonents/AuctionPhase/index'
+import AuctionPhase from '../../components/AuctionPhase/index'
 
 export default function MatchPage() {
   const { id } = useParams();
