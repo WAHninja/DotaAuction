@@ -1,21 +1,18 @@
-// pages/api/game/[id]/accept-offer.ts
+// app/api/game/[id]/accept-offer/route.ts
 
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const matchId = req.query.id as string;
-  const { offerId } = req.body;
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed.' });
-  }
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const matchId = params.id;
+  const { offerId } = await req.json();
 
   const session = await getSession();
   const userId = session?.userId;
+
   if (!userId) {
-    return res.status(401).json({ message: 'Not authenticated.' });
+    return NextResponse.json({ message: 'Not authenticated.' }, { status: 401 });
   }
 
   try {
@@ -24,7 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
       [matchId]
     );
-    if (gameRows.length === 0) return res.status(404).json({ message: 'Game not found.' });
+    if (gameRows.length === 0) {
+      return NextResponse.json({ message: 'Game not found.' }, { status: 404 });
+    }
 
     const game = gameRows[0];
     const winningTeam = game.winning_team;
@@ -34,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const losingTeamMembers = winningTeam === 'team_a' ? team1 : teamA;
 
     if (!losingTeamMembers.includes(userId)) {
-      return res.status(403).json({ message: 'You are not on the losing team.' });
+      return NextResponse.json({ message: 'You are not on the losing team.' }, { status: 403 });
     }
 
     // Check if offer exists and is pending
@@ -43,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       [offerId, game.id, 'pending']
     );
     if (offerRows.length === 0) {
-      return res.status(404).json({ message: 'Offer not found or already accepted.' });
+      return NextResponse.json({ message: 'Offer not found or already accepted.' }, { status: 404 });
     }
 
     // Accept the offer
@@ -52,9 +51,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ['accepted', offerId]
     );
 
-    res.status(200).json({ message: 'Offer accepted.', offer: result.rows[0] });
+    return NextResponse.json({ message: 'Offer accepted.', offer: result.rows[0] }, { status: 200 });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error.' });
+    return NextResponse.json({ message: 'Server error.' }, { status: 500 });
   }
 }
