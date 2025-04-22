@@ -74,7 +74,7 @@ export default function MatchPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from_user_id: currentUserId,
+          from_player_id: currentUserId,
           target_player_id: Number(selectedPlayer),
           offer_amount: Number(offerAmount),
         }),
@@ -185,7 +185,7 @@ export default function MatchPage() {
           <h4 className="font-semibold mb-2">Current Offers</h4>
           <ul className="list-disc pl-5">
             {offers.map((offer) => {
-              const from = getPlayer(offer.from_user_id);
+              const from = getPlayer(offer.from_player_id);
               const to = getPlayer(offer.target_player_id);
               return (
                 <li key={offer.id}>
