@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Update the game status and winning team
     await db.query(
-      `UPDATE Games SET status = 'Auction pending', winning_team = $1 WHERE game_id = $2`,
+      `UPDATE Games SET status = 'Auction pending', winning_team = $1 WHERE id = $2`,
       [winningTeamId, gameId]
     );
 
