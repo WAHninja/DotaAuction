@@ -70,7 +70,7 @@ export default function MatchPage() {
     if (!selectedPlayer || !offerAmount) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/game/${latestGame.id}/make-offer`, {
+      const res = await fetch(`/api/game/${latestGame.id}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
