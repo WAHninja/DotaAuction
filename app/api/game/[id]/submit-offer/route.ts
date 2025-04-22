@@ -40,7 +40,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
 
-    if (!winningTeamMembers.map(String).includes(String(userId))) {
+    const userIdNum = parseInt(userId);
+    if (!winningTeamMembers.includes(userIdNum)) {
       return new Response(JSON.stringify({ message: 'You are not on the winning team.' }), {
         status: 403,
       });
