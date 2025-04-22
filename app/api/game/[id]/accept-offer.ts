@@ -2,7 +2,7 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import db from '@/lib/db';
-import { getSession } from '@/lib/session';
+import { getSession } from '@/app/session';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const matchId = req.query.id as string;
