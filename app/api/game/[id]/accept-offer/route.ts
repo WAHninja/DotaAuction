@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const matchId = params.id;
+export async function POST(req: NextRequest, context: { params: { id: string } }) {
+  const { id: matchId } = context.params;
   const { offerId } = await req.json();
 
   const session = await getSession();
@@ -16,7 +16,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   try {
-    // Get latest game for the match
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
       [matchId]
@@ -36,7 +35,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ message: 'You are not on the losing team.' }, { status: 403 });
     }
 
-    // Check if offer exists and is pending
     const { rows: offerRows } = await db.query(
       'SELECT * FROM Offers WHERE id = $1 AND game_id = $2 AND status = $3',
       [offerId, game.id, 'pending']
@@ -45,7 +43,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ message: 'Offer not found or already accepted.' }, { status: 404 });
     }
 
-    // Accept the offer
     const result = await db.query(
       'UPDATE Offers SET status = $1 WHERE id = $2 RETURNING *',
       ['accepted', offerId]
