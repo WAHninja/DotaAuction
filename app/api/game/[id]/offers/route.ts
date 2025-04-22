@@ -5,9 +5,9 @@ import db from '@/lib/db';
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const gameId = Number(params.id);
+  const gameId = Number(context.params.id);
   if (isNaN(gameId)) {
     return NextResponse.json({ message: 'Invalid game ID' }, { status: 400 });
   }
