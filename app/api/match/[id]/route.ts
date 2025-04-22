@@ -15,7 +15,7 @@ function safeParseArray(value: any): number[] {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession(req);
+    const session = await getSession();
     const currentUserId = session?.userId;
 
     const url = new URL(req.url);
