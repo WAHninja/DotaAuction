@@ -1,7 +1,7 @@
 // app/api/match/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { getSession } from '@/app/session';
+import { getSession } from '@/lib/session';
 
 function safeParseArray(value: any): number[] {
   if (Array.isArray(value)) return value;
@@ -15,8 +15,8 @@ function safeParseArray(value: any): number[] {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    const currentUserId = session?.userId;
+    const session = await getSession(req);
+    const currentUserId = session?.userId || null;
 
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
@@ -26,14 +26,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
 
-    // Get match
     const matchRes = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
     if (matchRes.rowCount === 0) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
     const match = matchRes.rows[0];
 
-    // Get players
     const playersRes = await db.query(
       `SELECT u.id, u.username, mp.gold
        FROM match_players mp
@@ -43,7 +41,6 @@ export async function GET(req: NextRequest) {
     );
     const players = playersRes.rows;
 
-    // Get games
     const gamesRes = await db.query(
       `SELECT * FROM Games WHERE match_id = $1 ORDER BY id ASC`,
       [matchId]
@@ -51,7 +48,6 @@ export async function GET(req: NextRequest) {
     const games = gamesRes.rows;
     const latestGame = games.at(-1) || null;
 
-    // Get offers if auction pending
     let offers = [];
     if (latestGame?.status === 'Auction pending') {
       const offersRes = await db.query(
@@ -67,7 +63,7 @@ export async function GET(req: NextRequest) {
       games,
       latestGame,
       offers,
-      currentUserId, // ✅ included for frontend
+      currentUserId, // ✅ Guaranteed to be included
     });
   } catch (error) {
     console.error('API error in match/[id]:', error);
