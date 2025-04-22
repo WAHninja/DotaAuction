@@ -35,7 +35,7 @@ export async function getSessionIdFromCookies(): Promise<string | null> {
 }
 
 export async function getSession() {
-  const sessionId = await getSessionIdFromCookies(); // Await the promise
+  const sessionId = await getSessionIdFromCookies();
   if (!sessionId) return null;
 
   const result = await db.query(
@@ -43,7 +43,14 @@ export async function getSession() {
     [sessionId]
   );
 
-  return result.rows[0] || null;
+  const session = result.rows[0];
+  if (!session) return null;
+
+  return {
+    id: session.id,
+    userId: session.user_id, // ✅ camelCase normalization
+    createdAt: session.created_at,
+  };
 }
 
 export async function destroySession(response: NextResponse) {
