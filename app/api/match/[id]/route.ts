@@ -17,10 +17,14 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
     const matchId = parseInt(id || '');
-
-    if (isNaN(matchId)) {
-      return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
-    }
+    const session = await getSession(req);
+      if (!session?.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    const session = await getSession(req);
+      if (!session?.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
     // Fetch match metadata
     const matchResult = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
@@ -75,6 +79,7 @@ export async function GET(req: NextRequest) {
       team1,
       teamA,
       offers,
+      currentUserId: session.userId,
     });
   } catch (error) {
     console.error('API error in match/[id]/route.ts:', error);
