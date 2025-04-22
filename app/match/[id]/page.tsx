@@ -93,7 +93,7 @@ export default function MatchPage() {
       {latestGame?.status === 'Auction pending' && (
         <div className="bg-yellow-100 p-4 rounded-xl shadow">
           <h3 className="text-lg font-semibold mb-2">Auction Phase</h3>
-          <AuctionPhase game={latestGame} currentUserId={currentUserId} />
+          <AuctionPhase game={latestGame} currentUserId={getPlayer} />
         </div>
       )}
     </div>
