@@ -3,12 +3,17 @@ import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
-// Correct typing for App Router
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<Response> {
-  const matchId = params.id;
+export async function POST(req: NextRequest): Promise<Response> {
+  // ✅ Manually extract `id` from the URL
+  const url = new URL(req.url);
+  const id = url.pathname.split('/').at(-2); // e.g. `/api/game/123/accept-offer`
+
+  if (!id) {
+    return new Response(JSON.stringify({ message: 'Missing game ID.' }), {
+      status: 400,
+    });
+  }
+
   const { offerId } = await req.json();
 
   const session = await getSession();
@@ -23,7 +28,7 @@ export async function POST(
   try {
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
-      [matchId]
+      [id]
     );
     if (gameRows.length === 0) {
       return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
