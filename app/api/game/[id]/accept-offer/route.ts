@@ -1,11 +1,14 @@
 // app/api/game/[id]/accept-offer/route.ts
-
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
-export async function POST(req: NextRequest, context: { params: { id: string } }): Promise<Response> {
-  const { id: matchId } = context.params;
+// Correct typing for App Router
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+): Promise<Response> {
+  const matchId = params.id;
   const { offerId } = await req.json();
 
   const session = await getSession();
