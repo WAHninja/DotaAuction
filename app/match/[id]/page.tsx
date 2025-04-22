@@ -79,7 +79,7 @@ export default function MatchPage() {
       )}
 
       {/* Select Winner Form */}
-      <SelectWinnerForm matchId={match.id} show={isInProgress} />
+      <SelectGameWinnerForm matchId={match.id} show={isInProgress} />
 
       {match.winning_team && (
         <div className="mb-6">
