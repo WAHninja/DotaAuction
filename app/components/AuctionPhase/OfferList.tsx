@@ -37,7 +37,7 @@ export default function OfferList({ offers, currentUserId, game, isLoser, onOffe
           }`}
         >
           <span>
-            <strong>Player {offer.from_user_id}</strong> → Player {offer.target_player_id}
+            <strong>Player {offer.from_player_id}</strong> → Player {offer.target_player_id}
           </span>
           {isLoser && <span className="text-blue-700 font-semibold">{offer.offer_amount} Gold</span>}
           {canAccept && (
