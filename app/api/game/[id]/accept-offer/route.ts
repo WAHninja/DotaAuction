@@ -6,8 +6,13 @@ import { getSession } from '@/app/session';
 
 export async function POST(req: NextRequest): Promise<Response> {
   const url = new URL(req.url);
-  const gameId = url.pathname.split('/').at(-2);
-  if (!gameId) return new Response(JSON.stringify({ message: 'Missing game ID.' }), { status: 400 });
+  const matchId = url.pathname.split('/').at(-2); // this is still the match ID
+
+  if (!matchId) {
+    return new Response(JSON.stringify({ message: 'Missing match ID.' }), {
+      status: 400,
+    });
+  }
 
   const { offerId } = await req.json();
   const session = await getSession();
@@ -17,8 +22,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     // Get the current game
     const { rows: gameRows } = await db.query(
-      'SELECT * FROM Games WHERE id = $1',
-      [gameId]
+      'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
+      [matchId]
     );
     if (gameRows.length === 0) return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
     const game = gameRows[0];
