@@ -57,7 +57,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Reject all other offers
     await db.query(
       'UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
-      ['rejected', gameId, offerId, 'pending']
+      ['rejected', game.id, offerId, 'pending']
     );
 
     // Add gold to the offer maker
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
 
     // Mark current game as finished
-    await db.query('UPDATE Games SET status = $1 WHERE id = $2', ['finished', gameId]);
+    await db.query('UPDATE Games SET status = $1 WHERE id = $2', ['finished', game.id]);
 
     // Prepare new teams for the next game
     const newTeamA = [...teamA];
