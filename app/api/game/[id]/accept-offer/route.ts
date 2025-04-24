@@ -42,7 +42,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Fetch the offer
     const { rows: offerRows } = await db.query(
       'SELECT * FROM Offers WHERE id = $1 AND game_id = $2 AND status = $3',
-      [offerId, gameId, 'pending']
+      [offerId, game.id, 'pending'] // ✅ assuming `game` was fetched just above
     );
     if (offerRows.length === 0) return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), { status: 404 });
     const offer = offerRows[0];
