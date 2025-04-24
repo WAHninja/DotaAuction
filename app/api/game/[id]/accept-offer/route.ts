@@ -4,9 +4,8 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
 export async function POST(req: NextRequest): Promise<Response> {
-  // ✅ Manually extract `id` from the URL
   const url = new URL(req.url);
-  const id = url.pathname.split('/').at(-2); // e.g. `/api/game/123/accept-offer`
+  const id = url.pathname.split('/').at(-2);
 
   if (!id) {
     return new Response(JSON.stringify({ message: 'Missing game ID.' }), {
@@ -15,7 +14,6 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const { offerId } = await req.json();
-
   const session = await getSession();
   const userId = session?.userId;
 
@@ -47,22 +45,39 @@ export async function POST(req: NextRequest): Promise<Response> {
       });
     }
 
+    const existingAcceptance = await db.query(
+      'SELECT * FROM Offers WHERE game_id = $1 AND status = $2 AND target_player_id = $3',
+      [game.id, 'accepted', userId]
+    );
+
+    if (existingAcceptance.rows.length > 0) {
+      return new Response(JSON.stringify({ message: 'You have already accepted an offer.' }), {
+        status: 400,
+      });
+    }
+
     const { rows: offerRows } = await db.query(
       'SELECT * FROM Offers WHERE id = $1 AND game_id = $2 AND status = $3',
       [offerId, game.id, 'pending']
     );
+
     if (offerRows.length === 0) {
       return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), {
         status: 404,
       });
     }
 
-    const result = await db.query(
+    const accepted = await db.query(
       'UPDATE Offers SET status = $1 WHERE id = $2 RETURNING *',
       ['accepted', offerId]
     );
 
-    return new Response(JSON.stringify({ message: 'Offer accepted.', offer: result.rows[0] }), {
+    await db.query(
+      'UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
+      ['rejected', game.id, offerId, 'pending']
+    );
+
+    return new Response(JSON.stringify({ message: 'Offer accepted.', offer: accepted.rows[0] }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
