@@ -11,6 +11,7 @@ export default function MatchPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +67,10 @@ export default function MatchPage() {
   const myTeam = winningTeam === 'team_1' ? team1 : teamA;
   const offerCandidates = myTeam.filter((pid) => pid !== currentUserId);
 
+  const alreadyAcceptedOffer = offers.find(
+    (o) => o.status === 'accepted' && o.target_player_id === currentUserId
+  );
+
   const handleSubmitOffer = async () => {
     if (!selectedPlayer || !offerAmount) return;
     setSubmitting(true);
@@ -85,6 +90,28 @@ export default function MatchPage() {
       console.error(err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAcceptOffer = async (offerId: number) => {
+    setAccepting(true);
+    try {
+      const res = await fetch(`/api/game/${match.id}/accept-offer`, {
+        method: 'POST',
+        body: JSON.stringify({ offerId }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.message || 'Failed to accept offer');
+      } else {
+        await fetchOffers(latestGame.id); // refresh offers
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error accepting offer');
+    } finally {
+      setAccepting(false);
     }
   };
 
@@ -126,7 +153,6 @@ export default function MatchPage() {
         </>
       )}
 
-      {/* Select Winner Form */}
       <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
 
       {latestGame?.winning_team && (
@@ -137,7 +163,6 @@ export default function MatchPage() {
         </div>
       )}
 
-      {/* Auction Phase */}
       {isAuction && (
         <div className="bg-yellow-100 p-4 rounded-xl shadow">
           <h3 className="text-lg font-semibold mb-4">Auction Phase</h3>
@@ -181,16 +206,36 @@ export default function MatchPage() {
             </div>
           )}
 
-          {/* Offers table */}
           <h4 className="font-semibold mb-2">Current Offers</h4>
-          <ul className="list-disc pl-5">
+          <ul className="list-disc pl-5 space-y-2">
             {offers.map((offer) => {
               const from = getPlayer(offer.from_player_id);
               const to = getPlayer(offer.target_player_id);
+              const canAccept =
+                isLoser &&
+                offer.status === 'pending' &&
+                !alreadyAcceptedOffer;
+
               return (
-                <li key={offer.id}>
-                  Offer from {from?.username} {isLoser && <> , they receive {offer.offer_amount} gold)</>}
-                  {to?.username} changes team
+                <li key={offer.id} className="flex items-center gap-4">
+                  <span>
+                    Offer from <strong>{from?.username}</strong>{' '}
+                    {isLoser && (
+                      <>
+                        , they offer <strong>{offer.offer_amount}</strong> gold to{' '}
+                      </>
+                    )}
+                    <strong>{to?.username}</strong>
+                  </span>
+                  {canAccept && (
+                    <button
+                      onClick={() => handleAcceptOffer(offer.id)}
+                      disabled={accepting}
+                      className="bg-green-600 text-white px-3 py-1 rounded"
+                    >
+                      {accepting ? 'Accepting...' : 'Accept Offer'}
+                    </button>
+                  )}
                 </li>
               );
             })}
