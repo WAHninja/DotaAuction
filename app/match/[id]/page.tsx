@@ -189,8 +189,8 @@ export default function MatchPage() {
               const to = getPlayer(offer.target_player_id);
               return (
                 <li key={offer.id}>
-                  {from?.username} → {to?.username}
-                  {isLoser && <> (Offer: {offer.offer_amount} gold)</>}
+                  Offer from {from?.username} {isLoser && <> , they receive {offer.offer_amount} gold)</>}
+                  {to?.username} changes team
                 </li>
               );
             })}
