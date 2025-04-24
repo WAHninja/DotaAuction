@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     // Add gold to the offer maker
     await db.query(
-      'UPDATE MatchPlayers SET gold = gold + $1 WHERE player_id = $2 AND match_id = $3',
+      'UPDATE match_players SET gold = gold + $1 WHERE player_id = $2 AND match_id = $3',
       [offer_amount, from_player_id, game.match_id]
     );
 
