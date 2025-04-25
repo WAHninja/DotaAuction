@@ -1,5 +1,5 @@
 import { getSession } from '@/app/session';
-import db from '../../lib/db';
+import db from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from './CreateMatchFormWrapper';
