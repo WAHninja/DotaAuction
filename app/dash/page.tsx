@@ -43,8 +43,6 @@ export default async function DashboardPage() {
     const ongoingMatches = ongoingResult.rows;
     const completedMatches = completedResult.rows;
 
-    import DashboardTabs from '@/app/components/DashboardTabs';
-
 return (
   <div className="relative min-h-screen animate-fadeIn">
     <div className="absolute inset-0 bg-black/60 z-0" />
