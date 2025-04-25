@@ -43,83 +43,73 @@ export default async function DashboardPage() {
     const completedMatches = completedResult.rows;
 
     return (
-      <div className="relative min-h-screen animate-fadeIn">
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/60 z-0" />
+    <div className="min-h-screen bg-[#1c1c1c] text-white p-4 md:p-8 space-y-8">
+      <h1 className="text-3xl font-bold text-center text-yellow-300">Dota Auctions Dashboard</h1>
 
-        {/* Content */}
-        <div className="relative z-10 p-6 text-white space-y-10 max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* LEFT: Create Match */}
-            <div className="flex-1 bg-gray-900/90 p-6 rounded-xl shadow-md space-y-4">
-              <h2 className="text-2xl font-semibold mb-2">Create a Match</h2>
-              <CreateMatchFormWrapper />
-            </div>
-
-            {/* RIGHT: Ongoing Matches */}
-            <div className="flex-1 space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold mb-2">Ongoing Matches</h2>
-                {ongoingMatches.length > 0 ? (
-                  ongoingMatches.map((match) => (
-                    <div
-                      key={match.id}
-                      className="bg-blue-900/80 p-4 rounded-xl space-y-1 shadow-md transform transition-transform duration-200 hover:scale-105"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Match #{match.id}</span>
-                        <Link href={`/match/${match.id}`}>
-                          <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm">
-                            Continue
-                          </button>
-                        </Link>
-                      </div>
-                      <p className="text-sm text-gray-200">
-                        Players: {match.players.join(', ')}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-400">No ongoing matches yet.</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Completed Matches */}
-          {completedMatches.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-semibold mb-2">Completed Matches</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {completedMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-gray-800/80 p-4 rounded-xl space-y-1 shadow-md transform transition-transform duration-200 hover:scale-105"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span>
-                        Match #{match.id} – Winner:{' '}
-                        <strong>
-                          {match.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
-                        </strong>
-                      </span>
-                      <Link href={`/match/${match.id}`}>
-                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
-                          View
-                        </button>
-                      </Link>
-                    </div>
-                    <p className="text-sm text-gray-300">
-                      Players: {match.players.join(', ')}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Start Match */}
+      <div className="flex justify-center">
+        <Button className="bg-red-700 hover:bg-red-600 text-white px-6 py-2 rounded-xl shadow-md">
+          + Start New Match
+        </Button>
       </div>
-    );
+
+      {/* Tabs for Ongoing, Completed, Stats */}
+      <Tabs defaultValue="ongoing" className="w-full">
+        <TabsList className="flex justify-center bg-gray-800 rounded-xl mb-4">
+          <TabsTrigger value="ongoing" className="text-yellow-200">Ongoing Matches</TabsTrigger>
+          <TabsTrigger value="completed" className="text-green-300">Completed Matches</TabsTrigger>
+          <TabsTrigger value="stats" className="text-blue-300">Stats</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ongoing">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3].map((id) => (
+              <Card key={id} className="bg-gray-900">
+                <CardHeader>
+                  <CardTitle className="text-lg">Match #{id}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>Players: Player1, Player2, Player3, Player4</p>
+                  <Button className="mt-2 bg-yellow-600 hover:bg-yellow-500">View Match</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="completed">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[4, 5].map((id) => (
+              <Card key={id} className="bg-gray-900">
+                <CardHeader>
+                  <CardTitle className="text-lg">Match #{id} - Winner: Team A</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>Players: Player5, Player6, Player7, Player8</p>
+                  <Button className="mt-2 bg-green-600 hover:bg-green-500">View Summary</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats">
+          <Card className="bg-gray-900">
+            <CardHeader>
+              <CardTitle className="text-lg">Match Stats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li>Total Matches Played: 10</li>
+                <li>Top Player: Player1 (12000 gold)</li>
+                <li>Most Wins: Player3 (5 wins)</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
   } catch (error) {
     console.error("Error fetching data:", error);
     return redirect('/login');
