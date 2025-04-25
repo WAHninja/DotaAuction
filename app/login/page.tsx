@@ -42,7 +42,6 @@ export default function LoginPage() {
             <input
               type="text"
               id="username"
-              placeholder="Username"
               value={username}
               onChange={e => setUsername(e.target.value)}
               className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
@@ -57,7 +56,6 @@ export default function LoginPage() {
             <input
               type="password"
               id="pin"
-              placeholder="PIN"
               value={pin}
               onChange={e => setPin(e.target.value)}
               className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
