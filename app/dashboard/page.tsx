@@ -14,38 +14,32 @@ export default async function DashboardPage() {
   );
   const user = userResult.rows[0];
 
-  const ongoingResult = await db.query('
-    
-    SELECT 
-      m.id,
-      m.created_at,
-      ARRAY_AGG(u.username ORDER BY u.username) AS players
-    FROM matches m
-    JOIN match_players mp ON mp.match_id = m.id
-    JOIN users u ON u.id = mp.user_id
-    WHERE mp.user_id = $1 AND m.winning_team IS NULL
-    GROUP BY m.id
-    ORDER BY m.created_at DESC
-    ,
-    [session.userId]
-  ');
+  const ongoingResult = await db.query(`
+  SELECT 
+    m.id,
+    m.created_at,
+    ARRAY_AGG(u.username ORDER BY u.username) AS players
+  FROM matches m
+  JOIN match_players mp ON mp.match_id = m.id
+  JOIN users u ON u.id = mp.user_id
+  WHERE mp.user_id = $1 AND m.winning_team IS NULL
+  GROUP BY m.id
+  ORDER BY m.created_at DESC
+`, [session.userId]);
 
-  const completedResult = await db.query('
-    
-    SELECT 
-      m.id,
-      m.created_at,
-      m.winning_team,
-      ARRAY_AGG(u.username ORDER BY u.username) AS players
-    FROM matches m
-    JOIN match_players mp ON mp.match_id = m.id
-    JOIN users u ON u.id = mp.user_id
-    WHERE mp.user_id = $1 AND m.winning_team IS NOT NULL
-    GROUP BY m.id
-    ORDER BY m.created_at DESC
-    ,
-    [session.userId]
-  ');
+const completedResult = await db.query(`
+  SELECT 
+    m.id,
+    m.created_at,
+    m.winning_team,
+    ARRAY_AGG(u.username ORDER BY u.username) AS players
+  FROM matches m
+  JOIN match_players mp ON mp.match_id = m.id
+  JOIN users u ON u.id = mp.user_id
+  WHERE mp.user_id = $1 AND m.winning_team IS NOT NULL
+  GROUP BY m.id
+  ORDER BY m.created_at DESC
+`, [session.userId]);
 
   const ongoingMatches = ongoingResult.rows;
   const completedMatches = completedResult.rows;
