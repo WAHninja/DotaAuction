@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from '@/app/components/CreateMatchFormWrapper';
+import DashboardTabs from '@/app/components/DashboardTabs';
 
 export default async function DashboardPage() {
   const session = await getSession();
