@@ -2,7 +2,7 @@ import { getSession } from '@/app/session';
 import db from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import CreateMatchFormWrapper from './CreateMatchFormWrapper';
+import CreateMatchFormWrapper from '@/app/components/CreateMatchFormWrapper';
 
 export default async function DashboardPage() {
   const session = await getSession();
