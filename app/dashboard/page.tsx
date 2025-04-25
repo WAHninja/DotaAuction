@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   );
   const user = userResult.rows[0];
 
-  const ongoingResult = await db.query(
+  const ongoingResult = await db.query('
     
     SELECT 
       m.id,
@@ -28,9 +28,9 @@ export default async function DashboardPage() {
     ORDER BY m.created_at DESC
     ,
     [session.userId]
-  );
+  ');
 
-  const completedResult = await db.query(
+  const completedResult = await db.query('
     
     SELECT 
       m.id,
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
     ORDER BY m.created_at DESC
     ,
     [session.userId]
-  );
+  ');
 
   const ongoingMatches = ongoingResult.rows;
   const completedMatches = completedResult.rows;
