@@ -42,83 +42,27 @@ export default async function DashboardPage() {
     const ongoingMatches = ongoingResult.rows;
     const completedMatches = completedResult.rows;
 
-    return (
-      <div className="relative min-h-screen animate-fadeIn">
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/60 z-0" />
+    import DashboardTabs from '@/app/components/DashboardTabs';
 
-        {/* Content */}
-        <div className="relative z-10 p-6 text-white space-y-10 max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* LEFT: Create Match */}
-            <div className="flex-1 bg-gray-900/90 p-6 rounded-xl shadow-md space-y-4">
-              <CreateMatchFormWrapper />
-            </div>
+return (
+  <div className="relative min-h-screen animate-fadeIn">
+    <div className="absolute inset-0 bg-black/60 z-0" />
+    <div className="relative z-10 p-6 text-white max-w-4xl mx-auto space-y-10">
 
-            {/* RIGHT: Ongoing Matches */}
-            <div className="flex-1 space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold mb-2">Ongoing Matches</h2>
-                {ongoingMatches.length > 0 ? (
-                  ongoingMatches.map((match) => (
-                    <div
-                      key={match.id}
-                      className="bg-blue-900/80 p-4 rounded-xl space-y-1 shadow-md transform transition-transform duration-200 hover:scale-105"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Match #{match.id}</span>
-                        <Link href={`/match/${match.id}`}>
-                          <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm">
-                            Continue
-                          </button>
-                        </Link>
-                      </div>
-                      <p className="text-sm text-gray-200">
-                        Players: {match.players.join(', ')}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-400">No ongoing matches yet.</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Completed Matches */}
-          {completedMatches.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-semibold mb-2">Completed Matches</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {completedMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-gray-800/80 p-4 rounded-xl space-y-1 shadow-md transform transition-transform duration-200 hover:scale-105"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span>
-                        Match #{match.id} – Winner:{' '}
-                        <strong>
-                          {match.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
-                        </strong>
-                      </span>
-                      <Link href={`/match/${match.id}`}>
-                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-md text-sm">
-                          View
-                        </button>
-                      </Link>
-                    </div>
-                    <p className="text-sm text-gray-300">
-                      Players: {match.players.join(', ')}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Create Match Section */}
+      <div className="bg-gray-900/90 p-6 rounded-xl shadow-md">
+        <h1 className="text-3xl font-bold mb-4 text-center">Create a New Match</h1>
+        <CreateMatchFormWrapper />
       </div>
-    );
+
+      {/* Tabs */}
+      <DashboardTabs
+        ongoingMatches={ongoingMatches}
+        completedMatches={completedMatches}
+      />
+    </div>
+  </div>
+);
   } catch (error) {
     console.error("Error fetching data:", error);
     return redirect('/login');
