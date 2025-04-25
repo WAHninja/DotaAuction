@@ -52,7 +52,6 @@ export default async function DashboardPage() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* LEFT: Create Match */}
             <div className="flex-1 bg-gray-900/90 p-6 rounded-xl shadow-md space-y-4">
-              <h2 className="text-2xl font-semibold mb-2">Create a Match</h2>
               <CreateMatchFormWrapper />
             </div>
 
