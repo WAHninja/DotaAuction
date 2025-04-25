@@ -8,7 +8,7 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'DELETE' });
-    router.push('/login');
+    router.push('https://dotaauction.onrender.com/login');
   };
 
   return (
