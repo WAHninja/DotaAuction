@@ -3,8 +3,8 @@ import db from '../../lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CreateMatchFormWrapper from './CreateMatchFormWrapper';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
+import { Card, CardContent } from '@/app/components/ui/card';
 
 export default async function DashboardPage() {
   const session = await getSession();
