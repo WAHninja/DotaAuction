@@ -71,10 +71,10 @@ export default function CreateMatchForm() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-6 bg-gradient-to-br from-[#1f1f1f] to-[#0d0d0d] text-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto space-y-6"
-    >
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col p-6 bg-gradient-to-br from-[#1f1f1f] to-[#0d0d0d] text-white rounded-2xl shadow-2xl w-full max-w-5xl mx-auto space-y-6 flex-grow"
+      >
       <h2 className="text-3xl font-bold text-orange-400 text-center">
         Create a Match
       </h2>
