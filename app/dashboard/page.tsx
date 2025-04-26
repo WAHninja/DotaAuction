@@ -51,7 +51,6 @@ export default async function DashboardPage() {
 
     return (
       <div className="relative min-h-screen animate-fadeIn">
-        <div className="absolute inset-0 bg-black/60 z-0" />
         <div className="relative z-10 p-6 text-white max-w-4xl mx-auto space-y-10">
           <CreateMatchFormWrapper />
           {/* Tabs */}
