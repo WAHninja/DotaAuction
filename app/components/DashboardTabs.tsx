@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react'; // Add a nice spinner icon
+import { Loader2 } from 'lucide-react';
 
 export default function DashboardTabs({
   ongoingMatches,
@@ -78,10 +78,10 @@ export default function DashboardTabs({
                     {match.players.map((player: string) => (
                       <span
                         key={player}
-                          className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                        className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
                       >
                         {player}
-                      /span>
+                      </span>
                     ))}
                   </div>
                 </div>
