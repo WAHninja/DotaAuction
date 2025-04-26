@@ -47,13 +47,7 @@ return (
   <div className="relative min-h-screen animate-fadeIn">
     <div className="absolute inset-0 bg-black/60 z-0" />
     <div className="relative z-10 p-6 text-white max-w-4xl mx-auto space-y-10">
-
-      {/* Create Match Section */}
-      <div className="bg-gray-900/90 p-6 rounded-xl shadow-md">
-        <h1 className="text-3xl font-bold mb-4 text-center">Create a New Match</h1>
-        <CreateMatchFormWrapper />
-      </div>
-
+      <CreateMatchFormWrapper />
       {/* Tabs */}
       <DashboardTabs
         ongoingMatches={ongoingMatches}
