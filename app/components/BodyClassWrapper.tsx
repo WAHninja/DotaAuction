@@ -20,7 +20,7 @@ export default function BodyClassWrapper() {
     } else if (isMatchPage) {
       body.classList.add('bg-[url("/LastSupper.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
     } else {
-      body.classList.add('bg-[url("/header_bg.webm")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
+      body.classList.add('bg-[url("/header_bg.mp4")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
     }
   }, [pathname]);
 
