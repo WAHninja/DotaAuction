@@ -19,9 +19,10 @@ export default async function DashboardPage() {
         m.created_at,
         ARRAY_AGG(u.username ORDER BY u.username) AS players
       FROM matches m
-      JOIN match_players mp ON mp.match_id = m.id
-      JOIN users u ON u.id = mp.user_id
-      WHERE mp.user_id = $1 AND m.winning_team IS NULL
+      JOIN match_players mp_user ON mp_user.match_id = m.id
+      JOIN match_players mp_all ON mp_all.match_id = m.id
+      JOIN users u ON u.id = mp_all.user_id
+      WHERE mp_user.user_id = $1 AND m.winning_team IS NULL
       GROUP BY m.id
       ORDER BY m.created_at DESC
     `, [session.userId]);
@@ -33,9 +34,10 @@ export default async function DashboardPage() {
         m.winning_team,
         ARRAY_AGG(u.username ORDER BY u.username) AS players
       FROM matches m
-      JOIN match_players mp ON mp.match_id = m.id
-      JOIN users u ON u.id = mp.user_id
-      WHERE mp.user_id = $1 AND m.winning_team IS NOT NULL
+      JOIN match_players mp_user ON mp_user.match_id = m.id
+      JOIN match_players mp_all ON mp_all.match_id = m.id
+      JOIN users u ON u.id = mp_all.user_id
+      WHERE mp_user.user_id = $1 AND m.winning_team IS NOT NULL
       GROUP BY m.id
       ORDER BY m.created_at DESC
     `, [session.userId]);
