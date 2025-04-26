@@ -74,9 +74,16 @@ export default function DashboardTabs({
                       </button>
                     </Link>
                   </div>
-                  <p className="text-sm text-gray-200">
-                    Players: {match.players.join(', ')}
-                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {match.players.map((player: string) => (
+                      <span
+                        key={player}
+                          className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                      >
+                        {player}
+                      /span>
+                    ))}
+                  </div>
                 </div>
               ))}
               {ongoingVisible < ongoingMatches.length && (
