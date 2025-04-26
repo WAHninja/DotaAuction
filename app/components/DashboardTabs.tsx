@@ -12,15 +12,15 @@ export default function DashboardTabs({
   completedMatches: any[];
 }) {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
-  const [ongoingVisible, setOngoingVisible] = useState(10);
-  const [completedVisible, setCompletedVisible] = useState(10);
+  const [ongoingVisible, setOngoingVisible] = useState(5);
+  const [completedVisible, setCompletedVisible] = useState(5);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
 
   const loadMoreOngoing = () => {
     setLoadingOngoing(true);
     setTimeout(() => {
-      setOngoingVisible(prev => prev + 10);
+      setOngoingVisible(prev => prev + 5);
       setLoadingOngoing(false);
     }, 500);
   };
@@ -28,7 +28,7 @@ export default function DashboardTabs({
   const loadMoreCompleted = () => {
     setLoadingCompleted(true);
     setTimeout(() => {
-      setCompletedVisible(prev => prev + 10);
+      setCompletedVisible(prev => prev + 5);
       setLoadingCompleted(false);
     }, 500);
   };
