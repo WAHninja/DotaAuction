@@ -7,9 +7,49 @@ import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import Link from 'next/link'; // <- New
 
 export default function MatchPage() {
-  // (no changes to hooks)
+  const { id } = useParams();
+  const [data, setData] = useState<any>(null);
+  const [offers, setOffers] = useState<any[]>([]);
+  const [offerAmount, setOfferAmount] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // (no changes to useEffect or fetchOffers)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/match/${id}`);
+        if (!res.ok) throw new Error(`Failed to fetch match data: ${res.statusText}`);
+        const result = await res.json();
+        setData(result);
+      } catch (err: any) {
+        setError(err.message || 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  const fetchOffers = async (gameId: number) => {
+    try {
+      const res = await fetch(`/api/game/offers?id=${gameId}`);
+      if (!res.ok) throw new Error('Failed to fetch offers');
+      const result = await res.json();
+      setOffers(result.offers || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (data?.latestGame?.status === 'Auction pending') {
+      fetchOffers(data.latestGame.id);
+    }
+  }, [data]);
 
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
