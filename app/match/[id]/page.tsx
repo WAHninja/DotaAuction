@@ -11,14 +11,6 @@ export default function MatchPage() {
 
   // (no changes to useEffect or fetchOffers)
 
-if (error) {
-  return <div className="p-6 text-center text-red-500">Error: {error.message}</div>;
-}
-if (!data) {
-  return <div className="p-6 text-center text-gray-300">Match not found.</div>;
-}
-
-
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
