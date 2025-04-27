@@ -49,18 +49,20 @@ export default function MatchPage() {
     }
   }, [data]);
 
-  if (loading) return <div className="p-4">Loading match...</div>;
-  if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
-  if (!data) return <div className="p-4">Match not found.</div>;
+  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
+  if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
+  if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
 
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
+
   const getPlayer = (pid: number) => players.find((p: any) => p.id === pid);
+
   const isInProgress = latestGame?.status === 'In progress';
   const isAuction = latestGame?.status === 'Auction pending';
-
   const winningTeam = latestGame?.winning_team;
+
   const isWinner = winningTeam === 'team_1' ? team1.includes(currentUserId) : teamA.includes(currentUserId);
   const isLoser = !isWinner;
 
@@ -85,7 +87,7 @@ export default function MatchPage() {
         }),
       });
       if (!res.ok) throw new Error('Failed to submit offer');
-      await fetchOffers(latestGame.id); // refresh offers
+      await fetchOffers(latestGame.id);
     } catch (err) {
       console.error(err);
     } finally {
@@ -105,7 +107,7 @@ export default function MatchPage() {
       if (!res.ok) {
         alert(result.message || 'Failed to accept offer');
       } else {
-        await fetchOffers(latestGame.id); // refresh offers
+        await fetchOffers(latestGame.id);
       }
     } catch (err) {
       console.error(err);
@@ -116,65 +118,79 @@ export default function MatchPage() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Match #{match.id}</h1>
+    <div className="max-w-5xl mx-auto p-6 text-gray-100">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
+          Match #{match.id}
+        </h1>
+        <p className="text-lg text-gray-400">
+          Game #{latestGame.id} - <span className="capitalize">{latestGame.status}</span>
+        </p>
+      </div>
 
-      {latestGame && (
-        <>
-          <h2 className="text-xl font-semibold mb-2">Latest Game #{latestGame.id}</h2>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-100 p-4 rounded-xl shadow">
-              <h3 className="font-bold text-lg mb-2">Team 1</h3>
-              <ul>
-                {[...new Set(team1)].map((pid) => {
-                  const player = getPlayer(pid);
-                  return (
-                    <li key={`team1-${pid}`}>
-                      {player?.username || 'Unknown'} (Gold: {player?.gold ?? 0})
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-            <div className="bg-gray-100 p-4 rounded-xl shadow">
-              <h3 className="font-bold text-lg mb-2">Team A</h3>
-              <ul>
-                {[...new Set(teamA)].map((pid) => {
-                  const player = getPlayer(pid);
-                  return (
-                    <li key={`teamA-${pid}`}>
-                      {player?.username || 'Unknown'} (Gold: {player?.gold ?? 0})
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Teams */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-gradient-to-b from-red-900 via-red-800 to-red-700 p-4 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Team 1</h2>
+          <ul className="space-y-2">
+            {team1.map((pid) => {
+              const player = getPlayer(pid);
+              return (
+                <li key={`team1-${pid}`} className="flex justify-between">
+                  <span>{player?.username || 'Unknown'}</span>
+                  <span className="text-yellow-400">{player?.gold ?? 0} gold</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
-      <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
+        <div className="bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 p-4 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Team A</h2>
+          <ul className="space-y-2">
+            {teamA.map((pid) => {
+              const player = getPlayer(pid);
+              return (
+                <li key={`teamA-${pid}`} className="flex justify-between">
+                  <span>{player?.username || 'Unknown'}</span>
+                  <span className="text-yellow-400">{player?.gold ?? 0} gold</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
 
+      {/* Winner */}
       {latestGame?.winning_team && (
-        <div className="mb-6">
-          <p className="text-green-700 font-medium">
+        <div className="text-center mb-8">
+          <p className="text-green-400 font-bold text-xl">
             Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
           </p>
         </div>
       )}
 
+      {/* Select Winner Form */}
+      {isInProgress && (
+        <div className="mb-8">
+          <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
+        </div>
+      )}
+
+      {/* Auction Phase */}
       {isAuction && (
-        <div className="bg-yellow-100 p-4 rounded-xl shadow">
-          <h3 className="text-lg font-semibold mb-4">Auction Phase</h3>
+        <div className="bg-yellow-300 bg-opacity-20 p-6 rounded-2xl shadow-lg mb-8">
+          <h3 className="text-2xl font-bold mb-4 text-yellow-400 text-center">Auction Phase</h3>
 
           {isWinner && (
-            <div className="mb-4">
-              <p className="mb-2 font-medium">Make an offer:</p>
-              <div className="flex items-center gap-2 mb-2">
+            <div className="mb-6">
+              <p className="font-semibold mb-2 text-center">Make an Offer:</p>
+              <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
                 <select
                   value={selectedPlayer}
                   onChange={(e) => setSelectedPlayer(e.target.value)}
-                  className="p-2 rounded border"
+                  className="p-2 rounded-lg bg-gray-800 text-white border border-gray-700"
                 >
                   <option value="">Select teammate</option>
                   {offerCandidates.map((pid) => {
@@ -193,12 +209,12 @@ export default function MatchPage() {
                   placeholder="Gold amount"
                   value={offerAmount}
                   onChange={(e) => setOfferAmount(e.target.value)}
-                  className="p-2 rounded border w-32"
+                  className="p-2 rounded-lg bg-gray-800 text-white border border-gray-700 w-32"
                 />
                 <button
                   onClick={handleSubmitOffer}
                   disabled={submitting}
-                  className="bg-blue-600 text-white px-4 py-2 rounded"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
                 >
                   {submitting ? 'Submitting...' : 'Submit'}
                 </button>
@@ -206,40 +222,36 @@ export default function MatchPage() {
             </div>
           )}
 
-          <h4 className="font-semibold mb-2">Current Offers</h4>
-          <ul className="list-disc pl-5 space-y-2">
-            {offers.map((offer) => {
-              const from = getPlayer(offer.from_player_id);
-              const to = getPlayer(offer.target_player_id);
-              const canAccept =
-                isLoser &&
-                offer.status === 'pending' &&
-                !alreadyAcceptedOffer;
+          <div>
+            <h4 className="text-xl font-bold mb-2">Current Offers</h4>
+            <ul className="space-y-4">
+              {offers.map((offer) => {
+                const from = getPlayer(offer.from_player_id);
+                const to = getPlayer(offer.target_player_id);
+                const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
 
-              return (
-                <li key={offer.id} className="flex items-center gap-4">
-                  <span>
-                    Offer from <strong>{from?.username}</strong>{' '}
-                    {isLoser && (
-                      <>
-                        , they offer <strong>{offer.offer_amount}</strong> gold to{' '}
-                      </>
+                return (
+                  <li
+                    key={offer.id}
+                    className="flex flex-col md:flex-row items-center justify-between bg-gray-800 p-4 rounded-xl"
+                  >
+                    <span>
+                      <strong>{from?.username}</strong> offers <strong className="text-yellow-400">{offer.offer_amount}</strong> gold to <strong>{to?.username}</strong>
+                    </span>
+                    {canAccept && (
+                      <button
+                        onClick={() => handleAcceptOffer(offer.id)}
+                        disabled={accepting}
+                        className="mt-2 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                      >
+                        {accepting ? 'Accepting...' : 'Accept Offer'}
+                      </button>
                     )}
-                    <strong>{to?.username}</strong>
-                  </span>
-                  {canAccept && (
-                    <button
-                      onClick={() => handleAcceptOffer(offer.id)}
-                      disabled={accepting}
-                      className="bg-green-600 text-white px-3 py-1 rounded"
-                    >
-                      {accepting ? 'Accepting...' : 'Accept Offer'}
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       )}
     </div>
