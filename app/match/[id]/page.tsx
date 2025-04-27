@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image'; // <- New
+import Image from 'next/image';
+import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
-import Link from 'next/link'; // <- New
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -51,6 +51,48 @@ export default function MatchPage() {
     }
   }, [data]);
 
+  const handleSubmitOffer = async () => {
+    if (!selectedPlayer || !offerAmount) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/game/${data.latestGame.id}/submit-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetPlayerId: Number(selectedPlayer),
+          offerAmount: Number(offerAmount),
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to submit offer');
+      await fetchOffers(data.latestGame.id); // Refresh offers
+      setSelectedPlayer('');
+      setOfferAmount('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAcceptOffer = async (offerId: number) => {
+    setAccepting(true);
+    try {
+      const res = await fetch(`/api/match/${id}/accept-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to accept offer');
+      await fetchOffers(data.latestGame.id); // Refresh offers
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAccepting(false);
+    }
+  };
+
   if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
   if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
   if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
@@ -74,8 +116,6 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
-
-  // (handleSubmitOffer and handleAcceptOffer stay the same)
 
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
@@ -153,7 +193,7 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* Winner */}
+      {/* Winning Team */}
       {latestGame?.winning_team && (
         <div className="text-center mb-8">
           <p className="text-green-400 font-bold text-xl">
@@ -174,15 +214,47 @@ export default function MatchPage() {
         <div className="bg-yellow-300 bg-opacity-20 p-6 rounded-2xl shadow-lg mb-8">
           <h3 className="text-2xl font-bold mb-4 text-yellow-400 text-center">Auction Phase</h3>
 
+          {/* Offer form for winners */}
           {isWinner && (
             <div className="mb-6">
               <p className="font-semibold mb-2 text-center">Make an Offer:</p>
               <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
-                {/* (offer form stays same) */}
+                <select
+                  value={selectedPlayer}
+                  onChange={(e) => setSelectedPlayer(e.target.value)}
+                  className="px-3 py-2 rounded-lg text-black"
+                >
+                  <option value="">Select Player</option>
+                  {offerCandidates.map((pid) => {
+                    const player = getPlayer(pid);
+                    return (
+                      <option key={pid} value={pid}>
+                        {player?.username || 'Unknown'}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                <input
+                  type="number"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                  placeholder="Offer Amount (250-2000)"
+                  className="px-3 py-2 rounded-lg text-black"
+                />
+
+                <button
+                  onClick={handleSubmitOffer}
+                  disabled={submitting}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                >
+                  {submitting ? 'Submitting...' : 'Submit Offer'}
+                </button>
               </div>
             </div>
           )}
 
+          {/* Current Offers */}
           <div>
             <h4 className="text-xl font-bold mb-2">Current Offers</h4>
             <ul className="space-y-4">
