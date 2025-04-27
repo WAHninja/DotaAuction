@@ -4,8 +4,7 @@ import { getSessionIdFromCookies } from '@/app/session';
 import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
 import Image from 'next/image';
-import Head from 'next/head';
-import BodyClassWrapper from './components/BodyClassWrapper'; // ✅ Import client component
+import BodyClassWrapper from './components/BodyClassWrapper';
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -40,45 +39,38 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={cinzel.variable}>
-      <Head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap"
-          rel="stylesheet"
-        />
-      </Head>
-      <body className="bg-background text-text font-sans">
-        <BodyClassWrapper /> {/* ✅ Inject dynamic bg class */}
+      <body className="relative z-10 bg-gradient-to-b from-gray-900 via-gray-800 to-black text-gray-200 font-sans min-h-screen flex flex-col">
+        <BodyClassWrapper />
+
         <header className="bg-gradient-to-r from-radiant-green via-surface to-dire-red p-4 shadow-lg border-b border-gold">
-          <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center">
+          <div className="container mx-auto flex justify-between items-center px-4">
+            <div className="flex items-center space-x-4">
               <Image
                 src="/logo.png"
                 alt="Dota Auctions Logo"
-                width={150}
-                height={50}
+                width={120}
+                height={40}
+                className="h-auto w-auto"
               />
-              <h1 className="text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
+              <h1 className="text-2xl md:text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
                 <Link href="/">Defence of the Auctions</Link>
               </h1>
             </div>
-            <nav className="space-x-4 text-lg">
+            <nav className="space-x-4 text-base md:text-lg">
               {user ? (
                 <>
-                  <span className="italic text-gold">Welcome, {user.username}</span>
+                  <span className="italic text-gold hidden sm:inline">Welcome, {user.username}</span>
                   <Link href="/" className="hover:text-gold transition">Home</Link>
                   <form action="/logout" method="POST" className="inline">
                     <button className="ml-2 underline text-dire-red hover:text-gold transition">Logout</button>
                   </form>
                 </>
-              ) : (
-                <>
-                </>
-              )}
+              ) : null}
             </nav>
           </div>
         </header>
 
-        <main className="min-h-screen container mx-auto px-4 py-8">
+        <main className="flex-grow container mx-auto px-4 py-8">
           {children}
         </main>
 
