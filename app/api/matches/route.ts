@@ -1,4 +1,3 @@
-  // app/api/matches/route.ts
 import { NextRequest } from 'next/server';
 import db from '../../../lib/db';
 import { getSession } from '@/app/session';
@@ -56,14 +55,6 @@ export async function POST(req: NextRequest) {
         'UPDATE matches SET game_id = $1 WHERE id = $2',
         [gameId, matchId]
       );
-
-      const insertPlayerPromises = playerIds.map((playerId) => {
-        return client.query(
-    '      INSERT INTO match_players (match_id, user_id, gold) VALUES ($1, $2, $3)',
-          [matchId, playerId, 0]
-        );
-      });
-      await Promise.all(insertPlayerPromises);
 
       await client.query('COMMIT');
 
