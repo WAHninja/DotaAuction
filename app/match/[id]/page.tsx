@@ -11,9 +11,6 @@ export default function MatchPage() {
 
   // (no changes to useEffect or fetchOffers)
 
-  if (!data && !error) {
-  return <div className="p-6 text-center text-gray-300">Loading match...</div>;
-}
 if (error) {
   return <div className="p-6 text-center text-red-500">Error: {error.message}</div>;
 }
