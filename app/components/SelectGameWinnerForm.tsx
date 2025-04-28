@@ -48,36 +48,42 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
   };
 
   return (
-    <div className="border p-4 rounded-xl bg-white shadow-md mt-6">
-      <h2 className="text-xl font-bold mb-2">Select Winning Team for Game</h2>
-      <div className="flex gap-4 mb-4">
-        <label className="flex items-center gap-2">
+    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn max-w-xl mx-auto">
+      <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
+      <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
+        <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
           <input
             type="radio"
             name="winner"
             value="team_1"
             onChange={() => setSelectedTeam('team_1')}
+            className="accent-gold"
           />
-          Team 1
+          <span className="font-semibold">Team 1</span>
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
           <input
             type="radio"
             name="winner"
             value="team_a"
             onChange={() => setSelectedTeam('team_a')}
+            className="accent-gold"
           />
-          Team A
+          <span className="font-semibold">Team A</span>
         </label>
       </div>
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? 'Submitting...' : 'Submit Winner'}
-      </button>
-      {message && <p className="mt-2 text-sm text-red-500">{message}</p>}
+      <div className="flex justify-center">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Submitting...' : 'Submit Winner'}
+        </button>
+      </div>
+      {message && (
+        <p className="mt-4 text-center text-sm text-red-400 font-semibold">{message}</p>
+      )}
     </div>
   );
 }
