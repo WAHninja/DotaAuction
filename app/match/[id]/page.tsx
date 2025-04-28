@@ -17,6 +17,42 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // WebSocket connection
+  useEffect(() => {
+    const socket = new WebSocket(`ws://your-websocket-url.com/match/${id}`);
+
+    socket.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'offer_update') {
+        // Update offers when a new offer is made
+        setOffers((prevOffers) => [...prevOffers, message.offer]);
+      } else if (message.type === 'game_status_update') {
+        // Update game status or auction phase when it changes
+        setData((prevData: any) => ({
+          ...prevData,
+          latestGame: message.latestGame,
+        }));
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error: ', error);
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    // Clean up WebSocket connection when component unmounts
+    return () => {
+      socket.close();
+    };
+  }, [id]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -203,93 +239,95 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* Select Winner Form */}
-      {isInProgress && (
-        <div className="mb-8">
-          <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
-        </div>
-      )}
-
-      {/* Auction Phase */}
-      {isAuction && (
-        <div className="bg-yellow-300 bg-opacity-20 p-6 rounded-2xl shadow-lg mb-8">
-          <h3 className="text-2xl font-bold mb-4 text-yellow-400 text-center">Auction Phase</h3>
-
-          {/* Offer form for winners */}
-          {isWinner && (
-            <div className="mb-6">
-              <p className="font-semibold mb-2 text-center">Make an Offer:</p>
-              <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
-                <select
-                  value={selectedPlayer}
-                  onChange={(e) => setSelectedPlayer(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-black"
-                >
-                  <option value="">Select Player</option>
-                  {offerCandidates.map((pid) => {
-                    const player = getPlayer(pid);
-                    return (
-                      <option key={pid} value={pid}>
-                        {player?.username || 'Unknown'}
-                      </option>
-                    );
-                  })}
-                </select>
-
-                <input
-                  type="number"
-                  value={offerAmount}
-                  onChange={(e) => setOfferAmount(e.target.value)}
-                  placeholder="Offer Amount (250-2000)"
-                  className="px-3 py-2 rounded-lg text-black"
-                />
-
-                <button
-                  onClick={handleSubmitOffer}
-                  disabled={submitting}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-                >
-                  {submitting ? 'Submitting...' : 'Submit Offer'}
-                </button>
-              </div>
+      {/* Auction Section */}
+      {isAuction && !alreadyAcceptedOffer && (
+        <div className="bg-gray-700 p-6 rounded-xl shadow-md">
+          <h3 className="text-xl font-bold text-yellow-400">Auction Phase</h3>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="offer-amount" className="block text-gray-300">
+                Offer Amount (250-2000)
+              </label>
+              <input
+                type="number"
+                id="offer-amount"
+                className="w-full mt-2 p-3 rounded-md"
+                value={offerAmount}
+                onChange={(e) => setOfferAmount(e.target.value)}
+                disabled={submitting}
+                min={250}
+                max={2000}
+              />
             </div>
-          )}
 
-          {/* Current Offers */}
-          <div>
-            <h4 className="text-xl font-bold mb-2">Current Offers</h4>
-            <ul className="space-y-4">
-              {offers.map((offer) => {
-                const from = getPlayer(offer.from_player_id);
-                const to = getPlayer(offer.target_player_id);
-                const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
+            <div>
+              <label htmlFor="target-player" className="block text-gray-300">
+                Select Player to Offer
+              </label>
+              <select
+                id="target-player"
+                className="w-full mt-2 p-3 rounded-md"
+                value={selectedPlayer}
+                onChange={(e) => setSelectedPlayer(e.target.value)}
+                disabled={submitting}
+              >
+                <option value="">Select a player</option>
+                {offerCandidates.map((pid) => {
+                  const player = getPlayer(pid);
+                  return (
+                    <option key={pid} value={pid}>
+                      {player?.username || 'Unknown'}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
 
-                return (
-                  <li
-                    key={offer.id}
-                    className="flex flex-col md:flex-row items-center justify-between bg-gray-800 p-4 rounded-xl"
-                  >
-                    <span>
-                      <strong>{from?.username}</strong> offers <strong className="text-yellow-400">{offer.offer_amount}</strong> 
-                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1" /> 
-                      to <strong>{to?.username}</strong>
-                    </span>
-                    {canAccept && (
-                      <button
-                        onClick={() => handleAcceptOffer(offer.id)}
-                        disabled={accepting}
-                        className="mt-2 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-                      >
-                        {accepting ? 'Accepting...' : 'Accept Offer'}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <button
+              onClick={handleSubmitOffer}
+              disabled={submitting || !offerAmount || !selectedPlayer}
+              className={`mt-4 w-full bg-yellow-500 hover:bg-yellow-400 text-black py-2 rounded-xl font-semibold ${
+                submitting || !offerAmount || !selectedPlayer ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {submitting ? 'Submitting...' : 'Submit Offer'}
+            </button>
           </div>
         </div>
       )}
+
+      {/* Offers */}
+      {isAuction && offers.length > 0 && (
+        <div className="mt-8 bg-gray-700 p-6 rounded-xl shadow-md">
+          <h3 className="text-xl font-bold text-yellow-400">Offers</h3>
+          <ul className="space-y-4">
+            {offers.map((offer) => (
+              <li
+                key={offer.id}
+                className={`flex justify-between items-center ${offer.status === 'accepted' ? 'bg-green-500' : ''}`}
+              >
+                <span>
+                  Offer by {getPlayer(offer.from_user_id)?.username}: {offer.offer_amount} Gold
+                </span>
+                {isLoser && (
+                  <button
+                    onClick={() => handleAcceptOffer(offer.id)}
+                    disabled={accepting || offer.status === 'accepted'}
+                    className={`px-4 py-2 rounded-xl ${
+                      offer.status === 'accepted' ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-400'
+                    }`}
+                  >
+                    {accepting ? 'Accepting...' : 'Accept Offer'}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Game Winner Selection */}
+      {isWinner && <SelectGameWinnerForm gameId={latestGame.id} />}
     </div>
   );
 }
