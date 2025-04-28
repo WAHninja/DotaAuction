@@ -132,17 +132,27 @@ export default function MatchPage() {
       <div className="text-center mb-8">
         <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
           Match #{match.id}
-        </h1>
+         </h1>
         <p className="text-lg text-gray-400 flex justify-center items-center gap-2">
           Game #{latestGame.id}
-          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-            latestGame.status === 'Auction pending' ? 'bg-yellow-500 text-black' :
-            latestGame.status === 'In progress' ? 'bg-blue-500' :
-            latestGame.status === 'Finished' ? 'bg-green-500' :
-            'bg-gray-500'
-          }`}>
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-bold ${
+              latestGame.status === 'Auction pending'
+                ? 'bg-yellow-500 text-black'
+                : latestGame.status === 'In progress'
+                ? 'bg-blue-500'
+                : latestGame.status === 'Finished'
+                ? 'bg-green-500'
+                : 'bg-gray-500'
+            }`}
+          >
             {latestGame.status}
           </span>
+          {latestGame?.winning_team && (
+            <span className="px-3 py-1 rounded-full text-sm font-bold text-green-400">
+              Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
+            </span>
+          )}
         </p>
       </div>
 
@@ -192,15 +202,6 @@ export default function MatchPage() {
           </ul>
         </div>
       </div>
-
-      {/* Winning Team */}
-      {latestGame?.winning_team && (
-        <div className="text-center mb-8">
-          <p className="text-green-400 font-bold text-xl">
-            Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
-          </p>
-        </div>
-      )}
 
       {/* Select Winner Form */}
       {isInProgress && (
