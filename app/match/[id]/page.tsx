@@ -154,16 +154,6 @@ export default function MatchPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto p-6 text-gray-100">
-      {/* Back button */}
-      <div className="mb-6">
-        <Link href="/dashboard">
-          <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl">
-            ← Back to Dashboard
-          </button>
-        </Link>
-      </div>
-
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
