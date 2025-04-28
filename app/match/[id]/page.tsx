@@ -314,8 +314,11 @@ export default function MatchPage() {
         </div>
       )}
 
-      {/* Select Winner Section */}
-      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
-    </div>
+      {/* Select Winner Form */}
+      {isInProgress && (
+        <div className="mb-8">
+          <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
+        </div>
+      )}
   );
 }
