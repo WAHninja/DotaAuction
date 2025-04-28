@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 
 export default function MatchPage() {
@@ -155,11 +154,12 @@ export default function MatchPage() {
   );
 
   return (
+    <div>
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
           Match #{match.id}
-         </h1>
+        </h1>
         <p className="text-lg text-gray-400 flex justify-center items-center gap-2">
           Game #{latestGame.id}
           <span
@@ -287,41 +287,35 @@ export default function MatchPage() {
         </div>
       )}
 
-      {/* Offers */}
+      {/* Offers List */}
       {isAuction && offers.length > 0 && (
-        <div className="mt-8 bg-gray-700 p-6 rounded-xl shadow-md">
-          <h3 className="text-xl font-bold text-yellow-400">Offers</h3>
-          <ul className="space-y-4">
-            {offers.map((offer) => (
-              <li
-                key={offer.id}
-                className={`flex justify-between items-center ${offer.status === 'accepted' ? 'bg-green-500' : ''}`}
-              >
-                <span>
-                  Offer by {getPlayer(offer.from_user_id)?.username}: {offer.offer_amount} Gold
-                </span>
-                {isLoser && (
-                  <button
-                    onClick={() => handleAcceptOffer(offer.id)}
-                    disabled={accepting || offer.status === 'accepted'}
-                    className={`px-4 py-2 rounded-xl ${
-                      offer.status === 'accepted' ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-400'
-                    }`}
-                  >
-                    {accepting ? 'Accepting...' : 'Accept Offer'}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+        <div className="mt-8">
+          <h3 className="text-xl font-bold text-yellow-400">Available Offers</h3>
+          <div className="space-y-4">
+            {offers.map((offer) => {
+              const player = getPlayer(offer.from_user_id);
+              return (
+                <div key={offer.id} className="flex justify-between items-center bg-gray-800 p-4 rounded-md">
+                  <span className="text-gray-300">{player?.username || 'Unknown'}</span>
+                  <span className="text-yellow-400">{offer.offer_amount}</span>
+                  <span className="text-gray-300">Gold</span>
+                  {isLoser && !alreadyAcceptedOffer && (
+                    <button
+                      onClick={() => handleAcceptOffer(offer.id)}
+                      className="ml-4 bg-green-600 hover:bg-green-500 px-4 py-2 rounded-md text-white font-semibold"
+                    >
+                      Accept
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Select Winner Form */}
-      {isInProgress && (
-        <div className="mb-8">
-          <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
-        </div>
-      )}
+      {/* Select Winner Section */}
+      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
+    </div>
   );
 }
