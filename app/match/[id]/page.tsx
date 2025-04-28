@@ -17,42 +17,6 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // WebSocket connection
-  useEffect(() => {
-    const socket = new WebSocket(`ws://your-websocket-url.com/match/${id}`);
-
-    socket.onopen = () => {
-      console.log('WebSocket connection established');
-    };
-
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'offer_update') {
-        // Update offers when a new offer is made
-        setOffers((prevOffers) => [...prevOffers, message.offer]);
-      } else if (message.type === 'game_status_update') {
-        // Update game status or auction phase when it changes
-        setData((prevData: any) => ({
-          ...prevData,
-          latestGame: message.latestGame,
-        }));
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('WebSocket error: ', error);
-    };
-
-    socket.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-
-    // Clean up WebSocket connection when component unmounts
-    return () => {
-      socket.close();
-    };
-  }, [id]);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -154,12 +118,21 @@ export default function MatchPage() {
   );
 
   return (
-    <div>
+    <div className="max-w-5xl mx-auto p-6 text-gray-100">
+      {/* Back button */}
+      <div className="mb-6">
+        <Link href="/dashboard">
+          <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl">
+            ← Back to Dashboard
+          </button>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
           Match #{match.id}
-        </h1>
+         </h1>
         <p className="text-lg text-gray-400 flex justify-center items-center gap-2">
           Game #{latestGame.id}
           <span
@@ -230,95 +203,93 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* Auction Section */}
-      {isAuction && !alreadyAcceptedOffer && (
-        <div className="bg-gray-700 p-6 rounded-xl shadow-md">
-          <h3 className="text-xl font-bold text-yellow-400">Auction Phase</h3>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="offer-amount" className="block text-gray-300">
-                Offer Amount (250-2000)
-              </label>
-              <input
-                type="number"
-                id="offer-amount"
-                className="w-full mt-2 p-3 rounded-md"
-                value={offerAmount}
-                onChange={(e) => setOfferAmount(e.target.value)}
-                disabled={submitting}
-                min={250}
-                max={2000}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="target-player" className="block text-gray-300">
-                Select Player to Offer
-              </label>
-              <select
-                id="target-player"
-                className="w-full mt-2 p-3 rounded-md"
-                value={selectedPlayer}
-                onChange={(e) => setSelectedPlayer(e.target.value)}
-                disabled={submitting}
-              >
-                <option value="">Select a player</option>
-                {offerCandidates.map((pid) => {
-                  const player = getPlayer(pid);
-                  return (
-                    <option key={pid} value={pid}>
-                      {player?.username || 'Unknown'}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <button
-              onClick={handleSubmitOffer}
-              disabled={submitting || !offerAmount || !selectedPlayer}
-              className={`mt-4 w-full bg-yellow-500 hover:bg-yellow-400 text-black py-2 rounded-xl font-semibold ${
-                submitting || !offerAmount || !selectedPlayer ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {submitting ? 'Submitting...' : 'Submit Offer'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Offers List */}
-      {isAuction && offers.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-xl font-bold text-yellow-400">Available Offers</h3>
-          <div className="space-y-4">
-            {offers.map((offer) => {
-              const player = getPlayer(offer.from_user_id);
-              return (
-                <div key={offer.id} className="flex justify-between items-center bg-gray-800 p-4 rounded-md">
-                  <span className="text-gray-300">{player?.username || 'Unknown'}</span>
-                  <span className="text-yellow-400">{offer.offer_amount}</span>
-                  <span className="text-gray-300">Gold</span>
-                  {isLoser && !alreadyAcceptedOffer && (
-                    <button
-                      onClick={() => handleAcceptOffer(offer.id)}
-                      className="ml-4 bg-green-600 hover:bg-green-500 px-4 py-2 rounded-md text-white font-semibold"
-                    >
-                      Accept
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Select Winner Form */}
       {isInProgress && (
         <div className="mb-8">
           <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
         </div>
       )}
+
+      {/* Auction Phase */}
+      {isAuction && (
+        <div className="bg-yellow-300 bg-opacity-20 p-6 rounded-2xl shadow-lg mb-8">
+          <h3 className="text-2xl font-bold mb-4 text-yellow-400 text-center">Auction Phase</h3>
+
+          {/* Offer form for winners */}
+          {isWinner && (
+            <div className="mb-6">
+              <p className="font-semibold mb-2 text-center">Make an Offer:</p>
+              <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
+                <select
+                  value={selectedPlayer}
+                  onChange={(e) => setSelectedPlayer(e.target.value)}
+                  className="px-3 py-2 rounded-lg text-black"
+                >
+                  <option value="">Select Player</option>
+                  {offerCandidates.map((pid) => {
+                    const player = getPlayer(pid);
+                    return (
+                      <option key={pid} value={pid}>
+                        {player?.username || 'Unknown'}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                <input
+                  type="number"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                  placeholder="Offer Amount (250-2000)"
+                  className="px-3 py-2 rounded-lg text-black"
+                />
+
+                <button
+                  onClick={handleSubmitOffer}
+                  disabled={submitting}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                >
+                  {submitting ? 'Submitting...' : 'Submit Offer'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Current Offers */}
+          <div>
+            <h4 className="text-xl font-bold mb-2">Current Offers</h4>
+            <ul className="space-y-4">
+              {offers.map((offer) => {
+                const from = getPlayer(offer.from_player_id);
+                const to = getPlayer(offer.target_player_id);
+                const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
+
+                return (
+                  <li
+                    key={offer.id}
+                    className="flex flex-col md:flex-row items-center justify-between bg-gray-800 p-4 rounded-xl"
+                  >
+                    <span>
+                      <strong>{from?.username}</strong> offers <strong className="text-yellow-400">{offer.offer_amount}</strong> 
+                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1" /> 
+                      to <strong>{to?.username}</strong>
+                    </span>
+                    {canAccept && (
+                      <button
+                        onClick={() => handleAcceptOffer(offer.id)}
+                        disabled={accepting}
+                        className="mt-2 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                      >
+                        {accepting ? 'Accepting...' : 'Accept Offer'}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
