@@ -5,8 +5,6 @@ import db from '../lib/db';
 import { Cinzel } from 'next/font/google';
 import Image from 'next/image';
 import BodyClassWrapper from './components/BodyClassWrapper';
-import { useState } from 'react';
-import { FaBars, FaTimes } from 'react-icons/fa'; // For hamburger and close icons
 import MobileResponsiveHeader from './components/MobileResponsiveHeader';
 
 
