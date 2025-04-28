@@ -43,26 +43,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <BodyClassWrapper />
 
         <header className="bg-gradient-to-r from-radiant-green via-surface to-dire-red p-4 shadow-lg border-b border-gold">
-          <div className="container mx-auto flex justify-between items-center px-4">
-            <div className="flex items-center space-x-4">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 px-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-center sm:text-left">
               <Image
                 src="/logo.png"
                 alt="Dota Auctions Logo"
                 width={120}
                 height={40}
-                className="h-auto w-auto"
+                className="h-auto w-auto mx-auto sm:mx-0"
               />
               <h1 className="text-2xl md:text-4xl font-cinzel tracking-wide text-gold drop-shadow-md">
                 <Link href="/">Defence of the Auctions</Link>
               </h1>
             </div>
-            <nav className="space-x-4 text-base md:text-lg">
+            <nav className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-base md:text-lg">
               {user ? (
                 <>
-                  <span className="italic text-gold hidden sm:inline">Welcome, {user.username}</span>
+                  <span className="italic text-gold text-sm sm:text-base">Welcome, {user.username}</span>
                   <Link href="/" className="hover:text-gold transition">Home</Link>
                   <form action="/logout" method="POST" className="inline">
-                    <button className="ml-2 underline text-dire-red hover:text-gold transition">Logout</button>
+                    <button className="underline text-dire-red hover:text-gold transition">Logout</button>
                   </form>
                 </>
               ) : null}
@@ -70,7 +70,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
 
-        <main className="flex-grow container mx-auto px-4 py-8">
+        <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
           {children}
         </main>
 
