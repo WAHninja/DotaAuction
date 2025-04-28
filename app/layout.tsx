@@ -1,5 +1,3 @@
-'use client';
-
 import './globals.css';
 import Link from 'next/link';
 import { getSessionIdFromCookies } from '@/app/session';
@@ -9,6 +7,8 @@ import Image from 'next/image';
 import BodyClassWrapper from './components/BodyClassWrapper';
 import { useState } from 'react';
 import { FaBars, FaTimes } from 'react-icons/fa'; // For hamburger and close icons
+import MobileResponsiveHeader from './components/MobileResponsiveHeader';
+
 
 const cinzel = Cinzel({
   subsets: ['latin'],
