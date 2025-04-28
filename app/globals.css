@@ -3,26 +3,30 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-gray-950 text-gray-200 font-sans;
+/* Base styles */
+@layer base {
+  body {
+    @apply bg-gray-950 text-gray-200 font-sans;
+  }
+
+  h1, h2, h3 {
+    @apply font-cinzel;
+  }
+
+  a {
+    @apply text-yellow-400 hover:text-yellow-300 transition;
+  }
+
+  button, input[type="submit"] {
+    @apply bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded shadow transition disabled:bg-gray-600 disabled:cursor-not-allowed;
+  }
+
+  input[type="checkbox"] {
+    @apply accent-yellow-500;
+  }
 }
 
-h1, h2, h3 {
-  @apply font-cinzel;
-}
-
-a {
-  @apply text-yellow-400 hover:text-yellow-300 transition;
-}
-
-button, input[type="submit"] {
-  @apply bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded shadow transition disabled:bg-gray-600 disabled:cursor-not-allowed;
-}
-
-input[type="checkbox"] {
-  @apply accent-yellow-500;
-}
-
+/* Extra utilities */
 @layer utilities {
   .animate-fadeIn {
     @apply opacity-0 animate-fade;
