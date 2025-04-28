@@ -18,20 +18,32 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`/api/match/${id}`);
-        if (!res.ok) throw new Error(`Failed to fetch match data: ${res.statusText}`);
-        const result = await res.json();
-        setData(result);
-      } catch (err: any) {
-        setError(err.message || 'Unknown error');
-      } finally {
-        setLoading(false);
+    const ws = new WebSocket(`wss://your-app-name.onrender.com`);
+
+    ws.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log('Received message:', message);
+
+      // Update match data when a relevant message is received
+      if (message.matchData) {
+        setData(message.matchData);
+      }
+      if (message.offers) {
+        setOffers(message.offers);
       }
     };
 
-    fetchData();
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    return () => {
+      ws.close();
+    };
   }, [id]);
 
   const fetchOffers = async (gameId: number) => {
@@ -44,12 +56,6 @@ export default function MatchPage() {
       console.error(err);
     }
   };
-
-  useEffect(() => {
-    if (data?.latestGame?.status === 'Auction pending') {
-      fetchOffers(data.latestGame.id);
-    }
-  }, [data]);
 
   const handleSubmitOffer = async () => {
     if (!selectedPlayer || !offerAmount) return;
