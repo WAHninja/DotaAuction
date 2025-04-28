@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import React from 'react';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 
 export default function MatchPage() {
