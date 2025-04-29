@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import SelectGameWinnerForm from './SelectGameWinnerForm';
+import { Realtime } from 'ably';
 
 interface Player {
   id: number;
@@ -67,6 +68,42 @@ const MatchPage = () => {
     }
   };
 
+useEffect(() => {
+  const ably = new Realtime(process.env.NEXT_PUBLIC_ABLY_API_KEY);
+  const channel = ably.channels.get(`match:${id}`);
+
+  // When winner is selected
+  channel.subscribe('winner-selected', async () => {
+    console.log('Winner selected event received');
+    await fetchData(); // Update game + match state
+  });
+
+  // When a new offer is submitted
+  channel.subscribe('offer-submitted', async () => {
+    console.log('Offer submitted event received');
+    if (data?.latestGame?.status === 'Auction pending') {
+      await fetchOffers(data.latestGame.id); // Update offers
+    }
+  });
+
+  // When an offer is accepted
+  channel.subscribe('offer-accepted', async () => {
+    console.log('Offer accepted event received');
+    await fetchData(); // Update game, match, and hide auction phase
+  });
+
+  // Optional: When a new game is started
+  channel.subscribe('new-game-started', async () => {
+    console.log('New game started event received');
+    await fetchData(); // Pull fresh state for next round
+  });
+
+  return () => {
+    channel.unsubscribe();
+    ably.close();
+  };
+}, [id, data?.latestGame?.id]); // re-subscribe if match/game ID changes
+  
   useEffect(() => {
     fetchData();
     fetchOffers();
