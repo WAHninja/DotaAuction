@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
+import MobileNavToggle from '../../components/MobileNavToggle';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -119,10 +120,11 @@ export default function MatchPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
+    <MobileNavToggle />
       {/* Back button */}
       <div className="mb-6">
         <Link href="/dashboard">
-          <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl">
+          <button className="hidden md:inline-block bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl">
             ← Back to Dashboard
           </button>
         </Link>
