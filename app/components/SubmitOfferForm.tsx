@@ -64,7 +64,7 @@ export default function SubmitOfferForm({
     }
   };
 
-      const data = await res.json();
+      const data = await response.json();
       if (res.ok) {
         setMessage('Offer submitted!');
       } else {
