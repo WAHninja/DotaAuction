@@ -53,18 +53,6 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
 
-    // Validate that target is a teammate (not self, not opponent)
-    if (
-      !Array.isArray(winningTeamMembers) ||
-      !winningTeamMembers.includes(target_player_id) ||
-      target_player_id === userId
-    ) {
-      return new Response(
-        JSON.stringify({ message: 'Invalid target player for offer.' }),
-        { status: 400 }
-      );
-    }
-
     // Ensure the user hasn't already submitted an offer
     const existing = await db.query(
       'SELECT * FROM Offers WHERE from_player_id = $1 AND game_id = $2',
