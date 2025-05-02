@@ -30,25 +30,39 @@ export default function SubmitOfferForm({
   const filteredTeammates = winningTeamMembers.filter(p => p.id !== currentPlayerId);
 
   const handleSubmit = async () => {
-    const numAmount = parseInt(amount);
+  const numAmount = parseInt(amount);
 
-    if (!targetId || isNaN(numAmount) || numAmount < 250 || numAmount > 2000) {
-      setMessage('Please enter a valid offer (250–2000) and select a teammate.');
-      return;
-    }
+  if (!targetId || isNaN(numAmount) || numAmount < 250 || numAmount > 2000) {
+    setMessage('Please enter a valid offer (250–2000) and select a teammate.');
+    return;
+  }
 
-    setLoading(true);
-    setMessage('');
+  setLoading(true);
+  setMessage('');
 
     try {
       const res = await fetch(`/api/match/${matchId}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetId,
-          offerAmount: numAmount,
-        }),
-      });
+         body: JSON.stringify({
+           target_player_id: targetId, // update here to match backend
+           offer_amount: numAmount, // update here to match backend
+       }),
+       });
+
+      const data = await res.json();
+      if (res.ok) {
+         setMessage('Offer submitted!');
+       } else {
+         setMessage(data.error || 'Something went wrong.');
+       }
+     } catch (err) {
+       console.error(err);
+       setMessage('Error submitting offer.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
       const data = await res.json();
       if (res.ok) {
