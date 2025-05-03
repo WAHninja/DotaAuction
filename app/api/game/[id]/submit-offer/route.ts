@@ -5,6 +5,9 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const body = await req.json(); // ✅ parse body first!
+  const { target_player_id, offer_amount } = body;
+
   const url = new URL(req.url);
   const id = url.pathname.split('/').at(-2); // Game ID from route param
 
@@ -15,7 +18,6 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const gameId = Number(id);
-  const { target_player_id, offer_amount } = await req.json();
   const session = await getSession();
   const userId = session?.userId;
 
@@ -25,7 +27,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
-  // Validate offer amount
   if (offer_amount < 250 || offer_amount > 2000) {
     return new Response(
       JSON.stringify({ message: 'Offer amount must be between 250 and 2000.' }),
@@ -34,7 +35,6 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   try {
-    // Fetch latest game for the match
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE id = $1 LIMIT 1',
       [gameId]
@@ -53,7 +53,6 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
 
-    // Ensure the user hasn't already submitted an offer
     const existing = await db.query(
       'SELECT * FROM Offers WHERE from_player_id = $1 AND game_id = $2',
       [userId, gameId]
@@ -66,7 +65,6 @@ export async function POST(req: NextRequest): Promise<Response> {
       );
     }
 
-    // Insert the new offer
     const { rows: inserted } = await db.query(
       `INSERT INTO Offers (game_id, from_player_id, target_player_id, offer_amount, status)
        VALUES ($1, $2, $3, $4, $5)
