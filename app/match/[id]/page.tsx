@@ -17,6 +17,7 @@ export default function MatchPage() {
   const [accepting, setAccepting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,40 +53,46 @@ export default function MatchPage() {
     }
   }, [data]);
 
- const handleSubmitOffer = async () => {
-  const parsedAmount = parseInt(offerAmount, 10);
+  const handleSubmitOffer = async () => {
+    const parsedAmount = parseInt(offerAmount, 10);
 
-  if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < 250 || parsedAmount > 2000) {
-    setMessage('Please select a player and enter a valid offer amount between 250 and 2000.');
-    return;
-  }
-
-  setSubmitting(true);
-  setMessage('');
-
-  try {
-    const res = await fetch(`/api/game/${gameId}/submit-offer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        targetId: selectedPlayer,
-        offerAmount: parsedAmount,
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      setMessage('Offer submitted!');
-    } else {
-      setMessage(data.error || 'Something went wrong.');
+    if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < 250 || parsedAmount > 2000) {
+      setMessage('Please select a player and enter a valid offer amount between 250 and 2000.');
+      return;
     }
-  } catch (err) {
-    console.error('Error submitting offer:', err);
-    setMessage('Error submitting offer.');
-  } finally {
-    setSubmitting(false);
-  }
-};
+
+    setSubmitting(true);
+    setMessage(null);
+
+    try {
+      const gameId = data?.latestGame?.id; // Ensure gameId is taken from the latest game data
+      if (!gameId) {
+        setMessage('Game ID is missing');
+        return;
+      }
+
+      const res = await fetch(`/api/game/${gameId}/submit-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetId: selectedPlayer,
+          offerAmount: parsedAmount,
+        }),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        setMessage('Offer submitted!');
+      } else {
+        setMessage(result.error || 'Something went wrong.');
+      }
+    } catch (err) {
+      console.error('Error submitting offer:', err);
+      setMessage('Error submitting offer.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
