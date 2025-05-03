@@ -1,7 +1,7 @@
 // app/components/MatchRealtimeProvider.tsx
 "use client";
 import { useEffect } from "react";
-import * as Ably from "ably";
+import Ably from 'ably';
 
 type MatchRealtimeProviderProps = {
   matchId: number;
