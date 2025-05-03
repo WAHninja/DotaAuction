@@ -40,43 +40,30 @@ export default function SubmitOfferForm({
   setLoading(true);
   setMessage('');
 
-    try {
-      const res = await fetch(`/api/match/${matchId}/submit-offer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           target_player_id: targetId, // update here to match backend
-           offer_amount: numAmount, // update here to match backend
-       }),
-       });
+  try {
+    const res = await fetch(`/api/match/${matchId}/submit-offer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_player_id: targetId,
+        offer_amount: numAmount,
+      }),
+    });
 
-      const data = await res.json();
-      if (res.ok) {
-         setMessage('Offer submitted!');
-       } else {
-         setMessage(data.error || 'Something went wrong.');
-       }
-     } catch (err) {
-       console.error(err);
-       setMessage('Error submitting offer.');
-    } finally {
-      setLoading(false);
+    const data = await res.json();
+    if (res.ok) {
+      setMessage('Offer submitted!');
+    } else {
+      setMessage(data.error || 'Something went wrong.');
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setMessage('Error submitting offer.');
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const data = await Response.json();
-      if (res.ok) {
-        setMessage('Offer submitted!');
-      } else {
-        setMessage(data.error || 'Something went wrong.');
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage('Error submitting offer.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="border p-4 rounded-xl bg-white shadow-md mt-6">
