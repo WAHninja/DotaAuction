@@ -52,29 +52,39 @@ export default function MatchPage() {
     }
   }, [data]);
 
-  const handleSubmitOffer = async () => {
-    if (!selectedPlayer || !offerAmount) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/game/${data.latestGame.id}/submit-offer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetPlayerId: Number(selectedPlayer),
-          offerAmount: Number(offerAmount),
-        }),
-      });
+ const handleSubmitOffer = async () => {
+  if (!selectedPlayer || !offerAmount || isNaN(offerAmount) || offerAmount < 250 || offerAmount > 2000) {
+    setMessage('Please select a player and enter a valid offer amount between 250 and 2000.');
+    return;
+  }
 
-      if (!res.ok) throw new Error('Failed to submit offer');
-      await fetchOffers(data.latestGame.id); // Refresh offers
-      setSelectedPlayer('');
-      setOfferAmount('');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
+  setSubmitting(true);
+  setMessage('');
+
+  try {
+    const res = await fetch(`/api/game/${gameId}/submit-offer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetId: selectedPlayer,
+        offerAmount: offerAmount,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setMessage('Offer submitted!');
+    } else {
+      setMessage(data.error || 'Something went wrong.');
     }
-  };
+  } catch (err) {
+    console.error('Error submitting offer:', err);
+    setMessage('Error submitting offer.');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
