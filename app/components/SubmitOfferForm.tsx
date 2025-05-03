@@ -8,14 +8,14 @@ type Player = {
 };
 
 type SubmitOfferFormProps = {
-  matchId: number;
+  gameId: number; // ✅ required for correct backend route
   currentPlayerId: number;
   winningTeamMembers: Player[];
   show: boolean;
 };
 
 export default function SubmitOfferForm({
-  matchId,
+  gameId,
   currentPlayerId,
   winningTeamMembers,
   show,
@@ -30,40 +30,39 @@ export default function SubmitOfferForm({
   const filteredTeammates = winningTeamMembers.filter(p => p.id !== currentPlayerId);
 
   const handleSubmit = async () => {
-  const numAmount = parseInt(amount);
+    const numAmount = parseInt(amount);
 
-  if (!targetId || isNaN(numAmount) || numAmount < 250 || numAmount > 2000) {
-    setMessage('Please enter a valid offer (250–2000) and select a teammate.');
-    return;
-  }
-
-  setLoading(true);
-  setMessage('');
-
-  try {
-    const res = await fetch(`/api/match/${matchId}/submit-offer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        target_player_id: targetId,
-        offer_amount: numAmount,
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      setMessage('Offer submitted!');
-    } else {
-      setMessage(data.error || 'Something went wrong.');
+    if (!targetId || isNaN(numAmount) || numAmount < 250 || numAmount > 2000) {
+      setMessage('Please enter a valid offer (250–2000) and select a teammate.');
+      return;
     }
-  } catch (err) {
-    console.error(err);
-    setMessage('Error submitting offer.');
-  } finally {
-    setLoading(false);
-  }
-};
 
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const res = await fetch(`/api/game/${gameId}/submit-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_player_id: targetId,
+          offer_amount: numAmount,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage('Offer submitted!');
+      } else {
+        setMessage(data.message || 'Something went wrong.');
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage('Error submitting offer.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="border p-4 rounded-xl bg-white shadow-md mt-6">
