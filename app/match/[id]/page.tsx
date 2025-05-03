@@ -53,7 +53,9 @@ export default function MatchPage() {
   }, [data]);
 
  const handleSubmitOffer = async () => {
-  if (!selectedPlayer || !offerAmount || isNaN(offerAmount) || offerAmount < 250 || offerAmount > 2000) {
+  const parsedAmount = parseInt(offerAmount, 10);
+
+  if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < 250 || parsedAmount > 2000) {
     setMessage('Please select a player and enter a valid offer amount between 250 and 2000.');
     return;
   }
@@ -67,7 +69,7 @@ export default function MatchPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         targetId: selectedPlayer,
-        offerAmount: offerAmount,
+        offerAmount: parsedAmount,
       }),
     });
 
@@ -84,7 +86,6 @@ export default function MatchPage() {
     setSubmitting(false);
   }
 };
-
 
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
