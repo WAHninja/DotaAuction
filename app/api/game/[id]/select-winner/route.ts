@@ -1,7 +1,7 @@
 // app/api/game/[id]/select-winner/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import ablyChannel from '@/lib/ably-client';
+import ablyClient from '@/lib/ably-client'; // ✅ correct import
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,12 +41,11 @@ export async function POST(req: NextRequest) {
     );
 
     // ✅ Publish the update to Ably
-    const matchId = game.match_id;
-
-    const channel = ablyChannel('match-' + matchId);
+    const ably = await ablyClient;
+    const channel = ably.channels.get('match-' + game.match_id);
     await channel.publish('game-winner-selected', {
       gameId,
-      matchId,
+      matchId: game.match_id,
     });
 
     return NextResponse.json({ success: true });
