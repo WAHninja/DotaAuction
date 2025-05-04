@@ -47,28 +47,31 @@ export default function MatchPage() {
   }, []);
 
   useEffect(() => {
-    if (!ablyToken || !data?.latestGame?.id) return;
+  if (!ablyToken || !data?.latestGame?.id) return;
 
-    // Initialize Ably with the token directly
-    const ably = new Ably.Realtime(process.env.ABLY_API_KEY); // Your API key
+  // Initialize Ably with the token
+  const ably = new Ably.Realtime({
+    authOptions: {
+      // Use the requestToken method if the token is available
+      token: ablyToken,
+    },
+  });
 
-    // Set the token for Ably
-    ably.auth.requestToken({ token: ablyToken });
+  const channel = ably.channels.get(`match-${id}-offers`);
 
-    const channel = ably.channels.get(`match-${id}-offers`);
+  const handleOffer = (msg: Types.Message) => {
+    const newOffer = msg.data;
+    setOffers((prev) => [...prev, newOffer]);
+  };
 
-    const handleOffer = (msg: Types.Message) => {
-      const newOffer = msg.data;
-      setOffers((prev) => [...prev, newOffer]);
-    };
+  channel.subscribe('new-offer', handleOffer);
 
-    channel.subscribe('new-offer', handleOffer);
+  return () => {
+    channel.unsubscribe('new-offer', handleOffer);
+    ably.channels.release(`match-${id}-offers`);
+  };
+}, [ablyToken, data?.latestGame?.id, id]);
 
-    return () => {
-      channel.unsubscribe('new-offer', handleOffer);
-      ably.channels.release(`match-${id}-offers`);
-    };
-  }, [ablyToken, data?.latestGame?.id, id]);
 
   useEffect(() => {
     const fetchData = async () => {
