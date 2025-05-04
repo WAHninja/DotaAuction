@@ -140,7 +140,6 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
-}
 
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
