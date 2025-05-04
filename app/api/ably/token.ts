@@ -1,11 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Ably from 'ably';
+import Ably from 'ably/promises';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const ably = new Ably.Realtime('your-ably-api-key'); // Use your Ably API key here
-
   try {
-    // Generate the token for the client
+    // Create an Ably Realtime client
+    const ably = new Ably.Realtime('YOUR_ABLY_API_KEY'); // Replace with your actual Ably API key
+
+    // Request a token from Ably
     const tokenRequest = await ably.auth.requestToken({ clientId: 'unique-client-id' });
 
     // Return the token to the client
