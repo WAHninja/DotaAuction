@@ -12,7 +12,7 @@ import type { Types } from 'ably';
 // Add a helper to fetch Ably token from the server
 const fetchAblyToken = async () => {
   try {
-    const res = await fetch('/api/ably-token');
+    const res = await fetch('/api/ably/token');
     if (!res.ok) throw new Error('Failed to fetch Ably token');
     const data = await res.json();
     return data.token;
