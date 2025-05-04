@@ -3,29 +3,20 @@ import ablyClient from '@/lib/ably-client';
 
 export function useGameWinnerListener(matchId: string, onUpdate: () => void) {
   useEffect(() => {
-    if (!matchId) return;
+    if (!ablyClient) return;
 
-    let channel: any;
+    const channel = ablyClient.channels.get('match-' + matchId);
 
-    const subscribe = async () => {
-      const client = await ablyClient; // Await the promise
-      channel = client.channels.get('match-' + matchId);
-
-      const handler = (msg: any) => {
-        if (msg.name === 'game-winner-selected') {
-          onUpdate();
-        }
-      };
-
-      channel.subscribe('game-winner-selected', handler);
+    const handler = (msg: any) => {
+      if (msg.name === 'game-winner-selected') {
+        onUpdate();
+      }
     };
 
-    subscribe();
+    channel.subscribe('game-winner-selected', handler);
 
     return () => {
-      if (channel) {
-        channel.unsubscribe('game-winner-selected');
-      }
+      channel.unsubscribe('game-winner-selected', handler);
     };
   }, [matchId, onUpdate]);
 }
