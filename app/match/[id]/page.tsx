@@ -8,6 +8,12 @@ import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import ably from '@/lib/ablyClient';
 import type { Types } from 'ably';
+import Ably from 'ably/promises';
+
+const ably = new Ably.Realtime({
+  key: process.env.ABLY_API_KEY, // secret key only on server
+});
+
 
 export default function MatchPage() {
   const { id } = useParams();
