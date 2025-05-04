@@ -53,9 +53,12 @@ export default function MatchPage() {
     }
   }, [data]);
 
-  useGameWinnerListener(id, () => {
-    fetchMatchData();
-  });
+  const { id } = useParams();
+  const gameId = Array.isArray(id) ? id[0] : id; // Ensure id is a string
+
+useGameWinnerListener(gameId, () => {
+  fetchMatchData();
+});
 
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
