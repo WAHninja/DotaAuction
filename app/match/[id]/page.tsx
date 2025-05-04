@@ -8,6 +8,7 @@ import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 
 export default function MatchPage() {
   const { id } = useParams();
+  const gameId = Array.isArray(id) ? id[0] : id; // Ensure id is a string
   const [data, setData] = useState<any>(null);
   const [offers, setOffers] = useState<any[]>([]);
   const [offerAmount, setOfferAmount] = useState('');
@@ -53,12 +54,9 @@ export default function MatchPage() {
     }
   }, [data]);
 
-  const { id } = useParams();
-  const gameId = Array.isArray(id) ? id[0] : id; // Ensure id is a string
-
-useGameWinnerListener(gameId, () => {
-  fetchMatchData();
-});
+  useGameWinnerListener(gameId, () => {
+    fetchMatchData();
+  });
 
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
@@ -142,6 +140,7 @@ useGameWinnerListener(gameId, () => {
   const alreadyAcceptedOffer = offers.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
+}
 
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
