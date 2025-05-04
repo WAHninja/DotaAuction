@@ -7,6 +7,7 @@ import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import ably from '@/lib/ablyClient';
+import type { Types } from 'ably';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -25,7 +26,7 @@ export default function MatchPage() {
 
   const channel = ably.channels.get(`match-${id}-offers`);
 
-  const handleOffer = (msg: Ably.Types.Message) => {
+   const handleOffer = (msg: Types.Message) => {
     const newOffer = msg.data;
     setOffers((prev) => [...prev, newOffer]);
   };
