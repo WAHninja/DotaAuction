@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
-import { useGameWinnerListener } from '@/hooks/useGameWinnerListener';
+import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 
 export default function MatchPage() {
   const { id } = useParams();
