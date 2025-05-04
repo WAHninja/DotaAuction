@@ -6,9 +6,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
-import ably from '@/lib/ablyClient';
-import type { Types } from 'ably';
+import ablyClient from '@/lib/ablyClient';
 import Ably from 'ably/promises';
+import type { Types } from 'ably';
 
 const ably = new Ably.Realtime({
   key: process.env.ABLY_API_KEY, // secret key only on server
