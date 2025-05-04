@@ -10,9 +10,9 @@ const ably = new Ably.Realtime({
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Create a token request using the Ably API
-    const tokenRequest = await ably.auth.createTokenRequest();
-    res.status(200).json({ token: tokenRequest.token });
+    // Request a token using the Ably API
+    const token = await ably.auth.requestToken();  // This will get the token directly
+    res.status(200).json({ token: token });
   } catch (error) {
     res.status(500).json({ error: 'Error generating token' });
   }
