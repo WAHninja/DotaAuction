@@ -10,6 +10,19 @@ import ablyClient from '@/lib/ablyClient'; // Use ablyClient here
 import Ably from 'ably/promises';
 import type { Types } from 'ably';
 
+// Add a helper to fetch Ably token from the server
+const fetchAblyToken = async () => {
+  try {
+    const res = await fetch('/api/ably-token');
+    if (!res.ok) throw new Error('Failed to fetch Ably token');
+    const data = await res.json();
+    return data.token;
+  } catch (error) {
+    console.error('Error fetching Ably token:', error);
+    return null;
+  }
+};
+
 export default function MatchPage() {
   const { id } = useParams();
   const [data, setData] = useState<any>(null);
@@ -21,11 +34,27 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
+  const [ablyToken, setAblyToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!data?.latestGame?.id) return;
+    // Fetch the Ably token when the component mounts
+    const fetchToken = async () => {
+      const token = await fetchAblyToken();
+      setAblyToken(token);
+    };
 
-    const channel = ablyClient.channels.get(`match-${id}-offers`); // Use ablyClient here
+    fetchToken();
+  }, []);
+
+  useEffect(() => {
+    if (!ablyToken || !data?.latestGame?.id) return;
+
+    // Initialize Ably with the token
+    const ably = new Ably.Realtime({
+      authOptions: { token: ablyToken },
+    });
+
+    const channel = ably.channels.get(`match-${id}-offers`);
 
     const handleOffer = (msg: Types.Message) => {
       const newOffer = msg.data;
@@ -36,9 +65,9 @@ export default function MatchPage() {
 
     return () => {
       channel.unsubscribe('new-offer', handleOffer);
-      ablyClient.channels.release(`match-${id}-offers`); // Use ablyClient here
+      ably.channels.release(`match-${id}-offers`);
     };
-  }, [data?.latestGame?.id]);
+  }, [ablyToken, data?.latestGame?.id, id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -156,7 +185,14 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
-  
+
+  return (
+    <div>
+      {/* Your match page content */}
+    </div>
+  );
+}
+
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
     <MobileNavToggle />
