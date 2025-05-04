@@ -6,14 +6,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
-import ablyClient from '@/lib/ablyClient';
+import ablyClient from '@/lib/ablyClient'; // Use ablyClient here
 import Ably from 'ably/promises';
 import type { Types } from 'ably';
-
-const ably = new Ably.Realtime({
-  key: process.env.ABLY_API_KEY, // secret key only on server
-});
-
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -28,24 +23,23 @@ export default function MatchPage() {
   const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
 
   useEffect(() => {
-  if (!data?.latestGame?.id) return;
+    if (!data?.latestGame?.id) return;
 
-  const channel = ably.channels.get(`match-${id}-offers`);
+    const channel = ablyClient.channels.get(`match-${id}-offers`); // Use ablyClient here
 
-   const handleOffer = (msg: Types.Message) => {
-    const newOffer = msg.data;
-    setOffers((prev) => [...prev, newOffer]);
-  };
+    const handleOffer = (msg: Types.Message) => {
+      const newOffer = msg.data;
+      setOffers((prev) => [...prev, newOffer]);
+    };
 
-  channel.subscribe('new-offer', handleOffer);
+    channel.subscribe('new-offer', handleOffer);
 
-  return () => {
-    channel.unsubscribe('new-offer', handleOffer);
-    ably.channels.release(`match-${id}-offers`);
-  };
-}, [data?.latestGame?.id]);
-  
-  
+    return () => {
+      channel.unsubscribe('new-offer', handleOffer);
+      ablyClient.channels.release(`match-${id}-offers`); // Use ablyClient here
+    };
+  }, [data?.latestGame?.id]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -162,7 +156,7 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
-
+  
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
     <MobileNavToggle />
