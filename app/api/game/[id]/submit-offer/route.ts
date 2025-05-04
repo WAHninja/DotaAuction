@@ -1,5 +1,3 @@
-// app/api/game/[id]/submit-offer/route.ts
-
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
@@ -7,16 +5,12 @@ import * as Ably from 'ably/promises';
 
 const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
 
-await ably.channels
-  .get(`match-${matchId}-offers`)
-  .publish('new-offer', savedOffer);
-
 export async function POST(req: NextRequest): Promise<Response> {
-  const body = await req.json(); // ✅ parse body first!
+  const body = await req.json();
   const { target_player_id, offer_amount } = body;
 
   const url = new URL(req.url);
-  const id = url.pathname.split('/').at(-2); // Game ID from route param
+  const id = url.pathname.split('/').at(-2); // Extract game ID
 
   if (!id || isNaN(Number(id))) {
     return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
@@ -60,6 +54,13 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
 
+    if (!winningTeamMembers.includes(userId)) {
+      return new Response(
+        JSON.stringify({ message: 'Only winning team members can make offers.' }),
+        { status: 403 }
+      );
+    }
+
     const existing = await db.query(
       'SELECT * FROM Offers WHERE from_player_id = $1 AND game_id = $2',
       [userId, gameId]
@@ -79,8 +80,24 @@ export async function POST(req: NextRequest): Promise<Response> {
       [gameId, userId, target_player_id, offer_amount, 'pending']
     );
 
+    const savedOffer = inserted[0];
+
+    // 🔁 Get the matchId using the game
+    const matchResult = await db.query(
+      'SELECT match_id FROM Games WHERE id = $1',
+      [gameId]
+    );
+
+    const matchId = matchResult.rows[0]?.match_id;
+
+    if (matchId) {
+      await ably.channels
+        .get(`match-${matchId}-offers`)
+        .publish('new-offer', savedOffer);
+    }
+
     return new Response(
-      JSON.stringify({ message: 'Offer submitted.', offer: inserted[0] }),
+      JSON.stringify({ message: 'Offer submitted.', offer: savedOffer }),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
