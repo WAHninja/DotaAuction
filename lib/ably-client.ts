@@ -2,7 +2,7 @@ import Ably from 'ably';
 
 const getAuthUrl = () => {
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_SITE_URL + '/api/ably/token';
+    return process.env.SITE_URL + '/api/ably/token';
   }
   return '/api/ably/token';
 };
