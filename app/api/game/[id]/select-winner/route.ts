@@ -1,12 +1,7 @@
 // app/api/game/[id]/select-winner/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import db from '../../../../../lib/db';
-import { ablyChannel } from '@/lib/ably-server'; // your Ably server-side instance
-
-await ablyChannel.publish('game-winner-selected', {
-  gameId,
-  matchId,
-});
+import db from '@/lib/db';
+import { ablyChannel } from '@/lib/ably-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,6 +39,15 @@ export async function POST(req: NextRequest) {
       `UPDATE Games SET status = 'Auction pending', winning_team = $1 WHERE id = $2`,
       [winningTeamId, gameId]
     );
+
+    // ✅ Publish the update to Ably
+    const matchId = game.match_id;
+
+    const channel = ablyChannel('match-' + matchId);
+    await channel.publish('game-winner-selected', {
+      gameId,
+      matchId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
