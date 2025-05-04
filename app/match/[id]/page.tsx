@@ -187,13 +187,6 @@ export default function MatchPage() {
   );
 
   return (
-    <div>
-      {/* Your match page content */}
-    </div>
-  );
-}
-
-  return (
     <div className="max-w-5xl mx-auto p-6 text-gray-100">
     <MobileNavToggle />
       {/* Back button */}
