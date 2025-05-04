@@ -49,10 +49,11 @@ export default function MatchPage() {
   useEffect(() => {
     if (!ablyToken || !data?.latestGame?.id) return;
 
-    // Initialize Ably with the token
-    const ably = new Ably.Realtime({
-      authOptions: { token: ablyToken },
-    });
+    // Initialize Ably with the token directly
+    const ably = new Ably.Realtime(process.env.ABLY_API_KEY); // Your API key
+
+    // Set the token for Ably
+    ably.auth.requestToken({ token: ablyToken });
 
     const channel = ably.channels.get(`match-${id}-offers`);
 
