@@ -42,11 +42,11 @@ export default function MatchPage() {
   // Initialize Ably with the API key or token
   const ably = new Ably.Realtime('<Your-API-Key>'); // Replace with your API key or token URL
   
-  // Alternatively, if you're using token authentication, you can use requestToken()
+  // Use requestToken to get a token if you're using token-based authentication
   ably.auth.requestToken({ clientId: 'your-client-id' }).then((token) => {
-    // Set token or proceed with your logic using the token
-    ably.auth.options.token = token;
-    
+    // Set the token for Ably after receiving it
+    ably.auth.setToken(token);
+
     const channel = ably.channels.get(`match-${id}-offers`);
 
     const handleOffer = (msg: Types.Message) => {
