@@ -106,7 +106,7 @@ export default function MatchPage() {
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
     try {
-      const res = await fetch(`/api/match/${id}/accept-offer`, {
+      const res = await fetch(`/api/game/${id}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
