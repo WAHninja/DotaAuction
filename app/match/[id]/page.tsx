@@ -75,8 +75,8 @@ export default function MatchPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          targetId: selectedPlayer,
-          offerAmount: parsedAmount,
+          target_player_id: selectedPlayer,
+          offer_amount: parsedAmount,
         }),
       });
 
