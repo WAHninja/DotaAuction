@@ -36,42 +36,34 @@ export default function MatchPage() {
   const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
   const [ablyToken, setAblyToken] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Fetch the Ably token when the component mounts
-    const fetchToken = async () => {
-      const token = await fetchAblyToken();
-      setAblyToken(token);
-    };
-
-    fetchToken();
-  }, []);
-
-  useEffect(() => {
+ useEffect(() => {
   if (!ablyToken || !data?.latestGame?.id) return;
 
-  // Initialize Ably with the token
-  const ably = new Ably.Realtime({
-    authOptions: {
-      // Use the requestToken method if the token is available
-      token: ablyToken,
-    },
+  // Initialize Ably with the API key or token
+  const ably = new Ably.Realtime('<Your-API-Key>'); // Replace with your API key or token URL
+  
+  // Alternatively, if you're using token authentication, you can use requestToken()
+  ably.auth.requestToken({ clientId: 'your-client-id' }).then((token) => {
+    // Set token or proceed with your logic using the token
+    ably.auth.options.token = token;
+    
+    const channel = ably.channels.get(`match-${id}-offers`);
+
+    const handleOffer = (msg: Types.Message) => {
+      const newOffer = msg.data;
+      setOffers((prev) => [...prev, newOffer]);
+    };
+
+    channel.subscribe('new-offer', handleOffer);
+
+    return () => {
+      channel.unsubscribe('new-offer', handleOffer);
+      ably.channels.release(`match-${id}-offers`);
+    };
+  }).catch((error) => {
+    console.error('Error requesting token:', error);
   });
-
-  const channel = ably.channels.get(`match-${id}-offers`);
-
-  const handleOffer = (msg: Types.Message) => {
-    const newOffer = msg.data;
-    setOffers((prev) => [...prev, newOffer]);
-  };
-
-  channel.subscribe('new-offer', handleOffer);
-
-  return () => {
-    channel.unsubscribe('new-offer', handleOffer);
-    ably.channels.release(`match-${id}-offers`);
-  };
 }, [ablyToken, data?.latestGame?.id, id]);
-
 
   useEffect(() => {
     const fetchData = async () => {
