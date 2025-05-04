@@ -3,8 +3,15 @@ import Ably from 'ably/promises';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Get Ably API key from environment variables
+    const ablyApiKey = process.env.ABLY_API_KEY;
+
+    if (!ablyApiKey) {
+      return res.status(500).json({ error: 'Ably API key is missing' });
+    }
+
     // Create an Ably Realtime client
-    const ably = new Ably.Realtime('KmRkBA.i1dZsA:PiasFAtHeZ6cipNUhjO3POVYvFdhsajMPZIPg3p16lQ'); // Replace with your actual Ably API key
+    const ably = new Ably.Realtime(ablyApiKey); // Use the environment variable here
 
     // Request a token from Ably
     const tokenRequest = await ably.auth.requestToken({ clientId: 'unique-client-id' });
