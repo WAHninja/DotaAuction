@@ -1,6 +1,12 @@
 // app/api/game/[id]/select-winner/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '../../../../../lib/db';
+import { ablyChannel } from '@/lib/ably-server'; // your Ably server-side instance
+
+await ablyChannel.publish('game-winner-selected', {
+  gameId,
+  matchId,
+});
 
 export async function POST(req: NextRequest) {
   try {
