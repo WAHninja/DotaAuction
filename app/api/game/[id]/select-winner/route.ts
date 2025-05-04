@@ -1,7 +1,7 @@
 // app/api/game/[id]/select-winner/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { ablyChannel } from '@/lib/ably-client';
+import ablyChannel from '@/lib/ably-client';
 
 export async function POST(req: NextRequest) {
   try {
