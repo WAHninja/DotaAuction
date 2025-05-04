@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
-import ablyClient from '@/lib/ablyClient'; // Use ablyClient here
 import Ably from 'ably/promises';
 import type { Types } from 'ably';
 
@@ -36,16 +35,26 @@ export default function MatchPage() {
   const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
   const [ablyToken, setAblyToken] = useState<string | null>(null);
 
- useEffect(() => {
-  if (!ablyToken || !data?.latestGame?.id) return;
+  useEffect(() => {
+    // Fetch the Ably token when the component mounts
+    const initializeAbly = async () => {
+      const token = await fetchAblyToken();
+      if (token) {
+        setAblyToken(token);
+      }
+    };
 
-  // Initialize Ably with the API key or token
-  const ably = new Ably.Realtime('<Your-API-Key>'); // Replace with your API key or token URL
-  
-  // Use requestToken to get a token if you're using token-based authentication
-  ably.auth.requestToken({ clientId: 'your-client-id' }).then((token) => {
-    // Set the token for Ably after receiving it
-    ably.auth.setToken(token);
+    initializeAbly();
+  }, []);
+
+  useEffect(() => {
+    if (!ablyToken || !data?.latestGame?.id) return;
+
+    // Initialize Ably with the API key or token
+    const ably = new Ably.Realtime({
+      key: 'your-ably-api-key', // Replace with your API key or token URL
+      token: ablyToken, // Set the token from the state
+    });
 
     const channel = ably.channels.get(`match-${id}-offers`);
 
@@ -60,10 +69,7 @@ export default function MatchPage() {
       channel.unsubscribe('new-offer', handleOffer);
       ably.channels.release(`match-${id}-offers`);
     };
-  }).catch((error) => {
-    console.error('Error requesting token:', error);
-  });
-}, [ablyToken, data?.latestGame?.id, id]);
+  }, [ablyToken, data?.latestGame?.id, id]);
 
   useEffect(() => {
     const fetchData = async () => {
