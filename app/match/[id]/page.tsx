@@ -2,23 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/hooks/useGameWinnerListener';
-
-export default function MatchPage({ matchId }) {
-  const { data, refetch } = useMatchData(matchId); // However you're loading data
-
-  useGameWinnerListener(matchId, () => {
-    refetch(); // Reload match/game data
-  });
-
-  return (
-    // render match UI using `data`
-  );
-}
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -30,24 +16,21 @@ export default function MatchPage() {
   const [accepting, setAccepting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
-  
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`/api/match/${id}`);
-        if (!res.ok) throw new Error(`Failed to fetch match data: ${res.statusText}`);
-        const result = await res.json();
-        setData(result);
-      } catch (err: any) {
-        setError(err.message || 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [message, setMessage] = useState<string | null>(null);
 
-    fetchData();
-  }, [id]);
+  const fetchMatchData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/match/${id}`);
+      if (!res.ok) throw new Error(`Failed to fetch match data: ${res.statusText}`);
+      const result = await res.json();
+      setData(result);
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchOffers = async (gameId: number) => {
     try {
@@ -61,10 +44,18 @@ export default function MatchPage() {
   };
 
   useEffect(() => {
+    fetchMatchData();
+  }, [id]);
+
+  useEffect(() => {
     if (data?.latestGame?.status === 'Auction pending') {
       fetchOffers(data.latestGame.id);
     }
   }, [data]);
+
+  useGameWinnerListener(id, () => {
+    fetchMatchData();
+  });
 
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
@@ -78,7 +69,7 @@ export default function MatchPage() {
     setMessage(null);
 
     try {
-      const gameId = data?.latestGame?.id; // Ensure gameId is taken from the latest game data
+      const gameId = data?.latestGame?.id;
       if (!gameId) {
         setMessage('Game ID is missing');
         return;
