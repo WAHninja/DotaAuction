@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
+import ably from '@/lib/ablyClient';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -19,6 +20,25 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
 
+  useEffect(() => {
+  if (!data?.latestGame?.id) return;
+
+  const channel = ably.channels.get(`match-${id}-offers`);
+
+  const handleOffer = (msg: Ably.Types.Message) => {
+    const newOffer = msg.data;
+    setOffers((prev) => [...prev, newOffer]);
+  };
+
+  channel.subscribe('new-offer', handleOffer);
+
+  return () => {
+    channel.unsubscribe('new-offer', handleOffer);
+    ably.channels.release(`match-${id}-offers`);
+  };
+}, [data?.latestGame?.id]);
+  
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
