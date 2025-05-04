@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 
 export default function MatchPage() {
   const { id } = useParams();
-  const gameId = Array.isArray(id) ? id[0] : id; // Ensure id is a string
+  const matchId = Array.isArray(id) ? id[0] : id;
   const [data, setData] = useState<any>(null);
   const [offers, setOffers] = useState<any[]>([]);
   const [offerAmount, setOfferAmount] = useState('');
@@ -54,7 +55,7 @@ export default function MatchPage() {
     }
   }, [data]);
 
-  useGameWinnerListener(gameId, () => {
+   useGameWinnerListener(data?.latestGame?.id, () => {
     fetchMatchData();
   });
 
@@ -80,7 +81,7 @@ export default function MatchPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          target_player_id: selectedPlayer,
+          target_player_id: parseInt(selectedPlayer, 10),
           offer_amount: parsedAmount,
         }),
       });
@@ -88,6 +89,9 @@ export default function MatchPage() {
       const result = await res.json();
       if (res.ok) {
         setMessage('Offer submitted!');
+        setOfferAmount('');
+        setSelectedPlayer('');
+        fetchOffers(gameId); // refresh offers list
       } else {
         setMessage(result.error || 'Something went wrong.');
       }
@@ -137,7 +141,7 @@ export default function MatchPage() {
   const myTeam = winningTeam === 'team_1' ? team1 : teamA;
   const offerCandidates = myTeam.filter((pid) => pid !== currentUserId);
 
-  const alreadyAcceptedOffer = offers.find(
+  const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
 
