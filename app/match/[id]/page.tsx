@@ -6,21 +6,19 @@ import Image from 'next/image';
 import Link from 'next/link';
 import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
-import Ably from 'ably/promises';
-import type { Types } from 'ably';
+import { useGameWinnerListener } from '@/hooks/useGameWinnerListener';
 
-// Add a helper to fetch Ably token from the server
-const fetchAblyToken = async () => {
-  try {
-    const res = await fetch('/api/ably/token');
-    if (!res.ok) throw new Error('Failed to fetch Ably token');
-    const data = await res.json();
-    return data.token;
-  } catch (error) {
-    console.error('Error fetching Ably token:', error);
-    return null;
-  }
-};
+export default function MatchPage({ matchId }) {
+  const { data, refetch } = useMatchData(matchId); // However you're loading data
+
+  useGameWinnerListener(matchId, () => {
+    refetch(); // Reload match/game data
+  });
+
+  return (
+    // render match UI using `data`
+  );
+}
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -33,44 +31,7 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null); // Adding message state for feedback
-  const [ablyToken, setAblyToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fetch the Ably token when the component mounts
-    const initializeAbly = async () => {
-      const token = await fetchAblyToken();
-      if (token) {
-        setAblyToken(token);
-      }
-    };
-
-    initializeAbly();
-  }, []);
-
-  useEffect(() => {
-    if (!ablyToken || !data?.latestGame?.id) return;
-
-    // Initialize Ably with the API key or token
-    const ably = new Ably.Realtime({
-      key: 'your-ably-api-key', // Replace with your API key or token URL
-      token: ablyToken, // Set the token from the state
-    });
-
-    const channel = ably.channels.get(`match-${id}-offers`);
-
-    const handleOffer = (msg: Types.Message) => {
-      const newOffer = msg.data;
-      setOffers((prev) => [...prev, newOffer]);
-    };
-
-    channel.subscribe('new-offer', handleOffer);
-
-    return () => {
-      channel.unsubscribe('new-offer', handleOffer);
-      ably.channels.release(`match-${id}-offers`);
-    };
-  }, [ablyToken, data?.latestGame?.id, id]);
-
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
