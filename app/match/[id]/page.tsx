@@ -142,6 +142,7 @@ export default function MatchPage() {
   );
 
   return (
+    <>
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
