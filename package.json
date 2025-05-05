@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node server.js"
+    "start": "next start"
   },
   "dependencies": {
     "next": "latest",
@@ -16,7 +16,8 @@
     "framer-motion": "latest",
     "react-icons": "latest",
     "express": "^4.18.2",
-    "ws": "^8.7.0"
+    "ws": "^8.7.0",
+    "ably": "^1.2.12"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
