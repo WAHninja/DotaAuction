@@ -59,6 +59,18 @@ export default function MatchPage() {
   fetchMatchData();
 });
 
+  useAuctionListener(
+    matchId,
+    (data) => {
+      console.log('New offer created:', data);
+      // Refresh offer list or update state
+    },
+    (data) => {
+      console.log('Offer accepted:', data);
+      // Refresh game state or redirect to new game
+    }
+  );
+
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
 
