@@ -1,26 +1,28 @@
+// app/hooks/useAuctionListener.ts
 import { useEffect } from 'react';
-import ablyClient from '@/lib/ably-client';
+import Ably from 'ably/promises';
 
-export function useAuctionListener(matchId: number, onOfferCreated: Function, onOfferAccepted: Function) {
+export function useAuctionListener(
+  matchId: string,
+  onNewOffer: (data: any) => void,
+  onOfferAccepted?: (data: any) => void
+) {
   useEffect(() => {
-    if (!ablyClient) return;
+    if (!matchId) return;
 
-    const channel = ablyClient.channels.get('match-' + matchId);
+    const ably = new Ably.Realtime.Promise({ key: process.env.NEXT_PUBLIC_ABLY_API_KEY! });
+    const channel = ably.channels.get(`match-${matchId}-offers`);
 
-    const handleOfferCreated = (msg: any) => {
-      onOfferCreated(msg.data);
-    };
+    const newOfferHandler = (msg: any) => onNewOffer(msg.data);
+    const offerAcceptedHandler = (msg: any) => onOfferAccepted?.(msg.data);
 
-    const handleOfferAccepted = (msg: any) => {
-      onOfferAccepted(msg.data);
-    };
-
-    channel.subscribe('offer-created', handleOfferCreated);
-    channel.subscribe('offer-accepted', handleOfferAccepted);
+    channel.subscribe('new-offer', newOfferHandler);
+    channel.subscribe('offer-accepted', offerAcceptedHandler);
 
     return () => {
-      channel.unsubscribe('offer-created', handleOfferCreated);
-      channel.unsubscribe('offer-accepted', handleOfferAccepted);
+      channel.unsubscribe('new-offer', newOfferHandler);
+      channel.unsubscribe('offer-accepted', offerAcceptedHandler);
+      ably.close();
     };
-  }, [matchId, onOfferCreated, onOfferAccepted]);
+  }, [matchId]);
 }
