@@ -7,10 +7,9 @@ export function useAuctionListener(
   onOfferAccepted?: (data: any) => void
 ) {
   useEffect(() => {
-    if (!matchId) return;
+    if (!matchId || !ablyClient) return;
 
-    const ably = new Ably.Realtime.Promise({ key: process.env.NEXT_PUBLIC_ABLY_API_KEY! });
-    const channel = ably.channels.get(`match-${matchId}-offers`);
+    const channel = ablyClient.channels.get(`match-${matchId}-offers`);
 
     const newOfferHandler = (msg: any) => onNewOffer(msg.data);
     const offerAcceptedHandler = (msg: any) => onOfferAccepted?.(msg.data);
@@ -21,7 +20,6 @@ export function useAuctionListener(
     return () => {
       channel.unsubscribe('new-offer', newOfferHandler);
       channel.unsubscribe('offer-accepted', offerAcceptedHandler);
-      ably.close();
     };
-  }, [matchId]);
+  }, [matchId, ablyClient]);
 }
