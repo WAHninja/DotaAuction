@@ -7,12 +7,11 @@ const getAuthUrl = () => {
   return '/api/ably/token';
 };
 
-let ablyClient: any = null;
+let ablyClient: Ably.Realtime.Promise | null = null;
 
 if (typeof window !== 'undefined') {
-  const Ably = require('ably');
   ablyClient = new Ably.Realtime.Promise({
-    authUrl: '/api/ably/token',
+    authUrl: getAuthUrl(),
   });
 }
 
