@@ -21,5 +21,5 @@ export function useAuctionListener(
       channel.unsubscribe('new-offer', newOfferHandler);
       channel.unsubscribe('offer-accepted', offerAcceptedHandler);
     };
-  }, [matchId, ablyClient]);
+  }, [matchId, ablyClient, onNewOffer, onOfferAccepted]);
 }
