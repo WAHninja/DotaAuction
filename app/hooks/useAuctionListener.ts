@@ -3,23 +3,29 @@ import ablyClient from '@/lib/ably-client';
 
 export function useAuctionListener(
   matchId: string,
-  onNewOffer: (data: any) => void,
-  onOfferAccepted?: (data: any) => void
+  latestGameId: number | null,
+  fetchMatchData: () => void,
+  fetchOffers: (gameId: number) => void
 ) {
   useEffect(() => {
-    if (!matchId || !ablyClient) return;
+    if (!matchId || !ablyClient || !latestGameId) return;
 
     const channel = ablyClient.channels.get(`match-${matchId}-offers`);
 
-    const newOfferHandler = (msg: any) => onNewOffer(msg.data);
-    const offerAcceptedHandler = (msg: any) => onOfferAccepted?.(msg.data);
+    const handleNewOffer = () => {
+      fetchOffers(latestGameId);
+    };
 
-    channel.subscribe('new-offer', newOfferHandler);
-    channel.subscribe('offer-accepted', offerAcceptedHandler);
+    const handleOfferAccepted = () => {
+      fetchMatchData();
+    };
+
+    channel.subscribe('new-offer', handleNewOffer);
+    channel.subscribe('offer-accepted', handleOfferAccepted);
 
     return () => {
-      channel.unsubscribe('new-offer', newOfferHandler);
-      channel.unsubscribe('offer-accepted', offerAcceptedHandler);
+      channel.unsubscribe('new-offer', handleNewOffer);
+      channel.unsubscribe('offer-accepted', handleOfferAccepted);
     };
-  }, [matchId, ablyClient, onNewOffer, onOfferAccepted]);
+  }, [matchId, latestGameId, fetchMatchData, fetchOffers]);
 }
