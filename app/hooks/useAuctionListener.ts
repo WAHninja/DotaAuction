@@ -1,6 +1,5 @@
-// app/hooks/useAuctionListener.ts
 import { useEffect } from 'react';
-import Ably from 'ably/promises';
+import ablyClient from '@/lib/ably-client';
 
 export function useAuctionListener(
   matchId: string,
