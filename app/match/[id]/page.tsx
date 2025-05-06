@@ -260,19 +260,7 @@ export default function MatchPage() {
   <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
     <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
 
-    <div className="flex flex-col md:flex-row gap-6 items-start">
-      {/* Shopkeeper Image */}
-      <div className="hidden md:flex flex-shrink-0 w-full md:w-48 justify-center md:justify-start">
-      <Image
-        src="/Shopkeeper.png"
-        alt="Shopkeeper"
-        width={192}
-        height={192}
-        className="rounded-xl"
-      />
-    </div>
-
-      {/* Auction Content */}
+    {/* Auction Content */}
       <div className="flex-1 w-full">
         {/* Offer form for winners */}
 {isWinner && !alreadySubmittedOffer ? (
@@ -318,6 +306,18 @@ export default function MatchPage() {
   </div>
 )}
 
+    <div className="flex flex-col md:flex-row gap-6 items-start">
+      {/* Shopkeeper Image */}
+      <div className="hidden md:flex flex-shrink-0 w-full md:w-48 justify-center md:justify-start">
+      <Image
+        src="/Shopkeeper.png"
+        alt="Shopkeeper"
+        width={192}
+        height={192}
+        className="rounded-xl"
+      />
+    </div>
+        
         {/* Current Offers */}
 <div>
   <h4 className="text-xl font-bold mb-4">Current Offers</h4>
