@@ -317,6 +317,7 @@ export default function MatchPage() {
         className="rounded-xl"
       />
     </div>
+      </div>
         
         {/* Current Offers */}
 <div>
