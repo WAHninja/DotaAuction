@@ -154,16 +154,24 @@ export default function MatchPage() {
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
 
+  import {
+  Hash,
+  Gavel,
+  PlayCircle,
+  CheckCircle,
+  Trophy
+} from "lucide-react";
+
   return (
   <>
-    {/* Header */}
+  {/* Header */}
     <div className="text-center mb-8">
       <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
         Match #{match.id}
       </h1>
       <div className="flex justify-center">
         <span
-          className={`px-4 py-2 rounded-full text-sm font-bold ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${
             latestGame.status === 'Auction pending'
               ? 'bg-yellow-500 text-black'
               : latestGame.status === 'In progress'
@@ -173,9 +181,19 @@ export default function MatchPage() {
               : 'bg-gray-500 text-white'
           }`}
         >
-          Game #{latestGame.id} — {latestGame.status}
-          {latestGame?.winning_team && latestGame.status === 'Auction pending' && (
-            <> — Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}</>
+          <Hash className="w-4 h-4" />
+          Game #{latestGame.id} —
+    
+          {latestGame.status === 'Auction pending' && <Gavel className="w-4 h-4" />}
+          {latestGame.status === 'In progress' && <PlayCircle className="w-4 h-4" />}
+          {latestGame.status === 'Finished' && <CheckCircle className="w-4 h-4" />}
+          {latestGame.status}
+    
+          {latestGame?.winning_team && latestGame.status === 'Finished' && (
+            <>
+              <Trophy className="w-4 h-4 ml-2" />
+              Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
+            </>
           )}
         </span>
       </div>
@@ -242,15 +260,15 @@ export default function MatchPage() {
 
     <div className="flex flex-col md:flex-row gap-6 items-start">
       {/* Shopkeeper Image */}
-      <div className="flex-shrink-0 w-full md:w-48 flex justify-center md:justify-start">
-        <Image
-          src="/Shopkeeper.png"
-          alt="Shopkeeper"
-          width={192}
-          height={192}
-          className="rounded-xl"
-        />
-      </div>
+      <div className="hidden md:flex flex-shrink-0 w-full md:w-48 justify-center md:justify-start">
+      <Image
+        src="/Shopkeeper.png"
+        alt="Shopkeeper"
+        width={192}
+        height={192}
+        className="rounded-xl"
+      />
+    </div>
 
       {/* Auction Content */}
       <div className="flex-1 w-full">
