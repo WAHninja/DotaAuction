@@ -187,7 +187,7 @@ export default function MatchPage() {
     {/* Teams */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       {/* Team 1 */}
-      <div className="bg-gradient-to-b from-red-900 via-red-800 to-red-700 p-6 rounded-2xl shadow-lg">
+      <div className="bg-gradient-to-b from-lime-950 via-lime-900 to-lime-900 bg-opacity-20 p-6 rounded-2xl shadow-lg">
         <div className="flex flex-col items-center mb-4">
           <Image src="/Team1.png" alt="Team 1 Logo" width={64} height={64} />
           <h2 className="text-2xl font-semibold mt-2">Team 1</h2>
@@ -209,7 +209,7 @@ export default function MatchPage() {
       </div>
 
       {/* Team A */}
-      <div className="bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 p-6 rounded-2xl shadow-lg">
+      <div className="bg-gradient-to-b from-green-950 via-green-900 to-green-900 bg-opacity-20 p-6 rounded-2xl shadow-lg">
         <div className="flex flex-col items-center mb-4">
           <Image src="/TeamA.png" alt="Team A Logo" width={64} height={64} />
           <h2 className="text-2xl font-semibold mt-2">Team A</h2>
