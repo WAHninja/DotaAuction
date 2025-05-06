@@ -1,4 +1,4 @@
-'use client';
+  'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -157,32 +157,30 @@ export default function MatchPage() {
   return (
   <>
     {/* Header */}
-    <div className="flex justify-center gap-4 flex-wrap text-lg">
-  <div className="flex items-center gap-2">
-    <span className="text-white">Game #{latestGame.id}</span>
-    <span
-      className={`px-4 py-1 rounded-full text-sm font-semibold tracking-wide shadow-md border
-        ${
-          latestGame.status === 'Auction pending'
-            ? 'bg-yellow-400 text-black border-yellow-500'
-            : latestGame.status === 'In progress'
-            ? 'bg-blue-500 text-white border-blue-600'
-            : latestGame.status === 'Finished'
-            ? 'bg-green-500 text-white border-green-600'
-            : 'bg-gray-600 text-white border-gray-500'
-        }`}
-    >
-      {latestGame.status}
-    </span>
-  </div>
-
-  {latestGame?.winning_team && (
-    <span className="px-4 py-1 rounded-full text-sm font-semibold text-lime-300 bg-lime-900 bg-opacity-40 border border-lime-600 shadow-inner">
-      Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
-    </span>
-  )}
-</div>
-
+    <div className="text-center mb-8">
+      <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
+        Match #{match.id}
+      </h1>
+      <p className="text-lg text-gray-400 flex justify-center items-center gap-2">
+        Game #{latestGame.id}
+        <span
+          className={`px-4 py-2 rounded-full text-sm font-bold text-black ${
+            latestGame.status === 'Auction pending'
+              ? 'bg-yellow-500'
+              : latestGame.status === 'In progress'
+              ? 'bg-blue-500 text-white'
+              : latestGame.status === 'Finished'
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-500 text-white'
+          }`}
+        >
+          {latestGame.status}
+          {latestGame?.winning_team && latestGame.status === 'Finished' && (
+            <> — Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}</>
+          )}
+        </span>
+      </p>
+    </div>
 
     {/* Teams */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
