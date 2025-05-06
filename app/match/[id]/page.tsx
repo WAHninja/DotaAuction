@@ -7,6 +7,13 @@ import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
+import {
+  Hash,
+  Gavel,
+  PlayCircle,
+  CheckCircle,
+  Trophy
+} from "lucide-react";
 
 
 export default function MatchPage() {
@@ -153,14 +160,6 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
-
-  import {
-  Hash,
-  Gavel,
-  PlayCircle,
-  CheckCircle,
-  Trophy
-} from "lucide-react";
 
   return (
   <>
