@@ -190,7 +190,7 @@ export default function MatchPage() {
   <div className="bg-gradient-to-b from-[rgba(54,83,20,0.6)] via-[rgba(63,98,18,0.6)] to-[rgba(63,98,18,0.6)] p-6 rounded-2xl shadow-lg backdrop-opacity-10">
     <div className="flex flex-row justify-center mb-4">
       <Image src="/Team1.png" alt="Team 1 Logo" width={64} height={64} />
-      <h2 className="text-2xl font-semibold ml-4 mt-2">Team 1</h2>
+      <h2 className="text-2xl font-semibold ml-4 mt-6">Team 1</h2>
     </div>
     <ul className="space-y-2">
       {team1.map((pid) => {
@@ -209,10 +209,10 @@ export default function MatchPage() {
   </div>
 
   {/* Team A */}
-  <div className="bg-gradient-to-b from-[rgba(69,10,10,0.6)] via-[rgba(127,29,29,0.6)] to-[rgba(127,29,29,0.6)] p-6 rounded-2xl shadow-lg backdrop-blur-sm">
+  <div className="bg-gradient-to-b from-[rgba(69,10,10,0.6)] via-[rgba(127,29,29,0.6)] to-[rgba(127,29,29,0.6)] p-6 rounded-2xl shadow-lg backdrop-opacity-10">
     <div className="flex flex-row justify-center mb-4">
       <Image src="/TeamA.png" alt="Team A Logo" width={64} height={64} />
-      <h2 className="text-2xl font-semibold ml-4 mt-2">Team A</h2>
+      <h2 className="text-2xl font-semibold ml-4 mt-4">Team A</h2>
     </div>
     <ul className="space-y-2">
       {teamA.map((pid) => {
@@ -241,7 +241,7 @@ export default function MatchPage() {
     {/* Auction Phase */}
     {isAuction && (
       <div className="bg-yellow-300 bg-opacity-20 p-6 rounded-2xl shadow-lg mb-8">
-        <h3 className="text-2xl font-bold mb-4 text-yellow-400 text-center">Auction Phase</h3>
+        <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
 
         {/* Offer form for winners */}
         {isWinner && (
