@@ -325,8 +325,10 @@ export default function MatchPage() {
           className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
         >
           <div className="flex flex-col gap-2 mb-4">
-            <div className="text-sm text-gray-400">Offer from</div>
-            <div className="text-lg font-semibold text-yellow-300">{from?.username}</div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-400">From</span>
+              <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
+            </div>
 
             <div className="mt-2 text-sm text-gray-300">
               If accepted:
