@@ -188,7 +188,7 @@ export default function MatchPage() {
           {latestGame.status === 'Finished' && <CheckCircle className="w-4 h-4" />}
           {latestGame.status}
     
-          {latestGame?.winning_team && latestGame.status === 'Finished' && (
+          {latestGame?.winning_team && latestGame.status === 'Auction pending' && (
             <>
               <Trophy className="w-4 h-4 ml-2" />
               Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
@@ -312,39 +312,69 @@ export default function MatchPage() {
         )}
 
         {/* Current Offers */}
-        <div>
-          <h4 className="text-xl font-bold mb-2">Current Offers</h4>
-          <ul className="space-y-4">
-            {offers.map((offer) => {
-              const from = getPlayer(offer.from_player_id);
-              const to = getPlayer(offer.target_player_id);
-              const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
+<div>
+  <h4 className="text-xl font-bold mb-4">Current Offers</h4>
+  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    {offers.map((offer) => {
+      const from = getPlayer(offer.from_player_id);
+      const to = getPlayer(offer.target_player_id);
+      const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
 
-              return (
-                <li
-                  key={offer.id}
-                  className="flex flex-col md:flex-row items-center justify-between bg-gray-800 p-4 rounded-xl"
-                >
-                  <span>
-                    <strong>{from?.username}</strong> offers{' '}
-                    <strong className="text-yellow-400">{offer.offer_amount}</strong>
-                    <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1" />
-                    {' '}to <strong>{to?.username}</strong>
-                  </span>
-                  {canAccept && (
-                    <button
-                      onClick={() => handleAcceptOffer(offer.id)}
-                      disabled={accepting}
-                      className="mt-2 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-                    >
-                      {accepting ? 'Accepting...' : 'Accept Offer'}
-                    </button>
-                  )}
+      return (
+        <div
+          key={offer.id}
+          className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
+        >
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="text-sm text-gray-400">From</div>
+            <div className="text-lg font-semibold text-yellow-300">{from?.username}</div>
+
+            <div className="text-sm text-gray-400">To</div>
+            <div className="text-lg font-semibold text-blue-300">{to?.username}</div>
+
+            <div className="mt-2 text-sm text-gray-300">
+              If accepted:
+              <ul className="list-disc list-inside text-gray-200 mt-1">
+                <li>
+                  <strong>{from?.username}</strong> gains{' '}
+                  <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1" />
+                  starting gold in next game
                 </li>
-              );
-            })}
-          </ul>
+                <li>
+                  <strong>{to?.username}</strong> moves to the <span className="text-red-400 font-bold">losing team</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {canAccept ? (
+            <button
+              onClick={() => handleAcceptOffer(offer.id)}
+              disabled={accepting}
+              className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
+            >
+              {accepting ? 'Accepting...' : 'Accept Offer'}
+            </button>
+          ) : (
+            <div className="mt-auto text-sm text-gray-400 italic">
+              {offer.status === 'accepted'
+                ? 'Accepted'
+                : offer.status === 'rejected'
+                ? 'Rejected'
+                : 'Waiting for response'}
+            </div>
+          )}
         </div>
+      );
+    })}
+  </div>
+</div>
+
+
+
+
+        
       </div>
     </div>
   </div>
