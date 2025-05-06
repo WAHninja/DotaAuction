@@ -119,6 +119,10 @@ export default function MatchPage() {
     }
   };
 
+  const alreadySubmittedOffer = offers.some(
+    (offer) => offer.from_player_id === currentUserId
+  );
+
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
     try {
@@ -271,44 +275,48 @@ export default function MatchPage() {
       {/* Auction Content */}
       <div className="flex-1 w-full">
         {/* Offer form for winners */}
-        {isWinner && (
-          <div className="mb-6">
-            <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
-            <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
-              <select
-                value={selectedPlayer}
-                onChange={(e) => setSelectedPlayer(e.target.value)}
-                className="px-3 py-2 rounded-lg text-black"
-              >
-                <option value="">Select Player</option>
-                {offerCandidates.map((pid) => {
-                  const player = getPlayer(pid);
-                  return (
-                    <option key={pid} value={pid}>
-                      {player?.username || 'Unknown'}
-                    </option>
-                  );
-                })}
-              </select>
+{isWinner && !alreadySubmittedOffer ? (
+  <div className="mb-6">
+    <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
+    <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
+      <select
+        value={selectedPlayer}
+        onChange={(e) => setSelectedPlayer(e.target.value)}
+        className="px-3 py-2 rounded-lg text-black"
+      >
+        <option value="">Select Player</option>
+        {offerCandidates.map((pid) => {
+          const player = getPlayer(pid);
+          return (
+            <option key={pid} value={pid}>
+              {player?.username || 'Unknown'}
+            </option>
+          );
+        })}
+      </select>
 
-              <input
-                type="number"
-                value={offerAmount}
-                onChange={(e) => setOfferAmount(e.target.value)}
-                placeholder="Offer Amount (250-2000)"
-                className="px-3 py-2 rounded-lg text-black"
-              />
+      <input
+        type="number"
+        value={offerAmount}
+        onChange={(e) => setOfferAmount(e.target.value)}
+        placeholder="Offer Amount (250-2000)"
+        className="px-3 py-2 rounded-lg text-black"
+      />
 
-              <button
-                onClick={handleSubmitOffer}
-                disabled={submitting}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-              >
-                {submitting ? 'Submitting...' : 'Submit Offer'}
-              </button>
-            </div>
-          </div>
-        )}
+      <button
+        onClick={handleSubmitOffer}
+        disabled={submitting}
+        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+      >
+        {submitting ? 'Submitting...' : 'Submit Offer'}
+      </button>
+    </div>
+  </div>
+) : isWinner && alreadySubmittedOffer && (
+  <div className="mb-6 text-center text-yellow-300 font-semibold">
+    ✅ You've already submitted your offer.
+  </div>
+)}
 
         {/* Current Offers */}
 <div>
@@ -325,14 +333,14 @@ export default function MatchPage() {
           className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
         >
           <div className="flex flex-col gap-2 mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-400">From</span>
+            <div className="flex gap-2">
+              <span className="text-lg text-gray-300">From</span>
               <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
             </div>
 
             <div className="mt-2 text-sm text-gray-300">
               If accepted:
-              <ul className="list-disc list-inside text-gray-200 mt-1">
+              <ul className="list-disc list-inside text-gray-300 mt-1">
                 <li>
                   <strong>{from?.username}</strong> gains{' '}
                   <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
