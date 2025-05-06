@@ -238,14 +238,28 @@ export default function MatchPage() {
 
     {/* Auction Phase */}
     {isAuction && (
-      <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
-        <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
+  <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
+    <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
 
+    <div className="flex flex-col md:flex-row gap-6 items-start">
+      {/* Shopkeeper Image */}
+      <div className="flex-shrink-0 w-full md:w-48 flex justify-center md:justify-start">
+        <Image
+          src="/Shopkeeper.png"
+          alt="Shopkeeper"
+          width={192}
+          height={192}
+          className="rounded-xl"
+        />
+      </div>
+
+      {/* Auction Content */}
+      <div className="flex-1 w-full">
         {/* Offer form for winners */}
         {isWinner && (
           <div className="mb-6">
-            <p className="font-semibold mb-2 text-center">Make an Offer:</p>
-            <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
+            <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
+            <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
               <select
                 value={selectedPlayer}
                 onChange={(e) => setSelectedPlayer(e.target.value)}
@@ -296,9 +310,10 @@ export default function MatchPage() {
                   className="flex flex-col md:flex-row items-center justify-between bg-gray-800 p-4 rounded-xl"
                 >
                   <span>
-                    <strong>{from?.username}</strong> offers <strong className="text-yellow-400">{offer.offer_amount}</strong>
+                    <strong>{from?.username}</strong> offers{' '}
+                    <strong className="text-yellow-400">{offer.offer_amount}</strong>
                     <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1" />
-                    to <strong>{to?.username}</strong>
+                    {' '}to <strong>{to?.username}</strong>
                   </span>
                   {canAccept && (
                     <button
@@ -315,7 +330,10 @@ export default function MatchPage() {
           </ul>
         </div>
       </div>
-    )}
+    </div>
+  </div>
+)}
+
   </>
 );
 }
