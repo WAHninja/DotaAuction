@@ -334,7 +334,7 @@ export default function MatchPage() {
                 <li>
                   <strong>{from?.username}</strong> gains{' '}
                   <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
-                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block mr-2 ml-1 " />
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block mr-2" />
                   starting gold in next game
                 </li>
                 <li>
