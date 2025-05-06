@@ -266,6 +266,7 @@ export default function MatchPage() {
 
               <input
                 type="number"
+                class="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 value={offerAmount}
                 onChange={(e) => setOfferAmount(e.target.value)}
                 placeholder="Offer Amount (250-2000)"
