@@ -262,6 +262,7 @@ export default function MatchPage() {
 
     {/* Auction Content */}
       <div className="flex-1 w-full">
+        <div className="flex flex-col md:flex-row gap-6 items-start">
         {/* Offer form for winners */}
 {isWinner && !alreadySubmittedOffer ? (
   <div className="mb-6">
@@ -306,7 +307,7 @@ export default function MatchPage() {
   </div>
 )}
 
-    <div className="flex flex-col md:flex-row gap-6 items-start">
+    
       {/* Shopkeeper Image */}
       <div className="hidden md:flex flex-shrink-0 w-full md:w-48 justify-center md:justify-start">
       <Image
