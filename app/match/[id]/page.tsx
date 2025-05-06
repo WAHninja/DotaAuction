@@ -186,50 +186,50 @@ export default function MatchPage() {
 
     {/* Teams */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      {/* Team 1 */}
-      <div className="bg-gradient-to-b from-lime-950 via-lime-900 to-lime-900 bg-opacity-20 p-6 rounded-2xl shadow-lg">
-        <div className="flex flex-col items-center mb-4">
-          <Image src="/Team1.png" alt="Team 1 Logo" width={64} height={64} />
-          <h2 className="text-2xl font-semibold mt-2">Team 1</h2>
-        </div>
-        <ul className="space-y-2">
-          {team1.map((pid) => {
-            const player = getPlayer(pid);
-            return (
-              <li key={`team1-${pid}`} className="flex justify-between items-center">
-                <span>{player?.username || 'Unknown'}</span>
-                <span className="flex items-center gap-1">
-                  {player?.gold ?? 0}
-                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {/* Team A */}
-      <div className="bg-gradient-to-b from-green-950 via-green-900 to-green-900 bg-opacity-20 p-6 rounded-2xl shadow-lg">
-        <div className="flex flex-col items-center mb-4">
-          <Image src="/TeamA.png" alt="Team A Logo" width={64} height={64} />
-          <h2 className="text-2xl font-semibold mt-2">Team A</h2>
-        </div>
-        <ul className="space-y-2">
-          {teamA.map((pid) => {
-            const player = getPlayer(pid);
-            return (
-              <li key={`teamA-${pid}`} className="flex justify-between items-center">
-                <span>{player?.username || 'Unknown'}</span>
-                <span className="flex items-center gap-1">
-                  {player?.gold ?? 0}
-                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+  {/* Team 1 */}
+  <div className="bg-gradient-to-b from-[rgba(54,83,20,0.6)] via-[rgba(63,98,18,0.6)] to-[rgba(63,98,18,0.6)] p-6 rounded-2xl shadow-lg backdrop-blur-sm">
+    <div className="flex flex-row justify-center-safe mb-4">
+      <Image src="/Team1.png" alt="Team 1 Logo" width={64} height={64} />
+      <h2 className="text-2xl font-semibold mt-2">Team 1</h2>
     </div>
+    <ul className="space-y-2">
+      {team1.map((pid) => {
+        const player = getPlayer(pid);
+        return (
+          <li key={`team1-${pid}`} className="flex justify-between items-center">
+            <span>{player?.username || 'Unknown'}</span>
+            <span className="flex items-center gap-1">
+              {player?.gold ?? 0}
+              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+
+  {/* Team A */}
+  <div className="bg-gradient-to-b from-[rgba(69,10,10,0.6)] via-[rgba(127,29,29,0.6)] to-[rgba(127,29,29,0.6)] p-6 rounded-2xl shadow-lg backdrop-blur-sm">
+    <div className="flex flex-row justify-center-safe mb-4">
+      <Image src="/TeamA.png" alt="Team A Logo" width={64} height={64} />
+      <h2 className="text-2xl font-semibold mt-2">Team A</h2>
+    </div>
+    <ul className="space-y-2">
+      {teamA.map((pid) => {
+        const player = getPlayer(pid);
+        return (
+          <li key={`teamA-${pid}`} className="flex justify-between items-center">
+            <span>{player?.username || 'Unknown'}</span>
+            <span className="flex items-center gap-1">
+              {player?.gold ?? 0}
+              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+</div>
 
     {/* Select Winner Form */}
     {isInProgress && (
