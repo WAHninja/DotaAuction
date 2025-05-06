@@ -240,7 +240,7 @@ export default function MatchPage() {
 
     {/* Auction Phase */}
     {isAuction && (
-      <div className="bg-stone-500 bg-opacity-20 p-6 rounded-2xl shadow-lg mb-8">
+      <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
         <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
 
         {/* Offer form for winners */}
