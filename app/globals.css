@@ -41,31 +41,3 @@
     animation: fade 0.5s ease-out forwards;
   }
 }
-
-/* Fog animated background */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0; 
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: url('/fog-texture.png') repeat;
-  background-size: cover;
-  opacity: 0.05;
-  z-index: 0;
-  animation: moveBackground 60s linear infinite, pulseFog 10s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Drift movement */
-@keyframes moveBackground {
-  0% { background-position: 0 0; }
-  100% { background-position: 1000px 500px; }
-}
-
-/* Gentle opacity pulsing */
-@keyframes pulseFog {
-  0%, 100% { opacity: 0.03; }
-  50% { opacity: 0.07; }
-}
