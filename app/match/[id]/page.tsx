@@ -180,8 +180,7 @@ export default function MatchPage() {
               : 'bg-gray-500 text-white'
           }`}
         >
-          <Hash className="w-4 h-4" />
-          Game #{latestGame.id} —
+          Game #{latestGame.id}
     
           {latestGame.status === 'Auction pending' && <Gavel className="w-4 h-4" />}
           {latestGame.status === 'In progress' && <PlayCircle className="w-4 h-4" />}
@@ -326,11 +325,8 @@ export default function MatchPage() {
           className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
         >
           <div className="flex flex-col gap-2 mb-4">
-            <div className="text-sm text-gray-400">From</div>
+            <div className="text-sm text-gray-400">Offer from</div>
             <div className="text-lg font-semibold text-yellow-300">{from?.username}</div>
-
-            <div className="text-sm text-gray-400">To</div>
-            <div className="text-lg font-semibold text-blue-300">{to?.username}</div>
 
             <div className="mt-2 text-sm text-gray-300">
               If accepted:
@@ -338,7 +334,7 @@ export default function MatchPage() {
                 <li>
                   <strong>{from?.username}</strong> gains{' '}
                   <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
-                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1" />
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block mr-2 ml-1 " />
                   starting gold in next game
                 </li>
                 <li>
