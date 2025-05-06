@@ -175,7 +175,7 @@ export default function MatchPage() {
           }`}
         >
           {latestGame.status}
-          {latestGame?.winning_team && latestGame.status === 'Finished' && (
+          {latestGame?.winning_team && latestGame.status === 'Auction pending' && (
             <> — Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}</>
           )}
         </span>
