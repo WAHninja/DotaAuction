@@ -1,4 +1,4 @@
-  'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -119,10 +119,6 @@ export default function MatchPage() {
     }
   };
 
-  const alreadySubmittedOffer = offers.some(
-    (offer) => offer.from_player_id === currentUserId
-  );
-
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
     try {
@@ -163,6 +159,10 @@ export default function MatchPage() {
 
   const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
+  );
+
+  const alreadySubmittedOffer = offers.some(
+    (offer) => offer.from_player_id === currentUserId
   );
 
   return (
