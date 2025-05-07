@@ -157,13 +157,15 @@ export default function MatchPage() {
   const myTeam = winningTeam === 'team_1' ? team1 : teamA;
   const offerCandidates = myTeam.filter((pid) => pid !== currentUserId);
 
+  const totalOffersSubmitted = offers.filter(o => o.status === 'pending' || o.status === 'accepted').length;
+  const allOffersSubmitted = totalOffersSubmitted >= winningTeam.length;
+
+  
   const alreadySubmittedOffer = offers.some(
-    (offer) => offer.from_player_id === currentUserId
-  );
+    (offer) => offer.from_player_id === currentUserId);
   
   const alreadyAcceptedOffer = offers?.find(
-    (o) => o.status === 'accepted' && o.target_player_id === currentUserId
-  );
+    (o) => o.status === 'accepted' && o.target_player_id === currentUserId);
 
   return (
   <>
@@ -311,7 +313,7 @@ export default function MatchPage() {
 <div className="flex flex-col md:flex-row gap-6 items-start">
 
   {/* Shopkeeper Image */}
-  <div className="md:w-48 flex justify-center md:justify-start mb-6 md:mb-0">
+  <div className="hidden md:flex md:w-48 justify-center md:justify-start mb-6 md:mb-0">
     <Image
       src="/Shopkeeper.png"
       alt="Shopkeeper"
@@ -328,7 +330,7 @@ export default function MatchPage() {
       {offers.map((offer) => {
         const from = getPlayer(offer.from_player_id);
         const to = getPlayer(offer.target_player_id);
-        const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
+        const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer && allOffersSubmitted;
 
         return (
           <div
