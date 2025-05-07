@@ -1,4 +1,4 @@
-  'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -119,10 +119,6 @@ export default function MatchPage() {
     }
   };
 
-  const alreadySubmittedOffer = offers.some(
-    (offer) => offer.from_player_id === currentUserId
-  );
-
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
     try {
@@ -161,6 +157,10 @@ export default function MatchPage() {
   const myTeam = winningTeam === 'team_1' ? team1 : teamA;
   const offerCandidates = myTeam.filter((pid) => pid !== currentUserId);
 
+  const alreadySubmittedOffer = offers.some(
+    (offer) => offer.from_player_id === currentUserId
+  );
+  
   const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
@@ -261,16 +261,6 @@ export default function MatchPage() {
     <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
 
     <div className="flex flex-col md:flex-row gap-6 items-start">
-      {/* Shopkeeper Image */}
-      <div className="hidden md:flex flex-shrink-0 w-full md:w-48 justify-center md:justify-start">
-      <Image
-        src="/Shopkeeper.png"
-        alt="Shopkeeper"
-        width={192}
-        height={192}
-        className="rounded-xl"
-      />
-    </div>
 
       {/* Auction Content */}
       <div className="flex-1 w-full">
@@ -317,6 +307,17 @@ export default function MatchPage() {
     ✅ You've already submitted your offer.
   </div>
 )}
+
+        {/* Shopkeeper Image */}
+      <div className="hidden md:flex flex-shrink-0 w-full md:w-48 justify-center md:justify-start">
+      <Image
+        src="/Shopkeeper.png"
+        alt="Shopkeeper"
+        width={192}
+        height={192}
+        className="rounded-xl"
+      />
+    </div>
 
         {/* Current Offers */}
 <div>
