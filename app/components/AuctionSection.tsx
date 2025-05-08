@@ -2,7 +2,15 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { Offer } from '@/lib/types';
+
+type Offer = {
+  id: number;
+  game_id: number;
+  from_player_id: number;
+  target_player_id: number;
+  offer_amount: number;
+  status: 'pending' | 'accepted' | 'rejected';
+};
 
 interface AuctionSectionProps {
   isAuction: boolean;
