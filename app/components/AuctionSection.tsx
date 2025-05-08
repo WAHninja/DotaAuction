@@ -118,8 +118,8 @@ export default function AuctionSection({
               <h4 className="text-xl font-bold mb-4">Current Offers</h4>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {offers.map((offer) => {
-                  const from = getPlayer(offer.from_player_id);
-                  const to = getPlayer(offer.target_player_id);
+                  const from = getPlayer(offer.from_player_id.toString());
+                  const to = getPlayer(offer.target_player_id.toString());
                   const canAccept =
                     isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
 
