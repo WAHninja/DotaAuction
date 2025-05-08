@@ -48,7 +48,7 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
   };
 
   return (
-    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn max-w-xl mx-auto">
+    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn mx-auto">
       <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
       <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
         <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
