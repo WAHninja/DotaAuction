@@ -311,7 +311,7 @@ export default function MatchPage() {
 <div className="flex flex-col md:flex-row gap-6 items-start">
 
   {/* Shopkeeper Image */}
-  <div className="md:w-48 flex justify-center md:justify-start mb-6 md:mb-0">
+  <div className="hidden md:flex md:w-48 justify-center md:justify-start mb-6 md:mb-0">
     <Image
       src="/Shopkeeper.png"
       alt="Shopkeeper"
