@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import SelectGameWinnerForm from '../../components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import AuctionSection from '@/app/components/AuctionSection';
@@ -202,3 +201,4 @@ export default function MatchPage() {
     )}
   </>
 );
+}
