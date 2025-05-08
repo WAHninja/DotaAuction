@@ -14,7 +14,8 @@ type Offer = {
 
 interface AuctionSectionProps {
   isAuction: boolean;
-  currentUserId: number; // Add currentUserId as a number
+  currentUserId: number;
+  gameId: number;
   isWinner: boolean;
   isLoser: boolean;
   alreadySubmittedOffer: boolean;
