@@ -244,8 +244,8 @@ export default function MatchPage() {
     <Image
       src="/Shopkeeper.png"
       alt="Shopkeeper"
-      width={192}
-      height={192}
+      width={250}
+      height={300}
       className="rounded-xl"
     />
   </div>
