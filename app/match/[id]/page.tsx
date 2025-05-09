@@ -242,7 +242,7 @@ export default function MatchPage() {
 <div className="flex flex-col md:flex-row gap-6 items-start">
 
   {/* Shopkeeper Image */}
-  <div className="hidden md:block absolute top-[-60px] left-[-80px] z-10 w-fit">
+  <div className="hidden md:block relative -ml-20 z-10 overflow-visible w-fit">
     <Image
       src="/Shopkeeper.png"
       alt="Shopkeeper"
