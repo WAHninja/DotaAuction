@@ -241,15 +241,16 @@ export default function MatchPage() {
 {/* Shopkeeper + Offers layout */}
 <div className="flex flex-col md:flex-row gap-6 items-start">
 
- {/* Shopkeeper Image*/}
-<div className="hidden md:block relative -ml-20 -mt-20 z-10 overflow-visible w-fit">
-  <Image
-    src="/Shopkeeper.png"
-    alt="Shopkeeper"
-    width={300}
-    height={450}
-    className="rounded-xl max-w-[480px]"
-  />
+  {/* Shopkeeper Image */}
+  <div className="hidden md:block relative -ml-20 -mt-20 z-10 overflow-visible w-fit">
+    <Image
+      src="/Shopkeeper.png"
+      alt="Shopkeeper"
+      width={300}
+      height={450}
+      className="rounded-xl max-w-[300x]"
+    />
+  </div>
 
   {/* Current Offers */}
   <div className="flex-1">
