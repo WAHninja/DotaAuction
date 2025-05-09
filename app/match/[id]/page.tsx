@@ -242,15 +242,14 @@ export default function MatchPage() {
 <div className="flex flex-col md:flex-row gap-6 items-start">
 
  {/* Shopkeeper Image + Speech Bubble */}
-<div className="hidden md:block relative -ml-20 -mt-6 z-10 overflow-visible">
+<div className="hidden md:block relative -ml-20 -mt-6 z-10 overflow-visible w-fit">
   <Image
     src="/Shopkeeper.png"
     alt="Shopkeeper"
     width={700}
     height={900}
-    className="rounded-xl"
+    className="rounded-xl max-w-[700px]"
   />
-</div>
 
   {/* Speech Bubble */}
   <div className="absolute -top-4 left-44 bg-gray-100 text-black text-sm font-medium px-4 py-2 rounded-xl shadow-lg max-w-xs">
