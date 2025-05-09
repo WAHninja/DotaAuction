@@ -241,16 +241,22 @@ export default function MatchPage() {
 {/* Shopkeeper + Offers layout */}
 <div className="flex flex-col md:flex-row gap-6 items-start">
 
-  {/* Shopkeeper Image */}
-  <div className="hidden md:flex md:w-48 justify-center md:justify-start mb-6 md:mb-0">
-    <Image
-      src="/Shopkeeper.png"
-      alt="Shopkeeper"
-      width={250}
-      height={300}
-      className="rounded-xl"
-    />
+ {/* Shopkeeper Image + Speech Bubble */}
+<div className="hidden md:block relative md:w-48 md:-ml-20 md:-mt-6 z-10 overflow-visible">
+  <Image
+    src="/Shopkeeper.png"
+    alt="Shopkeeper"
+    width={400}
+    height={480}
+    className="rounded-xl"
+  />
+
+  {/* Speech Bubble */}
+  <div className="absolute -top-4 left-44 bg-gray-100 text-black text-sm font-medium px-4 py-2 rounded-xl shadow-lg max-w-xs">
+    💰 Only one offer can be accepted... choose wisely!
+    <div className="absolute -left-2 top-3 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-gray-100" />
   </div>
+</div>
 
   {/* Current Offers */}
   <div className="flex-1">
