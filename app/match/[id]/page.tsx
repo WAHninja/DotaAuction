@@ -169,12 +169,14 @@ export default function MatchPage() {
         logo="/Team1.png"
         players={team1.map(getPlayer)}
         teamId="team1"
+        color="from-lime-900/40 to-lime-800/40"
       />
       <TeamCard
         name="Team A"
         logo="/TeamA.png"
         players={teamA.map(getPlayer)}
         teamId="teamA"
+        color="from-red-900/40 to-red-800/40"
       />
     </div>
 
