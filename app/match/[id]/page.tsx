@@ -246,9 +246,9 @@ export default function MatchPage() {
   <Image
     src="/Shopkeeper.png"
     alt="Shopkeeper"
-    width={700}
-    height={900}
-    className="rounded-xl max-w-[700px]"
+    width={350}
+    height={500}
+    className="rounded-xl max-w-[500px]"
   />
 
   {/* Speech Bubble */}
