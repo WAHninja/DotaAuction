@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     const game = gameRes.rows[0];
 
-    if (game.status !== 'In progress') {
+    if (game.status !== 'in progress') {
       return NextResponse.json({ error: 'Game already completed or auction already started' }, { status: 400 });
     }
 
