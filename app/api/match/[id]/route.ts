@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     const latestGame = games.at(-1) || null;
 
     let offers = [];
-    if (latestGame?.status === 'Auction pending') {
+    if (latestGame?.status === 'auction pending') {
       const offersRes = await db.query(
         `SELECT * FROM Offers WHERE game_id = $1`,
         [latestGame.game_id]
