@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
       // Log in GamePlayerStats
       await db.query(
-        `INSERT INTO GamePlayerStats (game_id, user_id, team_id, gold_change, reason)
+        `INSERT INTO GamePlayerStats (game_id, player_id, team_id, gold_change, reason)
          VALUES ($1, $2, $3, $4, 'loss_penalty')`,
         [gameId, playerId, losingTeamId, -penalty]
       );
