@@ -53,7 +53,7 @@ export default function MatchPage() {
   }, [id]);
 
   useEffect(() => {
-    if (data?.latestGame?.status === 'Auction pending') {
+    if (data?.latestGame?.status === 'auction pending') {
       fetchOffers(data.latestGame.id);
     }
   }, [data]);
