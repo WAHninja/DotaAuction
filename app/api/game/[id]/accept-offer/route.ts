@@ -74,7 +74,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const { rows: newGameRows } = await db.query(
       `INSERT INTO Games (match_id, team_a_members, team_1_members, status)
-       VALUES ($1, $2, $3, 'In progress')
+       VALUES ($1, $2, $3, 'in progress')
        RETURNING *`,
       [game.match_id, newTeamA, newTeam1]
     );
