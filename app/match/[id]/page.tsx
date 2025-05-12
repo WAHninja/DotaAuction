@@ -282,7 +282,8 @@ export default function MatchPage() {
                           starting gold
                         </li>
                         <li>
-                          <strong>{to?.username}</strong> moves to the <span className="text-red-400 font-bold">losing team</span>
+                          <strong>{to?.username}</strong> moves to the{' '}
+                          <span className="text-red-400 font-bold">losing team</span>
                         </li>
                       </ul>
                     </div>
@@ -310,7 +311,6 @@ export default function MatchPage() {
             })}
           </div>
         </div>
-      </div> {/* End of Shopkeeper + Offers row */}
       </div>
     </div>
   </div>
