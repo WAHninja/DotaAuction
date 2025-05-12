@@ -1,68 +1,89 @@
-import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db'; // Your PostgreSQL client
+'use client';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const gameId = parseInt(params.id, 10);
-  if (isNaN(gameId)) {
-    return NextResponse.json({ error: 'Invalid game ID' }, { status: 400 });
-  }
+import { useState } from 'react';
 
-  const { winningTeamId } = await req.json();
+type SelectWinnerFormProps = {
+  gameId: number;
+  show: boolean; // Only show form if the game is "In progress"
+};
 
-  if (!['team_1', 'team_a'].includes(winningTeamId)) {
-    return NextResponse.json({ error: 'Invalid team selection' }, { status: 400 });
-  }
+export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps) {
+  const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  try {
-    // Fetch game and match info
-    const gameRes = await db.query(`
-      SELECT id, match_id, team_1_members, team_a_members
-      FROM Games
-      WHERE id = $1
-    `, [gameId]);
+  if (!show) return null;
 
-    const game = gameRes.rows[0];
-    if (!game) {
-      return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+  const handleSubmit = async () => {
+    if (!selectedTeam) {
+      setMessage('Please select a team.');
+      return;
     }
 
-    const losingTeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
-    const losingMembers: number[] = game[`${losingTeamId}_members`];
+    setLoading(true);
+    setMessage('');
 
-    // Apply 20% penalty to each losing player
-    for (const playerId of losingMembers) {
-      const goldRes = await db.query(`
-        SELECT gold FROM MatchPlayers
-        WHERE match_id = $1 AND player_id = $2
-      `, [game.match_id, playerId]);
+    try {
+      const res = await fetch(`/api/game/${gameId}/select-winner`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ winningTeamId: selectedTeam }),
+      });
 
-      const currentGold = goldRes.rows[0]?.gold ?? 0;
-      const penalty = Math.floor(currentGold * 0.2);
+      const data = await res.json();
 
-      // Deduct gold
-      await db.query(`
-        UPDATE MatchPlayers
-        SET gold = gold - $1
-        WHERE match_id = $2 AND player_id = $3
-      `, [penalty, game.match_id, playerId]);
-
-      // Log gold loss
-      await db.query(`
-        INSERT INTO GamePlayerStats (game_id, player_id, team_id, gold_change, reason)
-        VALUES ($1, $2, $3, $4, 'loss_penalty')
-      `, [gameId, playerId, losingTeamId, -penalty]);
+      if (res.ok) {
+        setMessage('Game winner selected successfully!');
+      } else {
+        setMessage(data.error || 'Something went wrong');
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage('Error connecting to server');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Update game status and winner
-    await db.query(`
-      UPDATE Games
-      SET status = 'Auction pending', winning_team_id = $1
-      WHERE id = $2
-    `, [winningTeamId, gameId]);
-
-    return NextResponse.json({ message: 'Winner set and gold penalty applied' });
-  } catch (err) {
-    console.error('Error selecting winner:', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
-  }
+  return (
+    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn mx-auto">
+      <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
+      <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
+        <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
+          <input
+            type="radio"
+            name="winner"
+            value="team_1"
+            onChange={() => setSelectedTeam('team_1')}
+            className="accent-gold"
+          />
+          <span className="font-semibold">Team 1</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
+          <input
+            type="radio"
+            name="winner"
+            value="team_a"
+            onChange={() => setSelectedTeam('team_a')}
+            className="accent-gold"
+          />
+          <span className="font-semibold">Team A</span>
+        </label>
+      </div>
+      <div className="flex justify-center">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Submitting...' : 'Submit Winner'}
+        </button>
+      </div>
+      {message && (
+        <p className="mt-4 text-center text-sm text-red-400 font-semibold">{message}</p>
+      )}
+    </div>
+  );
 }
