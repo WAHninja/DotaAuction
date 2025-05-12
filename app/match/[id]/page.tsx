@@ -141,8 +141,8 @@ export default function MatchPage() {
 
   const getPlayer = (pid: number) => players.find((p: any) => p.id === pid);
 
-  const isInProgress = latestGame?.status === 'In progress';
-  const isAuction = latestGame?.status === 'Auction pending';
+  const isInProgress = latestGame?.status === 'in progress';
+  const isAuction = latestGame?.status === 'auction pending';
   const winningTeam = latestGame?.winning_team;
 
   const isWinner = winningTeam === 'team_1' ? team1.includes(currentUserId) : teamA.includes(currentUserId);
