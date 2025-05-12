@@ -24,7 +24,7 @@ export default async function DashboardPage() {
       WHERE m.id IN (
         SELECT match_id FROM match_players WHERE user_id = $1
       )
-      AND m.winning_id IS NULL
+      AND m.winner_id IS NULL
       GROUP BY m.id
       ORDER BY m.created_at DESC
     `, [session.userId]);
@@ -33,7 +33,7 @@ export default async function DashboardPage() {
       SELECT 
         m.id,
         m.created_at,
-        m.winning_id,
+        m.winner_id,
         ARRAY_AGG(u.username ORDER BY u.username) AS players
       FROM matches m
       JOIN match_players mp ON mp.match_id = m.id
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       WHERE m.id IN (
         SELECT match_id FROM match_players WHERE user_id = $1
       )
-      AND m.winning_id IS NOT NULL
+      AND m.winner_id IS NOT NULL
       GROUP BY m.id
       ORDER BY m.created_at DESC
     `, [session.userId]);
