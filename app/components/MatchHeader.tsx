@@ -1,6 +1,14 @@
 import { Gavel, PlayCircle, CheckCircle, Trophy } from 'lucide-react';
 
 export default function MatchHeader({ matchId, latestGame }) {
+  // Map internal status values to display-friendly values
+  const statusDisplay = {
+    'auction pending': 'Auction Pending',
+    'in progress': 'In Progress',
+    'finished': 'Finished',
+    // Add any other statuses as needed
+  };
+
   return (
     <div className="text-center mb-8">
       <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
@@ -19,10 +27,10 @@ export default function MatchHeader({ matchId, latestGame }) {
           }`}
         >
           Game #{latestGame.id}
-          {latestGame.status === 'Auction pending' && <Gavel className="w-4 h-4" />}
-          {latestGame.status === 'In progress' && <PlayCircle className="w-4 h-4" />}
-          {latestGame.status === 'Finished' && <CheckCircle className="w-4 h-4" />}
-          {latestGame.status}
+          {latestGame.status === 'auction pending' && <Gavel className="w-4 h-4" />}
+          {latestGame.status === 'in progress' && <PlayCircle className="w-4 h-4" />}
+          {latestGame.status === 'finished' && <CheckCircle className="w-4 h-4" />}
+          {statusDisplay[latestGame.status]} {/* Display the friendly status */}
           {latestGame?.winning_team && latestGame.status === 'auction pending' && (
             <>
               <Trophy className="w-4 h-4 ml-2" />
