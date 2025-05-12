@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     for (const playerId of losingMembers) {
       // Get current gold
       const goldRes = await db.query(
-        `SELECT gold FROM match_players WHERE match_id = $1 AND player_id = $2`,
+        `SELECT gold FROM match_players WHERE match_id = $1 AND user_id = $2`,
         [game.match_id, playerId]
       );
 
@@ -50,13 +50,13 @@ export async function POST(req: NextRequest) {
 
       // Deduct gold
       await db.query(
-        `UPDATE match_players SET gold = gold - $1 WHERE match_id = $2 AND player_id = $3`,
+        `UPDATE match_players SET gold = gold - $1 WHERE match_id = $2 AND user_id = $3`,
         [penalty, game.match_id, playerId]
       );
 
       // Log in GamePlayerStats
       await db.query(
-        `INSERT INTO GamePlayerStats (game_id, player_id, team_id, gold_change, reason)
+        `INSERT INTO GamePlayerStats (game_id, user_id, team_id, gold_change, reason)
          VALUES ($1, $2, $3, $4, 'loss_penalty')`,
         [gameId, playerId, losingTeamId, -penalty]
       );
