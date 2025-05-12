@@ -191,12 +191,12 @@ export default function MatchPage() {
   <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
     <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
 
-    {/* Main container flex layout */}
-    <div className="flex flex-col gap-6 items-center md:items-start">
+    {/* Flex container for the entire auction phase */}
+    <div className="flex flex-col gap-6 items-start">
 
       {/* Offer form for winners */}
       {isWinner && !alreadySubmittedOffer ? (
-        <div className="w-full max-w-md mb-6">
+        <div className="w-full max-w-md mx-auto mb-6">
           <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
           <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
             <select
