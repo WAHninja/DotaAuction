@@ -160,6 +160,8 @@ export default function MatchPage() {
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
 
+  const [gameHistory, setGameHistory] = useState<any[]>([]);
+  
   useEffect(() => {
   const fetchHistory = async () => {
     try {
@@ -327,15 +329,19 @@ export default function MatchPage() {
         </div>
 
       </div> {/* End of Shopkeeper + Offers row */}
-      <div className="space-y-6">
-  {gameHistory.length > 0 && (
-    <div className="mt-10">
-      <h2 className="text-xl font-bold mb-4">Game History</h2>
-      {gameHistory.map((game: any, index: number) => (
+      {/* Game History Section */}
+<div className="bg-slate-700 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
+  <h3 className="text-2xl font-bold mb-4 text-center">Game History</h3>
+  {gameHistory.length === 0 ? (
+    <p className="text-center text-gray-300">No previous games yet.</p>
+  ) : (
+    <div className="grid gap-6">
+      {gameHistory.map((game) => (
         <GameHistoryCard
           key={game.id}
-          game={{ ...game, number: index + 1 }}
+          game={game}
           players={players}
+          currentUserId={currentUserId}
         />
       ))}
     </div>
