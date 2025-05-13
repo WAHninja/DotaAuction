@@ -164,9 +164,9 @@ export default function MatchPage() {
 
   const [gameHistory, setGameHistory] = useState<any[]>([]);
   const GameHistoryCard = dynamic<FC<GameHistoryCardProps>>(
-      () => import('@/app/components/GameHistoryCard'),
-      { ssr: false }
-    );
+  () => import('@/app/components/GameHistoryCard').then(mod => mod.GameHistoryCard),
+  { ssr: false }
+);
   
   useEffect(() => {
   const fetchHistory = async () => {
