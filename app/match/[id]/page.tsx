@@ -9,6 +9,7 @@ import TeamCard from '@/app/components/TeamCard';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
+import { GameHistoryCard } from '@/components/GameHistoryCard'
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -158,6 +159,9 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
+
+  const res = await fetch(`/api/match/${params.id}/history`)
+  const { history } = await res.json()
 
   return (
   <>
@@ -312,6 +316,12 @@ export default function MatchPage() {
         </div>
 
       </div> {/* End of Shopkeeper + Offers row */}
+      <div className="space-y-6">
+      <h2 className="text-xl font-bold">Game History</h2>
+      {history.map((game: any, index: number) => (
+        <GameHistoryCard key={game.game_id} game={game} index={index} />
+      ))}
+    </div>
     </div>
   </div>
 )}
