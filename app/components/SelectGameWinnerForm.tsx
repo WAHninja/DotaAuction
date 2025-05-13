@@ -49,15 +49,15 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
   };
 
   return (
-    <div className="flex items-center justify-center mt-8 animate-fadeIn">
-      <div className="flex items-center gap-6">
-        {/* Left image - hidden on small screens */}
+    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn mx-auto max-w-4xl">
+      <div className="flex items-center justify-between">
+        {/* Left image */}
         <div className="hidden sm:block">
           <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={160} height={160} />
         </div>
 
-        {/* Form container */}
-        <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl max-w-md w-full">
+        {/* Main form content */}
+        <div className="flex-1 px-4">
           <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
           <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
             <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
@@ -95,7 +95,7 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
           )}
         </div>
 
-        {/* Right image - hidden on small screens */}
+        {/* Right image */}
         <div className="hidden sm:block">
           <Image src="/direcreeps.PNG" alt="Dire Creeps" width={160} height={160} />
         </div>
