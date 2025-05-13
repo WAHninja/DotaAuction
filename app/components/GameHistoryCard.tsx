@@ -79,3 +79,5 @@ export function GameHistoryCard({ game, index }: GameHistoryCardProps) {
     </div>
   )
 }
+
+export default GameHistoryCard; // <-- Add this line at the end
