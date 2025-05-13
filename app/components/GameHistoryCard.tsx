@@ -5,6 +5,8 @@ import { useState } from 'react'
 type GameHistoryCardProps = {
   game: any
   index: number
+  players: any[]
+  currentUserId: string
 }
 
 export function GameHistoryCard({ game, index }: GameHistoryCardProps) {
