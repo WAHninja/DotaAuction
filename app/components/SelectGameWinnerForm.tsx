@@ -51,13 +51,18 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
   return (
     <div className="relative my-8">
       {/* Overflowing Images */}
-      <div className="hidden sm:block absolute left-20 top-1/2 transform -translate-y-1/2 z-0">
-        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={250} height={250} />
+      <div
+        className="hidden sm:block absolute left-20 transform -translate-y-1/2 z-0"
+        style={{ top: 'calc(50% - 20px)' }}
+      >
+        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={200} height={200} />
       </div>
-      <div className="hidden sm:block absolute right-20 top-1/2 transform -translate-y-1/2 z-0">
-        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={250} height={250} />
+      <div
+        className="hidden sm:block absolute right-20 transform -translate-y-1/2 z-0"
+        style={{ top: 'calc(50% - 20px)' }}
+      >
+        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={200} height={200} />
       </div>
-
       {/* Main container */}
       <div className="relative z-10 bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg">
         <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
