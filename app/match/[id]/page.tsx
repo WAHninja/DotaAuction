@@ -336,10 +336,11 @@ export default function MatchPage() {
     <p className="text-center text-gray-300">No previous games yet.</p>
   ) : (
     <div className="grid gap-6">
-      {gameHistory.map((game) => (
+      {gameHistory.map((game, index) => (
         <GameHistoryCard
           key={game.id}
           game={game}
+          index={index} // ✅ This was missing
           players={players}
           currentUserId={currentUserId}
         />
