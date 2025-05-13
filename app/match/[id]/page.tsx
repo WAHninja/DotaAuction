@@ -9,7 +9,7 @@ import TeamCard from '@/app/components/TeamCard';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import { GameHistoryCard } from '@/components/GameHistoryCard'
+import { GameHistoryCard } from '@/app/components/GameHistoryCard'
 
 export default function MatchPage() {
   const { id } = useParams();
