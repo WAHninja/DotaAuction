@@ -1,9 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 type GameHistoryCardProps = {
   game: any
@@ -18,20 +15,20 @@ export function GameHistoryCard({ game, index }: GameHistoryCardProps) {
   const team1 = game.team_1_members
 
   return (
-    <Card className="mb-4">
+    <div className="border rounded-xl shadow-sm mb-4">
       <div
-        className="flex justify-between items-center cursor-pointer px-4 py-2 bg-muted hover:bg-accent"
+        className="flex justify-between items-center cursor-pointer px-4 py-2 bg-gray-100 hover:bg-gray-200"
         onClick={() => setOpen(!open)}
       >
         <div className="font-semibold text-lg">
           Game {index + 1} — Winner: {winningTeam === 'team_a' ? 'Team A' : 'Team 1'}
         </div>
-        <Button variant="ghost" size="sm">
+        <button className="text-sm text-blue-600 hover:underline">
           {open ? 'Hide' : 'Show'} Details
-        </Button>
+        </button>
       </div>
       {open && (
-        <CardContent className="p-4 space-y-4">
+        <div className="p-4 space-y-4">
           <div>
             <strong>Team A:</strong>
             <ul className="ml-4 list-disc">
@@ -53,22 +50,30 @@ export function GameHistoryCard({ game, index }: GameHistoryCardProps) {
           <div>
             <strong>Offers:</strong>
             <ul className="ml-4 list-disc">
-              {game.offers.map((offer: any) => (
-                <li key={offer.id}>
-                  {offer.from_username} → {offer.target_username} ({offer.offer_amount}) -{' '}
-                  <span className={cn(
-                    offer.status === 'accepted' && 'text-green-600',
-                    offer.status === 'rejected' && 'text-red-600'
-                  )}>
-                    {offer.status}
-                  </span>
-                </li>
-              ))}
-              {game.offers.length === 0 && <li>No offers made.</li>}
+              {game.offers.length > 0 ? (
+                game.offers.map((offer: any) => (
+                  <li key={offer.id}>
+                    {offer.from_username} → {offer.target_username} ({offer.offer_amount}) —{' '}
+                    <span
+                      className={
+                        offer.status === 'accepted'
+                          ? 'text-green-600'
+                          : offer.status === 'rejected'
+                          ? 'text-red-600'
+                          : ''
+                      }
+                    >
+                      {offer.status}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li>No offers made.</li>
+              )}
             </ul>
           </div>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   )
 }
