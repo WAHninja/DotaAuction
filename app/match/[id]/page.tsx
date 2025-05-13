@@ -160,8 +160,19 @@ export default function MatchPage() {
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
 
-  const res = await fetch(`/api/match/${params.id}/history`)
-  const { history } = await res.json()
+  useEffect(() => {
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}/history`);
+      const result = await res.json();
+      setGameHistory(result.history || []);
+    } catch (err) {
+      console.error('Failed to fetch game history:', err);
+    }
+  };
+
+  fetchHistory();
+}, [matchId]);
 
   return (
   <>
@@ -317,11 +328,20 @@ export default function MatchPage() {
 
       </div> {/* End of Shopkeeper + Offers row */}
       <div className="space-y-6">
-      <h2 className="text-xl font-bold">Game History</h2>
-      {history.map((game: any, index: number) => (
-        <GameHistoryCard key={game.game_id} game={game} index={index} />
+  {gameHistory.length > 0 && (
+    <div className="mt-10">
+      <h2 className="text-xl font-bold mb-4">Game History</h2>
+      {gameHistory.map((game: any, index: number) => (
+        <GameHistoryCard
+          key={game.id}
+          game={{ ...game, number: index + 1 }}
+          players={players}
+        />
       ))}
     </div>
+  )}
+</div>
+
     </div>
   </div>
 )}
