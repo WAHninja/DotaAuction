@@ -9,9 +9,6 @@ import TeamCard from '@/app/components/TeamCard';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import dynamic from 'next/dynamic';
-import { FC } from 'react';
-import type { GameHistoryCardProps } from '@/app/components/GameHistoryCard';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -161,26 +158,6 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
-
-  const [gameHistory, setGameHistory] = useState<any[]>([]);
-  const GameHistoryCard = dynamic(() =>
-  import('@/app/components/GameHistoryCard').then(mod => mod.GameHistoryCard)
-);
-  
-  useEffect(() => {
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/history`);
-      const result = await res.json();
-      setGameHistory(result.history || []);
-    } catch (err) {
-      console.error('Failed to fetch game history:', err);
-    }
-  };
-
-  fetchHistory();
-}, [matchId]);
-  
 
   return (
   <>
@@ -335,27 +312,7 @@ export default function MatchPage() {
         </div>
 
       </div> {/* End of Shopkeeper + Offers row */}
-      {/* Game History Section */}
-<div className="bg-slate-700 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
-  <h3 className="text-2xl font-bold mb-4 text-center">Game History</h3>
-  {gameHistory.length === 0 ? (
-    <p className="text-center text-gray-300">No previous games yet.</p>
-  ) : (
-    <div className="grid gap-6">
-      {gameHistory.map((game, index) => (
-        <GameHistoryCard
-          key={game.id}
-          game={game}
-          index={index} // ✅ This was missing
-          players={players}
-          currentUserId={currentUserId}
-        />
-      ))}
-    </div>
-  )}
-</div>
-
-    </div>
+      </div>
   </div>
 )}
   </>
