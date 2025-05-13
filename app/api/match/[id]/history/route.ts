@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         g.match_id,
         g.team_a_members,
         g.team_1_members,
-        g.winning_team_id,
+        g.winning_team,
         g.status,
         g.created_at
       FROM games g
