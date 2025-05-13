@@ -3,11 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const matchId = params.id
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
+  const matchId = context.params.id
 
   try {
-    const games = await db.query(`
+    const games = await db.query(
+      `
       SELECT 
         g.id AS game_id,
         g.match_id,
@@ -19,10 +20,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       FROM games g
       WHERE g.match_id = $1
       ORDER BY g.id ASC
-    `, [matchId])
+      `,
+      [matchId]
+    )
 
     const gameIds = games.rows.map((g: any) => g.game_id)
-    const offersResult = await db.query(`
+
+    const offersResult = await db.query(
+      `
       SELECT 
         o.id,
         o.game_id,
@@ -38,13 +43,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       JOIN users u_target ON o.target_player_id = u_target.id
       WHERE o.game_id = ANY($1)
       ORDER BY o.created_at ASC
-    `, [gameIds])
+      `,
+      [gameIds]
+    )
 
-    const offersByGame = new Map()
+    const offersByGame = new Map<number, any[]>()
     for (const offer of offersResult.rows) {
       const gameId = offer.game_id
       if (!offersByGame.has(gameId)) offersByGame.set(gameId, [])
-      offersByGame.get(gameId).push(offer)
+      offersByGame.get(gameId)?.push(offer)
     }
 
     const history = games.rows.map((game: any) => ({
@@ -54,7 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     return NextResponse.json({ history })
   } catch (error) {
-    console.error(error)
+    console.error('[MATCH_HISTORY_ERROR]', error)
     return NextResponse.json({ error: 'Failed to load match history' }, { status: 500 })
   }
 }
