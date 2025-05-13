@@ -93,7 +93,7 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
       </div>
 
       <div className="hidden sm:block">
-        <Image src="/direcreeps.png" alt="Dire Creeps" width={100} height={100} />
+        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={100} height={100} />
       </div>
     </div>
   );
