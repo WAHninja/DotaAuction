@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 type SelectWinnerFormProps = {
   gameId: number;
-  show: boolean; // Only show form if the game is "In progress"
+  show: boolean;
 };
 
 export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps) {
@@ -50,49 +50,55 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
 
   return (
     <div className="flex items-center justify-center mt-8 animate-fadeIn">
-      <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mx-auto max-w-md w-full flex flex-col items-center gap-4">
-        {/* Images now inside the box */}
-        <div className="flex justify-between w-full">
-          <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={80} height={80} />
-          <Image src="/direcreeps.PNG" alt="Dire Creeps" width={80} height={80} />
+      <div className="flex items-center gap-6">
+        {/* Left image - hidden on small screens */}
+        <div className="hidden sm:block">
+          <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={160} height={160} />
         </div>
 
-        <h2 className="text-2xl font-cinzel text-gold mb-2 text-center">Select Winning Team</h2>
-
-        <div className="flex flex-col sm:flex-row justify-center gap-6 mb-4">
-          <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
-            <input
-              type="radio"
-              name="winner"
-              value="team_1"
-              onChange={() => setSelectedTeam('team_1')}
-              className="accent-gold"
-            />
-            <span className="font-semibold">Team 1</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
-            <input
-              type="radio"
-              name="winner"
-              value="team_a"
-              onChange={() => setSelectedTeam('team_a')}
-              className="accent-gold"
-            />
-            <span className="font-semibold">Team A</span>
-          </label>
+        {/* Form container */}
+        <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl max-w-md w-full">
+          <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
+          <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
+            <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
+              <input
+                type="radio"
+                name="winner"
+                value="team_1"
+                onChange={() => setSelectedTeam('team_1')}
+                className="accent-gold"
+              />
+              <span className="font-semibold">Team 1</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
+              <input
+                type="radio"
+                name="winner"
+                value="team_a"
+                onChange={() => setSelectedTeam('team_a')}
+                className="accent-gold"
+              />
+              <span className="font-semibold">Team A</span>
+            </label>
+          </div>
+          <div className="flex justify-center">
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Submitting...' : 'Submit Winner'}
+            </button>
+          </div>
+          {message && (
+            <p className="mt-4 text-center text-sm text-red-400 font-semibold">{message}</p>
+          )}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Submitting...' : 'Submit Winner'}
-        </button>
-
-        {message && (
-          <p className="mt-2 text-center text-sm text-red-400 font-semibold">{message}</p>
-        )}
+        {/* Right image - hidden on small screens */}
+        <div className="hidden sm:block">
+          <Image src="/direcreeps.PNG" alt="Dire Creeps" width={160} height={160} />
+        </div>
       </div>
     </div>
   );
