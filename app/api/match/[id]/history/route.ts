@@ -2,11 +2,18 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
+import { parse } from 'url'
 
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const matchId = context.params.id
-
+export async function GET(req: NextRequest) {
   try {
+    const { pathname } = parse(req.url || '', true)
+    const match = pathname?.match(/\/api\/match\/(\d+)\/history/)
+    const matchId = match?.[1]
+
+    if (!matchId) {
+      return NextResponse.json({ error: 'Match ID not found in URL' }, { status: 400 })
+    }
+
     const games = await db.query(
       `
       SELECT 
@@ -51,7 +58,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     for (const offer of offersResult.rows) {
       const gameId = offer.game_id
       if (!offersByGame.has(gameId)) offersByGame.set(gameId, [])
-      offersByGame.get(gameId)?.push(offer)
+      offersByGame.get(gameId)!.push(offer)
     }
 
     const history = games.rows.map((game: any) => ({
