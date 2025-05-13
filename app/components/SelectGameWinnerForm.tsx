@@ -52,10 +52,10 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
     <div className="relative my-8">
       {/* Overflowing Images */}
       <div className="hidden sm:block absolute left-20 top-1/2 transform -translate-y-1/2 z-0">
-        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={320} height={320} />
+        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={250} height={250} />
       </div>
       <div className="hidden sm:block absolute right-20 top-1/2 transform -translate-y-1/2 z-0">
-        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={320} height={320} />
+        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={250} height={250} />
       </div>
 
       {/* Main container */}
