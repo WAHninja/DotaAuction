@@ -9,7 +9,9 @@ import TeamCard from '@/app/components/TeamCard';
 import MobileNavToggle from '../../components/MobileNavToggle';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import dynamic from 'next/dynamic'
+import dynamic from 'next/dynamic';
+import { FC } from 'react';
+import type { GameHistoryCardProps } from '@/app/components/GameHistoryCard';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -161,7 +163,10 @@ export default function MatchPage() {
   );
 
   const [gameHistory, setGameHistory] = useState<any[]>([]);
-  const GameHistoryCard = dynamic(() => import('@/app/components/GameHistoryCard'), { ssr: false })
+  const GameHistoryCard = dynamic<FC<GameHistoryCardProps>>(
+      () => import('@/app/components/GameHistoryCard'),
+      { ssr: false }
+    );
   
   useEffect(() => {
   const fetchHistory = async () => {
@@ -176,6 +181,7 @@ export default function MatchPage() {
 
   fetchHistory();
 }, [matchId]);
+  
 
   return (
   <>
