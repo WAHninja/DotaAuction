@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     // Track gold change in GamePlayerStats
     await db.query(
-      `INSERT INTO GamePlayerStats (game_id, player_id, team_id, gold_change, reason)
+      `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
        VALUES ($1, $2, $3, $4, 'offer_gain')`,
       [game.id, from_player_id, winningTeam, offer_amount]
     );
