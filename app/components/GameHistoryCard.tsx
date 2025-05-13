@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-type GameHistoryCardProps = {
+export type GameHistoryCardProps = {
   game: any
   index: number
   players: any[]
