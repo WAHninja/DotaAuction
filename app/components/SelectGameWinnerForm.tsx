@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 type SelectWinnerFormProps = {
   gameId: number;
@@ -48,42 +49,52 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
   };
 
   return (
-    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn mx-auto">
-      <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
-      <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
-        <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
-          <input
-            type="radio"
-            name="winner"
-            value="team_1"
-            onChange={() => setSelectedTeam('team_1')}
-            className="accent-gold"
-          />
-          <span className="font-semibold">Team 1</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
-          <input
-            type="radio"
-            name="winner"
-            value="team_a"
-            onChange={() => setSelectedTeam('team_a')}
-            className="accent-gold"
-          />
-          <span className="font-semibold">Team A</span>
-        </label>
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fadeIn">
+      <div className="hidden sm:block">
+        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={100} height={100} />
       </div>
-      <div className="flex justify-center">
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Submitting...' : 'Submit Winner'}
-        </button>
+
+      <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mx-auto max-w-md w-full">
+        <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
+        <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
+          <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
+            <input
+              type="radio"
+              name="winner"
+              value="team_1"
+              onChange={() => setSelectedTeam('team_1')}
+              className="accent-gold"
+            />
+            <span className="font-semibold">Team 1</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer text-yellow-400 hover:text-yellow-300 transition">
+            <input
+              type="radio"
+              name="winner"
+              value="team_a"
+              onChange={() => setSelectedTeam('team_a')}
+              className="accent-gold"
+            />
+            <span className="font-semibold">Team A</span>
+          </label>
+        </div>
+        <div className="flex justify-center">
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Submitting...' : 'Submit Winner'}
+          </button>
+        </div>
+        {message && (
+          <p className="mt-4 text-center text-sm text-red-400 font-semibold">{message}</p>
+        )}
       </div>
-      {message && (
-        <p className="mt-4 text-center text-sm text-red-400 font-semibold">{message}</p>
-      )}
+
+      <div className="hidden sm:block">
+        <Image src="/direcreeps.png" alt="Dire Creeps" width={100} height={100} />
+      </div>
     </div>
   );
 }
