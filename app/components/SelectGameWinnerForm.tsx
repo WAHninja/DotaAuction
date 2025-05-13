@@ -49,7 +49,7 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
   };
 
   return (
-    <div className="border-2 border-gold p-6 rounded-2xl bg-surface shadow-2xl mt-8 animate-fadeIn mx-auto max-w-4xl">
+    <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
       <div className="flex items-center justify-between">
         {/* Left image */}
         <div className="hidden sm:block">
