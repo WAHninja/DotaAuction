@@ -19,7 +19,7 @@ export default function BodyClassWrapper() {
       body.classList.add('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
     } else if (isMatchPage) {
       setShowVideo(false);
-      body.classList.add('bg-[url("/LastSupper.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
+      body.classList.add('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
     } else {
       setShowVideo(true);
     }
