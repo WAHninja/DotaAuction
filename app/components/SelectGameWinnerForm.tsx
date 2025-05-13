@@ -50,10 +50,17 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
 
   return (
     <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between overflow-visible"> {/* Allow images to overflow */}
         {/* Left image */}
-        <div className="hidden sm:block">
-          <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={160} height={160} />
+        <div className="hidden sm:block relative">
+          <Image
+            src="/radiantcreeps.png"
+            alt="Radiant Creeps"
+            width={320} // Adjusted width
+            height={320} // Adjusted height
+            layout="intrinsic"
+            className="absolute left-0"
+          />
         </div>
 
         {/* Main form content */}
@@ -96,8 +103,15 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
         </div>
 
         {/* Right image */}
-        <div className="hidden sm:block">
-          <Image src="/direcreeps.PNG" alt="Dire Creeps" width={160} height={160} />
+        <div className="hidden sm:block relative">
+          <Image
+            src="/direcreeps.PNG"
+            alt="Dire Creeps"
+            width={320} // Adjusted width
+            height={320} // Adjusted height
+            layout="intrinsic"
+            className="absolute right-0"
+          />
         </div>
       </div>
     </div>
