@@ -170,6 +170,10 @@ export default function MatchPage() {
     offers.some((offer) => offer.from_player_id === playerId)
   );
 
+  console.log('Winning team players:', winningTeamPlayerIds);
+  console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
+  console.log('All offers submitted:', allOffersSubmitted);
+
   return (
   <>
     <MatchHeader matchId={match.id} latestGame={latestGame} />
