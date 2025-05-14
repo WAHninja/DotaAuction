@@ -171,31 +171,32 @@ const parseIntArray = (value: unknown): number[] => {
 };
 
 // Safely find current game using number coercion
-  try {
-      const game = data?.latestGame?.id;
-      if (!game) {
-        setMessage('Game ID is missing');
-        return;
-      }
-  
-const teamAMembers = parseIntArray(game?.team_a_members);
-const team1Members = parseIntArray(game?.team_1_members);
+  useEffect(() => {
+  if (data?.latestGame) {
+    const game = data.latestGame;
 
-const winningTeamPlayerIds =
-  game?.winning_team === 'team_a' ? teamAMembers : team1Members;
+    const teamAMembers = parseIntArray(game.team_a_members);
+    const team1Members = parseIntArray(game.team_1_members);
 
-const allOffersSubmitted = winningTeamPlayerIds.length > 0 &&
-  winningTeamPlayerIds.every((playerId) =>
-    offers.some((offer) => offer.from_player_id === playerId)
-  );
+    const winningTeamPlayerIds =
+      game.winning_team === 'team_a' ? teamAMembers : team1Members;
 
-console.log('Game ID:', game?.id);
-console.log('Winning team:', game?.winning_team);
-console.log('Team A members:', teamAMembers);
-console.log('Team 1 members:', team1Members);
-console.log('Winning team players:', winningTeamPlayerIds);
-console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
-console.log('All offers submitted:', allOffersSubmitted);
+    const allOffersSubmitted = winningTeamPlayerIds.length > 0 &&
+      winningTeamPlayerIds.every((playerId) =>
+        offers.some((offer) => offer.from_player_id === playerId)
+      );
+
+    console.log('Game ID:', game.id);
+    console.log('Winning team:', game.winning_team);
+    console.log('Team A members:', teamAMembers);
+    console.log('Team 1 members:', team1Members);
+    console.log('Winning team players:', winningTeamPlayerIds);
+    console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
+    console.log('All offers submitted:', allOffersSubmitted);
+  } else {
+    console.log("Waiting for latest game data...");
+  }
+}, [data, offers]);  // Run this effect whenever data or offers change
 
   return (
   <>
