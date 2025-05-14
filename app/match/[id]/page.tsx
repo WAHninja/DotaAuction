@@ -213,7 +213,7 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
     {/* Auction Phase */}
 {isAuction && (
   <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
-    <h3 className="text-2xl font-bold mb-4 text-center">Auction Phase</h3>
+    <h3 className="text-2xl font-bold mb-4 text-center">Auction House</h3>
 
     {/* Flex container for the entire auction phase */}
     <div className="flex flex-col gap-6 items-start">
@@ -257,9 +257,11 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
           </div>
         </div>
       ) : isWinner && alreadySubmittedOffer && (
+       <div className="w-full max-w-md mx-auto mb-6">
         <div className="mb-6 text-center text-yellow-300 font-semibold">
           ✅ You've already submitted your offer.
         </div>
+       </div>
       )}
 
       {/* Shopkeeper + Offers layout */}
@@ -301,7 +303,7 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
           <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
         </div>
         <div className="mt-2 text-sm text-gray-300">
-          Offer details hidden until all offers are submitted.
+          Waiting for all offers.
         </div>
       </div>
   ) : (
