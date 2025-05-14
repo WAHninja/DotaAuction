@@ -28,13 +28,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
-  if (offer_amount < 250 || offer_amount > 2000) {
-    return new Response(
-      JSON.stringify({ message: 'Offer amount must be between 250 and 2000.' }),
-      { status: 400 }
-    );
-  }
-
   try {
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE id = $1 LIMIT 1',
@@ -61,6 +54,34 @@ export async function POST(req: NextRequest): Promise<Response> {
       );
     }
 
+    // 🔁 Get the matchId using the game
+    const matchResult = await db.query(
+      'SELECT match_id FROM Games WHERE id = $1',
+      [gameId]
+    );
+    const matchId = matchResult.rows[0]?.match_id;
+
+    // Fetch the number of games played in the match
+    const { rows: matchGames } = await db.query(
+      'SELECT COUNT(*) FROM Games WHERE match_id = $1',
+      [matchId]
+    );
+
+    const gamesPlayed = parseInt(matchGames[0].count, 10);
+
+    // Dynamically calculate the offer limit based on the number of games played
+    const maxOfferAmount = 2000 + gamesPlayed * 500; // Increase by 500 per game
+    const minOfferAmount = 250 + gamesPlayed * 200; // Increase by 500 per game
+
+    if (offer_amount < minOfferAmount || offer_amount > maxOfferAmount) {
+      return new Response(
+        JSON.stringify({
+          message: `Offer amount must be between ${minOfferAmount} and ${maxOfferAmount}.`,
+        }),
+        { status: 400 }
+      );
+    }
+
     const existing = await db.query(
       'SELECT * FROM Offers WHERE from_player_id = $1 AND game_id = $2',
       [userId, gameId]
@@ -81,14 +102,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
 
     const savedOffer = inserted[0];
-
-    // 🔁 Get the matchId using the game
-    const matchResult = await db.query(
-      'SELECT match_id FROM Games WHERE id = $1',
-      [gameId]
-    );
-
-    const matchId = matchResult.rows[0]?.match_id;
 
     if (matchId) {
       await ably.channels
