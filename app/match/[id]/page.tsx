@@ -175,18 +175,18 @@ const game = match?.games?.find(
   (g) => Number(g.id) === Number(match.current_game_id)
 ) ?? null;
 
-const teamAMembers = parseIntArray(game?.team_a_members);
-const team1Members = parseIntArray(game?.team_1_members);
+const teamAMembers = parseIntArray(gameId?.team_a_members);
+const team1Members = parseIntArray(gameId?.team_1_members);
 
 const winningTeamPlayerIds =
-  game?.winning_team === 'team_a' ? teamAMembers : team1Members;
+  gameId?.winning_team === 'team_a' ? teamAMembers : team1Members;
 
 const allOffersSubmitted = winningTeamPlayerIds.length > 0 &&
   winningTeamPlayerIds.every((playerId) =>
     offers.some((offer) => offer.from_player_id === playerId)
   );
 
-console.log('Game ID:', game?.id);
+console.log('Game ID:', gameId?.id);
 console.log('Winning team:', game?.winning_team);
 console.log('Team A members:', teamAMembers);
 console.log('Team 1 members:', team1Members);
