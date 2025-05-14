@@ -158,7 +158,6 @@ export default function MatchPage() {
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
 
-  // Helper function to safely parse int4 arrays (if they come as strings)
 const parseIntArray = (value: unknown): number[] => {
   if (Array.isArray(value)) return value.map(Number);
   if (typeof value === 'string') {
@@ -171,24 +170,22 @@ const parseIntArray = (value: unknown): number[] => {
   return [];
 };
 
-// Find the current game
-const game = match?.games?.find((g) => g.id === match.current_game_id) ?? null;
+// Safely find current game using number coercion
+const game = match?.games?.find(
+  (g) => Number(g.id) === Number(match.current_game_id)
+) ?? null;
 
-// Parse team members safely
 const teamAMembers = parseIntArray(game?.team_a_members);
 const team1Members = parseIntArray(game?.team_1_members);
 
-// Get list of winning team player IDs
 const winningTeamPlayerIds =
   game?.winning_team === 'team_a' ? teamAMembers : team1Members;
 
-// Check if ALL winning team players have submitted an offer
 const allOffersSubmitted = winningTeamPlayerIds.length > 0 &&
   winningTeamPlayerIds.every((playerId) =>
     offers.some((offer) => offer.from_player_id === playerId)
   );
 
-// Debug logs
 console.log('Game ID:', game?.id);
 console.log('Winning team:', game?.winning_team);
 console.log('Team A members:', teamAMembers);
@@ -196,7 +193,6 @@ console.log('Team 1 members:', team1Members);
 console.log('Winning team players:', winningTeamPlayerIds);
 console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
 console.log('All offers submitted:', allOffersSubmitted);
-
 
   return (
   <>
