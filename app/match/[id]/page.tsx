@@ -270,27 +270,28 @@ export default function MatchPage() {
             {offers.map((offer) => {
               const from = getPlayer(offer.from_player_id);
               const to = getPlayer(offer.target_player_id);
-              const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer;
+              const canAccept =
+                isLoser &&
+                offer.status === 'pending' &&
+                !alreadyAcceptedOffer &&
+                allOffersSubmitted;
 
               return (
-  <div
-    key={offer.id}
-    className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
-  >
-    {!allOffersSubmitted ? (
-      // Placeholder content while waiting for all offers
-      <div className="flex flex-col items-center justify-center h-full text-gray-400 italic">
-        Offer details will be revealed once all offers are submitted.
-      </div>
-    ) : (
-      // Actual offer details
-      <>
-        <div className="flex flex-col gap-2 mb-4">
-          <div className="flex gap-2">
-            <span className="text-lg text-gray-300">From</span>
-            <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
-          </div>
+    <div
+      key={offer.id}
+      className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
+    >
+      <div className="flex flex-col gap-2 mb-4">
+        <div className="flex gap-2">
+          <span className="text-lg text-gray-300">From</span>
+          <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
+        </div>
 
+        {!allOffersSubmitted ? (
+          <div className="mt-2 text-sm text-gray-400 italic">
+            Waiting for all offers to be submitted...
+          </div>
+        ) : (
           <div className="mt-2 text-sm text-gray-300">
             If accepted:
             <ul className="list-disc list-inside text-gray-300 mt-1">
@@ -312,31 +313,31 @@ export default function MatchPage() {
               </li>
             </ul>
           </div>
-        </div>
-
-        {canAccept ? (
-          <button
-            onClick={() => handleAcceptOffer(offer.id)}
-            disabled={accepting}
-            className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
-          >
-            {accepting ? 'Accepting...' : 'Accept Offer'}
-          </button>
-        ) : (
-          <div className="mt-auto text-sm text-gray-400 italic">
-            {offer.status === 'accepted'
-              ? 'Accepted'
-              : offer.status === 'rejected'
-              ? 'Rejected'
-              : 'Waiting for response'}
-          </div>
         )}
-      </>
-    )}
-  </div>
-);
+      </div>
 
-            })}
+      {!allOffersSubmitted ? (
+        <div className="mt-auto text-sm text-gray-500 italic">Offer details hidden until all are submitted</div>
+      ) : canAccept ? (
+        <button
+          onClick={() => handleAcceptOffer(offer.id)}
+          disabled={accepting}
+          className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
+        >
+          {accepting ? 'Accepting...' : 'Accept Offer'}
+        </button>
+      ) : (
+        <div className="mt-auto text-sm text-gray-400 italic">
+          {offer.status === 'accepted'
+            ? 'Accepted'
+            : offer.status === 'rejected'
+            ? 'Rejected'
+            : 'Waiting for response'}
+        </div>
+      )}
+    </div>
+  );
+})}
           </div>
         </div>
 
