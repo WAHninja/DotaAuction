@@ -324,16 +324,10 @@ export default function MatchPage() {
         >
           {accepting ? 'Accepting...' : 'Accept Offer'}
         </button>
-      ) : (
-        <div className="mt-auto text-sm text-gray-400 italic">
-          {offer.status === 'accepted'
-            ? 'Accepted'
-            : offer.status === 'rejected'
-            ? 'Rejected'
-            : 'Waiting for response'}
-        </div>
       )}
-    </div>
+    </>
+  )}
+</div>
   );
 })}
           </div>
