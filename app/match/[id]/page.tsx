@@ -171,8 +171,13 @@ const parseIntArray = (value: unknown): number[] => {
 };
 
 // Safely find current game using number coercion
-  const game = data?.latestGame?.id;
-
+  try {
+      const game = data?.latestGame?.id;
+      if (!game) {
+        setMessage('Game ID is missing');
+        return;
+      }
+  
 const teamAMembers = parseIntArray(game?.team_a_members);
 const team1Members = parseIntArray(game?.team_1_members);
 
