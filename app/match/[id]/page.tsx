@@ -170,34 +170,19 @@ const parseIntArray = (value: unknown): number[] => {
   return [];
 };
 
-// Safely find current game using number coercion
-  useEffect(() => {
-  if (data?.latestGame) {
-    const game = data.latestGame;
+// Check if ALL winning team players have submitted an offer
+const allOffersSubmitted = myTeam.every((playerId) =>
+  offers.some((offer) => offer.from_player_id === playerId)
+);
 
-    const teamAMembers = parseIntArray(game.team_a_members);
-    const team1Members = parseIntArray(game.team_1_members);
-
-    const winningTeamPlayerIds =
-      game.winning_team === 'team_a' ? teamAMembers : team1Members;
-
-    const allOffersSubmitted = winningTeamPlayerIds.length > 0 &&
-      winningTeamPlayerIds.every((playerId) =>
-        offers.some((offer) => offer.from_player_id === playerId)
-      );
-
-    console.log('Game ID:', game.id);
-    console.log('Winning team:', game.winning_team);
-    console.log('Team A members:', teamAMembers);
-    console.log('Team 1 members:', team1Members);
-    console.log('Winning team players:', winningTeamPlayerIds);
-    console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
-    console.log('All offers submitted:', allOffersSubmitted);
-  } else {
-    console.log("Waiting for latest game data...");
-  }
-}, [data, offers]);  // Run this effect whenever data or offers change
-
+console.log('Winning team:', winningTeam);
+console.log('Team A members:', teamA);
+console.log('Team 1 members:', team1);
+console.log('My team (winning):', myTeam);
+console.log('All offers submitted:', allOffersSubmitted);
+console.log('Already submitted offer:', alreadySubmittedOffer);
+console.log('Already accepted offer:', alreadyAcceptedOffer);
+  
   return (
   <>
     <MatchHeader matchId={match.id} latestGame={latestGame} />
