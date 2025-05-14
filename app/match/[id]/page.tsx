@@ -310,9 +310,15 @@ console.log('All offers submitted:', allOffersSubmitted);
   className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
 >
   {!allOffersSubmitted ? (
-    <div className="text-center text-gray-400 italic">
-      Offer details hidden until all offers are submitted.
-    </div>
+    <div className="flex flex-col gap-2 mb-4">
+        <div className="flex gap-2">
+          <span className="text-lg text-gray-300">From</span>
+          <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
+        </div>
+        <div className="mt-2 text-sm text-gray-300">
+          Offer details hidden until all offers are submitted.
+        </div>
+      </div>
   ) : (
     <>
       <div className="flex flex-col gap-2 mb-4">
