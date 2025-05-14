@@ -158,21 +158,45 @@ export default function MatchPage() {
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
 
-  const game =
-  match?.games?.find((g) => g.id === match.current_game_id) ?? null;
+  // Helper function to safely parse int4 arrays (if they come as strings)
+const parseIntArray = (value: unknown): number[] => {
+  if (Array.isArray(value)) return value.map(Number);
+  if (typeof value === 'string') {
+    return value
+      .replace(/[{}]/g, '')
+      .split(',')
+      .map((v) => parseInt(v, 10))
+      .filter((v) => !isNaN(v));
+  }
+  return [];
+};
 
-  const winningTeamPlayerIds =
-    game?.winning_team === 'team_a'
-      ? game?.team_a_members ?? []
-      : game?.team_1_members ?? [];
+// Find the current game
+const game = match?.games?.find((g) => g.id === match.current_game_id) ?? null;
 
-  const allOffersSubmitted = winningTeamPlayerIds.every((playerId) =>
+// Parse team members safely
+const teamAMembers = parseIntArray(game?.team_a_members);
+const team1Members = parseIntArray(game?.team_1_members);
+
+// Get list of winning team player IDs
+const winningTeamPlayerIds =
+  game?.winning_team === 'team_a' ? teamAMembers : team1Members;
+
+// Check if ALL winning team players have submitted an offer
+const allOffersSubmitted = winningTeamPlayerIds.length > 0 &&
+  winningTeamPlayerIds.every((playerId) =>
     offers.some((offer) => offer.from_player_id === playerId)
   );
 
-  console.log('Winning team players:', winningTeamPlayerIds);
-  console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
-  console.log('All offers submitted:', allOffersSubmitted);
+// Debug logs
+console.log('Game ID:', game?.id);
+console.log('Winning team:', game?.winning_team);
+console.log('Team A members:', teamAMembers);
+console.log('Team 1 members:', team1Members);
+console.log('Winning team players:', winningTeamPlayerIds);
+console.log('Offers submitted from:', offers.map((o) => o.from_player_id));
+console.log('All offers submitted:', allOffersSubmitted);
+
 
   return (
   <>
