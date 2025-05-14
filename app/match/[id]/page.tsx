@@ -157,6 +157,8 @@ export default function MatchPage() {
   const alreadyAcceptedOffer = offers?.find(
     (o) => o.status === 'accepted' && o.target_player_id === currentUserId
   );
+
+  const game = match.games.find(g => g.id === match.current_game_id);
   
   // Get list of winning team player IDs (adjust as needed for your data shape)
   const winningTeamPlayerIds = game.winning_team === 'team_a' ? game.team_a_members : game.team_1_members;
