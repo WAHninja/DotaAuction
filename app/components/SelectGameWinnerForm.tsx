@@ -55,13 +55,13 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
         className="hidden sm:block absolute left-10 transform -translate-y-1/2 z-20"
         style={{ top: 'calc(50% - 5px)' }}
       >
-        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={200} height={200} />
+        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={220} height={220} />
       </div>
       <div
         className="hidden sm:block absolute right-10 transform -translate-y-1/2 z-20"
         style={{ top: 'calc(50% - 5px)' }}
       >
-        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={200} height={200} />
+        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={220} height={220} />
       </div>
       {/* Main container */}
       <div className="relative z-10 bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg">
