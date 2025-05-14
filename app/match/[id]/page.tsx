@@ -169,14 +169,6 @@ export default function MatchPage() {
   const allOffersSubmitted = winningTeamPlayerIds.every((playerId) =>
     offers.some((offer) => offer.from_player_id === playerId)
   );
-  
-  // Get list of winning team player IDs (adjust as needed for your data shape)
-  const winningTeamPlayerIds = game.winning_team === 'team_a' ? game.team_a_members : game.team_1_members;
-
-  // Check if all winning team players have submitted offers
-  const allOffersSubmitted = winningTeamPlayerIds.every((playerId) =>
-    offers.some((offer) => offer.from_player_id === playerId)
-  );
 
   return (
   <>
