@@ -274,18 +274,25 @@ export default function MatchPage() {
 
                     <div className="mt-2 text-sm text-gray-300">
                       If accepted:
-                      <ul className="list-disc list-inside text-gray-300 mt-1">
-                        <li>
-                          <strong>{from?.username}</strong> gains{' '}
-                          <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
-                          <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block mr-2" />
+                        <ul className="list-disc list-inside text-gray-300 mt-1">
+                          <li className="whitespace-nowrap">
+                            <strong>{from?.username}</strong> gains{' '}
+                              <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
+                              <Image
+                              src="/Gold_symbol.webp"
+                              alt="Gold"
+                              width={16}
+                              height={16}
+                            className="inline-block mr-2"
+                          />
                           starting gold
-                        </li>
-                        <li>
-                          <strong>{to?.username}</strong> moves to the <span className="text-red-400 font-bold">losing team</span>
-                        </li>
-                      </ul>
-                    </div>
+                          </li>
+                          <li className="whitespace-nowrap">
+                            <strong>{to?.username}</strong> moves to the{' '}
+                            <span className="text-red-400 font-bold">losing team</span>
+                          </li>
+                        </ul>
+                      </div>
                   </div>
 
                   {canAccept ? (
