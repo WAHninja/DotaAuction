@@ -278,51 +278,49 @@ export default function MatchPage() {
 
               return (
     <div
-      key={offer.id}
-      className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
-    >
+  key={offer.id}
+  className="bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between h-full"
+>
+  {!allOffersSubmitted ? (
+    <div className="text-center text-gray-400 italic">
+      Offer details hidden until all offers are submitted.
+    </div>
+  ) : (
+    <>
       <div className="flex flex-col gap-2 mb-4">
         <div className="flex gap-2">
           <span className="text-lg text-gray-300">From</span>
           <span className="text-lg font-semibold text-yellow-300">{from?.username}</span>
         </div>
 
-        {!allOffersSubmitted ? (
-          <div className="mt-2 text-sm text-gray-400 italic">
-            Waiting for all offers to be submitted...
-          </div>
-        ) : (
-          <div className="mt-2 text-sm text-gray-300">
-            If accepted:
-            <ul className="list-disc list-inside text-gray-300 mt-1">
-              <li className="whitespace-nowrap">
-                <strong>{from?.username}</strong> gains{' '}
-                <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
-                <Image
-                  src="/Gold_symbol.webp"
-                  alt="Gold"
-                  width={16}
-                  height={16}
-                  className="inline-block mr-2"
-                />
-                starting gold
-              </li>
-              <li className="whitespace-nowrap">
-                <strong>{to?.username}</strong> moves to the{' '}
-                <span className="text-red-400 font-bold">losing team</span>
-              </li>
-            </ul>
-          </div>
-        )}
+        <div className="mt-2 text-sm text-gray-300">
+          If accepted:
+          <ul className="list-disc list-inside text-gray-300 mt-1">
+            <li className="whitespace-nowrap">
+              <strong>{from?.username}</strong> gains{' '}
+              <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
+              <Image
+                src="/Gold_symbol.webp"
+                alt="Gold"
+                width={16}
+                height={16}
+                className="inline-block mr-2"
+              />
+              starting gold
+            </li>
+            <li className="whitespace-nowrap">
+              <strong>{to?.username}</strong> moves to the{' '}
+              <span className="text-red-400 font-bold">losing team</span>
+            </li>
+          </ul>
+        </div>
       </div>
 
-      {!allOffersSubmitted ? (
-        <div className="mt-auto text-sm text-gray-500 italic">Offer details hidden until all are submitted</div>
-      ) : canAccept ? (
+      {canAccept && (
         <button
           onClick={() => handleAcceptOffer(offer.id)}
           disabled={accepting}
-          className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
+          className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
         >
           {accepting ? 'Accepting...' : 'Accept Offer'}
         </button>
