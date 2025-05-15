@@ -196,8 +196,6 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
   };
 
     const maxOfferAmount = useMemo(() => 2000 + (gamesPlayed ?? 0) * 500, [gamesPlayed]);
-    const minOfferAmount = useMemo(() => 250 + (gamesPlayed ?? 0) * 200, [gamesPlayed]);
-
 
   fetchGamesPlayed();
 }, [matchId]);
@@ -262,7 +260,7 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
               type="number"
               value={offerAmount}
               onChange={(e) => setOfferAmount(e.target.value)}
-              min={minOfferAmount}
+              min={250}
               max={maxOfferAmount}
               className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
             />
