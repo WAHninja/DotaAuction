@@ -21,6 +21,7 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
 
   const fetchMatchData = async () => {
     setLoading(true);
@@ -182,6 +183,23 @@ console.log('My team (winning):', myTeam);
 console.log('All offers submitted:', allOffersSubmitted);
 console.log('Already submitted offer:', alreadySubmittedOffer);
 console.log('Already accepted offer:', alreadyAcceptedOffer);
+
+  useEffect(() => {
+  const fetchGamesPlayed = async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}/games-played`);
+      const data = await res.json();
+      setGamesPlayed(data.gamesPlayed);
+    } catch (err) {
+      console.error('Failed to fetch games played', err);
+    }
+  };
+
+    const maxOfferAmount = 2000 + (gamesPlayed ?? 0) * 500;
+    const minOfferAmount = 250 + (gamesPlayed ?? 0) * 200;
+
+  fetchGamesPlayed();
+}, [matchId]);
   
   return (
   <>
@@ -243,7 +261,9 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
               type="number"
               value={offerAmount}
               onChange={(e) => setOfferAmount(e.target.value)}
-              placeholder="Offer Amount (250-2000)"
+              placeholder={`${minOfferAmount}-${maxOfferAmount}`}
+              min={minOfferAmount}
+              max={maxOfferAmount}
               className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
             />
 
