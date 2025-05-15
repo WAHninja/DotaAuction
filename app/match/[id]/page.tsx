@@ -195,8 +195,9 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
     }
   };
 
-    const maxOfferAmount = 2000 + (gamesPlayed ?? 0) * 500;
-    const minOfferAmount = 250 + (gamesPlayed ?? 0) * 200;
+    const maxOfferAmount = useMemo(() => 2000 + (gamesPlayed ?? 0) * 500, [gamesPlayed]);
+    const minOfferAmount = useMemo(() => 250 + (gamesPlayed ?? 0) * 200, [gamesPlayed]);
+
 
   fetchGamesPlayed();
 }, [matchId]);
