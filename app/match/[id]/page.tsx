@@ -262,7 +262,6 @@ console.log('Already accepted offer:', alreadyAcceptedOffer);
               type="number"
               value={offerAmount}
               onChange={(e) => setOfferAmount(e.target.value)}
-              placeholder={`Offer Amount (${minOfferAmount}-${maxOfferAmount})`}
               min={minOfferAmount}
               max={maxOfferAmount}
               className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
