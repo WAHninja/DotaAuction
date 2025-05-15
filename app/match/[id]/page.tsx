@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
@@ -12,6 +12,7 @@ import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 export default function MatchPage() {
   const { id } = useParams();
   const matchId = Array.isArray(id) ? id[0] : id;
+
   const [data, setData] = useState<any>(null);
   const [offers, setOffers] = useState<any[]>([]);
   const [offerAmount, setOfferAmount] = useState('');
@@ -21,17 +22,16 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
+  const [gamesPlayed, setGamesPlayed] = useState<number>(0);
 
   const fetchMatchData = async () => {
-    setLoading(true);
     try {
-      const res = await fetch(`/api/match/${id}`);
-      if (!res.ok) throw new Error(`Failed to fetch match data: ${res.statusText}`);
-      const result = await res.json();
-      setData(result);
+      const res = await fetch(`/api/match/${matchId}`);
+      if (!res.ok) throw new Error('Failed to fetch match data');
+      const json = await res.json();
+      setData(json);
     } catch (err: any) {
-      setError(err.message || 'Unknown error');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -41,27 +41,38 @@ export default function MatchPage() {
     try {
       const res = await fetch(`/api/game/offers?id=${gameId}`);
       if (!res.ok) throw new Error('Failed to fetch offers');
-      const result = await res.json();
-      setOffers(result.offers || []);
+      const json = await res.json();
+      setOffers(json.offers || []);
     } catch (err) {
       console.error(err);
     }
   };
 
+  const fetchGamesPlayed = async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}/games-played`);
+      const json = await res.json();
+      setGamesPlayed(json.gamesPlayed);
+    } catch (err) {
+      console.error('Failed to fetch games played', err);
+    }
+  };
+
+  // Load match + games played
   useEffect(() => {
     fetchMatchData();
-  }, [id]);
+    fetchGamesPlayed();
+  }, [matchId]);
 
+  // Load offers only if auction phase
   useEffect(() => {
     if (data?.latestGame?.status === 'auction pending') {
       fetchOffers(data.latestGame.id);
     }
   }, [data]);
 
-   useGameWinnerListener(matchId, () => {
-  fetchMatchData();
-});
-
+  // Real-time updates
+  useGameWinnerListener(matchId, fetchMatchData);
   useAuctionListener(
     matchId,
     data?.latestGame?.id || null,
@@ -71,9 +82,8 @@ export default function MatchPage() {
 
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
-
-    if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < 250 || parsedAmount > 2000) {
-      setMessage('Please select a player and enter a valid offer amount between 250 and 2000.');
+    if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < minOfferAmount || parsedAmount > maxOfferAmount) {
+      setMessage(`Please select a player and enter a valid offer (${minOfferAmount}–${maxOfferAmount}).`);
       return;
     }
 
@@ -82,32 +92,26 @@ export default function MatchPage() {
 
     try {
       const gameId = data?.latestGame?.id;
-      if (!gameId) {
-        setMessage('Game ID is missing');
-        return;
-      }
+      if (!gameId) throw new Error('Game ID missing');
 
       const res = await fetch(`/api/game/${gameId}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          target_player_id: parseInt(selectedPlayer, 10),
+          target_player_id: parseInt(selectedPlayer),
           offer_amount: parsedAmount,
         }),
       });
 
       const result = await res.json();
-      if (res.ok) {
-        setMessage('Offer submitted!');
-        setOfferAmount('');
-        setSelectedPlayer('');
-        fetchOffers(gameId); // refresh offers list
-      } else {
-        setMessage(result.error || 'Something went wrong.');
-      }
-    } catch (err) {
-      console.error('Error submitting offer:', err);
-      setMessage('Error submitting offer.');
+      if (!res.ok) throw new Error(result.error || 'Error submitting offer');
+
+      setMessage('Offer submitted!');
+      setOfferAmount('');
+      setSelectedPlayer('');
+      fetchOffers(gameId);
+    } catch (err: any) {
+      setMessage(err.message || 'Error submitting offer.');
     } finally {
       setSubmitting(false);
     }
@@ -116,14 +120,14 @@ export default function MatchPage() {
   const handleAcceptOffer = async (offerId: number) => {
     setAccepting(true);
     try {
-      const res = await fetch(`/api/game/${id}/accept-offer`, {
+      const res = await fetch(`/api/game/${matchId}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
       });
 
       if (!res.ok) throw new Error('Failed to accept offer');
-      await fetchOffers(data.latestGame.id); // Refresh offers
+      await fetchOffers(data.latestGame.id);
     } catch (err) {
       console.error(err);
     } finally {
@@ -138,67 +142,25 @@ export default function MatchPage() {
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
+  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
 
-  const getPlayer = (pid: number) => players.find((p: any) => p.id === pid);
-
-  const isInProgress = latestGame?.status === 'in progress';
   const isAuction = latestGame?.status === 'auction pending';
+  const isInProgress = latestGame?.status === 'in progress';
   const winningTeam = latestGame?.winning_team;
 
-  const isWinner = winningTeam === 'team_1' ? team1.includes(currentUserId) : teamA.includes(currentUserId);
+  const isWinner = winningTeam === 'team_1'
+    ? team1.includes(currentUserId)
+    : teamA.includes(currentUserId);
   const isLoser = !isWinner;
 
-  const myTeam = winningTeam === 'team_1' ? team1 : teamA;
-  const offerCandidates = myTeam.filter((pid) => pid !== currentUserId);
+  const myTeam = isWinner ? (winningTeam === 'team_1' ? team1 : teamA) : [];
+  const offerCandidates = myTeam.filter((id) => id !== currentUserId);
+  const alreadySubmittedOffer = offers.some(o => o.from_player_id === currentUserId);
+  const alreadyAcceptedOffer = offers.find(o => o.status === 'accepted' && o.target_player_id === currentUserId);
+  const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
 
-  const alreadySubmittedOffer = offers.some(
-    (offer) => offer.from_player_id === currentUserId
-  );
-  
-  const alreadyAcceptedOffer = offers?.find(
-    (o) => o.status === 'accepted' && o.target_player_id === currentUserId
-  );
-
-const parseIntArray = (value: unknown): number[] => {
-  if (Array.isArray(value)) return value.map(Number);
-  if (typeof value === 'string') {
-    return value
-      .replace(/[{}]/g, '')
-      .split(',')
-      .map((v) => parseInt(v, 10))
-      .filter((v) => !isNaN(v));
-  }
-  return [];
-};
-
-// Check if ALL winning team players have submitted an offer
-const allOffersSubmitted = myTeam.every((playerId) =>
-  offers.some((offer) => offer.from_player_id === playerId)
-);
-
-console.log('Winning team:', winningTeam);
-console.log('Team A members:', teamA);
-console.log('Team 1 members:', team1);
-console.log('My team (winning):', myTeam);
-console.log('All offers submitted:', allOffersSubmitted);
-console.log('Already submitted offer:', alreadySubmittedOffer);
-console.log('Already accepted offer:', alreadyAcceptedOffer);
-
-  useEffect(() => {
-  const fetchGamesPlayed = async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const data = await res.json();
-      setGamesPlayed(data.gamesPlayed);
-    } catch (err) {
-      console.error('Failed to fetch games played', err);
-    }
-  };
-
-    const maxOfferAmount = useMemo(() => 2000 + (gamesPlayed ?? 0) * 500, [gamesPlayed]);
-
-  fetchGamesPlayed();
-}, [matchId]);
+  const minOfferAmount = 250 + gamesPlayed * 200;
+  const maxOfferAmount = 2000 + gamesPlayed * 500;
   
   return (
   <>
