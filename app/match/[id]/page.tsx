@@ -192,7 +192,7 @@ export default function MatchPage() {
     {isAuction && <AuctionSection />}
   </>
 );
-
+}
 // -----------------------------
 // Subcomponents below
 // -----------------------------
