@@ -72,9 +72,6 @@ export default function MatchPage() {
     }
   }, [data]);
 
-  fetchGamesPlayed();
-  }, [isWinner, alreadySubmittedOffer, matchId]);
-  
   useEffect(() => {
   const fetchGamesPlayed = async () => {
     if (!isWinner || alreadySubmittedOffer) return;
@@ -94,6 +91,10 @@ export default function MatchPage() {
       console.error('Failed to fetch games played:', err);
     }
   };
+
+  fetchGamesPlayed();
+}, [isWinner, alreadySubmittedOffer, matchId]);
+
 
   // Real-time updates
   useGameWinnerListener(matchId, fetchMatchData);
