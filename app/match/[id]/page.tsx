@@ -227,8 +227,8 @@ export default function MatchPage() {
         type="number"
         value={offerAmount}
         onChange={(e) => setOfferAmount(e.target.value)}
-        placeholder={`250 - ${maxOfferAmount}`}
-        min={250}
+        placeholder={`${minOfferAmount} - ${maxOfferAmount}`}
+        min={minOfferAmount}
         max={maxOfferAmount}
         className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
       />
