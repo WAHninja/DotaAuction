@@ -48,6 +48,21 @@ export default function MatchPage() {
     }
   };
 
+  const isAuction = latestGame?.status === 'auction pending';
+  const isInProgress = latestGame?.status === 'in progress';
+  const winningTeam = latestGame?.winning_team;
+
+  const isWinner = winningTeam === 'team_1'
+    ? team1.includes(currentUserId)
+    : teamA.includes(currentUserId);
+  const isLoser = !isWinner;
+
+  const myTeam = isWinner ? (winningTeam === 'team_1' ? team1 : teamA) : [];
+  const offerCandidates = myTeam.filter((id) => id !== currentUserId);
+  const alreadySubmittedOffer = offers.some(o => o.from_player_id === currentUserId);
+  const alreadyAcceptedOffer = offers.find(o => o.status === 'accepted' && o.target_player_id === currentUserId);
+  const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
+  
   const fetchGamesAndCalculateOfferLimit = async () => {
     try {
       const res = await fetch(`/api/match/${matchId}/games-played`);
@@ -160,21 +175,6 @@ export default function MatchPage() {
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
   const getPlayer = (id: number) => players.find((p: any) => p.id === id);
-
-  const isAuction = latestGame?.status === 'auction pending';
-  const isInProgress = latestGame?.status === 'in progress';
-  const winningTeam = latestGame?.winning_team;
-
-  const isWinner = winningTeam === 'team_1'
-    ? team1.includes(currentUserId)
-    : teamA.includes(currentUserId);
-  const isLoser = !isWinner;
-
-  const myTeam = isWinner ? (winningTeam === 'team_1' ? team1 : teamA) : [];
-  const offerCandidates = myTeam.filter((id) => id !== currentUserId);
-  const alreadySubmittedOffer = offers.some(o => o.from_player_id === currentUserId);
-  const alreadyAcceptedOffer = offers.find(o => o.status === 'accepted' && o.target_player_id === currentUserId);
-  const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
 
   const minOfferAmount = 250 + gamesPlayed * 200;
   
