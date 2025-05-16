@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
@@ -49,23 +48,28 @@ export default function MatchPage() {
     }
   };
 
-  const fetchGamesPlayed = async () => {
+  const fetchGamesAndCalculateOfferLimit = async () => {
     try {
       const res = await fetch(`/api/match/${matchId}/games-played`);
       const json = await res.json();
-      setGamesPlayed(json.gamesPlayed);
+      const played = json.gamesPlayed || 0;
+      setGamesPlayed(played);
+
+      if (isAuction && isWinner && !alreadySubmittedOffer) {
+        const calculatedMax = Math.max(2000 - played * 100, 250);
+        setMaxOfferAmount(calculatedMax);
+      }
     } catch (err) {
-      console.error('Failed to fetch games played', err);
+      console.error('Error fetching games played:', err);
     }
   };
 
-  // Load match + games played
+  // Initial fetch
   useEffect(() => {
     fetchMatchData();
-    fetchGamesPlayed();
   }, [matchId]);
 
-  // Load offers only if auction phase
+  // Fetch offers if auction phase
   useEffect(() => {
     if (data?.latestGame?.status === 'auction pending') {
       fetchOffers(data.latestGame.id);
@@ -81,10 +85,22 @@ export default function MatchPage() {
     fetchOffers
   );
 
+  // Fetch games played and set max offer amount dynamically
+  useEffect(() => {
+    fetchGamesAndCalculateOfferLimit();
+  }, [matchId, isAuction, isWinner, alreadySubmittedOffer]);
+
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
-    if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < minOfferAmount || parsedAmount > maxOfferAmount) {
-      setMessage(`Please select a player and enter a valid offer (${minOfferAmount}–${maxOfferAmount}).`);
+    if (
+      !selectedPlayer ||
+      isNaN(parsedAmount) ||
+      parsedAmount < minOfferAmount ||
+      parsedAmount > maxOfferAmount
+    ) {
+      setMessage(
+        `Please select a player and enter a valid offer (${minOfferAmount}–${maxOfferAmount}).`
+      );
       return;
     }
 
@@ -161,24 +177,6 @@ export default function MatchPage() {
   const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
 
   const minOfferAmount = 250 + gamesPlayed * 200;
-
-  useEffect(() => {
-    const fetchGamesPlayed = async () => {
-      try {
-        const res = await fetch(`/api/match/${matchId}/games-played`);
-        const data = await res.json();
-        const gamesPlayed = data.gamesPlayed || 0;
-        const calculatedMax = Math.max(2000 - gamesPlayed * 100, 250);
-        setMaxOfferAmount(calculatedMax);
-      } catch (err) {
-        console.error('Error fetching games played:', err);
-      }
-    };
-
-    if (isWinner && !alreadySubmittedOffer) {
-      fetchGamesPlayed();
-    }
-  }, [isWinner, alreadySubmittedOffer, matchId]);
   
   return (
   <>
