@@ -23,7 +23,6 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
-  const [maxOfferAmount, setMaxOfferAmount] = useState<number>(2000); // default to max
 
   const fetchMatchData = async () => {
     try {
@@ -71,30 +70,6 @@ export default function MatchPage() {
       fetchOffers(data.latestGame.id);
     }
   }, [data]);
-
-  useEffect(() => {
-  const fetchGamesPlayed = async () => {
-    if (!isWinner || alreadySubmittedOffer) return;
-
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const data = await res.json();
-
-      if (res.ok && typeof data.gamesPlayed === 'number') {
-        const gamesPlayed = data.gamesPlayed;
-        const offerCap = 250 * gamesPlayed;
-        setMaxOfferAmount(Math.min(offerCap, 2000)); // Clamp to 2000 max
-      } else {
-        console.error('Invalid gamesPlayed data:', data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch games played:', err);
-    }
-  };
-
-  fetchGamesPlayed();
-}, [isWinner, alreadySubmittedOffer, matchId]);
-
 
   // Real-time updates
   useGameWinnerListener(matchId, fetchMatchData);
