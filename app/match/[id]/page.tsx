@@ -168,14 +168,12 @@ export default function MatchPage() {
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <TeamCard
-        name="Team 1"
         logo="/Team1.png"
         players={team1.map(getPlayer)}
         teamId="team1"
         color="from-lime-900/40 to-lime-800/40"
       />
       <TeamCard
-        name="Team A"
         logo="/TeamA.png"
         players={teamA.map(getPlayer)}
         teamId="teamA"
