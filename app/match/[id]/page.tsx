@@ -235,9 +235,9 @@ export default function MatchPage() {
     </div>
 
     {/* Validation Message */}
-    {offerAmount !== '' && (Number(offerAmount) < 250 || Number(offerAmount) > maxOfferAmount) && (
+    {offerAmount !== '' && (Number(offerAmount) < minOfferAmount || Number(offerAmount) > maxOfferAmount) && (
       <div className="mt-2 text-red-400 text-sm text-center md:text-left">
-        Offer must be between 250 and {maxOfferAmount}.
+        Offer must be between {minOfferAmount} and {maxOfferAmount}.
       </div>
     )}
 
@@ -248,7 +248,7 @@ export default function MatchPage() {
           submitting ||
           !selectedPlayer ||
           !offerAmount ||
-          Number(offerAmount) < 250 ||
+          Number(offerAmount) < minOfferAmount ||
           Number(offerAmount) > maxOfferAmount
         }
         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full max-w-xs"
