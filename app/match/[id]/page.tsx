@@ -185,7 +185,6 @@ export default function MatchPage() {
   const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
 
   const minOfferAmount = 250 + gamesPlayed * 200;
-  const maxOfferAmount = 2000 + gamesPlayed * 500;
   
   return (
   <>
