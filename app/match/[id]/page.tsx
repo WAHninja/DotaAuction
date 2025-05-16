@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import Image from 'next/image';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -49,12 +49,23 @@ export default function MatchPage() {
     }
   };
 
-  // Initial fetch
+  const fetchGamesPlayed = async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}/games-played`);
+      const json = await res.json();
+      setGamesPlayed(json.gamesPlayed);
+    } catch (err) {
+      console.error('Failed to fetch games played', err);
+    }
+  };
+
+  // Load match + games played
   useEffect(() => {
     fetchMatchData();
+    fetchGamesPlayed();
   }, [matchId]);
 
-  // Fetch offers if auction phase
+  // Load offers only if auction phase
   useEffect(() => {
     if (data?.latestGame?.status === 'auction pending') {
       fetchOffers(data.latestGame.id);
@@ -70,64 +81,10 @@ export default function MatchPage() {
     fetchOffers
   );
 
-  // Only render content after loading/data fetch
-  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
-  if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
-  if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
-
-  // Extract from data AFTER it's ready
-  const { match, latestGame, players, currentUserId } = data;
-  const team1: number[] = latestGame?.team_1_members || [];
-  const teamA: number[] = latestGame?.team_a_members || [];
-  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
-
-  const isAuction = latestGame?.status === 'auction pending';
-  const isInProgress = latestGame?.status === 'in progress';
-  const winningTeam = latestGame?.winning_team;
-
-  const isWinner = winningTeam === 'team_1'
-    ? team1.includes(currentUserId)
-    : teamA.includes(currentUserId);
-  const isLoser = !isWinner;
-
-  const myTeam = isWinner ? (winningTeam === 'team_1' ? team1 : teamA) : [];
-  const offerCandidates = myTeam.filter((id) => id !== currentUserId);
-  const alreadySubmittedOffer = offers.some(o => o.from_player_id === currentUserId);
-  const alreadyAcceptedOffer = offers.find(o => o.status === 'accepted' && o.target_player_id === currentUserId);
-  const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
-  const minOfferAmount = 250 + gamesPlayed * 200;
-
-  const fetchGamesAndCalculateOfferLimit = async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const json = await res.json();
-      const played = json.gamesPlayed || 0;
-      setGamesPlayed(played);
-
-      if (isAuction && isWinner && !alreadySubmittedOffer) {
-        const calculatedMax = Math.max(2000 - played * 100, 250);
-        setMaxOfferAmount(calculatedMax);
-      }
-    } catch (err) {
-      console.error('Error fetching games played:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchGamesAndCalculateOfferLimit();
-  }, [matchId, isAuction, isWinner, alreadySubmittedOffer]);
-
   const handleSubmitOffer = async () => {
     const parsedAmount = parseInt(offerAmount, 10);
-    if (
-      !selectedPlayer ||
-      isNaN(parsedAmount) ||
-      parsedAmount < minOfferAmount ||
-      parsedAmount > maxOfferAmount
-    ) {
-      setMessage(
-        `Please select a player and enter a valid offer (${minOfferAmount}–${maxOfferAmount}).`
-      );
+    if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < minOfferAmount || parsedAmount > maxOfferAmount) {
+      setMessage(`Please select a player and enter a valid offer (${minOfferAmount}–${maxOfferAmount}).`);
       return;
     }
 
@@ -135,7 +92,7 @@ export default function MatchPage() {
     setMessage(null);
 
     try {
-      const gameId = latestGame?.id;
+      const gameId = data?.latestGame?.id;
       if (!gameId) throw new Error('Game ID missing');
 
       const res = await fetch(`/api/game/${gameId}/submit-offer`, {
@@ -171,13 +128,57 @@ export default function MatchPage() {
       });
 
       if (!res.ok) throw new Error('Failed to accept offer');
-      await fetchOffers(latestGame.id);
+      await fetchOffers(data.latestGame.id);
     } catch (err) {
       console.error(err);
     } finally {
       setAccepting(false);
     }
   };
+
+  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
+  if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
+  if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
+
+  const { match, latestGame, players, currentUserId } = data;
+  const team1: number[] = latestGame?.team_1_members || [];
+  const teamA: number[] = latestGame?.team_a_members || [];
+  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
+
+  const isAuction = latestGame?.status === 'auction pending';
+  const isInProgress = latestGame?.status === 'in progress';
+  const winningTeam = latestGame?.winning_team;
+
+  const isWinner = winningTeam === 'team_1'
+    ? team1.includes(currentUserId)
+    : teamA.includes(currentUserId);
+  const isLoser = !isWinner;
+
+  const myTeam = isWinner ? (winningTeam === 'team_1' ? team1 : teamA) : [];
+  const offerCandidates = myTeam.filter((id) => id !== currentUserId);
+  const alreadySubmittedOffer = offers.some(o => o.from_player_id === currentUserId);
+  const alreadyAcceptedOffer = offers.find(o => o.status === 'accepted' && o.target_player_id === currentUserId);
+  const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
+
+  const minOfferAmount = 250 + gamesPlayed * 200;
+
+  useEffect(() => {
+    const fetchGamesPlayed = async () => {
+      try {
+        const res = await fetch(`/api/match/${matchId}/games-played`);
+        const data = await res.json();
+        const gamesPlayed = data.gamesPlayed || 0;
+        const calculatedMax = Math.max(2000 - gamesPlayed * 100, 250);
+        setMaxOfferAmount(calculatedMax);
+      } catch (err) {
+        console.error('Error fetching games played:', err);
+      }
+    };
+
+    if (isWinner && !alreadySubmittedOffer) {
+      fetchGamesPlayed();
+    }
+  }, [isWinner, alreadySubmittedOffer, matchId]);
   
   return (
   <>
