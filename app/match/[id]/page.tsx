@@ -23,7 +23,7 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
-  const [maxOfferAmount, setMaxOfferAmount] = useState<number>(2000); // default to max
+  const [maxOfferAmount, setMaxOfferAmount] = useState(2000);
 
   const fetchMatchData = async () => {
     try {
@@ -71,29 +71,6 @@ export default function MatchPage() {
       fetchOffers(data.latestGame.id);
     }
   }, [data]);
-
-  fetchGamesPlayed();
-  }, [isWinner, alreadySubmittedOffer, matchId]);
-  
-  useEffect(() => {
-  const fetchGamesPlayed = async () => {
-    if (!isWinner || alreadySubmittedOffer) return;
-
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const data = await res.json();
-
-      if (res.ok && typeof data.gamesPlayed === 'number') {
-        const gamesPlayed = data.gamesPlayed;
-        const offerCap = 250 * gamesPlayed;
-        setMaxOfferAmount(Math.min(offerCap, 2000)); // Clamp to 2000 max
-      } else {
-        console.error('Invalid gamesPlayed data:', data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch games played:', err);
-    }
-  };
 
   // Real-time updates
   useGameWinnerListener(matchId, fetchMatchData);
@@ -184,6 +161,24 @@ export default function MatchPage() {
   const allOffersSubmitted = myTeam.every(pid => offers.some(o => o.from_player_id === pid));
 
   const minOfferAmount = 250 + gamesPlayed * 200;
+
+  useEffect(() => {
+    const fetchGamesPlayed = async () => {
+      try {
+        const res = await fetch(`/api/match/${matchId}/games-played`);
+        const data = await res.json();
+        const gamesPlayed = data.gamesPlayed || 0;
+        const calculatedMax = Math.max(2000 - gamesPlayed * 100, 250);
+        setMaxOfferAmount(calculatedMax);
+      } catch (err) {
+        console.error('Error fetching games played:', err);
+      }
+    };
+
+    if (isWinner && !alreadySubmittedOffer) {
+      fetchGamesPlayed();
+    }
+  }, [isWinner, alreadySubmittedOffer, matchId]);
   
   return (
   <>
