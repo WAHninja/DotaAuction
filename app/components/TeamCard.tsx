@@ -7,8 +7,6 @@ export default function TeamCard({ name, logo, players, teamId, color }) {
     <div className={`bg-gradient-to-b ${gradient} p-6 rounded-2xl shadow-lg backdrop-opacity-10`}>
       <div className="flex flex-row justify-center mb-4">
         <Image src={logo} alt={`${name} Logo`} width={100} height={100} />
-        <h2 className="text-2xl font-semibold ml-4 mt-10">{name}</h2>
-      </div>
       <ul className="space-y-2">
         {players.map((p) => (
           <li key={`${teamId}-${p.id}`} className="flex justify-between items-center">
@@ -20,6 +18,7 @@ export default function TeamCard({ name, logo, players, teamId, color }) {
           </li>
         ))}
       </ul>
+      </div>
     </div>
   );
 }
