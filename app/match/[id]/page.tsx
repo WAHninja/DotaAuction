@@ -199,50 +199,72 @@ export default function MatchPage() {
 
       {/* Offer form for winners */}
       {isWinner && !alreadySubmittedOffer ? (
-        <div className="w-full max-w-md mx-auto mb-6">
-          <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
-          <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
-            <select
-              value={selectedPlayer}
-              onChange={(e) => setSelectedPlayer(e.target.value)}
-              className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
-            >
-              <option value="">Select Player</option>
-              {offerCandidates.map((pid) => {
-                const player = getPlayer(pid);
-                return (
-                  <option key={pid} value={pid}>
-                    {player?.username || 'Unknown'}
-                  </option>
-                );
-              })}
-            </select>
+  <div className="w-full max-w-md mx-auto mb-6">
+    <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
 
-            <input
-              type="number"
-              value={offerAmount}
-              onChange={(e) => setOfferAmount(e.target.value)}
-              min={250}
-              max={maxOfferAmount}
-              className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
-            />
+    <div className="text-sm text-gray-300 text-center md:text-left mb-2">
+      Offer must be between <span className="font-semibold text-white">250</span> and <span className="font-semibold text-white">{maxOfferAmount}</span> gold.
+    </div>
 
-            <button
-              onClick={handleSubmitOffer}
-              disabled={submitting}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full max-w-xs mt-4 md:mt-0"
-            >
-              {submitting ? 'Submitting...' : 'Submit Offer'}
-            </button>
-          </div>
-        </div>
-      ) : isWinner && alreadySubmittedOffer && (
-       <div className="w-full max-w-md mx-auto mb-6">
-        <div className="mb-6 text-center text-yellow-300 font-semibold">
-          ✅ You've already submitted your offer.
-        </div>
-       </div>
-      )}
+    <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
+      <select
+        value={selectedPlayer}
+        onChange={(e) => setSelectedPlayer(e.target.value)}
+        className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
+      >
+        <option value="">Select Player</option>
+        {offerCandidates.map((pid) => {
+          const player = getPlayer(pid);
+          return (
+            <option key={pid} value={pid}>
+              {player?.username || 'Unknown'}
+            </option>
+          );
+        })}
+      </select>
+
+      <input
+        type="number"
+        value={offerAmount}
+        onChange={(e) => setOfferAmount(e.target.value)}
+        placeholder={`250 - ${maxOfferAmount}`}
+        min={250}
+        max={maxOfferAmount}
+        className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
+      />
+    </div>
+
+    {/* Validation Message */}
+    {offerAmount !== '' && (Number(offerAmount) < 250 || Number(offerAmount) > maxOfferAmount) && (
+      <div className="mt-2 text-red-400 text-sm text-center md:text-left">
+        Offer must be between 250 and {maxOfferAmount}.
+      </div>
+    )}
+
+    <div className="mt-4 flex justify-center md:justify-start">
+      <button
+        onClick={handleSubmitOffer}
+        disabled={
+          submitting ||
+          !selectedPlayer ||
+          !offerAmount ||
+          Number(offerAmount) < 250 ||
+          Number(offerAmount) > maxOfferAmount
+        }
+        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full max-w-xs"
+      >
+        {submitting ? 'Submitting...' : 'Submit Offer'}
+      </button>
+    </div>
+  </div>
+) : isWinner && alreadySubmittedOffer && (
+  <div className="w-full max-w-md mx-auto mb-6">
+    <div className="mb-6 text-center text-yellow-300 font-semibold">
+      ✅ You've already submitted your offer.
+    </div>
+  </div>
+)}
+
 
       {/* Shopkeeper + Offers layout */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
