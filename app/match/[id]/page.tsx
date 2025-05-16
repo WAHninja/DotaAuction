@@ -203,7 +203,7 @@ export default function MatchPage() {
     <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
 
     <div className="text-sm text-gray-300 text-center md:text-left mb-2">
-      Offer must be between <span className="font-semibold text-white">250</span> and <span className="font-semibold text-white">{maxOfferAmount}</span> gold.
+      Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span> gold.
     </div>
 
     <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
