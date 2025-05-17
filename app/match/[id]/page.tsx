@@ -162,6 +162,8 @@ export default function MatchPage() {
 
   const minOfferAmount = 250 + gamesPlayed * 200;
   const maxOfferAmount = 2000 + gamesPlayed * 500;
+
+  const res = await fetch(`/api/match/${matchId}/history`)
   
   return (
   <>
