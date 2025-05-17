@@ -386,7 +386,8 @@ export default function MatchPage() {
         </div>
 
       </div> {/* End of Shopkeeper + Offers row */}
-      )}
+      
+)}
   </>
 );
 }
