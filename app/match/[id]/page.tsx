@@ -24,7 +24,6 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
-  const [history, setHistory] = useState<any[]>([]);
 
   const fetchMatchData = async () => {
     try {
