@@ -8,6 +8,14 @@ type PlayerStat = {
   playerId: number
   username: string
   goldChange: number
+  reason: string
+}
+
+type Offer = {
+  id: number
+  from_username: string
+  target_username: string
+  offer_amount: number
   status: 'pending' | 'accepted' | 'rejected'
 }
 
