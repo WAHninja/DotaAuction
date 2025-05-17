@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       `
       SELECT u.id, u.username
       FROM users u
-      JOIN match_players mp ON u.id = mp.player_id
+      JOIN match_players mp ON u.id = mp.user_id
       WHERE mp.match_id = $1
       `,
       [matchId]
