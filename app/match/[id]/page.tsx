@@ -371,6 +371,10 @@ export default function MatchPage() {
         </div>
 
       </div> {/* End of Shopkeeper + Offers row */}
+      <div className="mt-10">
+  <h2 className="text-xl font-bold mb-4">Game History</h2>
+  <GameHistoryTimeline games={history} />
+</div>
       <GameHistoryTimeline
   games={[
     {
