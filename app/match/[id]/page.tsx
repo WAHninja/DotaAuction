@@ -218,13 +218,13 @@ export default function MatchPage() {
               <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
 
               <div className="text-sm text-gray-300 text-center md:text-left mb-2">
-                Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span> <Image
+                Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span><Image
                       src="/Gold_symbol.webp"
                       alt="Gold"
                       width={16}
                       height={16}
                       className="inline-block ml-1 align-middle"
-                    />.
+                    />
               </div>
 
               <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
@@ -302,7 +302,7 @@ export default function MatchPage() {
 
             {/* Current Offers */}
             <div className="flex-1">
-              <h4 className="text-xl font-bold mb-4">Current Offers</h4>
+              <h4 className="text-xl font-bold text-center mb-4">Current Offers</h4>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {offers.map((offer) => {
                   const from = getPlayer(offer.from_player_id);
@@ -447,7 +447,7 @@ export default function MatchPage() {
               <ul className="list-disc list-inside">
                 {game.offers.map((offer) => (
                   <li key={offer.id}>
-                    {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} <Image
+                    {offer.fromUsername} offered {offer.targetUsername} for {offer.offerAmount}<Image
                       src="/Gold_symbol.webp"
                       alt="Gold"
                       width={16}
