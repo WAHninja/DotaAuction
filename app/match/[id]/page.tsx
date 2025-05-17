@@ -386,14 +386,7 @@ export default function MatchPage() {
         </div>
 
       </div> {/* End of Shopkeeper + Offers row */}
-      </div>
-    {Array.isArray(gameHistory) && gameHistory.length > 0 ? (
-  <GameHistoryTimeline games={gameHistory} />
-) : (
-  <p className="text-sm text-gray-500">No game history yet.</p>
-)}
-  </div>
-)}
+      )}
   </>
 );
 }
