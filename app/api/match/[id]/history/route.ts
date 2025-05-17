@@ -14,8 +14,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Match ID not found in URL' }, { status: 400 })
     }
 
-    // Fetch games
-    const games = await db.query(
+    // Fetch all users in the match
+    const userResult = await db.query(
+      `
+      SELECT u.id, u.username
+      FROM users u
+      JOIN match_players mp ON u.id = mp.player_id
+      WHERE mp.match_id = $1
+      `,
+      [matchId]
+    )
+    const playerIdToUsername = Object.fromEntries(userResult.rows.map(u => [u.id, u.username]))
+
+    // Fetch games in the match
+    const gameResult = await db.query(
       `
       SELECT 
         g.id AS game_id,
@@ -32,9 +44,10 @@ export async function GET(req: NextRequest) {
       [matchId]
     )
 
-    const gameIds = games.rows.map((g: any) => g.game_id)
+    const games = gameResult.rows
+    const gameIds = games.map(g => g.game_id)
 
-    // Fetch offers
+    // Fetch offers per game
     const offersResult = await db.query(
       `
       SELECT 
@@ -60,10 +73,20 @@ export async function GET(req: NextRequest) {
     for (const offer of offersResult.rows) {
       const gameId = offer.game_id
       if (!offersByGame.has(gameId)) offersByGame.set(gameId, [])
-      offersByGame.get(gameId)!.push(offer)
+      offersByGame.get(gameId)!.push({
+        id: offer.id,
+        gameId: offer.game_id,
+        fromPlayerId: offer.from_player_id,
+        targetPlayerId: offer.target_player_id,
+        offerAmount: offer.offer_amount,
+        status: offer.status,
+        createdAt: offer.created_at,
+        fromUsername: offer.from_username,
+        targetUsername: offer.target_username,
+      })
     }
 
-    // Fetch gold changes from game_player_stats
+    // Fetch gold changes per game
     const statsResult = await db.query(
       `
       SELECT 
@@ -83,17 +106,23 @@ export async function GET(req: NextRequest) {
       const gameId = row.game_id
       if (!statsByGame.has(gameId)) statsByGame.set(gameId, [])
       statsByGame.get(gameId)!.push({
-        team_id: row.team_id,
-        gold_change: row.gold_change,
+        teamId: row.team_id,
+        goldChange: row.gold_change,
         reason: row.reason,
       })
     }
 
-    // Combine all data into history
-    const history = games.rows.map((game: any) => ({
-      ...game,
+    // Final combined result
+    const history = games.map((game: any) => ({
+      gameId: game.game_id,
+      matchId: game.match_id,
+      createdAt: game.created_at,
+      status: game.status,
+      winningTeam: game.winning_team,
+      teamAMembers: game.team_a_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
+      team1Members: game.team_1_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
       offers: offersByGame.get(game.game_id) || [],
-      gold_changes: statsByGame.get(game.game_id) || [],
+      playerStats: statsByGame.get(game.game_id) || [],
     }))
 
     return NextResponse.json({ history })
