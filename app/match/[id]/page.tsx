@@ -404,7 +404,7 @@ export default function MatchPage() {
         <ul className="list-disc list-inside">
           {game.playerStats.map((stat, index) => (
             <li key={index}>
-              Team: {stat.teamId}, Gold: {stat.goldChange}, Reason: {stat.reason}
+              Team: {stat.username}, Gold: {stat.goldChange}, Reason: {stat.reason}
             </li>
           ))}
         </ul>
