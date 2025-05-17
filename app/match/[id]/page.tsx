@@ -86,7 +86,7 @@ export default function MatchPage() {
   }, [data]);
 
   // After loading data from your API or DB
-  const gameHistory = transformedGames.map((game) => ({
+  const gameHistory = history.map((game) => ({
     gameId: game.id,
     createdAt: game.created_at,
     teamAMembers: game.team_a_members,
