@@ -59,7 +59,7 @@ export default function MatchPage() {
     }
   };
 
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<any[]>([]); // ✅ Important
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   const fetchGameHistory = async () => {
