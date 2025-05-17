@@ -218,7 +218,13 @@ export default function MatchPage() {
               <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
 
               <div className="text-sm text-gray-300 text-center md:text-left mb-2">
-                Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span> gold.
+                Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span> <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={16}
+                      height={16}
+                      className="inline-block ml-1 align-middle"
+                    />.
               </div>
 
               <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
@@ -388,15 +394,21 @@ export default function MatchPage() {
     >
       <h3 className="text-xl font-semibold flex justify-between items-center">
         <span>Game #{game.gameId} – {game.status}</span>
-        <button className="text-sm text-blue-500">
+        <button className="text-sm">
           {isExpanded ? 'Hide' : 'Show'} details
         </button>
       </h3>
 
       {/* Show accepted offer summary when not expanded */}
       {!isExpanded && acceptedOffer && (
-        <p className="mt-2 text-sm text-green-500 font-medium">
-          Offer accepted: {acceptedOffer.fromUsername} → {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount} gold
+        <p className="mt-2 text-sm font-medium">
+          {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount} <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={16}
+                      height={16}
+                      className="inline-block ml-1 align-middle"
+                    />
         </p>
       )}
 
@@ -435,7 +447,13 @@ export default function MatchPage() {
               <ul className="list-disc list-inside">
                 {game.offers.map((offer) => (
                   <li key={offer.id}>
-                    {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
+                    {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={16}
+                      height={16}
+                      className="inline-block ml-1 align-middle"
+                    /> (
                     <span
                       className={`font-semibold ${
                         offer.status === 'accepted'
