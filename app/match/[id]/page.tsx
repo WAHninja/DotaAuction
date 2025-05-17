@@ -388,9 +388,9 @@ export default function MatchPage() {
         {isExpanded && (
           <>
             <div className="mt-2">
-              <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+              <strong>Winner:</strong> {game.winningTeam || 'N/A'}<br />
               <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
-              <strong>Team 1:</strong> {game.team1Members.join(', ')}<br />
+              <strong>Team 1:</strong> {game.team1Members.join(', ')}
             </div>
 
             {game.playerStats.length > 0 && (
@@ -399,7 +399,7 @@ export default function MatchPage() {
                 <ul className="list-disc list-inside">
                   {game.playerStats.map((stat) => (
                     <li key={stat.id}>
-                      {stat.username || `Player#${stat.playerId}`} – {stat.reason}
+                      {stat.username || `Player#${stat.playerId}`} – {stat.reason} - {stat.goldChange}
                     </li>
                   ))}
                 </ul>
