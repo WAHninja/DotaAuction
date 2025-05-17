@@ -398,11 +398,11 @@ export default function MatchPage() {
       </div>
     )}
 
-    {playerStats.length > 0 && (
+    {game.playerStats.length > 0 && (
   <div>
     <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
     <ul className="space-y-1 text-sm">
-      {playerStats.map((stat) => (
+      {game.playerStats.map((stat) => (
         <li key={stat.id} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
           <span className="text-gray-300">
             {stat.username || `Player#${stat.playerId}`} – {stat.reason}
