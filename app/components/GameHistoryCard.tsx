@@ -5,16 +5,17 @@ import { Trophy, Swords, Coins } from 'lucide-react'
 
 type PlayerStat = {
   id: number
+  
   team_id: 'team_a' | 'team_1'
   gold_change: number
   reason: string
 }
 
-type Offer = {
+type PlayerStat = {
   id: number
-  from_username: string
-  target_username: string
-  offer_amount: number
+  playerId: number
+  username: string
+  goldChange: number
   status: 'pending' | 'accepted' | 'rejected'
 }
 
