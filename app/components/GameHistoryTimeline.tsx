@@ -1,14 +1,17 @@
 import GameHistoryCard from './GameHistoryCard'
+import { getUserMapFromOffers } from '@/lib/getUserMapFromOffers'
 
-type TimelineGame = {
-  gameId: number
-  createdAt: string
-  teamAMembers: string[]
-  team1Members: string[]
-  winningTeam: 'team_a' | 'team_1' | null
-  offers: any[]
-  playerStats: any[]
-}
+const userMap = getUserMapFromOffers(data.history)
+
+const games = data.history.map((game: any) => ({
+  gameId: game.game_id,
+  createdAt: game.created_at,
+  teamAMembers: game.team_a_members.map((id: number) => userMap[id] || `Player ${id}`),
+  team1Members: game.team_1_members.map((id: number) => userMap[id] || `Player ${id}`),
+  winningTeam: game.winning_team,
+  offers: game.offers,
+  playerStats: game.gold_changes,
+}))
 
 type Props = {
   games: TimelineGame[]
