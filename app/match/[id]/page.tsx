@@ -432,6 +432,7 @@ export default function MatchPage() {
           )}
         </div>
       ))}
+    </section>
   </>
 );
 }
