@@ -399,7 +399,7 @@ export default function MatchPage() {
                 <ul className="list-disc list-inside">
                   {game.playerStats.map((stat) => (
                     <li key={stat.id}>
-                      {stat.username || `Player#${stat.playerId}`} – {stat.reason} - {stat.goldChange}
+                      {stat.username || `Player#${stat.playerId}`} {stat.goldChange} <Image src="/Gold_symbol.webp"/> 
                     </li>
                   ))}
                 </ul>
