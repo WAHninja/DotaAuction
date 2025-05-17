@@ -372,7 +372,7 @@ export default function MatchPage() {
       </div> {/* End of Shopkeeper + Offers row */}
       
   </div>
-))}
+)}
   {history.map((game) => (
   <div key={game.gameId} className="mb-4 p-4 border rounded-lg shadow">
     <h3 className="text-xl font-semibold">
