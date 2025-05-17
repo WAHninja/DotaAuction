@@ -375,43 +375,6 @@ export default function MatchPage() {
   <h2 className="text-xl font-bold mb-4">Game History</h2>
   <GameHistoryTimeline games={history} />
 </div>
-      <GameHistoryTimeline
-  games={[
-    {
-      gameId: 1,
-      createdAt: '2025-05-16T10:00:00Z',
-      teamAMembers: ['Invoker', 'Lina'],
-      team1Members: ['Juggernaut', 'Witch Doctor'],
-      winningTeam: 'team_a',
-      offers: [],
-      playerStats: [
-        { id: 1, team_id: 'team_a', gold_change: 500, reason: 'Victory bonus' },
-        { id: 2, team_id: 'team_1', gold_change: -250, reason: 'Loss penalty' }
-      ]
-    },
-    {
-      gameId: 2,
-      createdAt: '2025-05-17T12:30:00Z',
-      teamAMembers: ['Lina', 'Witch Doctor'],
-      team1Members: ['Invoker', 'Juggernaut'],
-      winningTeam: 'team_1',
-      offers: [
-        {
-          id: 1,
-          from_username: 'Juggernaut',
-          target_username: 'Lina',
-          offer_amount: 1200,
-          status: 'accepted'
-        }
-      ],
-      playerStats: [
-        { id: 3, team_id: 'team_1', gold_change: 1200, reason: 'Offer accepted' },
-        { id: 4, team_id: 'team_a', gold_change: -1200, reason: 'Player traded' }
-      ]
-    }
-  ]}
-/>
-      </div>
   </div>
 )}
   </>
