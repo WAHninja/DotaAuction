@@ -399,14 +399,18 @@ export default function MatchPage() {
                 <ul className="list-disc list-inside">
                   {game.playerStats.map((stat) => (
                     <li key={stat.id}>
-                      {stat.username || `Player#${stat.playerId}`} {stat.goldChange} <Image
-  src="/Gold_symbol.webp"
-  alt="Gold"
-  width={14}
-  height={14}
-  className="inline-block ml-1 align-middle"
-/> 
-                    </li>
+                      {stat.username || `Player#${stat.playerId}`}{' '}
+                      <span className="text-red-500 font-semibold">
+                        {stat.goldChange}
+                      </span>
+                      <Image
+                        src="/Gold_symbol.webp"
+                        alt="Gold"
+                        width={16}
+                        height={16}
+                        className="inline-block ml-1 align-middle"
+                      />
+                  </li>
                   ))}
                 </ul>
               </div>
@@ -418,10 +422,22 @@ export default function MatchPage() {
                 <ul className="list-disc list-inside">
                   {game.offers.map((offer) => (
                     <li key={offer.id}>
-                      {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold ({offer.status})
-                    </li>
-                  ))}
-                </ul>
+                      {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
+                      <span
+                        className={`font-semibold ${
+                          offer.status === 'accepted'
+                            ? 'text-green-500'
+                            : offer.status === 'rejected'
+                            ? 'text-red-500'
+                            : 'text-gray-400'
+                      }`}
+                    >
+                      {offer.status}
+                    </span>
+                    )
+                  </li>
+                ))}
+              </ul>
               </div>
             )}
           </>
