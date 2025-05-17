@@ -8,7 +8,6 @@ import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import GameHistoryTimeline from '@/app/components/GameHistoryTimeline';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -24,6 +23,7 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
+  const [history, setHistory] = useState<any[]>([]);
 
   const fetchMatchData = async () => {
     try {
@@ -59,21 +59,16 @@ export default function MatchPage() {
     }
   };
 
-  const [history, setHistory] = useState<any[]>([]); // ✅ Important
-  const [loadingHistory, setLoadingHistory] = useState(true);
-
   const fetchGameHistory = async () => {
-  try {
-    const res = await fetch(`/api/match/${matchId}/history`);
-    if (!res.ok) throw new Error('Failed to fetch game history');
-    const json = await res.json();
-    setHistory(json.history || []);
-  } catch (err) {
-    console.error('Failed to fetch game history:', err);
-  } finally {
-    setLoadingHistory(false);
-  }
-};
+    try {
+      const res = await fetch(`/api/match/${matchId}/history`);
+      if (!res.ok) throw new Error('Failed to fetch game history');
+      const json = await res.json();
+      setHistory(json.history || []);
+    } catch (err) {
+      console.error('Failed to fetch game history:', err);
+    }
+  };
 
   // Load match + games played
   useEffect(() => {
@@ -88,17 +83,6 @@ export default function MatchPage() {
       fetchOffers(data.latestGame.id);
     }
   }, [data]);
-
-  // After loading data from your API or DB
-  const gameHistory = (history ?? []).map((game) => ({
-    gameId: game.id,
-    createdAt: game.created_at,
-    teamAMembers: game.team_a_members,
-    team1Members: game.team_1_members,
-    winningTeam: game.winning_team,
-    offers: game.offers,
-    playerStats: game.playerStats,
-  }));
 
   // Real-time updates
   useGameWinnerListener(matchId, fetchMatchData);
@@ -387,6 +371,49 @@ export default function MatchPage() {
 
       </div> {/* End of Shopkeeper + Offers row */}
       
+  </div>
+))}
+  {history.map((game) => (
+  <div key={game.gameId} className="mb-4 p-4 border rounded-lg shadow">
+    <h3 className="text-xl font-semibold">
+      Game #{game.gameId} – {game.status}
+    </h3>
+    <p className="text-sm text-gray-600">Created at: {new Date(game.createdAt).toLocaleString()}</p>
+
+    <div className="mt-2">
+      <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
+      <strong>Team 1:</strong> {game.team1Members.join(', ')}<br />
+      <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+    </div>
+
+    {game.offers.length > 0 && (
+      <div className="mt-4">
+        <h4 className="font-bold">Offers:</h4>
+        <ul className="list-disc list-inside">
+          {game.offers.map((offer) => (
+            <li key={offer.id}>
+              {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
+              {offer.status})
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {game.playerStats.length > 0 && (
+      <div className="mt-4">
+        <h4 className="font-bold">Gold Changes:</h4>
+        <ul className="list-disc list-inside">
+          {game.playerStats.map((stat, index) => (
+            <li key={index}>
+              Team: {stat.teamId}, Gold: {stat.goldChange}, Reason: {stat.reason}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}    
+  </div>
+  </div>
 )}
   </>
 );
