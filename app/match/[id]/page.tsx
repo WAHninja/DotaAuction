@@ -377,59 +377,72 @@ export default function MatchPage() {
     <section className="mt-12">
   <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
   {history.map((game) => {
-    const isExpanded = expandedGameId === game.gameId;
-    return (
-      <div key={game.gameId} className="mb-4 p-4 border rounded-lg shadow cursor-pointer" onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}>
-        <h3 className="text-xl font-semibold flex justify-between items-center">
-          <span>Game #{game.gameId} – {game.status}</span>
-          <button className="text-sm text-blue-500">{isExpanded ? 'Hide' : 'Show'} details</button>
-        </h3>
-  
-        {isExpanded && (
-          <>
-            <div className="mt-2">
-              <strong>Winner:</strong> {game.winningTeam || 'N/A'}<br />
-              <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
-              <strong>Team 1:</strong> {game.team1Members.join(', ')}
-            </div>
+  const isExpanded = expandedGameId === game.gameId;
+  const acceptedOffer = game.offers.find((offer) => offer.status === 'accepted');
 
-            {game.playerStats.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-bold">Penalties:</h4>
-                <ul className="list-disc list-inside">
-                  {game.playerStats.map((stat) => (
-                    <li key={stat.id}>
-                      {stat.username || `Player#${stat.playerId}`}{' '}
-                      <span className="text-red-500 font-semibold">
-                        {stat.goldChange}
-                      </span>
-                      <Image
-                        src="/Gold_symbol.webp"
-                        alt="Gold"
-                        width={16}
-                        height={16}
-                        className="inline-block ml-1 align-middle"
-                      />
+  return (
+    <div
+      key={game.gameId}
+      className="mb-4 p-4 border rounded-lg shadow cursor-pointer"
+      onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}
+    >
+      <h3 className="text-xl font-semibold flex justify-between items-center">
+        <span>Game #{game.gameId} – {game.status}</span>
+        <button className="text-sm text-blue-500">
+          {isExpanded ? 'Hide' : 'Show'} details
+        </button>
+      </h3>
+
+      {/* Show accepted offer summary when not expanded */}
+      {!isExpanded && acceptedOffer && (
+        <p className="mt-2 text-sm text-green-500 font-medium">
+          Offer accepted: {acceptedOffer.fromUsername} → {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount} gold
+        </p>
+      )}
+
+      {isExpanded && (
+        <>
+          <div className="mt-2">
+            <strong>Winner:</strong> {game.winningTeam || 'N/A'}<br />
+            <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
+            <strong>Team 1:</strong> {game.team1Members.join(', ')}
+          </div>
+
+          {game.playerStats.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-bold">Penalties:</h4>
+              <ul className="list-disc list-inside">
+                {game.playerStats.map((stat) => (
+                  <li key={stat.id}>
+                    {stat.username || `Player#${stat.playerId}`}{' '}
+                    <span className="text-red-500 font-semibold">{stat.goldChange}</span>
+                    <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={16}
+                      height={16}
+                      className="inline-block ml-1 align-middle"
+                    />
                   </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                ))}
+              </ul>
+            </div>
+          )}
 
-            {game.offers.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-bold">Offers:</h4>
-                <ul className="list-disc list-inside">
-                  {game.offers.map((offer) => (
-                    <li key={offer.id}>
-                      {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
-                      <span
-                        className={`font-semibold ${
-                          offer.status === 'accepted'
-                            ? 'text-green-500'
-                            : offer.status === 'rejected'
-                            ? 'text-red-500'
-                            : 'text-gray-400'
+          {game.offers.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-bold">Offers:</h4>
+              <ul className="list-disc list-inside">
+                {game.offers.map((offer) => (
+                  <li key={offer.id}>
+                    {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
+                    <span
+                      className={`font-semibold ${
+                        offer.status === 'accepted'
+                          ? 'text-green-500'
+                          : offer.status === 'rejected'
+                          ? 'text-red-500'
+                          : 'text-gray-400'
                       }`}
                     >
                       {offer.status}
@@ -438,13 +451,13 @@ export default function MatchPage() {
                   </li>
                 ))}
               </ul>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-  })}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+})}
 </section>
   </>
 );
