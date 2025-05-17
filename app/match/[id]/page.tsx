@@ -175,6 +175,16 @@ export default function MatchPage() {
 
   const minOfferAmount = 250 + gamesPlayed * 200;
   const maxOfferAmount = 2000 + gamesPlayed * 500;
+
+  const history = data.history.map((game: any) => ({
+    gameId: game.game_id,
+    createdAt: game.created_at,
+    teamAMembers: game.team_a_members,
+    team1Members: game.team_1_members,
+    winningTeam: game.winning_team,
+    offers: game.offers,
+    playerStats: game.gold_changes, // assuming gold_changes = playerStats
+  }))
   
   return (
   <>
