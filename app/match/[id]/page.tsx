@@ -398,18 +398,26 @@ export default function MatchPage() {
       </div>
     )}
 
-    {game.playerStats.length > 0 && (
-      <div className="mt-4">
-        <h4 className="font-bold">Gold Changes:</h4>
-        <ul className="list-disc list-inside">
-          {game.playerStats.map((stat, index) => (
-            <li key={index}>
-              Team: {stat.username}, Gold: {stat.goldChange}, Reason: {stat.reason}
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
+    {playerStats.length > 0 && (
+  <div>
+    <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
+    <ul className="space-y-1 text-sm">
+      {playerStats.map((stat) => (
+        <li key={stat.id} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
+          <span className="text-gray-300">
+            {stat.username || `Player#${stat.playerId}`} – {stat.reason}
+          </span>
+          <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
+            <Coins className="inline w-4 h-4 mr-1" />
+            {stat.goldChange >= 0 ? '+' : ''}
+            {stat.goldChange}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
   </div>
 ))}
   </div>
