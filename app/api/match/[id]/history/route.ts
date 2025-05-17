@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Match ID not found in URL' }, { status: 400 })
     }
 
+    // Fetch games
     const games = await db.query(
       `
       SELECT 
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 
     const gameIds = games.rows.map((g: any) => g.game_id)
 
+    // Fetch offers
     const offersResult = await db.query(
       `
       SELECT 
@@ -61,9 +63,37 @@ export async function GET(req: NextRequest) {
       offersByGame.get(gameId)!.push(offer)
     }
 
+    // Fetch gold changes from game_player_stats
+    const statsResult = await db.query(
+      `
+      SELECT 
+        gps.game_id,
+        gps.team_id,
+        gps.gold_change,
+        gps.reason
+      FROM game_player_stats gps
+      WHERE gps.game_id = ANY($1)
+      ORDER BY gps.game_id, gps.id
+      `,
+      [gameIds]
+    )
+
+    const statsByGame = new Map<number, any[]>()
+    for (const row of statsResult.rows) {
+      const gameId = row.game_id
+      if (!statsByGame.has(gameId)) statsByGame.set(gameId, [])
+      statsByGame.get(gameId)!.push({
+        team_id: row.team_id,
+        gold_change: row.gold_change,
+        reason: row.reason,
+      })
+    }
+
+    // Combine all data into history
     const history = games.rows.map((game: any) => ({
       ...game,
       offers: offersByGame.get(game.game_id) || [],
+      gold_changes: statsByGame.get(game.game_id) || [],
     }))
 
     return NextResponse.json({ history })
