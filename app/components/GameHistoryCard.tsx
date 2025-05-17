@@ -5,14 +5,6 @@ import { Trophy, Swords, Coins } from 'lucide-react'
 
 type PlayerStat = {
   id: number
-  
-  team_id: 'team_a' | 'team_1'
-  gold_change: number
-  reason: string
-}
-
-type PlayerStat = {
-  id: number
   playerId: number
   username: string
   goldChange: number
