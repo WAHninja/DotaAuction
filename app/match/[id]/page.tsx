@@ -60,16 +60,21 @@ export default function MatchPage() {
     }
   };
 
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
   const fetchGameHistory = async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/history`);
-      if (!res.ok) throw new Error('Failed to fetch game history');
-      const json = await res.json();
-      setHistory(json.history || []);
-    } catch (err) {
-      console.error('Failed to fetch game history:', err);
-    }
-  };
+  try {
+    const res = await fetch(`/api/match/${matchId}/history`);
+    if (!res.ok) throw new Error('Failed to fetch game history');
+    const json = await res.json();
+    setHistory(json.history || []);
+  } catch (err) {
+    console.error('Failed to fetch game history:', err);
+  } finally {
+    setLoadingHistory(false);
+  }
+};
 
   // Load match + games played
   useEffect(() => {
@@ -86,7 +91,7 @@ export default function MatchPage() {
   }, [data]);
 
   // After loading data from your API or DB
-  const gameHistory = history.map((game) => ({
+  const gameHistory = (history ?? []).map((game) => ({
     gameId: game.id,
     createdAt: game.created_at,
     teamAMembers: game.team_a_members,
@@ -383,7 +388,11 @@ export default function MatchPage() {
 
       </div> {/* End of Shopkeeper + Offers row */}
       </div>
-    <GameHistoryTimeline games={gameHistory} />
+    {Array.isArray(gameHistory) && gameHistory.length > 0 ? (
+  <GameHistoryTimeline games={gameHistory} />
+) : (
+  <p className="text-sm text-gray-500">No game history yet.</p>
+)}
   </div>
 )}
   </>
