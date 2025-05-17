@@ -24,6 +24,7 @@ export default function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
+  const [history, setHistory] = useState<any[]>([]);
 
   const fetchMatchData = async () => {
     try {
@@ -59,10 +60,22 @@ export default function MatchPage() {
     }
   };
 
+  const fetchGameHistory = async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}/history`);
+      if (!res.ok) throw new Error('Failed to fetch game history');
+      const json = await res.json();
+      setHistory(json.history || []);
+    } catch (err) {
+      console.error('Failed to fetch game history:', err);
+    }
+  };
+
   // Load match + games played
   useEffect(() => {
     fetchMatchData();
     fetchGamesPlayed();
+    fetchGameHistory(); // 👈 add this line
   }, [matchId]);
 
   // Load offers only if auction phase
@@ -162,8 +175,6 @@ export default function MatchPage() {
 
   const minOfferAmount = 250 + gamesPlayed * 200;
   const maxOfferAmount = 2000 + gamesPlayed * 500;
-
-  const res = await fetch(`/api/match/${matchId}/history`)
   
   return (
   <>
