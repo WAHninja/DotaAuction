@@ -375,6 +375,7 @@ export default function MatchPage() {
   <h2 className="text-xl font-bold mb-4">Game History</h2>
   <GameHistoryTimeline games={history} />
 </div>
+      </div>
   </div>
 )}
   </>
