@@ -8,6 +8,7 @@ import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
+import GameHistoryTimeline from '@/app/components/GameHistoryTimeline';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -371,6 +372,7 @@ export default function MatchPage() {
 
       </div> {/* End of Shopkeeper + Offers row */}
       </div>
+    <GameHistoryTimeline games={games} />
   </div>
 )}
   </>
