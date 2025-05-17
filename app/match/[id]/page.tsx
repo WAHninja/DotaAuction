@@ -85,6 +85,17 @@ export default function MatchPage() {
     }
   }, [data]);
 
+  // After loading data from your API or DB
+  const gameHistory = transformedGames.map((game) => ({
+    gameId: game.id,
+    createdAt: game.created_at,
+    teamAMembers: game.team_a_members,
+    team1Members: game.team_1_members,
+    winningTeam: game.winning_team,
+    offers: game.offers,
+    playerStats: game.playerStats,
+  }));
+
   // Real-time updates
   useGameWinnerListener(matchId, fetchMatchData);
   useAuctionListener(
@@ -372,7 +383,7 @@ export default function MatchPage() {
 
       </div> {/* End of Shopkeeper + Offers row */}
       </div>
-    <GameHistoryTimeline games={games} />
+    <GameHistoryTimeline games={gameHistory} />
   </div>
 )}
   </>
