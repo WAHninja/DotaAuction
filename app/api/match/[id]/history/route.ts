@@ -90,14 +90,16 @@ export async function GET(req: NextRequest) {
     const statsResult = await db.query(
       `
       SELECT 
+        gps.id,
         gps.game_id,
-        gps.team_id,
         gps.player_id,
+        u.username,
         gps.gold_change,
         gps.reason
       FROM game_player_stats gps
-      WHERE gps.game_id = ANY($1)
-      ORDER BY gps.game_id, gps.id
+    JOIN users u ON gps.player_id = u.id
+    WHERE gps.game_id = ANY($1)
+    ORDER BY gps.game_id, gps.id
       `,
       [gameIds]
     )
@@ -107,9 +109,9 @@ export async function GET(req: NextRequest) {
       const gameId = row.game_id
       if (!statsByGame.has(gameId)) statsByGame.set(gameId, [])
       statsByGame.get(gameId)!.push({
+        id: row.id,
         playerId: row.player_id,
-        username: playerIdToUsername[row.player_id] || `Player#${row.player_id}`,
-        teamId: row.team_id,
+        username: row.username,
         goldChange: row.gold_change,
         reason: row.reason,
       })
