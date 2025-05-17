@@ -15,6 +15,8 @@ type Props = {
 }
 
 export default function GameHistoryTimeline({ games }: Props) {
+  if (!Array.isArray(games)) return null;
+
   return (
     <div className="relative border-l-2 border-gray-600 pl-6 space-y-8">
       {games.map((game, index) => (
