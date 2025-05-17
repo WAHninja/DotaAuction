@@ -384,17 +384,27 @@ export default function MatchPage() {
           <span>Game #{game.gameId} – {game.status}</span>
           <button className="text-sm text-blue-500">{isExpanded ? 'Hide' : 'Show'} details</button>
         </h3>
-        <p className="text-sm text-gray-600">
-          Created at: {new Date(game.createdAt).toLocaleString()}
-        </p>
-
+  
         {isExpanded && (
           <>
             <div className="mt-2">
+              <strong>Winner:</strong> {game.winningTeam || 'N/A'}
               <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
               <strong>Team 1:</strong> {game.team1Members.join(', ')}<br />
-              <strong>Winner:</strong> {game.winningTeam || 'N/A'}
             </div>
+
+            {game.playerStats.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-bold">Penalties:</h4>
+                <ul className="list-disc list-inside">
+                  {game.playerStats.map((stat) => (
+                    <li key={stat.id}>
+                      {stat.username || `Player#${stat.playerId}`} – {stat.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {game.offers.length > 0 && (
               <div className="mt-4">
@@ -403,33 +413,6 @@ export default function MatchPage() {
                   {game.offers.map((offer) => (
                     <li key={offer.id}>
                       {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold ({offer.status})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {game.playerStats.length > 0 && (
-              <div>
-                <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
-                <ul className="space-y-1 text-sm">
-                  {game.playerStats.map((stat) => (
-                    <li
-                      key={stat.id}
-                      className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
-                    >
-                      <span className="text-gray-300">
-                        {stat.username || `Player#${stat.playerId}`} – {stat.reason}
-                      </span>
-                      <span
-                        className={`font-medium ${
-                          stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'
-                        }`}
-                      >
-                        <Coins className="inline w-4 h-4 mr-1" />
-                        {stat.goldChange >= 0 ? '+' : ''}
-                        {stat.goldChange}
-                      </span>
                     </li>
                   ))}
                 </ul>
