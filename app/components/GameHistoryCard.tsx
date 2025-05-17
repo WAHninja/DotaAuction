@@ -1,83 +1,139 @@
 'use client'
 
-import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { Trophy, Swords, Coins } from 'lucide-react'
 
-export type GameHistoryCardProps = {
-  game: any
-  index: number
-  players: any[]
-  currentUserId: string
+type PlayerStat = {
+  id: number
+  team_id: 'team_a' | 'team_1'
+  gold_change: number
+  reason: string
 }
 
-export function GameHistoryCard({ game, index }: GameHistoryCardProps) {
-  const [open, setOpen] = useState(false)
+type Offer = {
+  id: number
+  from_username: string
+  target_username: string
+  offer_amount: number
+  status: 'pending' | 'accepted' | 'rejected'
+}
 
-  const winningTeam = game.winning_team
-  const teamA = game.team_a_members
-  const team1 = game.team_1_members
+type GameHistoryCardProps = {
+  gameId: number
+  createdAt: string
+  teamAMembers: string[]
+  team1Members: string[]
+  winningTeam: 'team_a' | 'team_1' | null
+  offers: Offer[]
+  playerStats: PlayerStat[]
+}
+
+export default function GameHistoryCard({
+  gameId,
+  createdAt,
+  teamAMembers,
+  team1Members,
+  winningTeam,
+  offers,
+  playerStats
+}: GameHistoryCardProps) {
+  const date = new Date(createdAt).toLocaleString()
 
   return (
-    <div className="border rounded-xl shadow-sm mb-4">
-      <div
-        className="flex justify-between items-center cursor-pointer px-4 py-2 bg-gray-100 hover:bg-gray-200"
-        onClick={() => setOpen(!open)}
-      >
-        <div className="font-semibold text-lg">
-          Game {index + 1} — Winner: {winningTeam === 'team_a' ? 'Team A' : 'Team 1'}
-        </div>
-        <button className="text-sm text-blue-600 hover:underline">
-          {open ? 'Hide' : 'Show'} Details
-        </button>
+    <motion.div
+      className="bg-[#1b1b1b] border border-gray-700 rounded-2xl p-4 shadow-md mb-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-xl font-bold text-yellow-400">
+          Game #{gameId}
+        </h2>
+        <span className="text-sm text-gray-400">{date}</span>
       </div>
-      {open && (
-        <div className="p-4 space-y-4">
-          <div>
-            <strong>Team A:</strong>
-            <ul className="ml-4 list-disc">
-              {teamA.map((playerId: number) => (
-                <li key={playerId}>User ID: {playerId}</li>
-              ))}
-            </ul>
-          </div>
 
-          <div>
-            <strong>Team 1:</strong>
-            <ul className="ml-4 list-disc">
-              {team1.map((playerId: number) => (
-                <li key={playerId}>User ID: {playerId}</li>
-              ))}
-            </ul>
-          </div>
+      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+        <div>
+          <h3 className="font-semibold text-blue-400 mb-1">Team A</h3>
+          <ul className="space-y-1">
+            {teamAMembers.map((player) => (
+              <li
+                key={player}
+                className={`pl-2 ${winningTeam === 'team_a' ? 'text-green-400' : 'text-gray-300'}`}
+              >
+                {player}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-semibold text-red-400 mb-1">Team 1</h3>
+          <ul className="space-y-1">
+            {team1Members.map((player) => (
+              <li
+                key={player}
+                className={`pl-2 ${winningTeam === 'team_1' ? 'text-green-400' : 'text-gray-300'}`}
+              >
+                {player}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
-          <div>
-            <strong>Offers:</strong>
-            <ul className="ml-4 list-disc">
-              {game.offers.length > 0 ? (
-                game.offers.map((offer: any) => (
-                  <li key={offer.id}>
-                    {offer.from_username} → {offer.target_username} ({offer.offer_amount}) —{' '}
-                    <span
-                      className={
-                        offer.status === 'accepted'
-                          ? 'text-green-600'
-                          : offer.status === 'rejected'
-                          ? 'text-red-600'
-                          : ''
-                      }
-                    >
-                      {offer.status}
-                    </span>
-                  </li>
-                ))
-              ) : (
-                <li>No offers made.</li>
-              )}
-            </ul>
-          </div>
+      {winningTeam && (
+        <div className="flex items-center gap-2 text-green-400 font-semibold mb-4">
+          <Trophy className="w-4 h-4" />
+          Winner: {winningTeam === 'team_a' ? 'Team A' : 'Team 1'}
         </div>
       )}
-    </div>
+
+      {offers.length > 0 && (
+        <div className="mb-4">
+          <h4 className="text-yellow-300 font-semibold mb-1">Offers</h4>
+          <ul className="space-y-1 text-sm">
+            {offers.map((offer) => (
+              <li key={offer.id} className="flex justify-between items-center px-2 py-1 bg-gray-800 rounded">
+                <span className="text-gray-300">
+                  {offer.from_username} → {offer.target_username}
+                </span>
+                <span
+                  className={`text-sm ${
+                    offer.status === 'accepted'
+                      ? 'text-green-400'
+                      : offer.status === 'rejected'
+                      ? 'text-red-400'
+                      : 'text-yellow-400'
+                  }`}
+                >
+                  {offer.status === 'pending' ? '?' : offer.offer_amount}g ({offer.status})
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {playerStats.length > 0 && (
+        <div>
+          <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
+          <ul className="space-y-1 text-sm">
+            {playerStats.map((stat) => (
+              <li key={stat.id} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
+                <span className="text-gray-300">
+                  {stat.team_id === 'team_a' ? 'Team A' : 'Team 1'} – {stat.reason}
+                </span>
+                <span className={`font-medium ${stat.gold_change >= 0 ? 'text-green-300' : 'text-red-400'}`}>
+                  <Coins className="inline w-4 h-4 mr-1" />
+                  {stat.gold_change >= 0 ? '+' : ''}
+                  {stat.gold_change}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </motion.div>
   )
 }
-
-export default GameHistoryCard; // <-- Add this line at the end
