@@ -372,6 +372,66 @@ export default function MatchPage() {
         </div>
       </div>
     )}
+    {/* Game History Section */}
+    <section className="mt-12">
+      <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+      {history.map((game) => (
+        <div key={game.gameId} className="mb-4 p-4 border rounded-lg shadow">
+          <h3 className="text-xl font-semibold">
+            Game #{game.gameId} – {game.status}
+          </h3>
+          <p className="text-sm text-gray-600">
+            Created at: {new Date(game.createdAt).toLocaleString()}
+          </p>
+
+          <div className="mt-2">
+            <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
+            <strong>Team 1:</strong> {game.team1Members.join(', ')}<br />
+            <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+          </div>
+
+          {game.offers.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-bold">Offers:</h4>
+              <ul className="list-disc list-inside">
+                {game.offers.map((offer) => (
+                  <li key={offer.id}>
+                    {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
+                    {offer.status})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {game.playerStats.length > 0 && (
+            <div>
+              <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
+              <ul className="space-y-1 text-sm">
+                {game.playerStats.map((stat) => (
+                  <li
+                    key={stat.id}
+                    className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
+                  >
+                    <span className="text-gray-300">
+                      {stat.username || `Player#${stat.playerId}`} – {stat.reason}
+                    </span>
+                    <span
+                      className={`font-medium ${
+                        stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'
+                      }`}
+                    >
+                      <Coins className="inline w-4 h-4 mr-1" />
+                      {stat.goldChange >= 0 ? '+' : ''}
+                      {stat.goldChange}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      ))}
   </>
 );
 }
