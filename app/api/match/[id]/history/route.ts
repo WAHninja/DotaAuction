@@ -92,6 +92,7 @@ export async function GET(req: NextRequest) {
       SELECT 
         gps.game_id,
         gps.team_id,
+        gps.player_id,
         gps.gold_change,
         gps.reason
       FROM game_player_stats gps
@@ -106,12 +107,14 @@ export async function GET(req: NextRequest) {
       const gameId = row.game_id
       if (!statsByGame.has(gameId)) statsByGame.set(gameId, [])
       statsByGame.get(gameId)!.push({
+        playerId: row.player_id,
+        username: playerIdToUsername[row.player_id] || `Player#${row.player_id}`,
         teamId: row.team_id,
         goldChange: row.gold_change,
         reason: row.reason,
       })
     }
-
+    
     // Final combined result
     const history = games.map((game: any) => ({
       gameId: game.game_id,
