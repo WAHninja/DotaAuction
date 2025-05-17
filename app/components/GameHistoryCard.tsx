@@ -120,14 +120,15 @@ export default function GameHistoryCard({
           <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
           <ul className="space-y-1 text-sm">
             {playerStats.map((stat) => (
-              <li key={stat.id} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
+              <li key={stat.id || `${stat.playerId}-${stat.reason}`} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
                 <span className="text-gray-300">
-                  {stat.team_id === 'team_a' ? 'Team A' : 'Team 1'} – {stat.reason}
+                  {/* Display username instead of team */}
+                  {stat.username || `Player#${stat.playerId}`} – {stat.reason}
                 </span>
-                <span className={`font-medium ${stat.gold_change >= 0 ? 'text-green-300' : 'text-red-400'}`}>
+                <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
                   <Coins className="inline w-4 h-4 mr-1" />
-                  {stat.gold_change >= 0 ? '+' : ''}
-                  {stat.gold_change}
+                  {stat.goldChange >= 0 ? '+' : ''}
+                  {stat.goldChange}
                 </span>
               </li>
             ))}
