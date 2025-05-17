@@ -371,6 +371,47 @@ export default function MatchPage() {
 
       </div> {/* End of Shopkeeper + Offers row */}
       </div>
+    {history.map((game) => (
+  <div key={game.gameId} className="mb-4 p-4 border rounded-lg shadow">
+    <h3 className="text-xl font-semibold">
+      Game #{game.gameId} – {game.status}
+    </h3>
+    <p className="text-sm text-gray-600">Created at: {new Date(game.createdAt).toLocaleString()}</p>
+
+    <div className="mt-2">
+      <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
+      <strong>Team 1:</strong> {game.team1Members.join(', ')}<br />
+      <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+    </div>
+
+    {game.offers.length > 0 && (
+      <div className="mt-4">
+        <h4 className="font-bold">Offers:</h4>
+        <ul className="list-disc list-inside">
+          {game.offers.map((offer) => (
+            <li key={offer.id}>
+              {offer.fromUsername} → {offer.targetUsername} for {offer.offerAmount} gold (
+              {offer.status})
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {game.playerStats.length > 0 && (
+      <div className="mt-4">
+        <h4 className="font-bold">Gold Changes:</h4>
+        <ul className="list-disc list-inside">
+          {game.playerStats.map((stat, index) => (
+            <li key={index}>
+              Team: {stat.teamId}, Gold: {stat.goldChange}, Reason: {stat.reason}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+))}
   </div>
 )}
   </>
