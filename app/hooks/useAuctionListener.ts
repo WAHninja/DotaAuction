@@ -5,7 +5,9 @@ export function useAuctionListener(
   matchId: string,
   latestGameId: number | null,
   fetchMatchData: () => void,
-  fetchOffers: (gameId: number) => void
+  fetchOffers: (gameId: number) => void,
+  fetchGameHistory: () => void,
+  fetchGamesPlayed: () => void
 ) {
   useEffect(() => {
     if (!matchId || !ablyClient || !latestGameId) return;
@@ -18,6 +20,8 @@ export function useAuctionListener(
 
     const handleOfferAccepted = () => {
       fetchMatchData();
+      fetchGameHistory();     // ✅ Added
+      fetchGamesPlayed();     // ✅ Added
     };
 
     channel.subscribe('new-offer', handleNewOffer);
@@ -27,5 +31,12 @@ export function useAuctionListener(
       channel.unsubscribe('new-offer', handleNewOffer);
       channel.unsubscribe('offer-accepted', handleOfferAccepted);
     };
-  }, [matchId, latestGameId, fetchMatchData, fetchOffers]);
+  }, [
+    matchId,
+    latestGameId,
+    fetchMatchData,
+    fetchOffers,
+    fetchGameHistory,
+    fetchGamesPlayed,
+  ]);
 }
