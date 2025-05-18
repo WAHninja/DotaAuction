@@ -27,13 +27,13 @@ export default function MatchHeader({ matchId, latestGame }) {
           }`}
         >
           Game #{latestGame.id}
-          {latestGame.status === 'auction pending' && <Gavel className="w-4 h-4" />}
-          {latestGame.status === 'in progress' && <Swords className="w-4 h-4" />}
-          {latestGame.status === 'finished' && <CheckCircle className="w-4 h-4" />}
+          {latestGame.status === 'auction pending' && <Gavel className="w-6 h-6" />}
+          {latestGame.status === 'in progress' && <Swords className="w-6 h-6" />}
+          {latestGame.status === 'finished' && <CheckCircle className="w-6 h-6" />}
           {statusDisplay[latestGame.status]} {/* Display the friendly status */}
           {latestGame?.winning_team && latestGame.status === 'auction pending' && (
             <>
-              <Trophy className="w-4 h-4 ml-2" />
+              <Trophy className="w-6 h-6 ml-2" />
               Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
             </>
           )}
