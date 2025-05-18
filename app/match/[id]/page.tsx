@@ -87,12 +87,19 @@ export default function MatchPage() {
   }, [data]);
 
   // Real-time updates
-  useGameWinnerListener(matchId, fetchMatchData);
+  useGameWinnerListener(
+    matchId, 
+    fetchMatchData,
+    fetchGamesPlayed,
+    fetchGameHistory
+  );
   useAuctionListener(
     matchId,
     data?.latestGame?.id || null,
     fetchMatchData,
-    fetchOffers
+    fetchOffers,
+    fetchGamesPlayed,
+    fetchGameHistory
   );
 
   const handleSubmitOffer = async () => {
@@ -144,8 +151,6 @@ export default function MatchPage() {
       if (!res.ok) throw new Error('Failed to accept offer');
 
       await fetchOffers(data.latestGame.id);
-      await fetchGameHistory(); // ✅ Add this line to refresh the history
-      await fetchGamesPlayed();
     } catch (err) {
       console.error(err);
     } finally {
