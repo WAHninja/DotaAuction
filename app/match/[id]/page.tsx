@@ -145,6 +145,7 @@ export default function MatchPage() {
 
       await fetchOffers(data.latestGame.id);
       await fetchGameHistory(); // ✅ Add this line to refresh the history
+      await fetchGamesPlayed();
     } catch (err) {
       console.error(err);
     } finally {
