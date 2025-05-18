@@ -1,4 +1,4 @@
-import { Gavel, PlayCircle, CheckCircle, Trophy } from 'lucide-react';
+import { Gavel, PlayCircle, CheckCircle, Trophy, Swords } from 'lucide-react';
 
 export default function MatchHeader({ matchId, latestGame }) {
   // Map internal status values to display-friendly values
@@ -28,7 +28,7 @@ export default function MatchHeader({ matchId, latestGame }) {
         >
           Game #{latestGame.id}
           {latestGame.status === 'auction pending' && <Gavel className="w-4 h-4" />}
-          {latestGame.status === 'in progress' && <PlayCircle className="w-4 h-4" />}
+          {latestGame.status === 'in progress' && <Swords className="w-4 h-4" />}
           {latestGame.status === 'finished' && <CheckCircle className="w-4 h-4" />}
           {statusDisplay[latestGame.status]} {/* Display the friendly status */}
           {latestGame?.winning_team && latestGame.status === 'auction pending' && (
