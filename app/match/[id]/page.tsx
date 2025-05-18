@@ -428,12 +428,12 @@ export default function MatchPage() {
             <strong>Team 1:</strong> {game.team1Members.join(', ')}
           </div>
 
-          {game.playerStats.filter((stat) => stat.status === 'loss_penalty').length > 0 && (
+          {game.playerStats.filter((stat) => stat.reason === 'loss_penalty').length > 0 && (
             <div className="mt-4">
               <h4 className="font-bold">Penalties:</h4>
               <ul className="list-disc list-inside">
                 {game.playerStats
-                  .filter((stat) => stat.status === 'loss_penalty')
+                  .filter((stat) => stat.reason === 'loss_penalty')
                   .map((stat) => (
                     <li key={stat.id}>
                       {stat.username || `Player#${stat.playerId}`}{' '}
