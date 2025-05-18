@@ -87,12 +87,12 @@ export default function MatchPage() {
   }, [data]);
 
   // Real-time updates
-  useGameWinnerListener(
-    matchId, 
-    fetchMatchData,
-    fetchGamesPlayed,
-    fetchGameHistory
-  );
+  useGameWinnerListener(matchId, () => {
+    fetchMatchData();
+    fetchGamesPlayed();
+    fetchGameHistory();
+  });
+  
   useAuctionListener(
     matchId,
     data?.latestGame?.id || null,
