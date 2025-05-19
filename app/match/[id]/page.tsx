@@ -186,22 +186,23 @@ export default function MatchPage() {
   const minOfferAmount = 250 + gamesPlayed * 200;
   const maxOfferAmount = 2000 + gamesPlayed * 500;
   
-  return (
-  <>
-    <MatchHeader
-      matchId={match.id}
-      latestGame={latestGame}
-      matchWinnerId={match.winner_id}
-      matchWinnerUsername={
-        match.winner_id
-          ? players.find((p: any) => p.id === match.winner_id)?.username
-          : undefined
-      }
-    />
+  const matchWinnerId = match.winner_id;
+  const matchWinnerUsername = matchWinnerId
+    ? players.find((p: any) => p.id === matchWinnerId)?.username
+    : undefined;
 
-    {latestGame.status === 'finished' && matchWinnerId && (
-      <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
-    )}
+  return (
+    <>
+      <MatchHeader
+        matchId={match.id}
+        latestGame={latestGame}
+        matchWinnerId={matchWinnerId}
+        matchWinnerUsername={matchWinnerUsername}
+      />
+
+      {latestGame.status === 'finished' && matchWinnerId && (
+        <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
+      )}
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <TeamCard
