@@ -95,7 +95,7 @@ export default function CreateMatchForm() {
             key={player.id}
             className={`cursor-pointer p-3 rounded-xl text-center border-2 transition-all duration-200 text-sm ${
               selectedPlayerIds.includes(player.id)
-                ? 'bg-orange-500/20 border-orange-500 text-orange-300'
+                ? 'bg--slate-800/90 border-orange-500 text-orange-300'
                 : 'bg-slate-800 border-gray-600 hover:border-orange-400 text-gray-200'
             }`}
           >
