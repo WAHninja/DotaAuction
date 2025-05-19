@@ -44,21 +44,12 @@ export default function MatchHeader({
           Game #{latestGame.id}
           {latestGame.status === 'auction pending' && <Gavel className="w-6 h-6" />}
           {latestGame.status === 'in progress' && <Swords className="w-6 h-6" />}
-          {latestGame.status === 'finished' && <CheckCircle className="w-6 h-6" />}
           {statusDisplay[latestGame.status]}
 
           {latestGame?.winning_team && latestGame.status === 'auction pending' && (
             <>
               <Trophy className="w-6 h-6 ml-2" />
               Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
-            </>
-          )}
-
-          {latestGame.status === 'finished' && matchWinnerId && (
-            <>
-              <Trophy className="w-6 h-6 ml-2" />
-              Match Winner:{' '}
-              {matchWinnerUsername ? matchWinnerUsername : `Player #${matchWinnerId}`}
             </>
           )}
         </span>
