@@ -9,6 +9,7 @@ import TeamCard from '@/app/components/TeamCard';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { Trophy, Swords, Coins } from 'lucide-react'
+import WinnerBanner from '@/app/components/WinnerBanner';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -197,6 +198,10 @@ export default function MatchPage() {
           : undefined
       }
     />
+
+    {latestGame.status === 'finished' && matchWinnerId && (
+      <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
+    )}
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <TeamCard
