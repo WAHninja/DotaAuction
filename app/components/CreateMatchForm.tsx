@@ -73,9 +73,9 @@ export default function CreateMatchForm() {
   return (
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col p-6 bg-slate-600/40 text-white rounded-2xl shadow-2xl w-full max-w-5xl mx-auto space-y-6 flex-grow"
+        className="flex flex-col p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl w-full max-w-5xl mx-auto space-y-6 flex-grow"
       >
-      <h2 className="text-3xl font-bold text-orange-400 text-center">
+      <h2 className="text-3xl font-bold text-yellow-400 text-center">
         Create a Match
       </h2>
 
@@ -85,7 +85,7 @@ export default function CreateMatchForm() {
         </div>
       )}
 
-      <p className="text-sm text-gray-400 text-center">
+      <p className="text-sm text-center">
         Selected {selectedPlayerIds.length} of 4+ players
       </p>
 
@@ -115,7 +115,7 @@ export default function CreateMatchForm() {
         <button
           type="submit"
           disabled={selectedPlayerIds.length < 4 || isSubmitting}
-          className={`w-full sm:w-auto px-6 py-3 font-semibold rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`mx-auto w-full sm:w-auto px-6 py-3 font-semibold rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
             selectedPlayerIds.length < 4 || isSubmitting
               ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
               : 'bg-orange-500 hover:bg-orange-600 text-white'
