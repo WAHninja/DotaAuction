@@ -187,7 +187,16 @@ export default function MatchPage() {
   
   return (
   <>
-    <MatchHeader matchId={match.id} latestGame={latestGame} />
+    <MatchHeader
+      matchId={match.id}
+      latestGame={latestGame}
+      matchWinnerId={match.winner_id}
+      matchWinnerUsername={
+        match.winner_id
+          ? players.find((p: any) => p.id === match.winner_id)?.username
+          : undefined
+      }
+    />
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <TeamCard
