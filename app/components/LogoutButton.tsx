@@ -1,4 +1,3 @@
-// app/components/LogoutButton.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -8,7 +7,7 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
-    router.push('https://dotaauction.onrender.com/login');
+    router.push('/login'); // Redirect to the relative login path
   };
 
   return (
