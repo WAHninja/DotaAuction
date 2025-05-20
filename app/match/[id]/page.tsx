@@ -406,17 +406,17 @@ export default function MatchPage() {
     <section className="mt-12">
   <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
   {history.map((game) => {
-  const isExpanded = expandedGameId === game.gameId;
+  const isExpanded = expandedGameId === game.gameNumber;
   const acceptedOffer = game.offers.find((offer) => offer.status === 'accepted');
 
   return (
     <div
-      key={game.gameId}
+      key={game.gameNumber}
       className="mb-4 p-4 border rounded-lg shadow cursor-pointer"
-      onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}
+      onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
     >
       <h3 className="text-xl font-semibold flex justify-between items-center">
-        <span>Game #{game.gameId} – {game.status}</span>
+        <span>Game #{game.gameNumber} – {game.status}</span>
         <button className="text-sm">
           {isExpanded ? 'Hide' : 'Show'} details
         </button>
