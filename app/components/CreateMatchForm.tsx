@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react'; // Optional spinner icon
+import { Loader2 } from 'lucide-react';
 
 interface Player {
   id: number;
   username: string;
 }
 
-export default function CreateMatchForm() {
+export default function CreateMatchAccordion() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // accordion open state
   const router = useRouter();
 
   useEffect(() => {
@@ -71,60 +72,74 @@ export default function CreateMatchForm() {
   };
 
   return (
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl w-full max-w-5xl mx-auto space-y-6 flex-grow"
+    <div className="max-w-5xl mx-auto">
+      <button
+        onClick={() => setIsOpen(prev => !prev)}
+        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex justify-center items-center gap-2"
+        aria-expanded={isOpen}
+        aria-controls="create-match-form"
       >
-      <h2 className="text-3xl font-bold text-yellow-400 text-center">
-        Create a Match
-      </h2>
+        {isOpen ? 'Hide Create Match' : 'Create Match'}
+      </button>
 
-      {error && (
-        <div className="bg-red-600/20 text-red-300 px-4 py-2 rounded-lg border border-red-500 animate-pulse">
-          {error}
-        </div>
-      )}
-
-      <p className="text-sm text-center">
-        Selected {selectedPlayerIds.length} of 4+ players
-      </p>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {players.map(player => (
-          <label
-            key={player.id}
-            className={`cursor-pointer p-3 rounded-xl text-center border-2 transition-all duration-200 text-sm ${
-              selectedPlayerIds.includes(player.id)
-                ? 'bg-slate-800/90 border-orange-500 text-orange-300'
-                : 'bg-slate-800 border-gray-600 hover:border-orange-400 text-gray-200'
-            }`}
-          >
-            <input
-              type="checkbox"
-              value={player.id}
-              checked={selectedPlayerIds.includes(player.id)}
-              onChange={() => handleCheckboxChange(player.id)}
-              className="hidden"
-            />
-            {player.username}
-          </label>
-        ))}
-      </div>
-
-      <div className="text-center">
-        <button
-          type="submit"
-          disabled={selectedPlayerIds.length < 4 || isSubmitting}
-          className={`mx-auto w-full sm:w-auto px-6 py-3 font-semibold rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-            selectedPlayerIds.length < 4 || isSubmitting
-              ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-              : 'bg-orange-500 hover:bg-orange-600 text-white'
-          }`}
+      {isOpen && (
+        <form
+          id="create-match-form"
+          onSubmit={handleSubmit}
+          className="flex flex-col p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl mt-4 space-y-6"
         >
-          {isSubmitting && <Loader2 className="animate-spin w-4 h-4" />}
-          {isSubmitting ? 'Creating...' : 'Create Match'}
-        </button>
-      </div>
-    </form>
+          <h2 className="text-3xl font-bold text-yellow-400 text-center">
+            Create a Match
+          </h2>
+
+          {error && (
+            <div className="bg-red-600/20 text-red-300 px-4 py-2 rounded-lg border border-red-500 animate-pulse">
+              {error}
+            </div>
+          )}
+
+          <p className="text-sm text-center">
+            Selected {selectedPlayerIds.length} of 4+ players
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-64 overflow-y-auto">
+            {players.map(player => (
+              <label
+                key={player.id}
+                className={`cursor-pointer p-3 rounded-xl text-center border-2 transition-all duration-200 text-sm select-none ${
+                  selectedPlayerIds.includes(player.id)
+                    ? 'bg-slate-800/90 border-orange-500 text-orange-300'
+                    : 'bg-slate-800 border-gray-600 hover:border-orange-400 text-gray-200'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  value={player.id}
+                  checked={selectedPlayerIds.includes(player.id)}
+                  onChange={() => handleCheckboxChange(player.id)}
+                  className="hidden"
+                />
+                {player.username}
+              </label>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <button
+              type="submit"
+              disabled={selectedPlayerIds.length < 4 || isSubmitting}
+              className={`mx-auto w-full sm:w-auto px-6 py-3 font-semibold rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                selectedPlayerIds.length < 4 || isSubmitting
+                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
+            >
+              {isSubmitting && <Loader2 className="animate-spin w-4 h-4" />}
+              {isSubmitting ? 'Creating...' : 'Create Match'}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
