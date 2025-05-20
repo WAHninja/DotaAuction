@@ -191,6 +191,10 @@ export default function MatchPage() {
     ? players.find((p: any) => p.id === matchWinnerId)?.username
     : undefined;
 
+  const latestGameWithNumber = useMemo(() => {
+    return history.find(g => g.id === latestGame?.id);
+  }, [history, latestGame]);
+
   return (
     <>
       <MatchHeader
