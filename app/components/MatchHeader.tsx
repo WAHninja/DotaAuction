@@ -53,7 +53,7 @@ export default function MatchHeader({
           Game #{latestGame.id}
           {latestGame.status === 'auction pending' && <Gavel className="w-6 h-6" />}
           {latestGame.status === 'in progress' && <Swords className="w-6 h-6" />}
-          /* Add a space here */
+          
           <span>{statusDisplay[latestGame.status]}</span>
 
           {latestGame.status === 'auction pending' && latestGame.winning_team && (
