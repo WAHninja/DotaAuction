@@ -195,6 +195,10 @@ export default function MatchPage() {
     ? history.find(g => g.id === latestGame.id)
     : undefined;
 
+  console.log('latestGame:', latestGame);
+  console.log('history:', history);
+  console.log('latestGameWithNumber:', latestGameWithNumber);
+
   return (
     <>
       {latestGameWithNumber && (
