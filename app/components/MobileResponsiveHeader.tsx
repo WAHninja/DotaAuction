@@ -10,20 +10,19 @@ export default function MobileResponsiveHeader({ user }: { user: any }) {
 
   return (
     <>
-      {/* Top banner image */}
-      <div className="w-full">
-        <Image
-          src="/stone_rect.png"
-          alt="Stone Banner"
-          width={1920}
-          height={200}
-          className="w-full h-auto object-cover"
-          priority
-        />
-      </div>
+      <header className="relative p-4 shadow-lg border-b border-gold overflow-hidden">
+        {/* Background image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/stone_rect.png"
+            alt="Stone Background"
+            fill
+            priority
+            className="object-cover"
+          />
+        </div>
 
-      <header className="bg-gradient-to-r from-radiant-green via-surface to-dire-red p-4 shadow-lg border-b border-gold -mt-1">
-        <div className="max-w-7xl mx-auto flex justify-between items-center px-4">
+        <div className="relative z-10 max-w-7xl mx-auto flex justify-between items-center px-4">
           <div className="flex items-center space-x-4">
             <Image
               src="/logo.png"
