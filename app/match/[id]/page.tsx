@@ -192,8 +192,9 @@ export default function MatchPage() {
     : undefined;
 
   const latestGameWithNumber = useMemo(() => {
-    return history.find(g => g.id === latestGame?.id);
-  }, [history, latestGame]);
+    if (!latestGame || !history.length) return undefined;
+    return history.find(g => g.id === latestGame.id);
+  }, [history, latestGame?.id]);
 
   return (
     <>
