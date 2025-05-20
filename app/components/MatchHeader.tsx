@@ -1,4 +1,10 @@
-import { Gavel, PlayCircle, CheckCircle, Trophy, Swords } from 'lucide-react';
+import { Gavel, Trophy, Swords } from 'lucide-react';
+
+type Game = {
+  id: number;
+  status: 'auction pending' | 'in progress' | 'finished';
+  winning_team?: 'team_1' | 'team_a';
+};
 
 export default function MatchHeader({
   matchId,
@@ -7,7 +13,7 @@ export default function MatchHeader({
   matchWinnerUsername,
 }: {
   matchId: string;
-  latestGame: any;
+  latestGame: Game;
   matchWinnerId?: number;
   matchWinnerUsername?: string;
 }) {
@@ -16,6 +22,9 @@ export default function MatchHeader({
     'in progress': 'In Progress',
     'finished': 'Finished',
   };
+
+  const getTeamName = (teamId: 'team_1' | 'team_a') =>
+    teamId === 'team_1' ? 'Team 1' : 'Team A';
 
   console.log({
     matchId,
@@ -46,10 +55,10 @@ export default function MatchHeader({
           {latestGame.status === 'in progress' && <Swords className="w-6 h-6" />}
           {statusDisplay[latestGame.status]}
 
-          {latestGame?.winning_team && latestGame.status === 'auction pending' && (
+          {latestGame.status === 'auction pending' && latestGame.winning_team && (
             <>
               <Trophy className="w-6 h-6 ml-2" />
-              Winning Team: {latestGame.winning_team === 'team_1' ? 'Team 1' : 'Team A'}
+              Winning Team: {getTeamName(latestGame.winning_team)}
             </>
           )}
         </span>
