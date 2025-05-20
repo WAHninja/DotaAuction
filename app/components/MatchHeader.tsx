@@ -2,6 +2,7 @@ import { Gavel, Trophy, Swords } from 'lucide-react';
 
 type Game = {
   id: number;
+  gameNumber?: number;
   status: 'auction pending' | 'in progress' | 'finished';
   winning_team?: 'team_1' | 'team_a';
 };
@@ -26,13 +27,6 @@ export default function MatchHeader({
   const getTeamName = (teamId: 'team_1' | 'team_a') =>
     teamId === 'team_1' ? 'Team 1' : 'Team A';
 
-  console.log({
-    matchId,
-    latestGameStatus: latestGame.status,
-    matchWinnerId,
-    matchWinnerUsername,
-  });
-
   return (
     <div className="text-center mb-8">
       <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
@@ -50,10 +44,10 @@ export default function MatchHeader({
               : 'bg-gray-500 text-white'
           }`}
         >
-          Game #{latestGame.id}
+          Game #{latestGame.gameNumber ?? latestGame.id}
           {latestGame.status === 'auction pending' && <Gavel className="w-6 h-6" />}
           {latestGame.status === 'in progress' && <Swords className="w-6 h-6" />}
-          
+
           <span>{statusDisplay[latestGame.status]}</span>
 
           {latestGame.status === 'auction pending' && latestGame.winning_team && (
