@@ -198,13 +198,15 @@ export default function MatchPage() {
 
   return (
     <>
-      <MatchHeader
-        matchId={match.id}
-        latestGame={latestGame}
-        matchWinnerId={matchWinnerId}
-        matchWinnerUsername={matchWinnerUsername}
-      />
-
+      {latestGameWithNumber && (
+        <MatchHeader
+          matchId={matchId}
+          latestGame={latestGameWithNumber}
+          matchWinnerId={matchWinnerId}
+          matchWinnerUsername={matchWinnerUsername}
+        />
+      )}
+    
       {latestGame.status === 'finished' && matchWinnerId && (
         <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
       )}
