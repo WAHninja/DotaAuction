@@ -118,7 +118,8 @@ export async function GET(req: NextRequest) {
     }
     
     // Final combined result
-    const history = games.map((game: any) => ({
+    const history = games.map((game: any, index: number) => ({
+      gameNumber: index + 1, // 👈 Add dynamic game number
       gameId: game.game_id,
       matchId: game.match_id,
       createdAt: game.created_at,
