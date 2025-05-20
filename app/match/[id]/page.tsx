@@ -236,83 +236,78 @@ export default function MatchPage() {
         <div className="flex flex-col gap-6 items-start">
 
           {/* Offer form for winners */}
-            <div className="relative w-full bg-right bg-no-repeat bg-contain" style={{ backgroundImage: "url('/match_predictions_bg.png')" }}>
-  {/* Offer form for winners */}
-  {isWinner && !alreadySubmittedOffer ? (
-    <div className="w-full max-w-md mx-auto mb-6 bg-black/80 p-4 rounded-lg">
-      <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
+          {isWinner && !alreadySubmittedOffer ? (
+            <div className="w-full max-w-md mx-auto mb-6">
+              <p className="font-semibold mb-2 text-center md:text-left">Make an Offer:</p>
 
-      <div className="text-sm text-gray-300 text-center md:text-left mb-2">
-        Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span>
-        <Image
-          src="/Gold_symbol.webp"
-          alt="Gold"
-          width={16}
-          height={16}
-          className="inline-block ml-1 align-middle"
-        />
-      </div>
+              <div className="text-sm text-gray-300 text-center md:text-left mb-2">
+                Offer must be between <span className="font-semibold text-white">{minOfferAmount}</span> and <span className="font-semibold text-white">{maxOfferAmount}</span><Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={16}
+                      height={16}
+                      className="inline-block ml-1 align-middle"
+                    />
+              </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
-        <select
-          value={selectedPlayer}
-          onChange={(e) => setSelectedPlayer(e.target.value)}
-          className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
-        >
-          <option value="">Select Player</option>
-          {offerCandidates.map((pid) => {
-            const player = getPlayer(pid);
-            return (
-              <option key={pid} value={pid}>
-                {player?.username || 'Unknown'}
-              </option>
-            );
-          })}
-        </select>
+              <div className="flex flex-col md:flex-row items-center gap-4 justify-center md:justify-start">
+                <select
+                  value={selectedPlayer}
+                  onChange={(e) => setSelectedPlayer(e.target.value)}
+                  className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
+                >
+                  <option value="">Select Player</option>
+                  {offerCandidates.map((pid) => {
+                    const player = getPlayer(pid);
+                    return (
+                      <option key={pid} value={pid}>
+                        {player?.username || 'Unknown'}
+                      </option>
+                    );
+                  })}
+                </select>
 
-        <input
-          type="number"
-          value={offerAmount}
-          onChange={(e) => setOfferAmount(e.target.value)}
-          placeholder={`${minOfferAmount} - ${maxOfferAmount}`}
-          min={minOfferAmount}
-          max={maxOfferAmount}
-          className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
-        />
-      </div>
+                <input
+                  type="number"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                  placeholder={`${minOfferAmount} - ${maxOfferAmount}`}
+                  min={minOfferAmount}
+                  max={maxOfferAmount}
+                  className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
+                />
+              </div>
 
-      {/* Validation Message */}
-      {offerAmount !== '' && (Number(offerAmount) < minOfferAmount || Number(offerAmount) > maxOfferAmount) && (
-        <div className="mt-2 text-red-400 text-sm text-center md:text-left">
-          Offer must be between {minOfferAmount} and {maxOfferAmount}.
-        </div>
-      )}
+              {/* Validation Message */}
+              {offerAmount !== '' && (Number(offerAmount) < minOfferAmount || Number(offerAmount) > maxOfferAmount) && (
+                <div className="mt-2 text-red-400 text-sm text-center md:text-left">
+                  Offer must be between {minOfferAmount} and {maxOfferAmount}.
+                </div>
+              )}
 
-      <div className="mt-4 flex justify-center md:justify-start">
-        <button
-          onClick={handleSubmitOffer}
-          disabled={
-            submitting ||
-            !selectedPlayer ||
-            !offerAmount ||
-            Number(offerAmount) < minOfferAmount ||
-            Number(offerAmount) > maxOfferAmount
-          }
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full max-w-xs"
-        >
-          {submitting ? 'Submitting...' : 'Submit Offer'}
-        </button>
-      </div>
-    </div>
-  ) : isWinner && alreadySubmittedOffer ? (
-    <div className="w-full max-w-md mx-auto mb-6 bg-black/80 p-4 rounded-lg">
-      <div className="mb-6 text-center text-yellow-300 font-semibold">
-        ✅ You've already submitted your offer.
-      </div>
-    </div>
-  ) : null}
-</div>
-
+              <div className="mt-4 flex justify-center md:justify-start">
+                <button
+                  onClick={handleSubmitOffer}
+                  disabled={
+                    submitting ||
+                    !selectedPlayer ||
+                    !offerAmount ||
+                    Number(offerAmount) < minOfferAmount ||
+                    Number(offerAmount) > maxOfferAmount
+                  }
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full max-w-xs"
+                >
+                  {submitting ? 'Submitting...' : 'Submit Offer'}
+                </button>
+              </div>
+            </div>
+          ) : isWinner && alreadySubmittedOffer ? (
+            <div className="w-full max-w-md mx-auto mb-6">
+              <div className="mb-6 text-center text-yellow-300 font-semibold">
+                ✅ You've already submitted your offer.
+              </div>
+            </div>
+          ) : null}
 
           {/* Shopkeeper + Offers layout */}
           <div className="flex flex-col md:flex-row gap-6 items-start">
