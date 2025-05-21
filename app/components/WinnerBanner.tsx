@@ -17,13 +17,13 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
       <Confetti width={width} height={height} numberOfPieces={300} recycle={false} />
 
       {/* Winner Display */}
-      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 px-6 py-10 rounded-2xl shadow-2xl bg-black overflow-hidden border-4 border-yellow-400">
+      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 px-6 py-10 rounded-2xl shadow-2xl bg-stone500-50 overflow-hidden">
 
       {/* Background Image Overlay */}
       <img
         src="/rewards_aegis2024.png"
         alt="Aegis of Champions"
-        className="absolute top-1/2 left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-80 drop-shadow-2xl animate-pulse"
+        className="absolute top-1/2 left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-90 drop-shadow-2xl animate-pulse"
       />
 
       {/* Semi-transparent Overlay for Contrast */}
