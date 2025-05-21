@@ -14,27 +14,38 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
   return (
     <>
       {/* Confetti */}
-      <Confetti width={width} height={height} numberOfPieces={300} recycle={true} />
+      <Confetti width={width} height={height} numberOfPieces={300} recycle={false} />
 
       {/* Winner Display */}
-      <div className="flex flex-col items-center justify-center mt-6 mb-8 px-6 py-5 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-xl border-4 border-yellow-200 animate-pulse">
-        <img
-          src="/rewards_aegis2024.png"
-          alt="Aegis of Champions"
-          className="w-24 md:w-32 lg:w-40 mb-4 drop-shadow-xl"
-        />
-        <div className="flex items-center gap-3 text-white text-4xl font-black drop-shadow-lg">
-          <Trophy className="w-9 h-9 text-white drop-shadow" />
-          <span className="whitespace-nowrap">🏆 Match Winner:</span>
-          <span className="text-black bg-white/80 px-2 py-1 rounded-md underline decoration-2 decoration-yellow-500 shadow-inner">
-            {winnerName}
-          </span>
-          <Trophy className="w-9 h-9 text-white drop-shadow" />
+      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 px-6 py-10 rounded-2xl shadow-2xl bg-black overflow-hidden border-4 border-yellow-400">
+
+      {/* Background Image Overlay */}
+      <img
+        src="/rewards_aegis2024.png"
+        alt="Aegis of Champions"
+        className="absolute top-1/2 left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-80 drop-shadow-2xl animate-pulse"
+      />
+
+      {/* Semi-transparent Overlay for Contrast */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/30 to-black/60 backdrop-blur-sm rounded-2xl" />
+
+      {/* Foreground Content */}
+      <div className="relative z-10 text-center">
+        <div className="flex items-center justify-center gap-3 text-yellow-200 text-4xl font-black drop-shadow-md">
+          <Trophy className="w-8 h-8 text-yellow-200 drop-shadow" />
+          <span>Match Winner</span>
+          <Trophy className="w-8 h-8 text-yellow-200 drop-shadow" />
         </div>
-        <p className="mt-3 text-white text-sm font-medium italic drop-shadow-sm">
-          Congratulations on your victory!
+
+        <div className="mt-3 text-white text-2xl font-extrabold underline decoration-yellow-500 px-4 py-1 rounded bg-black/60 inline-block shadow-inner">
+          {winnerName}
+        </div>
+
+        <p className="mt-2 text-yellow-100 italic font-medium text-sm drop-shadow-sm">
+          A champion rises. Glory is yours.
         </p>
       </div>
+    </div>
     </>
   );
 }
