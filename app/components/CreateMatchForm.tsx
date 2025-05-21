@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface Player {
   id: number;
   username: string;
 }
 
-export default function CreateMatchAccordion() {
+export default function CreateMatchForm() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isOpen, setIsOpen] = useState(false); // accordion open state
+  const [isExpanded, setIsExpanded] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -72,21 +72,25 @@ export default function CreateMatchAccordion() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto p-4">
+      {/* Toggle Button */}
       <button
-        onClick={() => setIsOpen(prev => !prev)}
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex justify-center items-center gap-2"
-        aria-expanded={isOpen}
-        aria-controls="create-match-form"
+        onClick={() => setIsExpanded(prev => !prev)}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl text-white bg-orange-500 hover:bg-orange-600 font-semibold transition"
       >
-        {isOpen ? 'Hide Create Match' : 'Create Match'}
+        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        {isExpanded ? 'Hide Create Match Form' : 'Create Match'}
       </button>
 
-      {isOpen && (
+      {/* Slide-Down Form Container */}
+      <div
+        className={`transition-all duration-500 overflow-hidden ${
+          isExpanded ? 'max-h-[3000px] mt-6' : 'max-h-0'
+        }`}
+      >
         <form
-          id="create-match-form"
           onSubmit={handleSubmit}
-          className="flex flex-col p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl mt-4 space-y-6"
+          className="flex flex-col p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl space-y-6 mt-4"
         >
           <h2 className="text-3xl font-bold text-yellow-400 text-center">
             Create a Match
@@ -102,11 +106,11 @@ export default function CreateMatchAccordion() {
             Selected {selectedPlayerIds.length} of 4+ players
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {players.map(player => (
               <label
                 key={player.id}
-                className={`cursor-pointer p-3 rounded-xl text-center border-2 transition-all duration-200 text-sm select-none ${
+                className={`cursor-pointer p-3 rounded-xl text-center border-2 transition-all duration-200 text-sm ${
                   selectedPlayerIds.includes(player.id)
                     ? 'bg-slate-800/90 border-orange-500 text-orange-300'
                     : 'bg-slate-800 border-gray-600 hover:border-orange-400 text-gray-200'
@@ -139,7 +143,7 @@ export default function CreateMatchAccordion() {
             </button>
           </div>
         </form>
-      )}
+      </div>
     </div>
   );
 }
