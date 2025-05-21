@@ -211,6 +211,10 @@ export default function MatchPage() {
         />
       )}
 
+      {latestGame?.status === 'finished' && (
+        <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
+      )}
+
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <TeamCard
         name="Team 1"
@@ -232,10 +236,6 @@ export default function MatchPage() {
       <div className="mb-8">
         <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
       </div>
-    )}
-
-    {latestGame?.status === 'finished' && (
-      <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
     )}
 
     {/* Auction Phase */}
