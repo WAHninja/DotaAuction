@@ -26,9 +26,6 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
         className="absolute top-1/2 left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-90 drop-shadow-2xl animate-pulse"
       />
 
-      {/* Semi-transparent Overlay for Contrast */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/30 to-black/60 backdrop-blur-sm rounded-2xl" />
-
       {/* Foreground Content */}
       <div className="relative z-10 text-center">
         <div className="flex items-center justify-center gap-3 text-yellow-200 text-4xl font-black drop-shadow-md">
@@ -44,7 +41,6 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
         <p className="mt-2 text-yellow-100 italic font-medium text-sm drop-shadow-sm">
           A champion rises. Glory is yours.
         </p>
-      </div>
     </div>
     </>
   );
