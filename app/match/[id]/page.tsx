@@ -345,7 +345,7 @@ export default function MatchPage() {
                     isLoser &&
                     offer.status === 'pending' &&
                     !alreadyAcceptedOffer &&
-                    allOffersSubmitted;
+                    !allOffersSubmitted;
 
                   return (
                     <div
