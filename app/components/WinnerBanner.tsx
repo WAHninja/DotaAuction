@@ -23,7 +23,7 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
         <img
           src="/rewards_aegis2024.png"
           alt="Aegis of Champions"
-          className="absolute top-1/2 left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-90 drop-shadow-2xl animate-pulse"
+          className="absolute top-[60%] left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-90 drop-shadow-2xl animate-pulse"
         />
 
         {/* Foreground Content */}
