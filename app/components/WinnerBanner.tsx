@@ -14,17 +14,21 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
   return (
     <>
       {/* Confetti */}
-      <Confetti width={width} height={height} numberOfPieces={300} recycle={false} />
+      <Confetti width={width} height={height} numberOfPieces={300} recycle={true} />
 
       {/* Winner Display */}
-      <div className="flex flex-col items-center justify-center mt-6 mb-8 px-6 py-4 bg-gradient-to-br from-yellow-400 via-orange-400 to-red-500 rounded-xl shadow-2xl animate-pulse border-4 border-yellow-300">
-        <div className="flex items-center gap-2 text-white text-3xl font-extrabold drop-shadow">
-          <Trophy className="w-8 h-8 text-white drop-shadow" />
-          🏆 Match Winner:&nbsp;
-          <span className="text-black underline decoration-white decoration-2">{winnerName}</span>
-          <Trophy className="w-8 h-8 text-white drop-shadow" />
+      <div className="flex flex-col items-center justify-center mt-6 mb-8 px-6 py-5 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-xl border-4 border-yellow-200 animate-pulse">
+        <div className="flex items-center gap-3 text-white text-4xl font-black drop-shadow-lg">
+          <Trophy className="w-9 h-9 text-white drop-shadow" />
+          <span className="whitespace-nowrap">🏆 Match Winner:</span>
+          <span className="text-black bg-white/80 px-2 py-1 rounded-md underline decoration-2 decoration-yellow-500 shadow-inner">
+            {winnerName}
+          </span>
+          <Trophy className="w-9 h-9 text-white drop-shadow" />
         </div>
-        <p className="mt-2 text-white font-semibold text-sm">Congratulations on your victory!</p>
+        <p className="mt-3 text-white text-sm font-medium italic drop-shadow-sm">
+          Congratulations on your victory!
+        </p>
       </div>
     </>
   );
