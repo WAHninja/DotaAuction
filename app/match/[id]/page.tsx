@@ -171,8 +171,8 @@ export default function MatchPage() {
   const isAuction = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
   const isMatchFinished = useMemo(() => {
-    return match?.winner_id && latestGame?.status === 'finished';
-  }, [match?.winner_id, latestGame?.status]);
+    return !!match?.winner_id && latestGame?.status === 'finished';
+  }, [match, latestGame]);
   const winningTeam = latestGame?.winning_team;
 
   const isWinner = winningTeam === 'team_1'
