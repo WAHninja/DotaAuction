@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       // ✅ Notify via Ably
       const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
       const channel = ably.channels.get('match-' + game.match_id);
-      await channel.publish('match-finished', {
+      await channel.publish('game-winner-selected', {
         gameId,
         matchId: game.match_id,
         winnerId: winningPlayerId,
