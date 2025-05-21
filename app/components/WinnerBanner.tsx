@@ -18,6 +18,11 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
 
       {/* Winner Display */}
       <div className="flex flex-col items-center justify-center mt-6 mb-8 px-6 py-5 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-xl border-4 border-yellow-200 animate-pulse">
+        <img
+          src="/rewards_aegis2024.png"
+          alt="Aegis of Champions"
+          className="w-24 md:w-32 lg:w-40 mb-4 drop-shadow-xl"
+        />
         <div className="flex items-center gap-3 text-white text-4xl font-black drop-shadow-lg">
           <Trophy className="w-9 h-9 text-white drop-shadow" />
           <span className="whitespace-nowrap">🏆 Match Winner:</span>
