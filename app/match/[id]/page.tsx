@@ -170,9 +170,6 @@ export default function MatchPage() {
 
   const isAuction = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
-  const isMatchFinished = useMemo(() => {
-    return !!match?.winner_id && latestGame?.status === 'finished';
-  }, [match, latestGame]);
   const winningTeam = latestGame?.winning_team;
 
   const isWinner = winningTeam === 'team_1'
@@ -213,10 +210,6 @@ export default function MatchPage() {
           matchWinnerUsername={matchWinnerUsername}
         />
       )}
-    
-      {isMatchFinished && (
-        <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
-      )}
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <TeamCard
@@ -239,6 +232,10 @@ export default function MatchPage() {
       <div className="mb-8">
         <SelectGameWinnerForm gameId={latestGame.id} show={isInProgress} />
       </div>
+    )}
+
+    {latestGame?.status === 'finished' && (
+      <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
     )}
 
     {/* Auction Phase */}
