@@ -17,7 +17,7 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
       <Confetti width={width} height={height} numberOfPieces={300} recycle={false} />
 
       {/* Winner Display */}
-      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 px-6 py-10 rounded-2xl shadow-2xl bg-stone500-50 overflow-hidden">
+      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 px-6 py-10 rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Background Image Overlay */}
         <img
@@ -30,12 +30,8 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
         <div className="relative z-10 text-center">
           <div className="flex items-center justify-center gap-3 text-yellow-200 text-4xl font-black drop-shadow-md">
             <Trophy className="w-8 h-8 text-yellow-200 drop-shadow" />
-            <span>Match Winner</span>
+            <span>{winnerName}</span>
             <Trophy className="w-8 h-8 text-yellow-200 drop-shadow" />
-          </div>
-
-          <div className="mt-3 text-white text-2xl font-extrabold underline decoration-yellow-500 px-4 py-1 rounded bg-black/60 inline-block shadow-inner">
-            {winnerName}
           </div>
 
           <p className="mt-2 text-yellow-100 italic font-medium text-sm drop-shadow-sm">
