@@ -170,6 +170,7 @@ export default function MatchPage() {
 
   const isAuction = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
+  const isMatchFinished = match?.winner_id && latestGame?.status === 'finished';
   const winningTeam = latestGame?.winning_team;
 
   const isWinner = winningTeam === 'team_1'
@@ -211,7 +212,7 @@ export default function MatchPage() {
         />
       )}
     
-      {latestGame.status === 'finished' && matchWinnerId && (
+      {isMatchFinished && (
         <WinnerBanner winnerName={matchWinnerUsername || `Player #${matchWinnerId}`} />
       )}
 
