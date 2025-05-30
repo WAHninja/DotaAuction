@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // To navigate after login
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter(); // To navigate after login
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -21,7 +24,25 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (res.ok) {
+        // Successful registration message
         setMessage('✅ Registered successfully!');
+
+        // Now log the user in by calling the login API with the same credentials
+        const loginRes = await fetch('/api/login', {
+          method: 'POST',
+          body: JSON.stringify({ username, pin }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const loginData = await loginRes.json();
+
+        if (loginRes.ok) {
+          // Redirect the user after successful login
+          window.location.href = 'https://dotaauction.onrender.com/'; // Or redirect to your app's homepage or dashboard
+        } else {
+          setError(loginData.error || 'Login failed after registration');
+        }
+
         setUsername('');
         setPin('');
       } else {
@@ -77,14 +98,19 @@ export default function RegisterPage() {
             Register
           </button>
         </form>
+
         <p className="mt-6 text-center text-sm text-gray-400">
           Already registered?{' '}
           <Link href="/login" className="text-[#e05228] hover:underline">
             Login here
           </Link>
         </p>
+
         {message && (
           <p className="mt-4 text-center text-sm text-orange-400">{message}</p>
+        )}
+        {error && (
+          <p className="mt-4 text-center text-sm text-orange-400">{error}</p>
         )}
       </div>
     </div>

@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
 
     const game = latestGameRes.rows[0];
 
-    if (game.status !== 'In progress') {
+    if (game.status !== 'in progress') {
       return NextResponse.json({ error: 'Game already completed or auction already started' }, { status: 400 });
     }
 
     // Update game and match
     await db.query(
-      `UPDATE Games SET status = 'Auction pending', winning_team_id = $1 WHERE game_id = $2`,
+      `UPDATE Games SET status = 'auction pending', winning_team_id = $1 WHERE game_id = $2`,
       [winningTeamId, game.game_id]
     );
 

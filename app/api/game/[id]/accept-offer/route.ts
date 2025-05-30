@@ -53,10 +53,20 @@ export async function POST(req: NextRequest): Promise<Response> {
       'UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
       ['rejected', game.id, offerId, 'pending']
     );
+    
+    // Update gold
     await db.query(
       'UPDATE match_players SET gold = gold + $1 WHERE user_id = $2 AND match_id = $3',
       [offer_amount, from_player_id, game.match_id]
     );
+
+    // Track gold change in GamePlayerStats
+    await db.query(
+      `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+       VALUES ($1, $2, $3, $4, 'offer_gain')`,
+      [game.id, from_player_id, winningTeam, offer_amount]
+    );
+    
     await db.query('UPDATE Games SET status = $1 WHERE id = $2', ['finished', game.id]);
 
     const newTeamA = [...teamA];
@@ -74,7 +84,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const { rows: newGameRows } = await db.query(
       `INSERT INTO Games (match_id, team_a_members, team_1_members, status)
-       VALUES ($1, $2, $3, 'In progress')
+       VALUES ($1, $2, $3, 'in progress')
        RETURNING *`,
       [game.match_id, newTeamA, newTeam1]
     );

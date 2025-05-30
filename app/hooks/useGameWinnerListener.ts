@@ -1,15 +1,18 @@
 import { useEffect } from 'react';
 import ablyClient from '@/lib/ably-client';
 
-export function useGameWinnerListener(matchId: string, onUpdate: () => void) {
+export function useGameWinnerListener(
+  matchId: string,
+  onGameWinnerSelected: () => void
+) {
   useEffect(() => {
-    if (!ablyClient) return;
+    if (!matchId || !ablyClient) return;
 
-    const channel = ablyClient.channels.get('match-' + matchId);
+    const channel = ablyClient.channels.get(`match-${matchId}`);
 
     const handler = (msg: any) => {
       if (msg.name === 'game-winner-selected') {
-        onUpdate();
+        onGameWinnerSelected(); // e.g. fetchMatchData + fetchGameHistory + fetchGamesPlayed
       }
     };
 
@@ -18,5 +21,5 @@ export function useGameWinnerListener(matchId: string, onUpdate: () => void) {
     return () => {
       channel.unsubscribe('game-winner-selected', handler);
     };
-  }, [matchId, onUpdate]);
+  }, [matchId, onGameWinnerSelected]);
 }

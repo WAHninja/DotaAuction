@@ -6,27 +6,24 @@ import { usePathname } from 'next/navigation';
 export default function BodyClassWrapper() {
   const pathname = usePathname();
   const [showVideo, setShowVideo] = useState(false);
+  const [showImage, setShowImage] = useState(false);
 
   useEffect(() => {
     const isAuthPage = pathname === '/register' || pathname === '/login';
     const isMatchPage = pathname.startsWith('/match');
 
-    const body = document.body;
-    body.className = ''; // clear existing classes
-
-    if (isAuthPage) {
-      setShowVideo(false);
-      body.classList.add('bg-[url("/bg-smoke.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
-    } else if (isMatchPage) {
-      setShowVideo(false);
-      body.classList.add('bg-[url("/LastSupper.jpg")]', 'bg-cover', 'bg-center', 'bg-no-repeat');
-    } else {
-      setShowVideo(true);
-    }
+    setShowImage(isAuthPage || isMatchPage);
+    setShowVideo(!isAuthPage && !isMatchPage);
   }, [pathname]);
 
   return (
     <>
+      {showImage && (
+        <div
+          className="fixed inset-0 z-[-1] bg-[url('/bg-smoke.jpg')] bg-cover bg-center bg-no-repeat"
+          aria-hidden="true"
+        />
+      )}
       {showVideo && (
         <video
           autoPlay

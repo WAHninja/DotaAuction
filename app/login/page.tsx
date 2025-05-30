@@ -28,7 +28,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 text-white font-[Cinzel]">
+    <div className="flex items-center justify-center min-h-full p-4 text-white font-[Cinzel]">
       <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
         <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
           Login

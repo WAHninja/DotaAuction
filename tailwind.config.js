@@ -23,11 +23,11 @@ module.exports = {
 
         // Radiant / Dire
         radiant: {
-          green: '#86b75f',
+          green: '#598307',
           light: '#6c995c',
         },
         dire: {
-          red: '#a33a3a',
+          red: '#A83806',
           dark: '#8b2f2f',
         },
 
