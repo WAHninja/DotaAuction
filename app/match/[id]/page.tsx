@@ -336,7 +336,7 @@ export default function MatchPage() {
 
             {/* Current Offers */}
             <div className="flex-1">
-              <h4 className="text-xl font-bold text-center mb-4">Offers {offers.length} of {winningTeamMembers.length}</h4>
+              <h4 className="text-xl font-bold text-center mb-4">Current Offers</h4>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {offers.map((offer) => {
                   const from = getPlayer(offer.from_player_id);
