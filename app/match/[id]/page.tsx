@@ -342,7 +342,6 @@ export default function MatchPage() {
                   const from = getPlayer(offer.from_player_id);
                   const to = getPlayer(offer.target_player_id);
                   const canAccept =
-                    isLoser &&
                     offer.status === 'pending' &&
                     !alreadyAcceptedOffer &&
                     !allOffersSubmitted;
