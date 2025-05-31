@@ -124,7 +124,15 @@ export default function GameHistoryCard({
               <li key={stat.id || `${stat.playerId}-${stat.reason}`} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
                 <span className="text-gray-300">
                   {/* Display username instead of team */}
-                  {stat.username || `Player#${stat.playerId}`} – {stat.reason}
+                  {stat.username || `Player#${stat.playerId}`} – {
+                    stat.reason === 'win_reward'
+                      ? 'Win Bonus'
+                      : stat.reason === 'loss_penalty'
+                      ? 'Loss Penalty'
+                      : stat.reason === 'offer_accepted'
+                      ? 'Offer Accepted'
+                      : stat.reason
+                    }
                 </span>
                 <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
                   <Coins className="inline w-4 h-4 mr-1" />
