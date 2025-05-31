@@ -20,7 +20,7 @@ export default function DashboardTabs({
   const loadMoreOngoing = () => {
     setLoadingOngoing(true);
     setTimeout(() => {
-      setOngoingVisible(prev => prev + 5);
+      setOngoingVisible((prev) => prev + 5);
       setLoadingOngoing(false);
     }, 500);
   };
@@ -28,7 +28,7 @@ export default function DashboardTabs({
   const loadMoreCompleted = () => {
     setLoadingCompleted(true);
     setTimeout(() => {
-      setCompletedVisible(prev => prev + 5);
+      setCompletedVisible((prev) => prev + 5);
       setLoadingCompleted(false);
     }, 500);
   };
@@ -37,7 +37,7 @@ export default function DashboardTabs({
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex justify-center gap-4 mb-4">
-        {['ongoing', 'completed', 'stats'].map(tab => (
+        {['ongoing', 'completed', 'stats'].map((tab) => (
           <button
             key={tab}
             className={`px-4 py-2 rounded-md font-semibold transition ${
@@ -56,7 +56,7 @@ export default function DashboardTabs({
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
         <div className="space-y-4">
           {ongoingMatches.length > 0 ? (
@@ -66,7 +66,7 @@ export default function DashboardTabs({
                   key={match.id}
                   className="bg-blue-900/80 p-4 rounded-xl shadow hover:scale-105 transition-transform duration-300 ease-in-out"
                 >
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold">Match #{match.id}</span>
                     <Link href={`/match/${match.id}`}>
                       <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm">
@@ -74,15 +74,51 @@ export default function DashboardTabs({
                       </button>
                     </Link>
                   </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {match.players.map((player: string) => (
-                      <span
-                        key={player}
-                        className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                      >
-                        {player}
-                      </span>
-                    ))}
+                  <div className="text-sm text-gray-300">
+                    <p>
+                      <strong>Current Game:</strong> #{match.current_game_id}
+                    </p>
+                    <p>
+                      <strong>Status:</strong> {match.status}
+                    </p>
+                  </div>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-blue-300 mb-1">Team A</p>
+                      <div className="flex flex-wrap gap-2">
+                        {match.team_a_members?.map((playerId: number) => {
+                          const username = match.players.find((name) =>
+                            name.toLowerCase().includes(`user${playerId}`)
+                          ) || `User ${playerId}`;
+                          return (
+                            <span
+                              key={playerId}
+                              className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                            >
+                              {username}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-300 mb-1">Team 1</p>
+                      <div className="flex flex-wrap gap-2">
+                        {match.team_1_members?.map((playerId: number) => {
+                          const username = match.players.find((name) =>
+                            name.toLowerCase().includes(`user${playerId}`)
+                          ) || `User ${playerId}`;
+                          return (
+                            <span
+                              key={playerId}
+                              className="bg-red-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                            >
+                              {username}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -111,6 +147,7 @@ export default function DashboardTabs({
         </div>
       )}
 
+      {/* Completed Matches */}
       {activeTab === 'completed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {completedMatches.length > 0 ? (
