@@ -44,6 +44,20 @@ export async function POST(req: NextRequest) {
         [winningPlayerId, game.match_id]
       );
 
+      // ✅ Reward winning team with +500 gold each
+    for (const playerId of winningMembers) {
+      await db.query(
+        `UPDATE match_players SET gold = gold + 500 WHERE match_id = $1 AND user_id = $2`,
+        [game.match_id, playerId]
+      );
+
+      await db.query(
+        `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+         VALUES ($1, $2, $3, $4, 'win_reward')`,
+        [gameId, playerId, winningTeamId, 500]
+      );
+    }
+
       // ✅ Notify via Ably
       const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
       const channel = ably.channels.get('match-' + game.match_id);
