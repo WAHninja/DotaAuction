@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       );
 
       const currentGold = goldRes.rows[0]?.gold ?? 0;
-      const penalty = Math.floor(currentGold * 0.2);
+      const penalty = Math.floor(currentGold * 0.5);
 
       await db.query(
         `UPDATE match_players SET gold = gold - $1 WHERE match_id = $2 AND user_id = $3`,
