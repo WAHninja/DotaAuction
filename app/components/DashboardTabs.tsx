@@ -83,17 +83,13 @@ export default function DashboardTabs({
                     <div>
                       <p className="text-xs text-blue-300 mb-1">Team A</p>
                       <div className="flex flex-wrap gap-2">
-                        {match.team_a_members?.map((playerId: number) => {
-                          const username = match.players.find((name) =>
-                            name.toLowerCase().includes(`user${playerId}`)
-                          ) || `User ${playerId}`;
-                          return (
-                            <span
-                              key={playerId}
-                              className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                            >
-                              {username}
-                            </span>
+                        {match.team_a_usernames?.map((username: string) => (
+                          <span
+                            key={username}
+                            className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                          >
+                            {username}
+                          </span>
                           );
                         })}
                       </div>
@@ -101,15 +97,11 @@ export default function DashboardTabs({
                     <div>
                       <p className="text-xs text-red-300 mb-1">Team 1</p>
                       <div className="flex flex-wrap gap-2">
-                        {match.team_1_members?.map((playerId: number) => {
-                          const username = match.players.find((name) =>
-                            name.toLowerCase().includes(`user${playerId}`)
-                          ) || `User ${playerId}`;
-                          return (
-                            <span
-                              key={playerId}
-                              className="bg-red-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                            >
+                        {match.team_1_usernames?.map((username: string) => (
+                          <span
+                            key={username}
+                            className="bg-red-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                          >
                               {username}
                             </span>
                           );
