@@ -80,36 +80,35 @@ export default function DashboardTabs({
                     </p>
                   </div>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-blue-300 mb-1">Team A</p>
-                      <div className="flex flex-wrap gap-2">
-                        {match.team_a_usernames?.map((username: string) => (
-                          <span
-                            key={username}
-                            className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                          >
-                            {username}
-                          </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-red-300 mb-1">Team 1</p>
-                      <div className="flex flex-wrap gap-2">
-                        {match.team_1_usernames?.map((username: string) => (
-                          <span
-                            key={username}
-                            className="bg-red-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                          >
-                              {username}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                    {/* Team A */}
+<div>
+  <p className="text-xs text-blue-300 mb-1">Team A</p>
+  <div className="flex flex-wrap gap-2">
+    {match.team_a_usernames?.map((username: string) => (
+      <span
+        key={username}
+        className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+      >
+        {username}
+      </span>
+    ))}
+  </div>
+</div>
+
+{/* Team 1 */}
+<div>
+  <p className="text-xs text-red-300 mb-1">Team 1</p>
+  <div className="flex flex-wrap gap-2">
+    {match.team_1_usernames?.map((username: string) => (
+      <span
+        key={username}
+        className="bg-red-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
+      >
+        {username}
+      </span>
+    ))}
+  </div>
+</div>
               ))}
               {ongoingVisible < ongoingMatches.length && (
                 <div className="text-center">
