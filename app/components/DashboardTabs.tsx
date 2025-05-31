@@ -81,44 +81,17 @@ export default function DashboardTabs({
                     <p>
                       <strong>Status:</strong> {match.status}
                     </p>
-                  </div>
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-blue-300 mb-1">Team A</p>
-                      <div className="flex flex-wrap gap-2">
-                        {match.team_a_members?.map((playerId: number) => {
-                          const username = match.players.find((name) =>
-                            name.toLowerCase().includes(`user${playerId}`)
-                          ) || `User ${playerId}`;
-                          return (
-                            <span
-                              key={playerId}
-                              className="bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                            >
-                              {username}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-red-300 mb-1">Team 1</p>
-                      <div className="flex flex-wrap gap-2">
-                        {match.team_1_members?.map((playerId: number) => {
-                          const username = match.players.find((name) =>
-                            name.toLowerCase().includes(`user${playerId}`)
-                          ) || `User ${playerId}`;
-                          return (
-                            <span
-                              key={playerId}
-                              className="bg-red-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full"
-                            >
-                              {username}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <p className="mt-2">
+                      <strong>Players:</strong>{' '}
+                      {match.players.map((username: string) => (
+                        <span
+                          key={username}
+                          className="inline-block bg-blue-700/60 text-white text-xs font-semibold px-3 py-1 rounded-full mr-2 mb-1"
+                        >
+                          {username}
+                        </span>
+                      ))}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -170,9 +143,19 @@ export default function DashboardTabs({
                       </button>
                     </Link>
                   </div>
-                  <p className="text-sm text-gray-300">
-                    Players: {match.players.join(', ')}
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-400 mb-1">Players:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {match.players.map((username: string) => (
+                        <span
+                          key={username}
+                          className="bg-gray-700 text-white text-xs font-semibold px-3 py-1 rounded-full"
+                        >
+                          {username}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
               {completedVisible < completedMatches.length && (
