@@ -172,10 +172,14 @@ export default function MatchPage() {
   const isInProgress = latestGame?.status === 'in progress';
   const winningTeam = latestGame?.winning_team;
 
-  const isWinner = winningTeam === 'team_1'
-    ? team1.includes(currentUserId)
-    : teamA.includes(currentUserId);
-  const isLoser = !isWinner;
+  const isWinner =
+    winningTeam === 'team_1'
+      ? team1.includes(currentUserId)
+      : winningTeam === 'team_a'
+      ? teamA.includes(currentUserId)
+      : false;
+
+  const isLoser = winningTeam ? !isWinner : false;
 
   const myTeam = isWinner ? (winningTeam === 'team_1' ? team1 : teamA) : [];
   const offerCandidates = myTeam.filter((id) => id !== currentUserId);
@@ -342,7 +346,10 @@ export default function MatchPage() {
                   const from = getPlayer(offer.from_player_id);
                   const to = getPlayer(offer.target_player_id);
                   const canAccept =
-                    offer.status === 'pending'                    
+                    isLoser &&
+                    offer.status === 'pending' &&
+                    !alreadyAcceptedOffer &&
+                    allOffersSubmitted;                  
 
                   return (
                     <div
