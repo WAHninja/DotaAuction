@@ -83,10 +83,10 @@ export default function DashboardTabs({
                     <div>
                       <p className="text-xs text-blue-300 mb-1">Team A</p>
                       <div className="flex flex-wrap gap-2">
-                        {/* Team A */}
                         {match.team_a_members?.map((playerId: number) => {
-                          const player = match.players.find((p: any) => p.id === playerId);
-                          const username = player ? player.username : `User ${playerId}`;
+                          const username = match.players.find((name) =>
+                            name.toLowerCase().includes(`user${playerId}`)
+                          ) || `User ${playerId}`;
                           return (
                             <span
                               key={playerId}
@@ -96,10 +96,15 @@ export default function DashboardTabs({
                             </span>
                           );
                         })}
-                        {/* Team 1 */}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-300 mb-1">Team 1</p>
+                      <div className="flex flex-wrap gap-2">
                         {match.team_1_members?.map((playerId: number) => {
-                          const player = match.players.find((p: any) => p.id === playerId);
-                          const username = player ? player.username : `User ${playerId}`;
+                          const username = match.players.find((name) =>
+                            name.toLowerCase().includes(`user${playerId}`)
+                          ) || `User ${playerId}`;
                           return (
                             <span
                               key={playerId}
