@@ -14,31 +14,50 @@ export default async function DashboardPage() {
     const user = userResult.rows[0];
 
     const ongoingResult = await db.query(`
-      SELECT 
-        m.id,
-        m.created_at,
-        ARRAY_AGG(DISTINCT u.username ORDER BY u.username) AS players,
-        g.id AS current_game_id,
-        g.team_a_members,
-        g.team_1_members,
-        g.status
-      FROM matches m
-      JOIN match_players mp ON mp.match_id = m.id
-      JOIN users u ON u.id = mp.user_id
-      JOIN LATERAL (
-        SELECT *
-        FROM games g
-        WHERE g.match_id = m.id
-        ORDER BY g.id DESC
-        LIMIT 1
-      ) g ON true
-      WHERE m.id IN (
-        SELECT match_id FROM match_players WHERE user_id = $1
-      )
-      AND m.winner_id IS NULL
-      GROUP BY m.id, g.id, g.team_a_members, g.team_1_members, g.status
-      ORDER BY m.created_at DESC
-    `, [session.userId]);
+  SELECT 
+    m.id,
+    m.created_at,
+    ARRAY_AGG(DISTINCT u.username ORDER BY u.username) AS players,
+    g.id AS current_game_id,
+    g.team_a_members,
+    g.team_1_members,
+    g.status,
+
+    -- team A usernames
+    (
+      SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
+      FROM UNNEST(g.team_a_members) AS team_a_id
+      JOIN users u2 ON u2.id = team_a_id
+    ) AS team_a_usernames,
+
+    -- team 1 usernames
+    (
+      SELECT ARRAY_AGG(u3.username ORDER BY u3.username)
+      FROM UNNEST(g.team_1_members) AS team_1_id
+      JOIN users u3 ON u3.id = team_1_id
+    ) AS team_1_usernames
+
+  FROM matches m
+  JOIN match_players mp ON mp.match_id = m.id
+  JOIN users u ON u.id = mp.user_id
+
+  JOIN LATERAL (
+    SELECT *
+    FROM games g
+    WHERE g.match_id = m.id
+    ORDER BY g.id DESC
+    LIMIT 1
+  ) g ON true
+
+  WHERE m.id IN (
+    SELECT match_id FROM match_players WHERE user_id = $1
+  )
+  AND m.winner_id IS NULL
+
+  GROUP BY m.id, g.id, g.team_a_members, g.team_1_members, g.status
+  ORDER BY m.created_at DESC
+`, [session.userId]);
+
 
     const completedResult = await db.query(`
       SELECT 
