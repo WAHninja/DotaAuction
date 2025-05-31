@@ -203,6 +203,7 @@ export default function MatchPage() {
   console.log('latestGame:', latestGame);
   console.log('history:', history);
   console.log('latestGameWithNumber:', latestGameWithNumber);
+  console.log('isLoser:', isLoser);
 
   return (
     <>
