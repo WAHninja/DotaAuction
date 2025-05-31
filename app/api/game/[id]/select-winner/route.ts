@@ -90,7 +90,7 @@ for (const playerId of losingMembers) {
 // 🟢 Reward winning team members with +500 gold
 for (const playerId of winningMembers) {
   await db.query(
-    `UPDATE match_players SET gold = gold + 500 WHERE match_id = $1 AND user_id = $2`,
+    `UPDATE match_players SET gold = gold + 1000 WHERE match_id = $1 AND user_id = $2`,
     [game.match_id, playerId]
   );
 
