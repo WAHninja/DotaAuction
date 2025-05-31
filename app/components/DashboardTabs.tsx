@@ -78,18 +78,14 @@ export default function DashboardTabs({
                     <p>
                       <strong>Current Game:</strong> #{match.current_game_id}
                     </p>
-                    <p>
-                      <strong>Status:</strong> {match.status}
-                    </p>
                   </div>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <p className="text-xs text-blue-300 mb-1">Team A</p>
                       <div className="flex flex-wrap gap-2">
                         {match.team_a_members?.map((playerId: number) => {
-                          const username = match.players.find((name) =>
-                            name.toLowerCase().includes(`user${playerId}`)
-                          ) || `User ${playerId}`;
+                          const player = match.players.find((p: any) => p.id === playerId);
+                          const username = player ? player.username : `User ${playerId}`;
                           return (
                             <span
                               key={playerId}
