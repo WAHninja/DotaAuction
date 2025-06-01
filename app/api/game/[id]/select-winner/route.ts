@@ -28,10 +28,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Game already completed or auction already started' }, { status: 400 });
     }
 
+    // ✅ Define winningMembers here BEFORE using it
     const winningMembers: number[] = game[`${winningTeamId}_members`];
 
     if (winningMembers.length === 1) {
-      // ✅ Only one player on the winning team: Finish game and match
       const winningPlayerId = winningMembers[0];
 
       await db.query(
@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
         [winningPlayerId, game.match_id]
       );
 
-      // ✅ Notify via Ably
       const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
       const channel = ably.channels.get('match-' + game.match_id);
       await channel.publish('game-winner-selected', {
@@ -57,65 +56,63 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Regular flow: Set to auction pending and penalize losing team
-await db.query(
-  `UPDATE Games SET status = 'auction pending', winning_team = $1 WHERE id = $2`,
-  [winningTeamId, gameId]
-);
+    await db.query(
+      `UPDATE Games SET status = 'auction pending', winning_team = $1 WHERE id = $2`,
+      [winningTeamId, gameId]
+    );
 
-const losingTeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
-const losingMembers: number[] = game[`${losingTeamId}_members`];
-const winningMembers: number[] = game[`${winningTeamId}_members`];
+    const losingTeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
+    const losingMembers: number[] = game[`${losingTeamId}_members`];
 
-// 🔍 Step 1: Calculate bonus pool from half of losing players' gold (before penalties)
-let totalBonusPool = 0;
-const losingGolds: Record<number, number> = {};
+    // 🔍 Step 1: Calculate bonus pool from half of losing players' gold (before penalties)
+    let totalBonusPool = 0;
+    const losingGolds: Record<number, number> = {};
 
-for (const playerId of losingMembers) {
-  const goldRes = await db.query(
-    `SELECT gold FROM match_players WHERE match_id = $1 AND user_id = $2`,
-    [game.match_id, playerId]
-  );
+    for (const playerId of losingMembers) {
+      const goldRes = await db.query(
+        `SELECT gold FROM match_players WHERE match_id = $1 AND user_id = $2`,
+        [game.match_id, playerId]
+      );
 
-  const currentGold = goldRes.rows[0]?.gold ?? 0;
-  losingGolds[playerId] = currentGold;
-  totalBonusPool += Math.floor(currentGold * 0.5);
-}
+      const currentGold = goldRes.rows[0]?.gold ?? 0;
+      losingGolds[playerId] = currentGold;
+      totalBonusPool += Math.floor(currentGold * 0.5);
+    }
 
-// 💰 Step 2: Distribute bonus pool + 1000 to each winning player
-const perWinnerBonus = Math.floor(totalBonusPool / winningMembers.length);
+    // 💰 Step 2: Distribute bonus pool + 1000 to each winning player
+    const perWinnerBonus = Math.floor(totalBonusPool / winningMembers.length);
 
-for (const playerId of winningMembers) {
-  const totalReward = 1000 + perWinnerBonus;
+    for (const playerId of winningMembers) {
+      const totalReward = 1000 + perWinnerBonus;
 
-  await db.query(
-    `UPDATE match_players SET gold = gold + $1 WHERE match_id = $2 AND user_id = $3`,
-    [totalReward, game.match_id, playerId]
-  );
+      await db.query(
+        `UPDATE match_players SET gold = gold + $1 WHERE match_id = $2 AND user_id = $3`,
+        [totalReward, game.match_id, playerId]
+      );
 
-  await db.query(
-    `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-     VALUES ($1, $2, $3, $4, 'win_reward')`,
-    [gameId, playerId, winningTeamId, totalReward]
-  );
-}
+      await db.query(
+        `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+         VALUES ($1, $2, $3, $4, 'win_reward')`,
+        [gameId, playerId, winningTeamId, totalReward]
+      );
+    }
 
-// 🔻 Step 3: Now apply penalty to each losing player (50% of their original gold)
-for (const playerId of losingMembers) {
-  const currentGold = losingGolds[playerId];
-  const penalty = Math.floor(currentGold * 0.5);
+    // 🔻 Step 3: Now apply penalty to each losing player (50% of their original gold)
+    for (const playerId of losingMembers) {
+      const currentGold = losingGolds[playerId];
+      const penalty = Math.floor(currentGold * 0.5);
 
-  await db.query(
-    `UPDATE match_players SET gold = gold - $1 WHERE match_id = $2 AND user_id = $3`,
-    [penalty, game.match_id, playerId]
-  );
+      await db.query(
+        `UPDATE match_players SET gold = gold - $1 WHERE match_id = $2 AND user_id = $3`,
+        [penalty, game.match_id, playerId]
+      );
 
-  await db.query(
-    `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-     VALUES ($1, $2, $3, $4, 'loss_penalty')`,
-    [gameId, playerId, losingTeamId, -penalty]
-  );
-}
-
+      await db.query(
+        `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+         VALUES ($1, $2, $3, $4, 'loss_penalty')`,
+        [gameId, playerId, losingTeamId, -penalty]
+      );
+    }
 
     const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
     const channel = ably.channels.get('match-' + game.match_id);
