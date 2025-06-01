@@ -97,7 +97,7 @@ for (const playerId of winningMembers) {
   await db.query(
     `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
      VALUES ($1, $2, $3, $4, 'win_reward')`,
-    [gameId, playerId, winningTeamId, 500]
+    [gameId, playerId, winningTeamId, 1000]
   );
 }
 
