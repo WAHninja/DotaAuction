@@ -65,7 +65,10 @@ await db.query(
 const losingTeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
 const losingMembers: number[] = game[`${losingTeamId}_members`];
 
-// 🔻 Penalize losing team members
+// 🟡 Step 1: Find highest gold among losing players (before penalty)
+let highestLosingGold = 0;
+const losingGoldMap: Record<number, number> = {};
+
 for (const playerId of losingMembers) {
   const goldRes = await db.query(
     `SELECT gold FROM match_players WHERE match_id = $1 AND user_id = $2`,
@@ -73,6 +76,19 @@ for (const playerId of losingMembers) {
   );
 
   const currentGold = goldRes.rows[0]?.gold ?? 0;
+  losingGoldMap[playerId] = currentGold;
+
+  if (currentGold > highestLosingGold) {
+    highestLosingGold = currentGold;
+  }
+}
+
+// 🟢 Step 2: Calculate win bonus before penalizing
+const winBonus = Math.max(500, Math.floor(highestLosingGold * 0.5));
+
+// 🔻 Step 3: Penalize losing players
+for (const playerId of losingMembers) {
+  const currentGold = losingGoldMap[playerId];
   const penalty = Math.floor(currentGold * 0.5);
 
   await db.query(
@@ -87,17 +103,17 @@ for (const playerId of losingMembers) {
   );
 }
 
-// 🟢 Reward winning team members with +500 gold
+// 🟢 Step 4: Reward winning players
 for (const playerId of winningMembers) {
   await db.query(
-    `UPDATE match_players SET gold = gold + 1000 WHERE match_id = $1 AND user_id = $2`,
-    [game.match_id, playerId]
+    `UPDATE match_players SET gold = gold + $1 WHERE match_id = $2 AND user_id = $3`,
+    [winBonus, game.match_id, playerId]
   );
 
   await db.query(
     `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
      VALUES ($1, $2, $3, $4, 'win_reward')`,
-    [gameId, playerId, winningTeamId, 1000]
+    [gameId, playerId, winningTeamId, winBonus]
   );
 }
 
