@@ -459,29 +459,52 @@ export default function MatchPage() {
             <strong>Team 1:</strong> {game.team1Members.join(', ')}
           </div>
 
-          {game.playerStats.filter((stat) => stat.reason === 'loss_penalty').length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-bold">Penalties:</h4>
-              <ul className="list-disc list-inside">
-                {game.playerStats
-                  .filter((stat) => stat.reason === 'loss_penalty')
-                  .map((stat) => (
-                    <li key={stat.id}>
-                      {stat.username || `Player#${stat.playerId}`}{' '}
-                      <span className="text-red-500 font-semibold">{stat.goldChange}</span>
-                      <Image
-                        src="/Gold_symbol.webp"
-                        alt="Gold"
-                        width={16}
-                        height={16}
-                        className="inline-block ml-1 align-middle"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-          )}
+          {game.playerStats.length > 0 && (
+  <div className="mt-4">
+    <h4 className="font-bold">Gold changes:</h4>
+    <ul className="list-disc list-inside space-y-1">
+      {/* Win Rewards First */}
+      {game.playerStats
+        .filter((stat) => stat.reason === 'win_reward')
+        .map((stat) => (
+          <li key={stat.id}>
+            {stat.username || `Player#${stat.playerId}`} – 
+            <span className="text-green-400 font-semibold ml-1">
+              +{stat.goldChange}
+            </span>
+            <Image
+              src="/Gold_symbol.webp"
+              alt="Gold"
+              width={16}
+              height={16}
+              className="inline-block ml-1 align-middle"
+            />
+            <span className="text-sm text-gray-400 ml-2">(win reward)</span>
+          </li>
+        ))}
 
+      {/* Loss Penalties Next */}
+      {game.playerStats
+        .filter((stat) => stat.reason === 'loss_penalty')
+        .map((stat) => (
+          <li key={stat.id}>
+            {stat.username || `Player#${stat.playerId}`} – 
+            <span className="text-red-500 font-semibold ml-1">
+              {stat.goldChange}
+            </span>
+            <Image
+              src="/Gold_symbol.webp"
+              alt="Gold"
+              width={16}
+              height={16}
+              className="inline-block ml-1 align-middle"
+            />
+            <span className="text-sm text-gray-400 ml-2">(loss penalty)</span>
+          </li>
+        ))}
+    </ul>
+  </div>
+)}
 
           {game.offers.length > 0 && (
             <div className="mt-4">
