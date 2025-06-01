@@ -468,7 +468,7 @@ export default function MatchPage() {
         .filter((stat) => stat.reason === 'win_reward')
         .map((stat) => (
           <li key={stat.id}>
-            {stat.username || `Player#${stat.playerId}`} – 
+            {stat.username || `Player#${stat.playerId}`}: 
             <span className="text-green-400 font-semibold ml-1">
               +{stat.goldChange}
             </span>
@@ -488,7 +488,7 @@ export default function MatchPage() {
         .filter((stat) => stat.reason === 'loss_penalty')
         .map((stat) => (
           <li key={stat.id}>
-            {stat.username || `Player#${stat.playerId}`} – 
+            {stat.username || `Player#${stat.playerId}`}: 
             <span className="text-red-500 font-semibold ml-1">
               {stat.goldChange}
             </span>
