@@ -421,7 +421,7 @@ export default function MatchPage() {
     {/* Game History Section */}
     <section className="mt-12">
   <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
-  {history.map((game) => {
+  {[...history].reverse().map((game) => {
   const isExpanded = expandedGameId === game.gameNumber;
   const acceptedOffer = game.offers.find((offer) => offer.status === 'accepted');
 
