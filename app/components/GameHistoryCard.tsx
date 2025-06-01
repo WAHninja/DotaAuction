@@ -129,12 +129,14 @@ export default function GameHistoryCard({
                       ? 'Win Bonus'
                       : stat.reason === 'loss_penalty'
                       ? 'Loss Penalty'
+                      : stat.reason === 'offer_accepted'
+                      ? 'Offer Accepted'
                       : stat.reason
                     }
                 </span>
                 <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
                   <Coins className="inline w-4 h-4 mr-1" />
-                  {stat.goldChange ? '+' : ''}
+                  {stat.goldChange >= 0 ? '+' : ''}
                   {stat.goldChange}
                 </span>
               </li>
