@@ -64,10 +64,11 @@ await db.query(
 
 const losingTeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
 const losingMembers: number[] = game[`${losingTeamId}_members`];
+const winningMembers: number[] = game[`${winningTeamId}_members`];
 
-// 🟡 Step 1: Find highest gold among losing players (before penalty)
-let highestLosingGold = 0;
-const losingGoldMap: Record<number, number> = {};
+// 🔍 Step 1: Calculate bonus pool from half of losing players' gold (before penalties)
+let totalBonusPool = 0;
+const losingGolds: Record<number, number> = {};
 
 for (const playerId of losingMembers) {
   const goldRes = await db.query(
@@ -76,19 +77,31 @@ for (const playerId of losingMembers) {
   );
 
   const currentGold = goldRes.rows[0]?.gold ?? 0;
-  losingGoldMap[playerId] = currentGold;
-
-  if (currentGold > highestLosingGold) {
-    highestLosingGold = currentGold;
-  }
+  losingGolds[playerId] = currentGold;
+  totalBonusPool += Math.floor(currentGold * 0.5);
 }
 
-// 🟢 Step 2: Calculate win bonus before penalizing
-const winBonus = Math.max(500, Math.floor(highestLosingGold * 0.5));
+// 💰 Step 2: Distribute bonus pool + 1000 to each winning player
+const perWinnerBonus = Math.floor(totalBonusPool / winningMembers.length);
 
-// 🔻 Step 3: Penalize losing players
+for (const playerId of winningMembers) {
+  const totalReward = 1000 + perWinnerBonus;
+
+  await db.query(
+    `UPDATE match_players SET gold = gold + $1 WHERE match_id = $2 AND user_id = $3`,
+    [totalReward, game.match_id, playerId]
+  );
+
+  await db.query(
+    `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+     VALUES ($1, $2, $3, $4, 'win_reward')`,
+    [gameId, playerId, winningTeamId, totalReward]
+  );
+}
+
+// 🔻 Step 3: Now apply penalty to each losing player (50% of their original gold)
 for (const playerId of losingMembers) {
-  const currentGold = losingGoldMap[playerId];
+  const currentGold = losingGolds[playerId];
   const penalty = Math.floor(currentGold * 0.5);
 
   await db.query(
@@ -103,19 +116,6 @@ for (const playerId of losingMembers) {
   );
 }
 
-// 🟢 Step 4: Reward winning players
-for (const playerId of winningMembers) {
-  await db.query(
-    `UPDATE match_players SET gold = gold + $1 WHERE match_id = $2 AND user_id = $3`,
-    [winBonus, game.match_id, playerId]
-  );
-
-  await db.query(
-    `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-     VALUES ($1, $2, $3, $4, 'win_reward')`,
-    [gameId, playerId, winningTeamId, winBonus]
-  );
-}
 
     const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
     const channel = ably.channels.get('match-' + game.match_id);
