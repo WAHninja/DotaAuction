@@ -441,7 +441,7 @@ export default function MatchPage() {
       {/* Show accepted offer summary when not expanded */}
       {!isExpanded && acceptedOffer && (
         <p className="mt-2 text-sm font-medium">
-          {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount} <Image
+          {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}<Image
                       src="/Gold_symbol.webp"
                       alt="Gold"
                       width={16}
