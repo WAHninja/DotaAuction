@@ -82,7 +82,23 @@ export default async function DashboardPage() {
     return (
       <div className="relative min-h-screen animate-fadeIn">
         <div className="relative z-10 p-6 text-white max-w-4xl mx-auto space-y-10">
-          <CreateMatchFormWrapper />
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-1/2">
+              <CreateMatchFormWrapper />
+            </div>
+            <div className="lg:w-1/2 p-4 bg-gray-800 rounded-xl border border-gray-600">
+              <h2 className="text-xl font-semibold mb-2">How It Works</h2>
+              <ul className="list-disc pl-5 space-y-2 text-sm text-gray-300">
+                <li>Create a match by selecting 4 or more players.</li>
+                <li>The match will generate a game with random teams.</li>
+                <li>After each game, the winning team makes offers to one losing player.</li>
+                <li>The losing team can accept one offer to switch teams for the next game.</li>
+                <li>Gold is awarded based on offers made and accepted.</li>
+                <li>The match continues until you manually end it or set a winning team.</li>
+              </ul>
+            </div>
+          </div>
+
           {/* Tabs */}
           <DashboardTabs
             ongoingMatches={ongoingMatches}
