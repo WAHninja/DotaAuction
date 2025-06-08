@@ -86,15 +86,14 @@ export default async function DashboardPage() {
             <div className="lg:w-1/2">
               <CreateMatchFormWrapper />
             </div>
-            <div className="lg:w-1/2 p-4 bg-gray-800 rounded-xl border border-gray-600">
+            <div className="lg:w-1/2 p-4 bg-slate-600/60 rounded-xl border border-gray-600">
               <h2 className="text-xl font-semibold mb-2">How It Works</h2>
               <ul className="list-disc pl-5 space-y-2 text-sm text-gray-300">
                 <li>Create a match by selecting 4 or more players.</li>
-                <li>The match will generate a game with random teams.</li>
-                <li>After each game, the winning team makes offers to one losing player.</li>
-                <li>The losing team can accept one offer to switch teams for the next game.</li>
-                <li>Gold is awarded based on offers made and accepted.</li>
-                <li>The match continues until you manually end it or set a winning team.</li>
+                <li>When a team wins a game, the losing players all lose half their current starting gold</li>
+                <li>Each player from winning team makes a gold offer to sell one of the winning players</li>
+                <li>Losing team accepts one offer, all players in the winning team get 1000 gold plus half the value of the losing teams gold</li>
+                <li>The match continues until a player wins when on a team by themselves</li>
               </ul>
             </div>
           </div>
