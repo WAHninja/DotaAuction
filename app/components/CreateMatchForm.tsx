@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react'; // Optional spinner icon
+import { Loader2 } from 'lucide-react';
 
 interface Player {
   id: number;
@@ -21,7 +21,10 @@ export default function CreateMatchForm() {
       try {
         const res = await fetch('/api/players');
         const data = await res.json();
-        setPlayers(Array.isArray(data.players) ? data.players : []);
+        const filtered = Array.isArray(data.players)
+          ? data.players.filter((p: Player) => !p.username.toLowerCase().startsWith('ztest'))
+          : [];
+        setPlayers(filtered);
       } catch (error) {
         console.error('Failed to load players:', error);
       }
@@ -71,10 +74,10 @@ export default function CreateMatchForm() {
   };
 
   return (
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl w-full max-w-5xl mx-auto space-y-6 flex-grow"
-      >
+    <form
+      onSubmit={handleSubmit}
+      className="flex-1 min-w-0 p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl w-full max-w-3xl space-y-6"
+    >
       <h2 className="text-3xl font-bold text-yellow-400 text-center">
         Create a Match
       </h2>
@@ -89,7 +92,7 @@ export default function CreateMatchForm() {
         Selected {selectedPlayerIds.length} of 4+ players
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto pr-2">
         {players.map(player => (
           <label
             key={player.id}
