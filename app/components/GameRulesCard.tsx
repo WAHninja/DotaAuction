@@ -14,22 +14,29 @@ export default function GameRulesCard() {
 
         <ul className="list-disc pl-5 space-y-2 text-sm text-slate-200">
           <li>
-            Create a match with <strong>4 or more players</strong>.
+            Matches require <strong>4 or more players</strong>.
           </li>
 
           <li>
-            When a team loses a game, each losing player loses
-            <strong> half of their current gold</strong>.
+            Once a game is completed, select the winning team.
           </li>
 
           <li>
-            Each player on the winning team submits
-            <strong> one gold offer</strong>.
+            Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
           </li>
 
           <li>
-            The losing team reviews all offers and
-            <strong> accepts one</strong>.
+            The losing team reviews all offers and <strong> accepts one</strong>.
+              <li>
+                The Player who's offer was accepted receive the gold amount of the offer.
+              </li>
+               <li>
+                The Player was offered is moved to the losing team for the next game.
+              </li>
+          </li>
+
+          <li>
+            All players of the losing team lose <strong> half of their current gold</strong>.
           </li>
 
           <li>
@@ -52,7 +59,7 @@ export default function GameRulesCard() {
           </li>
 
           <li>
-            The match ends when a player wins while
+            The match ends when a player wins a game while
             <strong> on a team by themselves</strong>.
           </li>
         </ul>
