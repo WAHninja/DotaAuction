@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { redirect } from 'next/navigation';
 import CreateMatchFormWrapper from '@/app/components/CreateMatchFormWrapper';
 import DashboardTabs from '@/app/components/DashboardTabs';
+import GameRulesCard from '@/app/components/GameRulesCard';
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -102,32 +103,8 @@ export default async function DashboardPage() {
             </div>
 
             {/* Game Rules */}
-            <div className="lg:w-1/2 p-5 bg-slate-700/60 rounded-xl border border-slate-500 shadow-md">
-              <h2 className="text-xl font-semibold mb-3">
-                Game Rules
-              </h2>
-
-              <ul className="list-disc pl-5 space-y-2 text-sm text-slate-200">
-                <li>Create a match by selecting 4 or more players.</li>
-                <li>
-                  When a team loses a game, all losing players lose half of
-                  their current gold.
-                </li>
-                <li>
-                  Each player on the winning team makes one gold offer.
-                </li>
-                <li>
-                  The losing team chooses and accepts one offer.
-                </li>
-                <li>
-                  All winning team members receive 1000 gold plus half of the
-                  losing team’s gold.
-                </li>
-                <li>
-                  The match continues until a player wins while on a team by
-                  themselves.
-                </li>
-              </ul>
+            <div className="lg:w-1/2">
+              <GameRulesCard />
             </div>
           </section>
 
