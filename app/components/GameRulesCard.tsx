@@ -26,13 +26,11 @@ export default function GameRulesCard() {
           </li>
 
           <li>
-            The losing team reviews all offers and <strong> accepts one</strong>.
-              <li>
-                The Player who's offer was accepted receive the gold amount of the offer.
-              </li>
-               <li>
-                The Player was offered is moved to the losing team for the next game.
-              </li>
+            The losing team reviews all offers and <strong>accepts one</strong>.
+            <ul className="list-disc pl-5 space-y-1 mt-1 text-slate-200">
+              <li>The player whose offer was accepted receives the gold amount of the offer.</li>
+              <li>The player who was offered is moved to the losing team for the next game.</li>
+            </ul>
           </li>
 
           <li>
