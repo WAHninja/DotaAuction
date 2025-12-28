@@ -13,7 +13,7 @@ type Match = {
   players?: string[];
 };
 
-export default function DashboardTabs({
+export default function CreateMatchForm({
   ongoingMatches,
   completedMatches,
 }: {
@@ -47,8 +47,8 @@ export default function DashboardTabs({
       onClick={() => setActiveTab(tab)}
       className={`px-5 py-2 font-semibold rounded-t-lg transition ${
         activeTab === tab
-          ? 'bg-blue-600 text-white shadow-md'
-          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          ? 'bg-orange-500 text-white shadow-md'
+          : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
       }`}
     >
       {tab === 'ongoing' && 'Ongoing'}
@@ -59,30 +59,35 @@ export default function DashboardTabs({
 
   const MatchTeams = ({ match }: { match: Match }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {['team_a', 'team_1'].map((teamKey) => {
-        const usernames = teamKey === 'team_a' ? match.team_a_usernames : match.team_1_usernames;
-        const color = teamKey === 'team_a' ? 'blue' : 'red';
-        const teamName = teamKey === 'team_a' ? 'Team A' : 'Team 1';
+      {/* Team A */}
+      <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/40">
+        <p className="text-xs font-semibold text-blue-300 mb-2">Team A</p>
+        <div className="flex flex-wrap gap-2">
+          {match.team_a_usernames?.map((u) => (
+            <span
+              key={u}
+              className="bg-blue-700/80 text-white text-xs px-3 py-1 rounded-full"
+            >
+              {u}
+            </span>
+          ))}
+        </div>
+      </div>
 
-        return (
-          <div
-            key={teamKey}
-            className={`bg-${color}-900/30 p-2 rounded-lg border border-${color}-700 flex flex-col gap-2`}
-          >
-            <p className={`text-xs font-semibold text-${color}-300`}>{teamName}</p>
-            <div className="flex flex-wrap gap-2">
-              {usernames?.map((u) => (
-                <span
-                  key={u}
-                  className={`bg-${color}-700/80 text-white text-xs px-3 py-1 rounded-full`}
-                >
-                  {u}
-                </span>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      {/* Team 1 */}
+      <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
+        <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
+        <div className="flex flex-wrap gap-2">
+          {match.team_1_usernames?.map((u) => (
+            <span
+              key={u}
+              className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
+            >
+              {u}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
@@ -95,29 +100,35 @@ export default function DashboardTabs({
   }) => {
     const isCompleted = type === 'completed';
     const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
+
     return (
       <div
-        className={`p-4 rounded-xl shadow-lg transition-transform duration-300 hover:scale-105 ${
-          isCompleted ? 'bg-gray-800/90 border border-gray-700' : 'bg-blue-900/90 border border-blue-700'
+        className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
+          isCompleted
+            ? 'bg-slate-800/80 border border-slate-600'
+            : 'bg-slate-700/80 border border-orange-500/40'
         }`}
       >
         <div className="flex justify-between items-center mb-2">
           <span className="font-semibold text-sm">
             Match #{match.id}{' '}
             {isCompleted ? (
-              <span className="text-green-400 font-normal text-xs flex items-center gap-1">
+              <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
                 <CheckCircle className="h-4 w-4" /> Winner: {winner}
               </span>
             ) : (
-              <span className="text-yellow-300 font-normal text-xs flex items-center gap-1">
+              <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
                 <PlayCircle className="h-4 w-4" /> Current Game #{match.current_game_id}
               </span>
             )}
           </span>
+
           <Link href={`/match/${match.id}`}>
             <button
-              className={`px-3 py-1 text-sm rounded-md text-white font-semibold ${
-                isCompleted ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'
+              className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
+                isCompleted
+                  ? 'bg-slate-600 hover:bg-slate-700 text-white'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
               }`}
             >
               {isCompleted ? 'View' : 'Continue'}
@@ -125,9 +136,11 @@ export default function DashboardTabs({
           </Link>
         </div>
 
-        {isCompleted && match.players ? (
-          <p className="text-xs text-gray-300 mb-2">Players: {match.players.join(', ')}</p>
-        ) : null}
+        {isCompleted && match.players && (
+          <p className="text-xs text-gray-300 mb-2">
+            Players: {match.players.join(', ')}
+          </p>
+        )}
 
         <MatchTeams match={match} />
       </div>
@@ -148,7 +161,7 @@ export default function DashboardTabs({
         <button
           onClick={onClick}
           disabled={loading}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {loading ? (
             <>
@@ -164,7 +177,7 @@ export default function DashboardTabs({
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex justify-center gap-4 border-b border-gray-600 mb-4">
+      <div className="flex justify-center gap-4 border-b border-slate-600 mb-4">
         {(['ongoing', 'completed', 'stats'] as const).map((tab) => (
           <TabButton key={tab} tab={tab} />
         ))}
@@ -173,7 +186,7 @@ export default function DashboardTabs({
       {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ongoingMatches.length > 0 ? (
+          {ongoingMatches.length ? (
             <>
               {ongoingMatches.slice(0, ongoingVisible).map((match) => (
                 <MatchCard key={match.id} match={match} type="ongoing" />
@@ -185,7 +198,9 @@ export default function DashboardTabs({
               />
             </>
           ) : (
-            <p className="text-center text-gray-400 col-span-full">No ongoing matches yet.</p>
+            <p className="text-center text-gray-400 col-span-full">
+              No ongoing matches yet.
+            </p>
           )}
         </div>
       )}
@@ -193,7 +208,7 @@ export default function DashboardTabs({
       {/* Completed Matches */}
       {activeTab === 'completed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {completedMatches.length > 0 ? (
+          {completedMatches.length ? (
             <>
               {completedMatches.slice(0, completedVisible).map((match) => (
                 <MatchCard key={match.id} match={match} type="completed" />
@@ -205,14 +220,18 @@ export default function DashboardTabs({
               />
             </>
           ) : (
-            <p className="text-center text-gray-400 col-span-full">No completed matches.</p>
+            <p className="text-center text-gray-400 col-span-full">
+              No completed matches.
+            </p>
           )}
         </div>
       )}
 
       {/* Stats */}
       {activeTab === 'stats' && (
-        <div className="text-center text-gray-400 italic">Coming soon...</div>
+        <div className="text-center text-gray-400 italic">
+          Coming soon...
+        </div>
       )}
     </div>
   );
