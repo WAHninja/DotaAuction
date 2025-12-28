@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 export default function BodyClassWrapper() {
   const pathname = usePathname();
-  const [showVideo, setShowVideo] = useState(false);
+  const [showStaticBg, setShowStaticBg] = useState(false);
   const [showImage, setShowImage] = useState(false);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export default function BodyClassWrapper() {
     const isMatchPage = pathname.startsWith('/match');
 
     setShowImage(isAuthPage || isMatchPage);
-    setShowVideo(!isAuthPage && !isMatchPage);
+    setShowStaticBg(!isAuthPage && !isMatchPage);
   }, [pathname]);
 
   return (
@@ -24,17 +24,11 @@ export default function BodyClassWrapper() {
           aria-hidden="true"
         />
       )}
-      {showVideo && (
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="fixed inset-0 w-full h-full object-cover z-[-1]"
-        >
-          <source src="/header_bg.webm" type="video/webm" />
-          Your browser does not support the video tag.
-        </video>
+      {showStaticBg && (
+        <div
+          className="fixed inset-0 z-[-1] bg-[url('/b33a11afdff2ef2e1d7502b8d2df0fe9d1efd593.jpg')] bg-cover bg-center bg-no-repeat"
+          aria-hidden="true"
+        />
       )}
     </>
   );
