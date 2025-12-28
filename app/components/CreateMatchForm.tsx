@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 
@@ -13,19 +13,56 @@ type Match = {
   players?: string[];
 };
 
+type Props = {
+  ongoingMatches?: Match[];
+  completedMatches?: Match[];
+};
+
 export default function DashboardPage({
-  ongoingMatches,
-  completedMatches,
-}: {
-  ongoingMatches: Match[];
-  completedMatches: Match[];
-}) {
+  ongoingMatches: initialOngoing = [],
+  completedMatches: initialCompleted = [],
+}: Props) {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
+  const [ongoingMatches, setOngoingMatches] = useState<Match[]>(initialOngoing);
+  const [completedMatches, setCompletedMatches] = useState<Match[]>(initialCompleted);
+
   const [ongoingVisible, setOngoingVisible] = useState(5);
   const [completedVisible, setCompletedVisible] = useState(5);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
+  // ---------------------
+  // Fetch matches from API
+  // ---------------------
+  useEffect(() => {
+    async function fetchMatches() {
+      try {
+        setLoadingData(true);
+
+        const [ongoingRes, completedRes] = await Promise.all([
+          fetch('/api/matches?status=ongoing'),
+          fetch('/api/matches?status=completed'),
+        ]);
+
+        const ongoingData: Match[] = await ongoingRes.json();
+        const completedData: Match[] = await completedRes.json();
+
+        setOngoingMatches(ongoingData || []);
+        setCompletedMatches(completedData || []);
+      } catch (error) {
+        console.error('Failed to fetch matches', error);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+
+    fetchMatches();
+  }, []);
+
+  // ---------------------
+  // Load More handler
+  // ---------------------
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
       setLoadingOngoing(true);
@@ -42,6 +79,9 @@ export default function DashboardPage({
     }
   };
 
+  // ---------------------
+  // Tab Button
+  // ---------------------
   const TabButton = ({ tab }: { tab: 'ongoing' | 'completed' | 'stats' }) => (
     <button
       onClick={() => setActiveTab(tab)}
@@ -57,6 +97,9 @@ export default function DashboardPage({
     </button>
   );
 
+  // ---------------------
+  // Match Card
+  // ---------------------
   const MatchCard = ({
     match,
     type,
@@ -89,7 +132,7 @@ export default function DashboardPage({
           </Link>
         </div>
 
-        {/* Teams / Scoreboard */}
+        {/* Teams */}
         <div className="flex flex-col sm:flex-row gap-4">
           {['team_a', 'team_1'].map((teamKey) => {
             const usernames =
@@ -146,6 +189,9 @@ export default function DashboardPage({
     );
   };
 
+  // ---------------------
+  // Load More Button
+  // ---------------------
   const LoadMoreButton = ({
     onClick,
     loading,
@@ -173,6 +219,17 @@ export default function DashboardPage({
       </div>
     ) : null;
 
+  if (loadingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <Loader2 className="animate-spin h-8 w-8" />
+      </div>
+    );
+  }
+
+  // ---------------------
+  // Render
+  // ---------------------
   return (
     <div className="min-h-screen p-6 bg-black text-white space-y-6">
       {/* Tabs */}
