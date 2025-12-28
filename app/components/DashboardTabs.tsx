@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 
 // Dynamically import StatsTab to avoid SSR issues
