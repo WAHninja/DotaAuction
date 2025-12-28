@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 
+// Dynamically import StatsTab to avoid SSR issues
+const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
+
 type Match = {
   id: number;
   current_game_id?: number;
@@ -229,8 +232,8 @@ export default function CreateMatchForm({
 
       {/* Stats */}
       {activeTab === 'stats' && (
-        <div className="text-center text-gray-400 italic">
-          Coming soon...
+        <div className="px-2 md:px-0">
+          <StatsTab />
         </div>
       )}
     </div>
