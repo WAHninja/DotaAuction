@@ -32,21 +32,23 @@ export default function GameRulesCard() {
             <strong> accepts one</strong>.
           </li>
 
-          <li className="flex items-start gap-2">
-            <span>
-              All winning team members receive
-              <strong> 1000 gold</strong> plus a share of
-              <strong> half of the losing team’s total gold</strong>.
-            </span>
+          <li>
+            <div className="flex items-start gap-2">
+              <span>
+                All winning team members receive
+                <strong> 1000 gold</strong> plus a share of
+                <strong> half of the losing team’s total gold</strong>.
+              </span>
 
-            {/* Help button */}
-            <button
-              onClick={() => setShowHelp(true)}
-              className="mt-0.5 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-5 h-5 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
-              aria-label="Gold calculation help"
-            >
-              ?
-            </button>
+              {/* Help button */}
+              <button
+                onClick={() => setShowHelp(true)}
+                className="mt-0.5 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-5 h-5 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
+                aria-label="Gold calculation help"
+              >
+                ?
+              </button>
+            </div>
           </li>
 
           <li>
