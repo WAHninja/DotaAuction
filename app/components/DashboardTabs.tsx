@@ -21,8 +21,8 @@ export default function CreateMatchForm({
   completedMatches: Match[];
 }) {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
-  const [ongoingVisible, setOngoingVisible] = useState(5);
-  const [completedVisible, setCompletedVisible] = useState(5);
+  const [ongoingVisible, setOngoingVisible] = useState(6);
+  const [completedVisible, setCompletedVisible] = useState(6);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
 
