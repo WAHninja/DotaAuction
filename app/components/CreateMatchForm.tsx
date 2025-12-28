@@ -1,238 +1,133 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
-type Match = {
+interface Player {
   id: number;
-  current_game_id?: number;
-  team_a_usernames?: string[];
-  team_1_usernames?: string[];
-  winning_team?: string;
-  players?: string[];
-};
+  username: string;
+}
 
-export default function CreateMatchForm({
-  ongoingMatches,
-  completedMatches,
-}: {
-  ongoingMatches: Match[];
-  completedMatches: Match[];
-}) {
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
-  const [ongoingVisible, setOngoingVisible] = useState(5);
-  const [completedVisible, setCompletedVisible] = useState(5);
-  const [loadingOngoing, setLoadingOngoing] = useState(false);
-  const [loadingCompleted, setLoadingCompleted] = useState(false);
+export default function CreateMatchForm() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
-  const loadMore = (type: 'ongoing' | 'completed') => {
-    if (type === 'ongoing') {
-      setLoadingOngoing(true);
-      setTimeout(() => {
-        setOngoingVisible((prev) => prev + 5);
-        setLoadingOngoing(false);
-      }, 500);
-    } else {
-      setLoadingCompleted(true);
-      setTimeout(() => {
-        setCompletedVisible((prev) => prev + 5);
-        setLoadingCompleted(false);
-      }, 500);
-    }
-  };
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const res = await fetch('/api/players');
+        const data = await res.json();
+        const filtered = Array.isArray(data.players)
+          ? data.players.filter((p: Player) => !p.username.toLowerCase().startsWith('ztest'))
+          : [];
+        setPlayers(filtered);
+      } catch (error) {
+        console.error('Failed to load players:', error);
+      }
+    };
+    fetchPlayers();
+  }, []);
 
-  const TabButton = ({ tab }: { tab: 'ongoing' | 'completed' | 'stats' }) => (
-    <button
-      onClick={() => setActiveTab(tab)}
-      className={`px-5 py-2 font-semibold rounded-t-lg transition ${
-        activeTab === tab
-          ? 'bg-orange-500 text-white shadow-md'
-          : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-      }`}
-    >
-      {tab === 'ongoing' && 'Ongoing'}
-      {tab === 'completed' && 'Completed'}
-      {tab === 'stats' && 'Stats'}
-    </button>
-  );
-
-  const MatchTeams = ({ match }: { match: Match }) => (
-    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {/* Team A */}
-      <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/40">
-        <p className="text-xs font-semibold text-blue-300 mb-2">Team A</p>
-        <div className="flex flex-wrap gap-2">
-          {match.team_a_usernames?.map((u) => (
-            <span
-              key={u}
-              className="bg-blue-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
-              {u}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Team 1 */}
-      <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
-        <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
-        <div className="flex flex-wrap gap-2">
-          {match.team_1_usernames?.map((u) => (
-            <span
-              key={u}
-              className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
-              {u}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const MatchCard = ({
-    match,
-    type,
-  }: {
-    match: Match;
-    type: 'ongoing' | 'completed';
-  }) => {
-    const isCompleted = type === 'completed';
-    const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
-
-    return (
-      <div
-        className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
-          isCompleted
-            ? 'bg-slate-800/80 border border-slate-600'
-            : 'bg-slate-700/80 border border-orange-500/40'
-        }`}
-      >
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-semibold text-sm">
-            Match #{match.id}{' '}
-            {isCompleted ? (
-              <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" /> Winner: {winner}
-              </span>
-            ) : (
-              <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
-                <PlayCircle className="h-4 w-4" /> Current Game #{match.current_game_id}
-              </span>
-            )}
-          </span>
-
-          <Link href={`/match/${match.id}`}>
-            <button
-              className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
-                isCompleted
-                  ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                  : 'bg-orange-500 hover:bg-orange-600 text-white'
-              }`}
-            >
-              {isCompleted ? 'View' : 'Continue'}
-            </button>
-          </Link>
-        </div>
-
-        {isCompleted && match.players && (
-          <p className="text-xs text-gray-300 mb-2">
-            Players: {match.players.join(', ')}
-          </p>
-        )}
-
-        <MatchTeams match={match} />
-      </div>
+  const handleCheckboxChange = (playerId: number) => {
+    setSelectedPlayerIds(prev =>
+      prev.includes(playerId)
+        ? prev.filter(id => id !== playerId)
+        : [...prev, playerId]
     );
   };
 
-  const LoadMoreButton = ({
-    onClick,
-    loading,
-    hidden,
-  }: {
-    onClick: () => void;
-    loading: boolean;
-    hidden: boolean;
-  }) =>
-    !hidden ? (
-      <div className="col-span-full text-center mt-4">
-        <button
-          onClick={onClick}
-          disabled={loading}
-          className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin h-5 w-5" /> Loading...
-            </>
-          ) : (
-            'Load More'
-          )}
-        </button>
-      </div>
-    ) : null;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (selectedPlayerIds.length < 4) {
+      setError('Please select at least 4 players.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch('/api/matches', {
+        method: 'POST',
+        body: JSON.stringify({ playerIds: selectedPlayerIds }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Unknown error occurred');
+        return;
+      }
+
+      router.push(`/match/${data.id}`);
+    } catch (err) {
+      console.error(err);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex justify-center gap-4 border-b border-slate-600 mb-4">
-        {(['ongoing', 'completed', 'stats'] as const).map((tab) => (
-          <TabButton key={tab} tab={tab} />
+    <form
+      onSubmit={handleSubmit}
+      className="flex-1 min-w-0 p-6 bg-slate-600/60 text-white rounded-2xl shadow-2xl w-full max-w-3xl space-y-6"
+    >
+      <h2 className="text-3xl font-bold text-yellow-400 text-center">
+        Create a Match
+      </h2>
+
+      {error && (
+        <div className="bg-red-600/20 text-red-300 px-4 py-2 rounded-lg border border-red-500 animate-pulse">
+          {error}
+        </div>
+      )}
+
+      <p className="text-sm text-center">
+        Selected {selectedPlayerIds.length} of 4+ players
+      </p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+        {players.map(player => (
+          <label
+            key={player.id}
+            className={`cursor-pointer p-3 rounded-xl text-center border-2 transition-all duration-200 text-sm ${
+              selectedPlayerIds.includes(player.id)
+                ? 'bg-slate-800/90 border-orange-500 text-orange-300'
+                : 'bg-slate-800 border-gray-600 hover:border-orange-400 text-gray-200'
+            }`}
+          >
+            <input
+              type="checkbox"
+              value={player.id}
+              checked={selectedPlayerIds.includes(player.id)}
+              onChange={() => handleCheckboxChange(player.id)}
+              className="hidden"
+            />
+            {player.username}
+          </label>
         ))}
       </div>
 
-      {/* Ongoing Matches */}
-      {activeTab === 'ongoing' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ongoingMatches.length ? (
-            <>
-              {ongoingMatches.slice(0, ongoingVisible).map((match) => (
-                <MatchCard key={match.id} match={match} type="ongoing" />
-              ))}
-              <LoadMoreButton
-                onClick={() => loadMore('ongoing')}
-                loading={loadingOngoing}
-                hidden={ongoingVisible >= ongoingMatches.length}
-              />
-            </>
-          ) : (
-            <p className="text-center text-gray-400 col-span-full">
-              No ongoing matches yet.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Completed Matches */}
-      {activeTab === 'completed' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {completedMatches.length ? (
-            <>
-              {completedMatches.slice(0, completedVisible).map((match) => (
-                <MatchCard key={match.id} match={match} type="completed" />
-              ))}
-              <LoadMoreButton
-                onClick={() => loadMore('completed')}
-                loading={loadingCompleted}
-                hidden={completedVisible >= completedMatches.length}
-              />
-            </>
-          ) : (
-            <p className="text-center text-gray-400 col-span-full">
-              No completed matches.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Stats */}
-      {activeTab === 'stats' && (
-        <div className="text-center text-gray-400 italic">
-          Coming soon...
-        </div>
-      )}
-    </div>
+      <div className="text-center">
+        <button
+          type="submit"
+          disabled={selectedPlayerIds.length < 4 || isSubmitting}
+          className={`mx-auto w-full sm:w-auto px-6 py-3 font-semibold rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+            selectedPlayerIds.length < 4 || isSubmitting
+              ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+              : 'bg-orange-500 hover:bg-orange-600 text-white'
+          }`}
+        >
+          {isSubmitting && <Loader2 className="animate-spin w-4 h-4" />}
+          {isSubmitting ? 'Creating...' : 'Create Match'}
+        </button>
+      </div>
+    </form>
   );
 }
