@@ -8,8 +8,8 @@ export default function GameRulesCard() {
   return (
     <>
       <div className="p-5 bg-slate-700/60 rounded-xl border border-slate-500 shadow-md">
-        <h2 className="text-xl font-semibold mb-3 text-white">
-          Game Rules
+        <h2 className="text-3xl font-bold text-yellow-400 text-center">
+          Match Rules
         </h2>
 
         <ul className="list-disc pl-5 space-y-2 text-sm text-slate-200">
