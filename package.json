@@ -19,7 +19,8 @@
     "ws": "^8.7.0",
     "ably": "^1.2.12",
     "react-confetti": "^6.1.0",
-    "react-use": "^17.4.0"
+    "react-use": "^17.4.0",
+     "recharts": "^2.7.2"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
