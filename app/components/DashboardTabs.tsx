@@ -60,13 +60,13 @@ export default function CreateMatchForm({
   const MatchTeams = ({ match }: { match: Match }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
       {/* Team A */}
-      <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/40">
-        <p className="text-xs font-semibold text-blue-300 mb-2">Team A</p>
+      <div className="bg-lime-900/30 p-3 rounded-lg border border-lime-700/40">
+        <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
           {match.team_a_usernames?.map((u) => (
             <span
               key={u}
-              className="bg-blue-700/80 text-white text-xs px-3 py-1 rounded-full"
+              className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full"
             >
               {u}
             </span>
