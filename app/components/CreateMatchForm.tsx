@@ -13,7 +13,7 @@ type Match = {
   players?: string[];
 };
 
-export default function DashboardTabs({
+export default function CreateMatchForm({
   ongoingMatches,
   completedMatches,
 }: {
