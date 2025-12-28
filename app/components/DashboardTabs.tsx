@@ -130,49 +130,37 @@ function LoadMoreButton({
 }
 
 // ---------------------
-// Dashboard Tabs
+// Dashboard Tabs Component
 // ---------------------
 export default function DashboardTabs() {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
   const [ongoingMatches, setOngoingMatches] = useState<Match[]>([]);
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
-  const [loadingOngoing, setLoadingOngoing] = useState(false);
-  const [loadingCompleted, setLoadingCompleted] = useState(false);
+  const [loadingOngoing, setLoadingOngoing] = useState(true);
+  const [loadingCompleted, setLoadingCompleted] = useState(true);
   const [ongoingVisible, setOngoingVisible] = useState(5);
   const [completedVisible, setCompletedVisible] = useState(5);
 
-  // ---------------------
   // Fetch matches from API
-  // ---------------------
   useEffect(() => {
-    async function fetchOngoing() {
-      setLoadingOngoing(true);
+    async function fetchMatches() {
       try {
-        const res = await fetch('/api/match/ongoing');
-        const data = await res.json();
-        setOngoingMatches(data.matches || []);
+        const [ongoingRes, completedRes] = await Promise.all([
+          fetch('/api/match/ongoing'),
+          fetch('/api/match/completed'),
+        ]);
+        const ongoingData = await ongoingRes.json();
+        const completedData = await completedRes.json();
+        setOngoingMatches(ongoingData.matches || []);
+        setCompletedMatches(completedData.matches || []);
       } catch (e) {
-        console.error(e);
+        console.error('Error fetching matches:', e);
       } finally {
         setLoadingOngoing(false);
-      }
-    }
-
-    async function fetchCompleted() {
-      setLoadingCompleted(true);
-      try {
-        const res = await fetch('/api/match/completed');
-        const data = await res.json();
-        setCompletedMatches(data.matches || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
         setLoadingCompleted(false);
       }
     }
-
-    fetchOngoing();
-    fetchCompleted();
+    fetchMatches();
   }, []);
 
   const loadMore = (type: 'ongoing' | 'completed') => {
@@ -204,46 +192,46 @@ export default function DashboardTabs() {
         ))}
       </div>
 
-      {/* Ongoing */}
+      {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ongoingMatches.length > 0 ? (
+          {loadingOngoing ? (
+            <p className="text-center text-gray-400 col-span-full">Loading...</p>
+          ) : ongoingMatches.length > 0 ? (
             <>
               {ongoingMatches.slice(0, ongoingVisible).map((m) => (
                 <MatchCard key={m.id} match={m} type="ongoing" />
               ))}
               <LoadMoreButton
                 onClick={() => loadMore('ongoing')}
-                loading={loadingOngoing}
+                loading={false}
                 hidden={ongoingVisible >= ongoingMatches.length}
               />
             </>
           ) : (
-            <p className="text-center text-gray-400 col-span-full">
-              {loadingOngoing ? 'Loading...' : 'No ongoing matches.'}
-            </p>
+            <p className="text-center text-gray-400 col-span-full">No ongoing matches.</p>
           )}
         </div>
       )}
 
-      {/* Completed */}
+      {/* Completed Matches */}
       {activeTab === 'completed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {completedMatches.length > 0 ? (
+          {loadingCompleted ? (
+            <p className="text-center text-gray-400 col-span-full">Loading...</p>
+          ) : completedMatches.length > 0 ? (
             <>
               {completedMatches.slice(0, completedVisible).map((m) => (
                 <MatchCard key={m.id} match={m} type="completed" />
               ))}
               <LoadMoreButton
                 onClick={() => loadMore('completed')}
-                loading={loadingCompleted}
+                loading={false}
                 hidden={completedVisible >= completedMatches.length}
               />
             </>
           ) : (
-            <p className="text-center text-gray-400 col-span-full">
-              {loadingCompleted ? 'Loading...' : 'No completed matches.'}
-            </p>
+            <p className="text-center text-gray-400 col-span-full">No completed matches.</p>
           )}
         </div>
       )}
