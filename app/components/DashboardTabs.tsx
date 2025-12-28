@@ -59,18 +59,22 @@ export default function DashboardTabs({
 
   const MatchTeams = ({ match }: { match: Match }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {['team_a', 'team_1'].map((teamKey, idx) => {
+      {['team_a', 'team_1'].map((teamKey) => {
         const usernames = teamKey === 'team_a' ? match.team_a_usernames : match.team_1_usernames;
         const color = teamKey === 'team_a' ? 'blue' : 'red';
         const teamName = teamKey === 'team_a' ? 'Team A' : 'Team 1';
+
         return (
-          <div key={teamKey}>
-            <p className={`text-xs font-semibold text-${color}-300 mb-1`}>{teamName}</p>
+          <div
+            key={teamKey}
+            className={`bg-${color}-900/30 p-2 rounded-lg border border-${color}-700 flex flex-col gap-2`}
+          >
+            <p className={`text-xs font-semibold text-${color}-300`}>{teamName}</p>
             <div className="flex flex-wrap gap-2">
               {usernames?.map((u) => (
                 <span
                   key={u}
-                  className={`bg-${color}-700/60 text-white text-xs px-3 py-1 rounded-full`}
+                  className={`bg-${color}-700/80 text-white text-xs px-3 py-1 rounded-full`}
                 >
                   {u}
                 </span>
@@ -93,8 +97,8 @@ export default function DashboardTabs({
     const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
     return (
       <div
-        className={`p-4 rounded-xl shadow-md transition-transform duration-300 hover:scale-105 ${
-          isCompleted ? 'bg-gray-800/80' : 'bg-blue-900/80'
+        className={`p-4 rounded-xl shadow-lg transition-transform duration-300 hover:scale-105 ${
+          isCompleted ? 'bg-gray-800/90 border border-gray-700' : 'bg-blue-900/90 border border-blue-700'
         }`}
       >
         <div className="flex justify-between items-center mb-2">
