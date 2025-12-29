@@ -159,44 +159,44 @@ export default function StatsTab() {
       </div>
 
       {/* Top Winning Team Combinations */}
-      <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
-        <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
-          Top Winning Team Combinations
-        </h3>
+        <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
+          <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
+            Top Winning Team Combinations
+          </h3>
 
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart
-            data={topWinningCombos
-              .sort((a, b) => b.wins - a.wins)
-              .slice(0, 10)}
-            layout="vertical"
-            margin={{ top: 20, right: 30, left: 140, bottom: 20 }}
-          >
-            <XAxis 
-              type="number" 
-              tick={{ fontSize: 12, fill: '#fff' }} 
-              allowDecimals={false} 
-            />
-            <YAxis
-              dataKey="combo"
-              type="category"
-              tick={{ fontSize: 12, fill: '#fff' }}
-              width={140}
-              interval={0}
-              tickFormatter={(name) =>
-                name.length > 25 ? name.slice(0, 22) + '...' : name
-              }
-            />
-            <Tooltip formatter={(v: any) => [`${v} wins`, 'Wins']} />
-            <Bar 
-              dataKey="wins" 
-              fill="#facc15"
-              radius={[4, 4, 4, 4]}
-              label={{ position: 'right', fill: '#fff', fontSize: 12 }}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart
+              data={topWinningCombos
+                .sort((a, b) => b.wins - a.wins)
+                .slice(0, 10)}
+              layout="vertical"
+              margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+            >
+              <XAxis 
+                type="number" 
+                tick={{ fontSize: 12, fill: '#fff' }} 
+                allowDecimals={false} 
+              />
+              <YAxis
+                dataKey="combo"
+                type="category"
+                tick={{ fontSize: 12, fill: '#fff' }}
+                width={Math.min(
+                  400,
+                  Math.max(...topWinningCombos.map(c => c.combo.length * 8)) + 20
+                )} // dynamically calculate width based on name length
+                interval={0}
+              />
+              <Tooltip formatter={(v: any) => [`${v} wins`, 'Wins']} />
+              <Bar 
+                dataKey="wins" 
+                fill="#facc15"
+                radius={[4, 4, 4, 4]}
+                label={{ position: 'right', fill: '#fff', fontSize: 12 }}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
     </div>
   );
 }
