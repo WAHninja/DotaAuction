@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     const data = await res.json();
     if (res.ok) {
-      window.location.href = 'https://dotaauction2.onrender.com/';
+      window.location.href = 'https://dotaauction.onrender.com/';
     } else {
       setError(data.error || 'Login failed');
     }
