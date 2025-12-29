@@ -1,45 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList,
-} from 'recharts';
-
-/* =====================
-   Types
-===================== */
+import { useEffect, useMemo, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 type PlayerStats = {
-  id: number;
   username: string;
   matches: number;
   gamesPlayed: number;
   gamesWon: number;
-  offersAccepted: number;
+  gamesWinRate: number;
   offersMade: number;
+  offersAccepted: number;
+  offersAcceptedRate: number;
   timesSold: number;
+  timesSoldRate: number;
 };
 
-type TeamComboStat = {
-  players: string[];
+type TeamCombo = {
+  combo: string;
   wins: number;
 };
 
+type SortKey =
+  | 'username'
+  | 'matches'
+  | 'gamesPlayed'
+  | 'gamesWinRate'
+  | 'offersMade'
+  | 'offersAcceptedRate'
+  | 'timesSold'
+  | 'timesSoldRate';
+
 export default function StatsTab() {
-  const [players, setPlayers] = useState<PlayerStats[]>([]);
-  const [teamCombos, setTeamCombos] = useState<TeamComboStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [players, setPlayers] = useState<PlayerStats[]>([]);
+  const [topWinningCombos, setTopWinningCombos] = useState<TeamCombo[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  /* =====================
-     Fetch stats
-  ===================== */
+  const [sortKey, setSortKey] = useState<SortKey>('gamesWinRate');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -47,14 +46,15 @@ export default function StatsTab() {
         const res = await fetch('/api/stats');
         const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to load stats');
+        if (res.ok) {
+          setPlayers(data.players);
+          setTopWinningCombos(data.topWinningCombos);
+        } else {
+          setError(data.error || 'Failed to load stats');
         }
-
-        setPlayers(data.players ?? []);
-        setTeamCombos(data.topWinningCombos ?? []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        console.error(err);
+        setError('An unexpected error occurred');
       } finally {
         setLoading(false);
       }
@@ -63,167 +63,124 @@ export default function StatsTab() {
     fetchStats();
   }, []);
 
-  if (loading) {
-    return <p className="text-center text-slate-400">Loading stats…</p>;
-  }
+  const formatStat = (success: number, total: number) => {
+    if (!total) return '0 / 0 (0%)';
+    const pct = ((success / total) * 100).toFixed(1);
+    return `${success} / ${total} (${pct}%)`;
+  };
 
-  if (error) {
-    return <p className="text-center text-red-400">{error}</p>;
-  }
+  const sortedPlayers = useMemo(() => {
+    return [...players].sort((a, b) => {
+      const aVal = a[sortKey];
+      const bVal = b[sortKey];
 
-  /* =====================
-     Player derived stats
-  ===================== */
+      if (typeof aVal === 'string') {
+        return sortDir === 'asc'
+          ? aVal.localeCompare(bVal as string)
+          : (bVal as string).localeCompare(aVal);
+      }
 
-  const playerRows = players.map((p) => {
-    const winPct = p.gamesPlayed
-      ? Math.round((p.gamesWon / p.gamesPlayed) * 100)
-      : 0;
+      return sortDir === 'asc'
+        ? (aVal as number) - (bVal as number)
+        : (bVal as number) - (aVal as number);
+    });
+  }, [players, sortKey, sortDir]);
 
-    const offerPct = p.offersMade
-      ? Math.round((p.offersAccepted / p.offersMade) * 100)
-      : 0;
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
 
-    const soldPct = p.gamesPlayed
-      ? Math.round((p.timesSold / p.gamesPlayed) * 100)
-      : 0;
+  const SortHeader = ({
+    label,
+    sort,
+  }: {
+    label: string;
+    sort: SortKey;
+  }) => (
+    <th
+      onClick={() => toggleSort(sort)}
+      className="px-3 py-2 cursor-pointer select-none hover:text-orange-400"
+    >
+      {label}
+      {sortKey === sort && (
+        <span className="ml-1">{sortDir === 'asc' ? '▲' : '▼'}</span>
+      )}
+    </th>
+  );
 
-    return {
-      ...p,
-      winPct,
-      offerPct,
-      soldPct,
-    };
-  });
-
-  /* =====================
-     Top team combinations
-  ===================== */
-
-  const topCombos = [...teamCombos]
-    .sort((a, b) => b.wins - a.wins)
-    .slice(0, 5)
-    .map((combo, index) => ({
-      rank: index + 1,
-      name: combo.players.join(' • '), // clearer separator
-      wins: combo.wins,
-    }));
+  if (loading) return <p className="text-center text-gray-400">Loading stats...</p>;
+  if (error) return <p className="text-center text-red-400">{error}</p>;
 
   return (
     <div className="space-y-8">
+      {/* Player Stats Table */}
+      <div className="overflow-x-auto bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
+        <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
+          Player Stats
+        </h3>
 
-      {/* =====================
-          PLAYER STATS TABLE
-      ====================== */}
-      <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-5">
-        <h2 className="text-lg font-semibold text-amber-400 mb-4">
-          Player Statistics
-        </h2>
+        <table className="min-w-full text-sm text-left text-white">
+          <thead>
+            <tr className="bg-slate-800/80">
+              <SortHeader label="Player" sort="username" />
+              <SortHeader label="Matches" sort="matches" />
+              <SortHeader label="Games Won" sort="gamesWinRate" />
+              <SortHeader label="Offers Accepted" sort="offersAcceptedRate" />
+              <SortHeader label="Times Sold" sort="timesSoldRate" />
+            </tr>
+          </thead>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-slate-300 border-b border-slate-600">
-                <th className="px-3 py-2 text-left">Player</th>
-                <th className="px-3 py-2 text-center">Matches</th>
-                <th className="px-3 py-2 text-center">Games Won</th>
-                <th className="px-3 py-2 text-center">Offers Accepted</th>
-                <th className="px-3 py-2 text-center">Times Sold</th>
+          <tbody>
+            {sortedPlayers.map((p) => (
+              <tr
+                key={p.username}
+                className="border-b border-slate-600 hover:bg-slate-700/40"
+              >
+                <td className="px-3 py-2 font-semibold">{p.username}</td>
+                <td className="px-3 py-2">{p.matches}</td>
+                <td className="px-3 py-2">
+                  {formatStat(p.gamesWon, p.gamesPlayed)}
+                </td>
+                <td className="px-3 py-2">
+                  {formatStat(p.offersAccepted, p.offersMade)}
+                </td>
+                <td className="px-3 py-2">
+                  {formatStat(p.timesSold, p.gamesPlayed)}
+                </td>
               </tr>
-            </thead>
-
-            <tbody>
-              {playerRows.map((p) => (
-                <tr
-                  key={p.id}
-                  className="border-b border-slate-700 hover:bg-slate-700/40"
-                >
-                  <td className="px-3 py-2 font-medium text-slate-100">
-                    {p.username}
-                  </td>
-
-                  <td className="px-3 py-2 text-center">
-                    {p.matches}
-                  </td>
-
-                  <td className="px-3 py-2 text-center">
-                    <div className="font-semibold">{p.gamesWon}</div>
-                    <div className="text-xs text-slate-400">
-                      ({p.winPct}%)
-                    </div>
-                  </td>
-
-                  <td className="px-3 py-2 text-center">
-                    <div className="font-semibold">{p.offersAccepted}</div>
-                    <div className="text-xs text-slate-400">
-                      ({p.offerPct}%)
-                    </div>
-                  </td>
-
-                  <td className="px-3 py-2 text-center">
-                    <div className="font-semibold">{p.timesSold}</div>
-                    <div className="text-xs text-slate-400">
-                      ({p.soldPct}%)
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* =====================
-          TOP TEAM COMBOS
-      ====================== */}
-      <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-5">
-        <h2 className="text-lg font-semibold text-amber-400 mb-4 text-center">
+      {/* Top Winning Team Combinations */}
+      <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
+        <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
           Top Winning Team Combinations
-        </h2>
+        </h3>
 
-        <div className="h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={topCombos}
-              layout="vertical"
-              margin={{ left: 20, right: 20 }}
-            >
-              <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={280}
-                tick={{ fill: '#cbd5f5', fontSize: 12 }}
-              />
-
-              <Tooltip
-                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                contentStyle={{
-                  backgroundColor: '#020617',
-                  border: '1px solid #334155',
-                }}
-              />
-
-              <Bar
-                dataKey="wins"
-                fill="#f97316"
-                radius={[6, 6, 6, 6]}
-                barSize={22}
-              >
-                <LabelList
-                  dataKey="wins"
-                  position="insideRight"
-                  fill="#f8fafc"
-                  fontSize={12}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <p className="mt-3 text-xs text-slate-400 text-center">
-          Top 5 most successful player combinations
-        </p>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart
+            data={topWinningCombos}
+            layout="vertical"
+            margin={{ top: 20, right: 30, left: 120, bottom: 20 }}
+          >
+            <XAxis type="number" />
+            <YAxis
+              dataKey="combo"
+              type="category"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              width={220}
+            />
+            <Tooltip formatter={(v: any) => [`${v} wins`, 'Wins']} />
+            <Bar dataKey="wins" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
