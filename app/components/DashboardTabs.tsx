@@ -103,67 +103,68 @@ export default function CreateMatchForm({
   );
 
   const MatchCard = ({
-    match,
-    type,
-  }: {
-    match: Match;
-    type: 'ongoing' | 'completed';
-  }) => {
-    const isCompleted = type === 'completed';
-    const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
+  match,
+  type,
+}: {
+  match: Match;
+  type: 'ongoing' | 'completed';
+}) => {
+  const isCompleted = type === 'completed';
+  const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
-    // Safely get current game number
-    const currentGameNumber =
-      !isCompleted && match.games && match.current_game_id
-        ? match.games.find((g) => g.id === match.current_game_id)?.gameNumber
-        : undefined;
+  // Compute current game number dynamically
+  const currentGameNumber =
+    !isCompleted && match.games && match.current_game_id
+      ? match.games.findIndex((g) => g.id === match.current_game_id) + 1
+      : undefined;
 
-    return (
-      <div
-        className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
-          isCompleted
-            ? 'bg-slate-800/80 border border-slate-600'
-            : 'bg-slate-700/80 border border-orange-500/40'
-        }`}
-      >
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-semibold text-sm">
-            Match #{match.id}{' '}
-            {isCompleted ? (
-              <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" /> Winner: {winner}
-              </span>
-            ) : (
-              <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
-                <PlayCircle className="h-4 w-4" /> Current Game #
-                {currentGameNumber ?? '?'}
-              </span>
-            )}
-          </span>
+  return (
+    <div
+      className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
+        isCompleted
+          ? 'bg-slate-800/80 border border-slate-600'
+          : 'bg-slate-700/80 border border-orange-500/40'
+      }`}
+    >
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-semibold text-sm">
+          Match #{match.id}{' '}
+          {isCompleted ? (
+            <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
+              <CheckCircle className="h-4 w-4" /> Winner: {winner}
+            </span>
+          ) : (
+            <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
+              <PlayCircle className="h-4 w-4" /> Current Game #
+              {currentGameNumber ?? '?'}
+            </span>
+          )}
+        </span>
 
-          <Link href={`/match/${match.id}`}>
-            <button
-              className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
-                isCompleted
-                  ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                  : 'bg-orange-500 hover:bg-orange-600 text-white'
-              }`}
-            >
-              {isCompleted ? 'View' : 'Continue'}
-            </button>
-          </Link>
-        </div>
-
-        {isCompleted && match.players && (
-          <p className="text-xs text-gray-300 mb-2">
-            Players: {match.players.join(', ')}
-          </p>
-        )}
-
-        <MatchTeams match={match} />
+        <Link href={`/match/${match.id}`}>
+          <button
+            className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
+              isCompleted
+                ? 'bg-slate-600 hover:bg-slate-700 text-white'
+                : 'bg-orange-500 hover:bg-orange-600 text-white'
+            }`}
+          >
+            {isCompleted ? 'View' : 'Continue'}
+          </button>
+        </Link>
       </div>
-    );
-  };
+
+      {isCompleted && match.players && (
+        <p className="text-xs text-gray-300 mb-2">
+          Players: {match.players.join(', ')}
+        </p>
+      )}
+
+      <MatchTeams match={match} />
+    </div>
+  );
+};
+
 
   const LoadMoreButton = ({
     onClick,
