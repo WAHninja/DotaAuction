@@ -164,21 +164,36 @@ export default function StatsTab() {
           Top Winning Team Combinations
         </h3>
 
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={350}>
           <BarChart
-            data={topWinningCombos}
+            data={topWinningCombos
+              .sort((a, b) => b.wins - a.wins)
+              .slice(0, 10)}
             layout="vertical"
-            margin={{ top: 20, right: 30, left: 120, bottom: 20 }}
+            margin={{ top: 20, right: 30, left: 140, bottom: 20 }}
           >
-            <XAxis type="number" />
+            <XAxis 
+              type="number" 
+              tick={{ fontSize: 12, fill: '#fff' }} 
+              allowDecimals={false} 
+            />
             <YAxis
               dataKey="combo"
               type="category"
               tick={{ fontSize: 12, fill: '#fff' }}
-              width={220}
+              width={140}
+              interval={0}
+              tickFormatter={(name) =>
+                name.length > 25 ? name.slice(0, 22) + '...' : name
+              }
             />
             <Tooltip formatter={(v: any) => [`${v} wins`, 'Wins']} />
-            <Bar dataKey="wins" />
+            <Bar 
+              dataKey="wins" 
+              fill="#facc15"
+              radius={[4, 4, 4, 4]}
+              label={{ position: 'right', fill: '#fff', fontSize: 12 }}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
