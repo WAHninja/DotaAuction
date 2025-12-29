@@ -20,7 +20,11 @@ export default function GameRulesCard() {
           <li>
             Once a game is completed, <strong>select the winning team</strong>.
             <ul className="list-disc pl-5 space-y-1 mt-1 text-slate-200">
-              <li>All players of the losing team lose <strong> half of their current gold</strong>.</li>
+              <li>
+                All players of the losing team lose
+                <strong> half of their current gold</strong>.
+              </li>
+
               <li>
                 <div className="flex items-start gap-2">
                   <span>
@@ -29,7 +33,6 @@ export default function GameRulesCard() {
                     <strong> half of the losing team’s total gold</strong>.
                   </span>
 
-                  {/* Help button */}
                   <button
                     onClick={() => setShowHelp(true)}
                     className="mt-0.5 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-5 h-5 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
@@ -39,7 +42,8 @@ export default function GameRulesCard() {
                   </button>
                 </div>
               </li>
-              </li>      
+            </ul>
+          </li>      
 
           <li>
             Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
