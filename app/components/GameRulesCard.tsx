@@ -18,19 +18,7 @@ export default function GameRulesCard() {
           </li>
 
           <li>
-            Once a game is completed, select the winning team.
-          </li>
-
-          <li>
-            Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
-          </li>
-
-          <li>
-            The losing team reviews all offers and <strong>accepts one</strong>.
-            <ul className="list-disc pl-5 space-y-1 mt-1 text-slate-200">
-              <li>The player whose offer was accepted, <strong>receives</strong> the gold amount of the offer.</li>
-              <li>The player who was offered, is <strong>moved to the losing team</strong>.</li>
-            </ul>
+            Once a game is completed, <strong>select the winning team</strong>.
           </li>
 
           <li>
@@ -54,6 +42,18 @@ export default function GameRulesCard() {
                 ?
               </button>
             </div>
+          </li>
+
+          <li>
+            Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
+          </li>
+
+          <li>
+            The losing team reviews all offers and <strong>accepts one</strong>.
+            <ul className="list-disc pl-5 space-y-1 mt-1 text-slate-200">
+              <li>The player whose offer was accepted, <strong>receives</strong> the gold amount of the offer.</li>
+              <li>The player who was offered, is <strong>moved to the losing team</strong>.</li>
+            </ul>
           </li>
 
           <li>
