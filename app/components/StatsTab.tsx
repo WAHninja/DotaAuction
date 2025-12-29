@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -9,6 +10,10 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts';
+
+/* =====================
+   Types
+===================== */
 
 type PlayerStats = {
   id: number;
@@ -26,15 +31,50 @@ type TeamComboStat = {
   wins: number;
 };
 
-type StatsTabProps = {
-  players: PlayerStats[];
-  teamCombos: TeamComboStat[];
-};
+export default function StatsTab() {
+  const [players, setPlayers] = useState<PlayerStats[]>([]);
+  const [teamCombos, setTeamCombos] = useState<TeamComboStat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default function StatsTab({ players, teamCombos }: StatsTabProps) {
-  /* ---------------------------
+  /* =====================
+     Fetch stats
+  ===================== */
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to load stats');
+        }
+
+        setPlayers(data.players ?? []);
+        setTeamCombos(data.topWinningCombos ?? []);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return <p className="text-center text-slate-400">Loading stats…</p>;
+  }
+
+  if (error) {
+    return <p className="text-center text-red-400">{error}</p>;
+  }
+
+  /* =====================
      Player derived stats
-  ---------------------------- */
+  ===================== */
+
   const playerRows = players.map((p) => {
     const winPct = p.gamesPlayed
       ? Math.round((p.gamesWon / p.gamesPlayed) * 100)
@@ -56,24 +96,25 @@ export default function StatsTab({ players, teamCombos }: StatsTabProps) {
     };
   });
 
-  /* ---------------------------
-     Top 5 winning team combos
-  ---------------------------- */
+  /* =====================
+     Top team combinations
+  ===================== */
+
   const topCombos = [...teamCombos]
     .sort((a, b) => b.wins - a.wins)
     .slice(0, 5)
     .map((combo, index) => ({
       rank: index + 1,
-      name: combo.players.join(' · '),
+      name: combo.players.join(' • '), // clearer separator
       wins: combo.wins,
     }));
 
   return (
     <div className="space-y-8">
 
-      {/* =======================
-           PLAYER STATS TABLE
-      ======================== */}
+      {/* =====================
+          PLAYER STATS TABLE
+      ====================== */}
       <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-5">
         <h2 className="text-lg font-semibold text-amber-400 mb-4">
           Player Statistics
@@ -132,9 +173,9 @@ export default function StatsTab({ players, teamCombos }: StatsTabProps) {
         </div>
       </div>
 
-      {/* =======================
-         TOP TEAM COMBINATIONS
-      ======================== */}
+      {/* =====================
+          TOP TEAM COMBOS
+      ====================== */}
       <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-5">
         <h2 className="text-lg font-semibold text-amber-400 mb-4 text-center">
           Top Winning Team Combinations
@@ -147,14 +188,11 @@ export default function StatsTab({ players, teamCombos }: StatsTabProps) {
               layout="vertical"
               margin={{ left: 20, right: 20 }}
             >
-              <XAxis
-                type="number"
-                hide
-              />
+              <XAxis type="number" hide />
               <YAxis
                 type="category"
                 dataKey="name"
-                width={260}
+                width={280}
                 tick={{ fill: '#cbd5f5', fontSize: 12 }}
               />
 
@@ -168,7 +206,7 @@ export default function StatsTab({ players, teamCombos }: StatsTabProps) {
 
               <Bar
                 dataKey="wins"
-                fill="#d97706"
+                fill="#f97316"
                 radius={[6, 6, 6, 6]}
                 barSize={22}
               >
@@ -184,7 +222,7 @@ export default function StatsTab({ players, teamCombos }: StatsTabProps) {
         </div>
 
         <p className="mt-3 text-xs text-slate-400 text-center">
-          Showing top 5 most successful player combinations
+          Top 5 most successful player combinations
         </p>
       </div>
     </div>
