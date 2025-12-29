@@ -234,7 +234,10 @@ export default function CreateMatchForm({
       {/* Stats */}
       {activeTab === 'stats' && (
         <div className="px-2 md:px-0">
-          <StatsTab />
+          <StatsTab
+            players={playerStats}
+            teamCombos={winningTeamCombos}
+          />
         </div>
       )}
     </div>
