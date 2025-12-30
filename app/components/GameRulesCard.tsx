@@ -22,14 +22,17 @@ export default function GameRulesCard() {
               <li>
                 All players of the losing team lose <strong>half of their current gold</strong>.
               </li>
+
               <li>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <span>
-                    All winning team members receive 1000 gold plus a share of half of the losing team’s total gold.
+                    All winning team members receive <strong>1000 gold</strong> plus a share of
+                    <strong> half of the losing team’s total gold</strong>.
                   </span>
+
                   <button
                     onClick={() => setShowGoldHelp(true)}
-                    className="text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-6 h-6 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
+                    className="shrink-0 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-6 h-6 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
                     aria-label="Gold calculation help"
                   >
                     ?
@@ -40,11 +43,15 @@ export default function GameRulesCard() {
           </li>
 
           <li>
-            <div className="flex items-center gap-2">
-              Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <span>
+                Each player on the winning team submits <strong>a gold offer</strong> to sell
+                one of their <strong>own players</strong>.
+              </span>
+
               <button
                 onClick={() => setShowOfferHelp(true)}
-                className="text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-6 h-6 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
+                className="shrink-0 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-6 h-6 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
                 aria-label="Offer submission help"
               >
                 ?
@@ -71,6 +78,7 @@ export default function GameRulesCard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative">
             <h3 className="text-lg font-semibold mb-4">Gold Distribution Explained</h3>
+
             <div className="space-y-4 text-sm text-slate-200 leading-relaxed">
               <p>When a game ends, the winning team earns gold in <strong>two steps</strong>:</p>
 
@@ -88,7 +96,9 @@ export default function GameRulesCard() {
                 <p>Losing team total gold: <strong>4000</strong></p>
                 <p>Half of total: <strong>2000</strong></p>
                 <p>Winning team size: <strong>4 players</strong></p>
-                <p className="mt-2"><strong>Each winner receives:</strong> 1000 + (2000 ÷ 4) = <strong>1500 gold</strong></p>
+                <p className="mt-2">
+                  <strong>Each winner receives:</strong> 1000 + (2000 ÷ 4) = <strong>1500 gold</strong>
+                </p>
               </div>
             </div>
 
@@ -108,8 +118,10 @@ export default function GameRulesCard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative">
             <h3 className="text-lg font-semibold mb-4">Gold Offer Explained</h3>
+
             <div className="space-y-4 text-sm text-slate-200 leading-relaxed">
               <p>During the auction phase:</p>
+
               <ul className="list-disc pl-5 space-y-2">
                 <li>Only winners can submit offers.</li>
                 <li>You can submit <strong>one offer per game</strong>.</li>
