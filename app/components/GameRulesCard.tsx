@@ -117,19 +117,33 @@ export default function GameRulesCard() {
       {showOfferHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative">
-            <h3 className="text-lg font-semibold mb-4">Gold Offer Explained</h3>
+            <h3 className="text-lg font-semibold mb-4">Offers Explained</h3>
 
             <div className="space-y-4 text-sm text-slate-200 leading-relaxed">
               <p>During the auction phase:</p>
 
               <ul className="list-disc pl-5 space-y-2">
-                <li>Only winners can submit offers.</li>
-                <li>You can submit <strong>one offer per game</strong>.</li>
-                <li>Offers must be made to <strong>another teammate</strong>, not yourself.</li>
+                <li>Each player on the winning team submits one offer.</li>
+                <li>The offer is to gain a gold amount to sell one of your own team's players.</li>
                 <li>Pick a gold amount within the allowed range for this game.</li>
+                  <ul className="list-disc pl-5 space-y-2 mt-2 text-slate-200">
+                    <li>Offer range increases each game.</li>
+                    <li>Minimum range increases by 200 each game.</li>
+                    <li>Maximum range increases by 500 each game.</li>
+                  </ul>
                 <li>The losing team will later review all offers and accept one.</li>
               </ul>
+
+              <div className="bg-slate-900/60 p-3 rounded-md border border-slate-700 mt-2">
+                <p className="font-semibold mb-1">Example</p>
+                <p>Game 1 offer range: <strong>250</strong> and <strong>2000</strong></p>
+                <p>Game 3 offer range: <strong>650</strong> and <strong>3000</strong></p>
+                <p>Game 7 offer range: <strong>1450</strong> and <strong>5000</strong></p>
+              </div>
             </div>
+
+            max = 2000 + gamesPlayed * 500
+min = 250 + gamesPlayed * 200
 
             <button
               onClick={() => setShowOfferHelp(false)}
