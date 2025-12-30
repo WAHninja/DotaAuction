@@ -137,7 +137,7 @@ export default function GameRulesCard() {
               </ul>
 
               <div className="bg-slate-900/60 p-3 rounded-md border border-slate-700">
-                <p className="font-semibold mb-1">Example</p>
+                <p className="font-semibold mb-1"><strong>Example</strong></p>
                 <p>Losing team total gold: <strong>4000</strong></p>
                 <p>Half of total: <strong>2000</strong></p>
                 <p>Winning team size: <strong>4 players</strong></p>
@@ -202,7 +202,7 @@ export default function GameRulesCard() {
               </ul>
 
               <div className="bg-slate-900/60 p-3 rounded-md border border-slate-700">
-                <p className="font-semibold mb-1">Example</p>
+                <p className="font-semibold mb-1"><strong>Example</strong></p>
                 <p>
                   Game 1 range: <strong>250 – 2000</strong>
                 </p>
