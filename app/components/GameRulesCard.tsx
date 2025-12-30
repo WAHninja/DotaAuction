@@ -25,7 +25,7 @@ export default function GameRulesCard() {
               <li>
                 <div className="flex items-center gap-2">
                   <span>
-                    All winning team members receive <strong>1000 gold</strong> plus a share of <strong>half of the losing team’s total gold</strong>.
+                    All winning team members receive 1000 gold plus a share of half of the losing team’s total gold.
                   </span>
                   <button
                     onClick={() => setShowGoldHelp(true)}
