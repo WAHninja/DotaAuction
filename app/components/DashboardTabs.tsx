@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 
-// Dynamically import StatsTab to avoid SSR issues
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
 type Game = {
@@ -37,6 +36,9 @@ export default function CreateMatchForm({
   const [completedVisible, setCompletedVisible] = useState(6);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
+  const [matchesWithGames, setMatchesWithGames] = useState<{
+    [matchId: number]: Game[];
+  }>({}); // store fetched games
 
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
@@ -51,6 +53,18 @@ export default function CreateMatchForm({
         setCompletedVisible(prev => prev + 5);
         setLoadingCompleted(false);
       }, 500);
+    }
+  };
+
+  // Fetch games for a match
+  const fetchGames = async (matchId: number) => {
+    if (matchesWithGames[matchId]) return; // already fetched
+    try {
+      const res = await fetch(`/api/match/${matchId}/games`);
+      const data: Game[] = await res.json();
+      setMatchesWithGames(prev => ({ ...prev, [matchId]: data }));
+    } catch (err) {
+      console.error('Failed to fetch games for match', matchId, err);
     }
   };
 
@@ -84,7 +98,6 @@ export default function CreateMatchForm({
           ))}
         </div>
       </div>
-
       <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
@@ -101,25 +114,25 @@ export default function CreateMatchForm({
     </div>
   );
 
-  function getCurrentGameNumber(games?: Game[]): number | undefined {
+  const getCurrentGameNumber = (games?: Game[]): number | undefined => {
     if (!games || !games.length) return undefined;
-
-    // Determine current game by status
     const currentGame = games.find(g => g.status === 'in progress' || g.status === 'auction pending');
-
     if (!currentGame) return undefined;
-
-    // Sort by id to calculate game number
     const sorted = [...games].sort((a, b) => a.id - b.id);
-    const index = sorted.findIndex(g => g.id === currentGame.id);
-    return index >= 0 ? index + 1 : undefined;
-  }
+    return sorted.findIndex(g => g.id === currentGame.id) + 1;
+  };
 
   const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
     const isCompleted = type === 'completed';
     const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
-    const currentGameNumber = !isCompleted ? getCurrentGameNumber(match.games) : undefined;
+    // fetch games if not already fetched
+    useEffect(() => {
+      fetchGames(match.id);
+    }, [match.id]);
+
+    const games = matchesWithGames[match.id];
+    const currentGameNumber = !isCompleted ? getCurrentGameNumber(games) : undefined;
 
     return (
       <div
@@ -142,7 +155,6 @@ export default function CreateMatchForm({
               </span>
             )}
           </span>
-
           <Link href={`/match/${match.id}`}>
             <button
               className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
@@ -196,7 +208,6 @@ export default function CreateMatchForm({
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
       <div className="flex justify-center gap-4 border-b border-slate-600 mb-4">
         {(['ongoing', 'completed', 'stats'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
