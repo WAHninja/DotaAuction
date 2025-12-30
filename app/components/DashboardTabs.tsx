@@ -102,6 +102,25 @@ export default function CreateMatchForm({
     </div>
   );
 
+  function getCurrentGameNumber(
+    games: Game[] | undefined,
+    currentGameId: number | undefined
+  ): number | undefined {
+    if (!games || !currentGameId) return undefined;
+
+    const sortedGames = [...games].sort((a, b) => {
+      // Prefer created_at if available
+      if (a.created_at && b.created_at) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      // Fallback to id for safety
+      return a.id - b.id;
+    });
+
+    const index = sortedGames.findIndex(g => g.id === currentGameId);
+    return index >= 0 ? index + 1 : undefined;
+  }
+
   const MatchCard = ({
   match,
   type,
@@ -113,10 +132,10 @@ export default function CreateMatchForm({
   const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
   // Compute current game number dynamically
-  const currentGameNumber =
-    !isCompleted && match.games && match.current_game_id
-      ? match.games.findIndex((g) => g.id === match.current_game_id) + 1
-      : undefined;
+   const currentGameNumber =
+     !isCompleted
+       ? getCurrentGameNumber(match.games, match.current_game_id)
+       : undefined;
 
   return (
     <div
