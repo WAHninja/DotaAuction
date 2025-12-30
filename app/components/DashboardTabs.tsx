@@ -10,18 +10,19 @@ const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
 type Game = {
   id: number;
-  gameNumber: number;
-  status: string;
+  status: 'in progress' | 'auction pending' | 'finished';
+  team_a_members: number[];
+  team_1_members: number[];
+  winning_team?: 'team_1' | 'team_a';
 };
 
 type Match = {
   id: number;
-  current_game_id?: number;
   team_a_usernames?: string[];
   team_1_usernames?: string[];
-  winning_team?: string;
+  winning_team?: 'team_1' | 'team_a';
   players?: string[];
-  games?: Game[]; // ✅ Added
+  games?: Game[];
 };
 
 export default function CreateMatchForm({
@@ -41,13 +42,13 @@ export default function CreateMatchForm({
     if (type === 'ongoing') {
       setLoadingOngoing(true);
       setTimeout(() => {
-        setOngoingVisible((prev) => prev + 5);
+        setOngoingVisible(prev => prev + 5);
         setLoadingOngoing(false);
       }, 500);
     } else {
       setLoadingCompleted(true);
       setTimeout(() => {
-        setCompletedVisible((prev) => prev + 5);
+        setCompletedVisible(prev => prev + 5);
         setLoadingCompleted(false);
       }, 500);
     }
@@ -70,11 +71,10 @@ export default function CreateMatchForm({
 
   const MatchTeams = ({ match }: { match: Match }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {/* Team A */}
       <div className="bg-lime-900/30 p-3 rounded-lg border border-lime-700/40">
         <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
-          {match.team_a_usernames?.map((u) => (
+          {match.team_a_usernames?.map(u => (
             <span
               key={u}
               className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full"
@@ -85,11 +85,10 @@ export default function CreateMatchForm({
         </div>
       </div>
 
-      {/* Team 1 */}
       <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
-          {match.team_1_usernames?.map((u) => (
+          {match.team_1_usernames?.map(u => (
             <span
               key={u}
               className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
@@ -102,82 +101,71 @@ export default function CreateMatchForm({
     </div>
   );
 
-  function getCurrentGameNumber(
-    games: Game[] | undefined,
-    currentGameId: number | undefined
-  ): number | undefined {
-    if (!games || !currentGameId) return undefined;
+  function getCurrentGameNumber(games?: Game[]): number | undefined {
+    if (!games || !games.length) return undefined;
 
-    // Sort by id (ascending)
-    const sortedGames = [...games].sort((a, b) => a.id - b.id);
+    // Determine current game by status
+    const currentGame = games.find(g => g.status === 'in progress' || g.status === 'auction pending');
 
-    const index = sortedGames.findIndex(g => g.id === currentGameId);
+    if (!currentGame) return undefined;
+
+    // Sort by id to calculate game number
+    const sorted = [...games].sort((a, b) => a.id - b.id);
+    const index = sorted.findIndex(g => g.id === currentGame.id);
     return index >= 0 ? index + 1 : undefined;
   }
 
-  const MatchCard = ({
-  match,
-  type,
-}: {
-  match: Match;
-  type: 'ongoing' | 'completed';
-}) => {
-  const isCompleted = type === 'completed';
-  const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
+  const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
+    const isCompleted = type === 'completed';
+    const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
-  // Compute current game number dynamically
-   const currentGameNumber =
-     !isCompleted
-       ? getCurrentGameNumber(match.games, match.current_game_id)
-       : undefined;
+    const currentGameNumber = !isCompleted ? getCurrentGameNumber(match.games) : undefined;
 
-  return (
-    <div
-      className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
-        isCompleted
-          ? 'bg-slate-800/80 border border-slate-600'
-          : 'bg-slate-700/80 border border-orange-500/40'
-      }`}
-    >
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-semibold text-sm">
-          Match #{match.id}{' '}
-          {isCompleted ? (
-            <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
-              <CheckCircle className="h-4 w-4" /> Winner: {winner}
-            </span>
-          ) : (
-            <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
-              <PlayCircle className="h-4 w-4" /> Current Game #
-              {currentGameNumber ?? '?'}
-            </span>
-          )}
-        </span>
+    return (
+      <div
+        className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
+          isCompleted
+            ? 'bg-slate-800/80 border border-slate-600'
+            : 'bg-slate-700/80 border border-orange-500/40'
+        }`}
+      >
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-semibold text-sm">
+            Match #{match.id}{' '}
+            {isCompleted ? (
+              <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
+                <CheckCircle className="h-4 w-4" /> Winner: {winner}
+              </span>
+            ) : (
+              <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
+                <PlayCircle className="h-4 w-4" /> Current Game #{currentGameNumber ?? '?'}
+              </span>
+            )}
+          </span>
 
-        <Link href={`/match/${match.id}`}>
-          <button
-            className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
-              isCompleted
-                ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                : 'bg-orange-500 hover:bg-orange-600 text-white'
-            }`}
-          >
-            {isCompleted ? 'View' : 'Continue'}
-          </button>
-        </Link>
+          <Link href={`/match/${match.id}`}>
+            <button
+              className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
+                isCompleted
+                  ? 'bg-slate-600 hover:bg-slate-700 text-white'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
+            >
+              {isCompleted ? 'View' : 'Continue'}
+            </button>
+          </Link>
+        </div>
+
+        {isCompleted && match.players && (
+          <p className="text-xs text-gray-300 mb-2">
+            Players: {match.players.join(', ')}
+          </p>
+        )}
+
+        <MatchTeams match={match} />
       </div>
-
-      {isCompleted && match.players && (
-        <p className="text-xs text-gray-300 mb-2">
-          Players: {match.players.join(', ')}
-        </p>
-      )}
-
-      <MatchTeams match={match} />
-    </div>
-  );
-};
-
+    );
+  };
 
   const LoadMoreButton = ({
     onClick,
@@ -210,7 +198,7 @@ export default function CreateMatchForm({
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex justify-center gap-4 border-b border-slate-600 mb-4">
-        {(['ongoing', 'completed', 'stats'] as const).map((tab) => (
+        {(['ongoing', 'completed', 'stats'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
         ))}
       </div>
@@ -220,7 +208,7 @@ export default function CreateMatchForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ongoingMatches.length ? (
             <>
-              {ongoingMatches.slice(0, ongoingVisible).map((match) => (
+              {ongoingMatches.slice(0, ongoingVisible).map(match => (
                 <MatchCard key={match.id} match={match} type="ongoing" />
               ))}
               <LoadMoreButton
@@ -230,9 +218,7 @@ export default function CreateMatchForm({
               />
             </>
           ) : (
-            <p className="text-center text-gray-400 col-span-full">
-              No ongoing matches yet.
-            </p>
+            <p className="text-center text-gray-400 col-span-full">No ongoing matches yet.</p>
           )}
         </div>
       )}
@@ -242,7 +228,7 @@ export default function CreateMatchForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {completedMatches.length ? (
             <>
-              {completedMatches.slice(0, completedVisible).map((match) => (
+              {completedMatches.slice(0, completedVisible).map(match => (
                 <MatchCard key={match.id} match={match} type="completed" />
               ))}
               <LoadMoreButton
@@ -252,9 +238,7 @@ export default function CreateMatchForm({
               />
             </>
           ) : (
-            <p className="text-center text-gray-400 col-span-full">
-              No completed matches.
-            </p>
+            <p className="text-center text-gray-400 col-span-full">No completed matches.</p>
           )}
         </div>
       )}
