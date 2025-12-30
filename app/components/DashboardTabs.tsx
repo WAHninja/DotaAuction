@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
+import { CheckCircle, PlayCircle } from 'lucide-react';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
@@ -21,7 +20,7 @@ type Match = {
   team_1_usernames?: string[];
   winning_team?: 'team_1' | 'team_a';
   players?: string[];
-  games?: Game[];
+  games: Game[]; // games must be included from the server
 };
 
 export default function CreateMatchForm({
@@ -31,14 +30,11 @@ export default function CreateMatchForm({
   ongoingMatches: Match[];
   completedMatches: Match[];
 }) {
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
-  const [ongoingVisible, setOngoingVisible] = useState(6);
-  const [completedVisible, setCompletedVisible] = useState(6);
-  const [loadingOngoing, setLoadingOngoing] = useState(false);
-  const [loadingCompleted, setLoadingCompleted] = useState(false);
-  const [matchesWithGames, setMatchesWithGames] = useState<{
-    [matchId: number]: Game[];
-  }>({}); // store fetched games
+  const [activeTab, setActiveTab] = React.useState<'ongoing' | 'completed' | 'stats'>('ongoing');
+  const [ongoingVisible, setOngoingVisible] = React.useState(6);
+  const [completedVisible, setCompletedVisible] = React.useState(6);
+  const [loadingOngoing, setLoadingOngoing] = React.useState(false);
+  const [loadingCompleted, setLoadingCompleted] = React.useState(false);
 
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
@@ -53,18 +49,6 @@ export default function CreateMatchForm({
         setCompletedVisible(prev => prev + 5);
         setLoadingCompleted(false);
       }, 500);
-    }
-  };
-
-  // Fetch games for a match
-  const fetchGames = async (matchId: number) => {
-    if (matchesWithGames[matchId]) return; // already fetched
-    try {
-      const res = await fetch(`/api/match/${matchId}/games`);
-      const data: Game[] = await res.json();
-      setMatchesWithGames(prev => ({ ...prev, [matchId]: data }));
-    } catch (err) {
-      console.error('Failed to fetch games for match', matchId, err);
     }
   };
 
@@ -89,12 +73,7 @@ export default function CreateMatchForm({
         <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
           {match.team_a_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
-              {u}
-            </span>
+            <span key={u} className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full">{u}</span>
           ))}
         </div>
       </div>
@@ -102,20 +81,14 @@ export default function CreateMatchForm({
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
           {match.team_1_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
-              {u}
-            </span>
+            <span key={u} className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full">{u}</span>
           ))}
         </div>
       </div>
     </div>
   );
 
-  const getCurrentGameNumber = (games?: Game[]): number | undefined => {
-    if (!games || !games.length) return undefined;
+  const getCurrentGameNumber = (games: Game[]): number | undefined => {
     const currentGame = games.find(g => g.status === 'in progress' || g.status === 'auction pending');
     if (!currentGame) return undefined;
     const sorted = [...games].sort((a, b) => a.id - b.id);
@@ -125,23 +98,12 @@ export default function CreateMatchForm({
   const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
     const isCompleted = type === 'completed';
     const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
-
-    // fetch games if not already fetched
-    useEffect(() => {
-      fetchGames(match.id);
-    }, [match.id]);
-
-    const games = matchesWithGames[match.id];
-    const currentGameNumber = !isCompleted ? getCurrentGameNumber(games) : undefined;
+    const currentGameNumber = !isCompleted ? getCurrentGameNumber(match.games) : undefined;
 
     return (
-      <div
-        className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
-          isCompleted
-            ? 'bg-slate-800/80 border border-slate-600'
-            : 'bg-slate-700/80 border border-orange-500/40'
-        }`}
-      >
+      <div className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
+        isCompleted ? 'bg-slate-800/80 border border-slate-600' : 'bg-slate-700/80 border border-orange-500/40'
+      }`}>
         <div className="flex justify-between items-center mb-2">
           <span className="font-semibold text-sm">
             Match #{match.id}{' '}
@@ -156,13 +118,9 @@ export default function CreateMatchForm({
             )}
           </span>
           <Link href={`/match/${match.id}`}>
-            <button
-              className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
-                isCompleted
-                  ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                  : 'bg-orange-500 hover:bg-orange-600 text-white'
-              }`}
-            >
+            <button className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
+              isCompleted ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'
+            }`}>
               {isCompleted ? 'View' : 'Continue'}
             </button>
           </Link>
@@ -179,15 +137,7 @@ export default function CreateMatchForm({
     );
   };
 
-  const LoadMoreButton = ({
-    onClick,
-    loading,
-    hidden,
-  }: {
-    onClick: () => void;
-    loading: boolean;
-    hidden: boolean;
-  }) =>
+  const LoadMoreButton = ({ onClick, loading, hidden }: { onClick: () => void; loading: boolean; hidden: boolean }) =>
     !hidden ? (
       <div className="col-span-full text-center mt-4">
         <button
@@ -195,13 +145,7 @@ export default function CreateMatchForm({
           disabled={loading}
           className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin h-5 w-5" /> Loading...
-            </>
-          ) : (
-            'Load More'
-          )}
+          {loading ? <span>Loading...</span> : 'Load More'}
         </button>
       </div>
     ) : null;
@@ -214,7 +158,6 @@ export default function CreateMatchForm({
         ))}
       </div>
 
-      {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ongoingMatches.length ? (
@@ -234,7 +177,6 @@ export default function CreateMatchForm({
         </div>
       )}
 
-      {/* Completed Matches */}
       {activeTab === 'completed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {completedMatches.length ? (
@@ -254,7 +196,6 @@ export default function CreateMatchForm({
         </div>
       )}
 
-      {/* Stats */}
       {activeTab === 'stats' && (
         <div className="px-2 md:px-0">
           <StatsTab />
