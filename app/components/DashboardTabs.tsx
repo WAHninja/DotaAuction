@@ -108,14 +108,8 @@ export default function CreateMatchForm({
   ): number | undefined {
     if (!games || !currentGameId) return undefined;
 
-    const sortedGames = [...games].sort((a, b) => {
-      // Prefer created_at if available
-      if (a.created_at && b.created_at) {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }
-      // Fallback to id for safety
-      return a.id - b.id;
-    });
+    // Sort by id (ascending)
+    const sortedGames = [...games].sort((a, b) => a.id - b.id);
 
     const index = sortedGames.findIndex(g => g.id === currentGameId);
     return index >= 0 ? index + 1 : undefined;
