@@ -3,7 +3,8 @@
 import { useState } from 'react';
 
 export default function GameRulesCard() {
-  const [showHelp, setShowHelp] = useState(false);
+  const [showGoldHelp, setShowGoldHelp] = useState(false);
+  const [showOfferHelp, setShowOfferHelp] = useState(false);
 
   return (
     <>
@@ -34,7 +35,7 @@ export default function GameRulesCard() {
                   </span>
 
                   <button
-                    onClick={() => setShowHelp(true)}
+                    onClick={() => setShowGoldHelp(true)}
                     className="mt-0.5 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-5 h-5 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
                     aria-label="Gold calculation help"
                   >
@@ -46,7 +47,16 @@ export default function GameRulesCard() {
           </li>      
 
           <li>
-            Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
+            <div className="flex items-start gap-2">
+              Each player on the winning team submits <strong>a gold offer</strong> to sell one of their <strong>own players</strong>.
+              <button
+                onClick={() => setShowOfferHelp(true)}
+                className="mt-0.5 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full w-5 h-5 flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
+                aria-label="Offer submission help"
+              >
+                ?
+              </button>
+            </div>
           </li>
 
           <li>
@@ -64,11 +74,10 @@ export default function GameRulesCard() {
         </ul>
       </div>
 
-      {/* ===== Help Modal ===== */}
-      {showHelp && (
+      {/* ===== Gold Help Modal ===== */}
+      {showGoldHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative">
-
             <h3 className="text-lg font-semibold mb-4">
               Gold Distribution Explained
             </h3>
@@ -87,8 +96,7 @@ export default function GameRulesCard() {
 
                 <li>
                   <strong>Shared bonus:</strong><br />
-                  Half of the losing team’s remaining gold is calculated
-                  and split evenly among the winning team.
+                  Half of the losing team’s remaining gold is split evenly among the winning team.
                 </li>
               </ul>
 
@@ -108,9 +116,41 @@ export default function GameRulesCard() {
               </div>
             </div>
 
-            {/* Close button */}
             <button
-              onClick={() => setShowHelp(false)}
+              onClick={() => setShowGoldHelp(false)}
+              className="absolute top-3 right-3 text-slate-400 hover:text-white text-lg"
+              aria-label="Close help modal"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Offer Help Modal ===== */}
+      {showOfferHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative">
+            <h3 className="text-lg font-semibold mb-4">
+              Gold Offer Explained
+            </h3>
+
+            <div className="space-y-4 text-sm text-slate-200">
+              <p>
+                During the auction phase:
+              </p>
+
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Only winners can submit offers.</li>
+                <li>You can submit <strong>one offer per game</strong>.</li>
+                <li>Offers must be made to <strong>another teammate</strong>, not yourself.</li>
+                <li>Pick a gold amount within the allowed range for this game.</li>
+                <li>The losing team will later review all offers and accept one.</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={() => setShowOfferHelp(false)}
               className="absolute top-3 right-3 text-slate-400 hover:text-white text-lg"
               aria-label="Close help modal"
             >
