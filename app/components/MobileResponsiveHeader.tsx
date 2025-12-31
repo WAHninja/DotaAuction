@@ -10,7 +10,9 @@ import LogoutButton from './LogoutButton';
 export default function MobileResponsiveHeader() {
   const { user } = useContext(UserContext);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Disable background scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => {
@@ -18,22 +20,27 @@ export default function MobileResponsiveHeader() {
     };
   }, [menuOpen]);
 
+  // Detect when user is loaded
+  useEffect(() => {
+    if (user !== undefined) setLoading(false);
+  }, [user]);
+
   const closeMenu = () => setMenuOpen(false);
 
+  // Navigation links
   const NavLinks = () => (
     <>
-      <span className="italic text-gold">Welcome, {user?.username}</span>
+      {user && <span className="italic text-gold">Welcome, {user.username}</span>}
       <Link href="/" className="hover:text-gold transition" onClick={closeMenu}>
         Home
       </Link>
-      <LogoutButton />
+      {user && <LogoutButton />}
     </>
   );
 
-  if (!user) return null;
-
   return (
     <>
+      {/* Header / Banner */}
       <header className="bg-gradient-to-r from-radiant-green via-surface to-dire-red p-4 shadow-lg border-b border-gold">
         <div className="max-w-7xl mx-auto flex justify-between items-center px-4">
           <div className="flex items-center space-x-4">
@@ -43,10 +50,12 @@ export default function MobileResponsiveHeader() {
             </h1>
           </div>
 
+          {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-4 text-base md:text-lg">
-            <NavLinks />
+            {!loading && <NavLinks />}
           </nav>
 
+          {/* Mobile menu button */}
           <button
             aria-label="Open menu"
             onClick={() => setMenuOpen(true)}
@@ -57,6 +66,7 @@ export default function MobileResponsiveHeader() {
         </div>
       </header>
 
+      {/* Mobile side menu */}
       <aside
         className={`fixed top-0 right-0 h-full w-64 bg-gray-900 z-50 transform ${
           menuOpen ? 'translate-x-0' : 'translate-x-full'
@@ -67,11 +77,13 @@ export default function MobileResponsiveHeader() {
             <FaTimes />
           </button>
         </div>
+
         <nav className="flex flex-col items-start gap-6 p-8 text-lg">
-          <NavLinks />
+          {!loading && <NavLinks />}
         </nav>
       </aside>
 
+      {/* Overlay */}
       {menuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"
