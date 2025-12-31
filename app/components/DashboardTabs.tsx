@@ -116,7 +116,7 @@ export default function CreateMatchForm({
     }, [match.id, isCompleted]);
 
     const currentGameNumber = !isCompleted
-      ? (gamesPlayedMap[match.id] !== undefined ? gamesPlayedMap[match.id] + 1 : undefined)
+      ? (gamesPlayedMap[match.id] !== undefined ? gamesPlayedMap[match.id] : undefined)
       : undefined;
 
     return (
