@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSessionIdFromCookies } from '@/app/session';
 import db from '@/lib/db';
 
-export async function GET(req: NextRequest) {
-  const sessionId = await getSessionIdFromCookies(req);
+export async function GET() {
+  const sessionId = await getSessionIdFromCookies(); // ← no arguments
 
   if (!sessionId) {
     return NextResponse.json({ user: null });
