@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const router = useRouter();
-
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +18,7 @@ export default function LoginPage() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // 🔑 REQUIRED for session cookie
+        credentials: 'include', // ✅ important for HTTP-only cookie
         body: JSON.stringify({ username, pin }),
       });
 
@@ -30,11 +27,10 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // ✅ Force a clean navigation so UserProvider re-runs /api/me
-      router.replace('/');
+      // 🔑 HARD redirect so UserProvider re-fetches user immediately
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
