@@ -46,12 +46,12 @@ const TeamList = ({
     <h3 className={`font-semibold mb-1 ${color}`}>
       {teamName} {isWinner && <Trophy className="inline w-4 h-4 text-green-400 ml-1" />}
     </h3>
-    <ul className="space-y-1">
+    <ul className="space-y-1 max-h-48 overflow-y-auto">
       {members.map((player) => (
         <li
           key={player}
           className={`pl-2 truncate ${isWinner ? 'text-green-400 font-semibold' : 'text-gray-300'}`}
-          title={player} // tooltip for long names
+          title={player}
         >
           {player}
         </li>
@@ -61,15 +61,15 @@ const TeamList = ({
 )
 
 const OfferList = ({ offers }: { offers: Offer[] }) => (
-  <div className="mb-4">
-    <h4 className="text-yellow-300 font-semibold mb-1">Offers</h4>
-    <ul className="space-y-1 text-sm">
+  <div className="bg-gray-800 p-2 rounded-lg shadow-inner">
+    <h4 className="text-yellow-300 font-semibold mb-2">Offers</h4>
+    <ul className="space-y-1 max-h-48 overflow-y-auto">
       {offers.map((offer) => (
         <li
           key={offer.id}
-          className="flex justify-between items-center px-2 py-1 bg-gray-800 rounded"
+          className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
         >
-          <span className="text-gray-300 truncate max-w-[150px]" title={`${offer.from_username} → ${offer.target_username}`}>
+          <span className="text-gray-300 truncate max-w-[120px]" title={`${offer.from_username} → ${offer.target_username}`}>
             {offer.from_username} → {offer.target_username}
           </span>
           <span
@@ -90,15 +90,15 @@ const OfferList = ({ offers }: { offers: Offer[] }) => (
 )
 
 const GoldChangeList = ({ playerStats }: { playerStats: PlayerStat[] }) => (
-  <div>
-    <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
-    <ul className="space-y-1 text-sm">
+  <div className="bg-gray-800 p-2 rounded-lg shadow-inner">
+    <h4 className="text-cyan-300 font-semibold mb-2">Gold Changes</h4>
+    <ul className="space-y-1 max-h-48 overflow-y-auto">
       {playerStats.map((stat) => (
         <li
           key={stat.id || `${stat.playerId}-${stat.reason}`}
           className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
         >
-          <span className="text-gray-300 truncate max-w-[150px]" title={stat.username || `Player#${stat.playerId}`}>
+          <span className="text-gray-300 truncate max-w-[120px]" title={stat.username || `Player#${stat.playerId}`}>
             {stat.username || `Player#${stat.playerId}`} –{' '}
             {stat.reason === 'win_reward'
               ? 'Win Bonus'
@@ -141,6 +141,7 @@ export default function GameHistoryCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Header */}
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-xl font-bold text-yellow-400">Game #{gameId}</h2>
         <span className="text-sm text-gray-400">{date}</span>
@@ -170,11 +171,13 @@ export default function GameHistoryCard({
         </div>
       )}
 
-      {/* Offers */}
-      {offers.length > 0 && <OfferList offers={offers} />}
-
-      {/* Gold Changes */}
-      {playerStats.length > 0 && <GoldChangeList playerStats={playerStats} />}
+      {/* Offers + Gold Changes Side by Side */}
+      {(offers.length > 0 || playerStats.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {offers.length > 0 && <OfferList offers={offers} />}
+          {playerStats.length > 0 && <GoldChangeList playerStats={playerStats} />}
+        </div>
+      )}
     </motion.div>
   )
 }
