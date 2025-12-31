@@ -7,30 +7,26 @@ export async function GET(req: NextRequest) {
     // 1️⃣ Fetch all matches
     const matchesResult = await db.query(`SELECT id FROM matches`)
     const matchIds = matchesResult.rows.map((m: any) => m.id)
-    if (matchIds.length === 0) {
-      return NextResponse.json({ players: [], topWinningCombos: [] })
-    }
+    if (matchIds.length === 0) return NextResponse.json({ players: [], topWinningCombos: [] })
 
-    // 2️⃣ Fetch all games for these matches
+    // 2️⃣ Fetch all finished games
     const gamesResult = await db.query(
       `
-      SELECT id AS game_id, match_id, team_a_members, team_1_members, winning_team
+      SELECT id AS game_id, match_id, team_a_members, team_1_members, winning_team, status
       FROM games
-      WHERE match_id = ANY($1)
+      WHERE match_id = ANY($1) AND status = 'finished'
       ORDER BY id ASC
       `,
       [matchIds]
     )
-    const games = gamesResult.rows.filter((g: any) => g.winning_team) // only finished games
+    const games = gamesResult.rows
 
-    // 3️⃣ Fetch all users
+    // 3️⃣ Fetch users
     const usersResult = await db.query(`SELECT id, username FROM users`)
     const playerIdToUsername: Record<number, string> = {}
-    usersResult.rows.forEach((u: any) => {
-      playerIdToUsername[u.id] = u.username
-    })
+    usersResult.rows.forEach((u: any) => (playerIdToUsername[u.id] = u.username))
 
-    // 4️⃣ Fetch all offers for these games
+    // 4️⃣ Fetch offers for these games
     const gameIds = games.map(g => g.game_id)
     const offersResult = await db.query(
       `
@@ -45,19 +41,18 @@ export async function GET(req: NextRequest) {
     const playerStatsMap = new Map<number, any>()
     const teamComboWins = new Map<string, number>()
 
-    // 6️⃣ Compute stats
     for (const game of games) {
-      const teamA = [...new Set(game.team_a_members)]
-      const team1 = [...new Set(game.team_1_members)]
+      const teamA = game.team_a_members as number[]
+      const team1 = game.team_1_members as number[]
       const winnerTeamIds = game.winning_team === 'team_1' ? team1 : teamA
 
-      // Track winning combinations
+      // Track winning combos
       const winnerUsernames = winnerTeamIds.map(id => playerIdToUsername[id] || `Player#${id}`)
       const comboKey = [...winnerUsernames].sort().join(' + ')
       teamComboWins.set(comboKey, (teamComboWins.get(comboKey) || 0) + 1)
 
       // Update stats for all participants
-      const allPlayers = [...new Set([...teamA, ...team1])]
+      const allPlayers = Array.from(new Set([...teamA, ...team1]))
       for (const playerId of allPlayers) {
         if (!playerStatsMap.has(playerId)) {
           playerStatsMap.set(playerId, {
@@ -76,21 +71,18 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 7️⃣ Process offers
+    // 6️⃣ Process offers
     for (const offer of offersResult.rows) {
       const fromStats = playerStatsMap.get(offer.from_player_id)
       if (fromStats) {
         fromStats.offersMade += 1
         if (offer.status === 'accepted') fromStats.offersAccepted += 1
       }
-
       const targetStats = playerStatsMap.get(offer.target_player_id)
-      if (targetStats && offer.status === 'accepted') {
-        targetStats.timesSold += 1
-      }
+      if (targetStats && offer.status === 'accepted') targetStats.timesSold += 1
     }
 
-    // 8️⃣ Convert stats to array with usernames and percentages
+    // 7️⃣ Convert map to array
     const playersStatsArray = Array.from(playerStatsMap.entries()).map(([playerId, stats]) => {
       const username = playerIdToUsername[playerId] || `Player#${playerId}`
       return {
@@ -107,7 +99,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // 9️⃣ Top winning team combinations
+    // 8️⃣ Top winning team combinations
     const topWinningCombos = Array.from(teamComboWins.entries())
       .map(([combo, wins]) => ({ combo, wins }))
       .sort((a, b) => b.wins - a.wins)
