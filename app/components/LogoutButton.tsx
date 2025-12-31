@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useContext } from 'react';
-import { UserContext } from '@/app/context/UserContext'; // your global user context
+import { UserContext } from '@/app/context/UserContext';
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -11,29 +11,19 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     setLoading(true);
-
-    // Optimistically clear user from UI
-    setUser(null);
+    setUser(null); // Optimistic update
 
     try {
-      const response = await fetch('/api/logout', {
+      const res = await fetch('/api/logout', {
         method: 'POST',
-        headers: { 'Accept': 'application/json' },
+        headers: { Accept: 'application/json' },
       });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Logout failed');
-      }
-
-      // Redirect after logout
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Logout failed');
       router.push('/login');
     } catch (error) {
       console.error(error);
       alert('Failed to logout. Please try again.');
-      // Rollback user state if logout failed
-      setUser({ username: 'Unknown' }); // or fetch current user again
       setLoading(false);
     }
   };
