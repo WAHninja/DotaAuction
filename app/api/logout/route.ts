@@ -1,15 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { destroySession } from '@/app/session';
 
-export async function POST(req: NextRequest) {
-  const response = NextResponse.json({ success: true });
-
+export async function POST() {
   try {
-    await destroySession(response); // clears session cookie + removes from DB
+    const response = NextResponse.json({ success: true });
+    await destroySession(response); // clears DB + cookie
+    return response;
   } catch (error) {
-    console.error('Error destroying session:', error);
+    console.error('Failed to logout:', error);
     return NextResponse.json({ success: false, error: 'Failed to logout' }, { status: 500 });
   }
-
-  return response;
 }
