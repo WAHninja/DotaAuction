@@ -305,4 +305,18 @@ function SortableHeader({
   label: string;
   active: boolean;
   direction: 'asc' | 'desc';
-  onC
+  onClick: () => void;
+}) {
+  return (
+    <th
+      onClick={onClick}
+      className="px-2 sm:px-3 py-2 cursor-pointer select-none hover:text-orange-400"
+      aria-sort={
+        active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
+      }
+    >
+      {label}
+      {active && <span className="ml-1">{direction === 'asc' ? '▲' : '▼'}</span>}
+    </th>
+  );
+}
