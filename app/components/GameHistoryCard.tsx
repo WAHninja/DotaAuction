@@ -60,34 +60,46 @@ const TeamList = ({
   </div>
 )
 
-const OfferList = ({ offers }: { offers: Offer[] }) => (
-  <div className="bg-gray-800 p-2 rounded-lg shadow-inner">
-    <h4 className="text-yellow-300 font-semibold mb-2">Offers</h4>
-    <ul className="space-y-1 max-h-48 overflow-y-auto">
-      {offers.map((offer) => (
-        <li
-          key={offer.id}
-          className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
-        >
-          <span className="text-gray-300 truncate max-w-[120px]" title={`${offer.from_username} → ${offer.target_username}`}>
-            {offer.from_username} → {offer.target_username}
-          </span>
-          <span
-            className={`text-sm ${
-              offer.status === 'accepted'
-                ? 'text-green-400'
-                : offer.status === 'rejected'
-                ? 'text-red-400'
-                : 'text-yellow-400'
-            }`}
+const OfferList = ({ offers }: { offers: Offer[] }) => {
+  // Sort offers: accepted first
+  const sortedOffers = [...offers].sort((a, b) => {
+    if (a.status === 'accepted') return -1
+    if (b.status === 'accepted') return 1
+    return 0
+  })
+
+  return (
+    <div className="bg-gray-800 p-2 rounded-lg shadow-inner">
+      <h4 className="text-yellow-300 font-semibold mb-2">Offers</h4>
+      <ul className="space-y-1 max-h-48 overflow-y-auto">
+        {sortedOffers.map((offer) => (
+          <li
+            key={offer.id}
+            className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
           >
-            {offer.status === 'pending' ? '?' : offer.offer_amount}g ({offer.status})
-          </span>
-        </li>
-      ))}
-    </ul>
-  </div>
-)
+            <span
+              className="text-gray-300 truncate max-w-[120px]"
+              title={`${offer.from_username} → ${offer.target_username}`}
+            >
+              {offer.from_username} → {offer.target_username}
+            </span>
+            <span
+              className={`text-sm ${
+                offer.status === 'accepted'
+                  ? 'text-green-400'
+                  : offer.status === 'rejected'
+                  ? 'text-red-400'
+                  : 'text-yellow-400'
+              }`}
+            >
+              {offer.status === 'pending' ? '?' : offer.offer_amount}g ({offer.status})
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 const GoldChangeList = ({ playerStats }: { playerStats: PlayerStat[] }) => (
   <div className="bg-gray-800 p-2 rounded-lg shadow-inner">
