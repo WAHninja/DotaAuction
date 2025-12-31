@@ -17,7 +17,7 @@ export default async function DashboardPage() {
     );
 
     // ===== Ongoing Matches =====
-    const { rows: ongoingMatches } = await db.query(
+    const { rows: ongoingMatchesRaw } = await db.query(
       `
       SELECT
         m.id AS match_id,
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
     );
 
     // ===== Completed Matches =====
-    const { rows: completedMatches } = await db.query(
+    const { rows: completedMatchesRaw } = await db.query(
       `
       SELECT
         m.id AS match_id,
@@ -87,6 +87,17 @@ export default async function DashboardPage() {
       `,
       [session.userId]
     );
+
+    // ===== Normalize match_id → id so frontend works with existing components =====
+    const ongoingMatches = ongoingMatchesRaw.map(m => ({
+      ...m,
+      id: m.match_id,
+    }));
+
+    const completedMatches = completedMatchesRaw.map(m => ({
+      ...m,
+      id: m.match_id,
+    }));
 
     return (
       <div className="relative min-h-screen animate-fadeIn">
