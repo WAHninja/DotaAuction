@@ -1,60 +1,61 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // To navigate after login
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter(); // To navigate after login
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
 
     try {
-      const res = await fetch('/api/register', {
+      // 1️⃣ Register
+      const registerRes = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, pin }),
       });
 
-      const data = await res.json();
+      const registerData = await registerRes.json();
 
-      if (res.ok) {
-        // Successful registration message
-        setMessage('✅ Registered successfully!');
-
-        // Now log the user in by calling the login API with the same credentials
-        const loginRes = await fetch('/api/login', {
-          method: 'POST',
-          body: JSON.stringify({ username, pin }),
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        const loginData = await loginRes.json();
-
-        if (loginRes.ok) {
-          // Redirect the user after successful login
-          window.location.href = 'https://dotaauction.onrender.com/'; // Or redirect to your app's homepage or dashboard
-        } else {
-          setError(loginData.error || 'Login failed after registration');
-        }
-
-        setUsername('');
-        setPin('');
-      } else {
-        setMessage(`❌ ${data.error || 'Registration failed.'}`);
+      if (!registerRes.ok) {
+        throw new Error(registerData.error || 'Registration failed');
       }
-    } catch (err) {
-      setMessage('❌ Network error. Please try again.');
+
+      // 2️⃣ Auto-login
+      const loginRes = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, pin }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (!loginRes.ok) {
+        throw new Error(loginData.error || 'Login failed after registration');
+      }
+
+      // 3️⃣ Redirect (session cookie already set)
+      router.push('/');
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 text-white font-[Cinzel]">
+    <div className="flex items-center justify-center min-h-full p-4 text-white font-[Cinzel]">
       <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
         <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
           Register
@@ -70,8 +71,11 @@ export default function RegisterPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              disabled={loading}
               required
-              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2
+                         focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white
+                         disabled:opacity-60"
             />
           </div>
 
@@ -86,16 +90,22 @@ export default function RegisterPage() {
               pattern="\d{4,}"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
+              disabled={loading}
               required
-              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2
+                         focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white
+                         disabled:opacity-60"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold py-2 rounded shadow-lg transition-all duration-200"
+            disabled={loading}
+            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold
+                       py-2 rounded shadow-lg transition-all duration-200
+                       disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Register
+            {loading ? 'Registering…' : 'Register'}
           </button>
         </form>
 
@@ -106,11 +116,10 @@ export default function RegisterPage() {
           </Link>
         </p>
 
-        {message && (
-          <p className="mt-4 text-center text-sm text-orange-400">{message}</p>
-        )}
         {error && (
-          <p className="mt-4 text-center text-sm text-orange-400">{error}</p>
+          <p className="mt-4 text-center text-sm text-orange-400">
+            {error}
+          </p>
         )}
       </div>
     </div>
