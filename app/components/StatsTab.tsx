@@ -148,7 +148,7 @@ export default function StatsTab() {
       {/* =======================
           Player Stats Table
       ======================= */}
-      <div className="overflow-x-auto bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
+      <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl overflow-x-auto">
         <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
           Player Stats
         </h3>
@@ -158,7 +158,7 @@ export default function StatsTab() {
             No player statistics available yet.
           </p>
         ) : (
-          <table className="min-w-full text-sm text-left text-white">
+          <table className="min-w-full text-sm sm:text-base text-left text-white">
             <thead>
               <tr className="bg-slate-800/80">
                 <SortableHeader
@@ -200,15 +200,15 @@ export default function StatsTab() {
                   key={p.username}
                   className="border-b border-slate-600 hover:bg-slate-700/40"
                 >
-                  <td className="px-3 py-2 font-semibold">{p.username}</td>
-                  <td className="px-3 py-2">{p.matches}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 sm:px-3 sm:py-2 font-semibold">{p.username}</td>
+                  <td className="px-2 py-2 sm:px-3 sm:py-2">{p.matches}</td>
+                  <td className="px-2 py-2 sm:px-3 sm:py-2">
                     {formatStat(p.gamesWon, p.gamesPlayed)}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 sm:px-3 sm:py-2">
                     {formatStat(p.offersAccepted, p.offersMade)}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 sm:px-3 sm:py-2">
                     {formatStat(p.timesSold, p.gamesPlayed)}
                   </td>
                 </tr>
@@ -241,13 +241,13 @@ export default function StatsTab() {
               return (
                 <li
                   key={combo.combo}
-                  className="flex flex-col md:flex-row md:items-center gap-2 bg-slate-800/80 p-3 rounded-md hover:bg-slate-700/50 transition"
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-800/80 p-3 rounded-md hover:bg-slate-700/50 transition"
                 >
                   {/* Rank + Name */}
-                  <div className="flex items-center gap-2 flex-shrink-0 md:w-auto">
-                    <span className="font-semibold text-yellow-400">{idx + 1}.</span>
+                  <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                    <span className="font-semibold text-yellow-400 text-base sm:text-lg">{idx + 1}.</span>
                     <span
-                      className="truncate text-white max-w-[calc(50vw-100px)] md:max-w-[250px]"
+                      className="truncate text-white text-sm sm:text-base"
                       title={combo.combo}
                     >
                       {combo.combo}
@@ -255,7 +255,7 @@ export default function StatsTab() {
                   </div>
 
                   {/* Mini bar */}
-                  <div className="relative flex-1 h-4 bg-slate-600 rounded-md overflow-hidden mt-1 md:mt-0">
+                  <div className="relative flex-1 h-4 bg-slate-600 rounded-md overflow-hidden mt-2 sm:mt-0">
                     <div
                       className="h-full rounded-md transition-all duration-500"
                       style={{
@@ -266,7 +266,7 @@ export default function StatsTab() {
                   </div>
 
                   {/* Wins */}
-                  <span className="ml-2 md:ml-4 font-bold text-green-300 flex-shrink-0">
+                  <span className="mt-1 sm:mt-0 sm:ml-4 font-bold text-green-300 text-sm sm:text-base flex-shrink-0">
                     {combo.wins} win{combo.wins > 1 ? 's' : ''}
                   </span>
                 </li>
@@ -297,7 +297,7 @@ function SortableHeader({
   return (
     <th
       onClick={onClick}
-      className="px-3 py-2 cursor-pointer select-none hover:text-orange-400"
+      className="px-2 sm:px-3 py-2 cursor-pointer select-none hover:text-orange-400"
       aria-sort={
         active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
       }
