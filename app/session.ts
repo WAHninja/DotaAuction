@@ -30,15 +30,20 @@ export async function createSession(userId: number) {
 }
 
 // ------------------ Get Session ID ------------------
-export function getSessionIdFromCookies(): string | null {
-  const cookieStore = cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  return sessionCookie?.value ?? null;
+export async function getSessionIdFromCookies(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies(); // must await
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+    return sessionCookie?.value ?? null;
+  } catch (error) {
+    console.error('Error reading session cookie:', error);
+    return null;
+  }
 }
 
 // ------------------ Get Session ------------------
 export async function getSession() {
-  const sessionId = getSessionIdFromCookies();
+  const sessionId = await getSessionIdFromCookies(); // must await
   if (!sessionId) return null;
 
   const result = await db.query(
@@ -59,7 +64,7 @@ export async function getSession() {
 
 // ------------------ Destroy Session ------------------
 export async function destroySession(response?: NextResponse) {
-  const sessionId = getSessionIdFromCookies();
+  const sessionId = await getSessionIdFromCookies(); // must await
   if (!sessionId) return;
 
   await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
