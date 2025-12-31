@@ -10,9 +10,9 @@ const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
 type Match = {
   id: number;
+  winner_id?: number;
   team_a_usernames?: string[];
   team_1_usernames?: string[];
-  winning_team?: 'team_1' | 'team_a';
   players?: string[];
 };
 
@@ -31,6 +31,8 @@ export default function CreateMatchForm({
 
   // Store number of games played for each match
   const [gamesPlayedMap, setGamesPlayedMap] = useState<{ [matchId: number]: number }>({});
+  // Store winner usernames for completed matches
+  const [winnerUsernames, setWinnerUsernames] = useState<{ [matchId: number]: string }>({});
 
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
@@ -60,6 +62,18 @@ export default function CreateMatchForm({
     }
   };
 
+  // Fetch winner username for completed match
+  const fetchWinnerUsername = async (matchId: number, winnerId?: number) => {
+    if (!winnerId || winnerUsernames[matchId]) return;
+    try {
+      const res = await fetch(`/api/users/${winnerId}`);
+      const data = await res.json();
+      setWinnerUsernames(prev => ({ ...prev, [matchId]: data.username }));
+    } catch (err) {
+      console.error('Failed to fetch winner username for match', matchId, err);
+    }
+  };
+
   const TabButton = ({ tab }: { tab: 'ongoing' | 'completed' | 'stats' }) => (
     <button
       onClick={() => setActiveTab(tab)}
@@ -81,10 +95,7 @@ export default function CreateMatchForm({
         <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
           {match.team_a_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
+            <span key={u} className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
@@ -94,10 +105,7 @@ export default function CreateMatchForm({
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
           {match.team_1_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
+            <span key={u} className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
@@ -108,15 +116,15 @@ export default function CreateMatchForm({
 
   const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
     const isCompleted = type === 'completed';
-    const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
-    // fetch games played for ongoing matches
+    // fetch games played for ongoing matches or winner username for completed
     useEffect(() => {
-      if (!isCompleted) fetchGamesPlayed(match.id);
-    }, [match.id, isCompleted]);
+      if (isCompleted) fetchWinnerUsername(match.id, match.winner_id);
+      else fetchGamesPlayed(match.id);
+    }, [match.id, match.winner_id, isCompleted]);
 
     const currentGameNumber = !isCompleted
-      ? (gamesPlayedMap[match.id] !== undefined ? gamesPlayedMap[match.id] : undefined)
+      ? gamesPlayedMap[match.id] ?? undefined
       : undefined;
 
     return (
@@ -132,7 +140,7 @@ export default function CreateMatchForm({
             Match #{match.id}{' '}
             {isCompleted ? (
               <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" /> Winner: {winner}
+                <CheckCircle className="h-4 w-4" /> Winner: {winnerUsernames[match.id] ?? '...'}
               </span>
             ) : (
               <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
@@ -154,8 +162,7 @@ export default function CreateMatchForm({
         </div>
 
         {/* Show teams for both ongoing and completed matches */}
-        <MatchTeams match={{ ...match, team_a_usernames: match.team_a_usernames, team_1_usernames: match.team_1_usernames }} />
-
+        <MatchTeams match={{ team_a_usernames: match.team_a_usernames, team_1_usernames: match.team_1_usernames }} />
       </div>
     );
   };
