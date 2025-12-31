@@ -249,7 +249,9 @@ export default function StatsTab() {
         ) : (
           <ul className="space-y-2">
             {topCombos.map((combo, idx) => {
-              const greenValue = 120 + Math.round((combo.wins / topCombos[0].wins) * 80);
+              const maxWins = topCombos[0].wins;
+              const barWidthPercent = (combo.wins / maxWins) * 100;
+              const greenValue = 120 + Math.round((combo.wins / maxWins) * 80);
               const barColor = `rgb(0, ${greenValue}, 0)`;
 
               return (
@@ -260,20 +262,17 @@ export default function StatsTab() {
                   {/* Rank + Name */}
                   <div className="flex items-center gap-2 flex-shrink-0 w-max min-w-[200px] sm:min-w-[250px]">
                     <span className="font-semibold text-yellow-400 text-base sm:text-lg">{idx + 1}.</span>
-                    <span
-                      className="truncate text-white text-sm sm:text-base"
-                      title={combo.combo}
-                    >
+                    <span className="truncate text-white text-sm sm:text-base" title={combo.combo}>
                       {combo.combo}
                     </span>
                   </div>
 
-                  {/* Uniform Bar */}
+                  {/* Proportional Bar */}
                   <div className="relative flex-1 h-4 bg-slate-600 rounded-md overflow-hidden mt-2 sm:mt-0">
                     <div
                       className="h-full rounded-md transition-all duration-500"
                       style={{
-                        width: '100%',
+                        width: `${barWidthPercent}%`,
                         background: `linear-gradient(to right, ${barColor}, limegreen)`,
                       }}
                     />
@@ -306,18 +305,4 @@ function SortableHeader({
   label: string;
   active: boolean;
   direction: 'asc' | 'desc';
-  onClick: () => void;
-}) {
-  return (
-    <th
-      onClick={onClick}
-      className="px-2 sm:px-3 py-2 cursor-pointer select-none hover:text-orange-400"
-      aria-sort={
-        active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
-      }
-    >
-      {label}
-      {active && <span className="ml-1">{direction === 'asc' ? '▲' : '▼'}</span>}
-    </th>
-  );
-}
+  onC
