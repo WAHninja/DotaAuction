@@ -8,21 +8,12 @@ import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 // Dynamically import StatsTab to avoid SSR issues
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
-type Game = {
-  id: number;
-  status: 'in progress' | 'auction pending' | 'finished';
-  team_a_members: number[];
-  team_1_members: number[];
-  winning_team?: 'team_1' | 'team_a';
-};
-
 type Match = {
   id: number;
   team_a_usernames?: string[];
   team_1_usernames?: string[];
   winning_team?: 'team_1' | 'team_a';
   players?: string[];
-  games?: Game[];
 };
 
 export default function CreateMatchForm({
@@ -37,7 +28,9 @@ export default function CreateMatchForm({
   const [completedVisible, setCompletedVisible] = useState(6);
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
-  const [matchesWithGames, setMatchesWithGames] = useState<{ [matchId: number]: Game[] }>({});
+
+  // Store number of games played for each match
+  const [gamesPlayedMap, setGamesPlayedMap] = useState<{ [matchId: number]: number }>({});
 
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
@@ -55,14 +48,15 @@ export default function CreateMatchForm({
     }
   };
 
-  const fetchGames = async (matchId: number) => {
-    if (matchesWithGames[matchId]) return; // already fetched
+  // Fetch games played for a match
+  const fetchGamesPlayed = async (matchId: number) => {
+    if (gamesPlayedMap[matchId] !== undefined) return; // already fetched
     try {
-      const res = await fetch(`/api/match/${matchId}/games`);
-      const data: Game[] = await res.json();
-      setMatchesWithGames(prev => ({ ...prev, [matchId]: data }));
+      const res = await fetch(`/api/match/${matchId}/games-played`);
+      const data = await res.json();
+      setGamesPlayedMap(prev => ({ ...prev, [matchId]: data.gamesPlayed }));
     } catch (err) {
-      console.error('Failed to fetch games for match', matchId, err);
+      console.error('Failed to fetch games played for match', matchId, err);
     }
   };
 
@@ -112,25 +106,18 @@ export default function CreateMatchForm({
     </div>
   );
 
-  const getCurrentGameNumber = (games?: Game[]): number | undefined => {
-    if (!games || !games.length) return undefined;
-    const currentGame = games.find(g => g.status === 'in progress' || g.status === 'auction pending');
-    if (!currentGame) return undefined;
-    const sorted = [...games].sort((a, b) => a.id - b.id);
-    return sorted.findIndex(g => g.id === currentGame.id) + 1;
-  };
-
   const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
     const isCompleted = type === 'completed';
     const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
-    // fetch games if not already fetched
+    // fetch games played for ongoing matches
     useEffect(() => {
-      fetchGames(match.id);
-    }, [match.id]);
+      if (!isCompleted) fetchGamesPlayed(match.id);
+    }, [match.id, isCompleted]);
 
-    const games = matchesWithGames[match.id];
-    const currentGameNumber = !isCompleted ? getCurrentGameNumber(games) : undefined;
+    const currentGameNumber = !isCompleted
+      ? (gamesPlayedMap[match.id] !== undefined ? gamesPlayedMap[match.id] + 1 : undefined)
+      : undefined;
 
     return (
       <div
