@@ -3,7 +3,8 @@ import { getSessionIdFromCookies } from '@/app/session';
 import db from '@/lib/db';
 
 export async function GET() {
-  const sessionId = getSessionIdFromCookies(); // synchronous now
+  const sessionId = await getSessionIdFromCookies(); // <-- MUST await
+
   if (!sessionId) {
     return NextResponse.json({ user: null });
   }
