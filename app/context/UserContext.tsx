@@ -2,9 +2,11 @@
 
 import { createContext, useState, useEffect, ReactNode } from 'react';
 
-type User = { username: string } | null;
+export type User = {
+  username: string;
+} | null;
 
-type UserContextType = {
+export type UserContextType = {
   user: User;
   setUser: (user: User) => void;
 };
@@ -14,26 +16,39 @@ export const UserContext = createContext<UserContextType>({
   setUser: () => {},
 });
 
-type Props = { children: ReactNode };
+type Props = {
+  children: ReactNode;
+};
 
 export default function UserProvider({ children }: Props) {
   const [user, setUser] = useState<User>(null);
 
-  // Fetch current user on mount
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch('/api/me', { headers: { Accept: 'application/json' } });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user ?? null);
+        const res = await fetch('/api/me', {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store', // always get latest user data
+        });
+
+        if (!res.ok) {
+          console.error('Failed to fetch user:', res.statusText);
+          return;
         }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
+
+        const data = await res.json();
+        setUser(data.user ?? null);
+      } catch (err) {
+        console.error('Error fetching user:', err);
       }
     };
+
     fetchUser();
   }, []);
 
-  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserContext.Provider>
+  );
 }
