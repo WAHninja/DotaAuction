@@ -72,23 +72,50 @@ export default async function DashboardPage() {
         m.id AS match_id,
         m.created_at,
         m.winner_id,
+        u_winner.username AS winner_username,
 
-        ARRAY_AGG(u.username ORDER BY u.username) AS players
+        g.id AS game_id,
+        g.team_a_members,
+        g.team_1_members,
+
+        -- Team A usernames
+        (
+          SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
+          FROM UNNEST(g.team_a_members) AS uid
+          JOIN users u2 ON u2.id = uid
+        ) AS team_a_usernames,
+
+        -- Team 1 usernames
+        (
+          SELECT ARRAY_AGG(u3.username ORDER BY u3.username)
+          FROM UNNEST(g.team_1_members) AS uid
+          JOIN users u3 ON u3.id = uid
+        ) AS team_1_usernames
 
       FROM matches m
-      JOIN match_players mp ON mp.match_id = m.id
-      JOIN users u ON u.id = mp.user_id
+      JOIN users u_winner ON u_winner.id = m.winner_id
+      JOIN LATERAL (
+        SELECT *
+        FROM games g
+        WHERE g.match_id = m.id
+        ORDER BY g.id DESC
+        LIMIT 1
+      ) g ON true
 
-      WHERE mp.user_id = $1
-        AND m.winner_id IS NOT NULL
+      WHERE EXISTS (
+        SELECT 1
+        FROM match_players mp
+        WHERE mp.match_id = m.id
+          AND mp.user_id = $1
+      )
+      AND m.winner_id IS NOT NULL
 
-      GROUP BY m.id
       ORDER BY m.created_at DESC
       `,
       [session.userId]
     );
 
-    // ===== Normalize match_id → id so frontend works with existing components =====
+    // Normalize match_id → id for frontend
     const ongoingMatches = ongoingMatchesRaw.map(m => ({
       ...m,
       id: m.match_id,
