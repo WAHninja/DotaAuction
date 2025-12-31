@@ -1,21 +1,36 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function LogoutButton() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
-    router.push('/login'); // Redirect to the relative login path
+    setLoading(true);
+    try {
+      const response = await fetch('/api/logout', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+      router.push('/login');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to logout. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
     <button
       onClick={handleLogout}
-      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+      disabled={loading}
+      className={`px-4 py-2 rounded text-white ${
+        loading ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+      }`}
     >
-      Logout
+      {loading ? 'Logging out...' : 'Logout'}
     </button>
   );
 }
