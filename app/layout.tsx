@@ -1,11 +1,9 @@
 import './globals.css';
-import Link from 'next/link';
-import { getSessionIdFromCookies } from '@/app/session';
-import db from '@/lib/db';
 import { Cinzel } from 'next/font/google';
-import Image from 'next/image';
 import BodyClassWrapper from '@/app/components/BodyClassWrapper';
 import MobileResponsiveHeader from '@/app/components/MobileResponsiveHeader';
+import db from '@/lib/db';
+import { getSessionIdFromCookies } from '@/app/session';
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -13,30 +11,34 @@ const cinzel = Cinzel({
   variable: '--font-cinzel',
 });
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+type RootLayoutProps = {
+  children: React.ReactNode;
+};
+
+async function getUserFromSession() {
   const sessionId = await getSessionIdFromCookies();
-  let user = null;
+  if (!sessionId) return null;
 
-  if (sessionId) {
-    try {
-      const result = await db.query(
-        `
-        SELECT users.username
-        FROM sessions
-        JOIN users ON users.id = sessions.user_id
-        WHERE sessions.id = $1
-        LIMIT 1
-        `,
-        [sessionId]
-      );
-
-      if (result.rows.length > 0) {
-        user = result.rows[0];
-      }
-    } catch (error) {
-      console.error('Error fetching session and user:', error);
-    }
+  try {
+    const result = await db.query(
+      `
+      SELECT users.username
+      FROM sessions
+      JOIN users ON users.id = sessions.user_id
+      WHERE sessions.id = $1
+      LIMIT 1
+      `,
+      [sessionId]
+    );
+    return result.rows[0] ?? null;
+  } catch (error) {
+    console.error('Error fetching user from session:', error);
+    return null;
   }
+}
+
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const user = await getUserFromSession();
 
   return (
     <html lang="en" className={cinzel.variable}>
