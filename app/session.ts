@@ -6,11 +6,11 @@ import db from '@/lib/db';
 const SESSION_COOKIE_NAME = 'session_id';
 const SESSION_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
 
+// ------------------ Create Session ------------------
 export async function createSession(userId: number) {
   const sessionId = randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  // Save session in database with expiry
   await db.query(
     'INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES ($1, $2, NOW(), $3)',
     [sessionId, userId, expiresAt]
@@ -18,26 +18,27 @@ export async function createSession(userId: number) {
 
   const response = NextResponse.json({ success: true });
 
-  // Set session cookie to expire at the same time
   response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    expires: expiresAt, // use exact timestamp instead of maxAge
+    expires: expiresAt,
   });
 
   return response;
 }
 
-export async function getSessionIdFromCookies(): Promise<string | null> {
-  const cookieStore = await cookies();
+// ------------------ Get Session ID ------------------
+export function getSessionIdFromCookies(): string | null {
+  const cookieStore = cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  return sessionCookie?.value || null;
+  return sessionCookie?.value ?? null;
 }
 
+// ------------------ Get Session ------------------
 export async function getSession() {
-  const sessionId = await getSessionIdFromCookies();
+  const sessionId = getSessionIdFromCookies();
   if (!sessionId) return null;
 
   const result = await db.query(
@@ -56,12 +57,14 @@ export async function getSession() {
   };
 }
 
-export async function destroySession(response: NextResponse) {
-  const sessionId = await getSessionIdFromCookies();
+// ------------------ Destroy Session ------------------
+export async function destroySession(response?: NextResponse) {
+  const sessionId = getSessionIdFromCookies();
+  if (!sessionId) return;
 
-  if (sessionId) {
-    await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
+  await db.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
 
+  if (response) {
     response.cookies.set(SESSION_COOKIE_NAME, '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -70,6 +73,4 @@ export async function destroySession(response: NextResponse) {
       maxAge: 0,
     });
   }
-
-  return response;
 }
