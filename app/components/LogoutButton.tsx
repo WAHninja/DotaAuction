@@ -1,29 +1,30 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState, useContext } from 'react';
+import { useRouter } from 'next/navigation';
 import { UserContext } from '@/app/context/UserContext';
 
 export default function LogoutButton() {
   const router = useRouter();
-  const { setUser } = useContext(UserContext);
+  const { refreshUser } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     setLoading(true);
-    setUser(null); // Optimistic update
 
     try {
-      const res = await fetch('/api/logout', {
+      await fetch('/api/logout', {
         method: 'POST',
-        headers: { Accept: 'application/json' },
+        credentials: 'include',
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Logout failed');
-      router.push('/login');
-    } catch (error) {
-      console.error(error);
-      alert('Failed to logout. Please try again.');
+
+      // 🔥 Re-sync auth state after cookie is cleared
+      await refreshUser();
+
+      router.replace('/login');
+    } catch (err) {
+      console.error('Logout failed', err);
+    } finally {
       setLoading(false);
     }
   };
@@ -32,11 +33,11 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       disabled={loading}
-      className={`px-4 py-2 rounded text-white ${
-        loading ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
-      }`}
+      className="px-4 py-2 rounded bg-red-600 hover:bg-red-700
+                 text-white font-semibold transition
+                 disabled:opacity-60 disabled:cursor-not-allowed"
     >
-      {loading ? 'Logging out...' : 'Logout'}
+      {loading ? 'Logging out…' : 'Logout'}
     </button>
   );
 }
