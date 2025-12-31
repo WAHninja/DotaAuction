@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
+// ...other imports
 import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 // Dynamically import StatsTab to avoid SSR issues
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
+
+type Game = {
+  id: number;
+  status: 'in progress' | 'auction pending' | 'finished';
+  team_a_members: string[];
+  team_1_members: string[];
+};
 
 type Match = {
   id: number;
@@ -14,6 +22,7 @@ type Match = {
   team_1_usernames?: string[];
   winning_team?: 'team_1' | 'team_a';
   players?: string[];
+  games?: Game[];
 };
 
 export default function CreateMatchForm({
@@ -29,7 +38,6 @@ export default function CreateMatchForm({
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
 
-  // Store number of games played for each match
   const [gamesPlayedMap, setGamesPlayedMap] = useState<{ [matchId: number]: number }>({});
 
   const loadMore = (type: 'ongoing' | 'completed') => {
@@ -48,9 +56,8 @@ export default function CreateMatchForm({
     }
   };
 
-  // Fetch games played for a match
   const fetchGamesPlayed = async (matchId: number) => {
-    if (gamesPlayedMap[matchId] !== undefined) return; // already fetched
+    if (gamesPlayedMap[matchId] !== undefined) return;
     try {
       const res = await fetch(`/api/match/${matchId}/games-played`);
       const data = await res.json();
@@ -81,10 +88,7 @@ export default function CreateMatchForm({
         <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
           {match.team_a_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
+            <span key={u} className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
@@ -94,10 +98,7 @@ export default function CreateMatchForm({
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
           {match.team_1_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
+            <span key={u} className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
@@ -110,14 +111,22 @@ export default function CreateMatchForm({
     const isCompleted = type === 'completed';
     const winner = match.winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
-    // fetch games played for ongoing matches
     useEffect(() => {
       if (!isCompleted) fetchGamesPlayed(match.id);
     }, [match.id, isCompleted]);
 
     const currentGameNumber = !isCompleted
-      ? (gamesPlayedMap[match.id] !== undefined ? gamesPlayedMap[match.id] : undefined)
+      ? gamesPlayedMap[match.id] ?? undefined
       : undefined;
+
+    // For completed matches, derive teams from last game
+    let teamA = match.team_a_usernames ?? [];
+    let team1 = match.team_1_usernames ?? [];
+    if (isCompleted && match.games && match.games.length > 0) {
+      const lastGame = match.games[match.games.length - 1];
+      teamA = lastGame.team_a_members ?? [];
+      team1 = lastGame.team_1_members ?? [];
+    }
 
     return (
       <div
@@ -153,11 +162,12 @@ export default function CreateMatchForm({
           </Link>
         </div>
 
-        {isCompleted && match.players && (
+        {/* Only show overall players if no games exist */}
+        {isCompleted && match.players && (!match.games || match.games.length === 0) && (
           <p className="text-xs text-gray-300 mb-2">Players: {match.players.join(', ')}</p>
         )}
 
-        <MatchTeams match={match} />
+        <MatchTeams match={{ team_a_usernames: teamA, team_1_usernames: team1 }} />
       </div>
     );
   };
@@ -192,11 +202,14 @@ export default function CreateMatchForm({
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex justify-center gap-4 border-b border-slate-600 mb-4">
+      <div className="flex justify-center gap-4 border-b border-slate-600 mb-2">
         {(['ongoing', 'completed', 'stats'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
         ))}
       </div>
+
+      {/* Small spacing between tabs and content */}
+      <div className="mb-4" />
 
       {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
