@@ -1,14 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, Swords, Coins } from 'lucide-react'
+import { Trophy, Coins } from 'lucide-react'
 
+/* ----------------------- Types ----------------------- */
 type PlayerStat = {
-  id: number
+  id?: number
   playerId: number
   username: string
   goldChange: number
-  reason: string
+  reason: 'win_reward' | 'loss_penalty' | 'offer_accepted' | string
 }
 
 type Offer = {
@@ -29,6 +30,96 @@ type GameHistoryCardProps = {
   playerStats: PlayerStat[]
 }
 
+/* ----------------------- Subcomponents ----------------------- */
+const TeamList = ({
+  members,
+  isWinner,
+  teamName,
+  color
+}: {
+  members: string[]
+  isWinner: boolean
+  teamName: string
+  color: string
+}) => (
+  <div>
+    <h3 className={`font-semibold mb-1 ${color}`}>
+      {teamName} {isWinner && <Trophy className="inline w-4 h-4 text-green-400 ml-1" />}
+    </h3>
+    <ul className="space-y-1">
+      {members.map((player) => (
+        <li
+          key={player}
+          className={`pl-2 truncate ${isWinner ? 'text-green-400 font-semibold' : 'text-gray-300'}`}
+          title={player} // tooltip for long names
+        >
+          {player}
+        </li>
+      ))}
+    </ul>
+  </div>
+)
+
+const OfferList = ({ offers }: { offers: Offer[] }) => (
+  <div className="mb-4">
+    <h4 className="text-yellow-300 font-semibold mb-1">Offers</h4>
+    <ul className="space-y-1 text-sm">
+      {offers.map((offer) => (
+        <li
+          key={offer.id}
+          className="flex justify-between items-center px-2 py-1 bg-gray-800 rounded"
+        >
+          <span className="text-gray-300 truncate max-w-[150px]" title={`${offer.from_username} → ${offer.target_username}`}>
+            {offer.from_username} → {offer.target_username}
+          </span>
+          <span
+            className={`text-sm ${
+              offer.status === 'accepted'
+                ? 'text-green-400'
+                : offer.status === 'rejected'
+                ? 'text-red-400'
+                : 'text-yellow-400'
+            }`}
+          >
+            {offer.status === 'pending' ? '?' : offer.offer_amount}g ({offer.status})
+          </span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
+
+const GoldChangeList = ({ playerStats }: { playerStats: PlayerStat[] }) => (
+  <div>
+    <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
+    <ul className="space-y-1 text-sm">
+      {playerStats.map((stat) => (
+        <li
+          key={stat.id || `${stat.playerId}-${stat.reason}`}
+          className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
+        >
+          <span className="text-gray-300 truncate max-w-[150px]" title={stat.username || `Player#${stat.playerId}`}>
+            {stat.username || `Player#${stat.playerId}`} –{' '}
+            {stat.reason === 'win_reward'
+              ? 'Win Bonus'
+              : stat.reason === 'loss_penalty'
+              ? 'Loss Penalty'
+              : stat.reason === 'offer_accepted'
+              ? 'Offer Accepted'
+              : stat.reason}
+          </span>
+          <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
+            <Coins className="inline w-4 h-4 mr-1" />
+            {stat.goldChange >= 0 ? '+' : ''}
+            {stat.goldChange}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
+
+/* ----------------------- Main Component ----------------------- */
 export default function GameHistoryCard({
   gameId,
   createdAt,
@@ -38,7 +129,10 @@ export default function GameHistoryCard({
   offers,
   playerStats
 }: GameHistoryCardProps) {
-  const date = new Date(createdAt).toLocaleString()
+  const date = new Date(createdAt).toLocaleString(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  })
 
   return (
     <motion.div
@@ -48,41 +142,27 @@ export default function GameHistoryCard({
       transition={{ duration: 0.3 }}
     >
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xl font-bold text-yellow-400">
-          Game #{gameId}
-        </h2>
+        <h2 className="text-xl font-bold text-yellow-400">Game #{gameId}</h2>
         <span className="text-sm text-gray-400">{date}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-        <div>
-          <h3 className="font-semibold text-blue-400 mb-1">Team A</h3>
-          <ul className="space-y-1">
-            {teamAMembers.map((player) => (
-              <li
-                key={player}
-                className={`pl-2 ${winningTeam === 'team_a' ? 'text-green-400' : 'text-gray-300'}`}
-              >
-                {player}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold text-red-400 mb-1">Team 1</h3>
-          <ul className="space-y-1">
-            {team1Members.map((player) => (
-              <li
-                key={player}
-                className={`pl-2 ${winningTeam === 'team_1' ? 'text-green-400' : 'text-gray-300'}`}
-              >
-                {player}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {/* Teams */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+        <TeamList
+          members={teamAMembers}
+          isWinner={winningTeam === 'team_a'}
+          teamName="Team A"
+          color="text-blue-400"
+        />
+        <TeamList
+          members={team1Members}
+          isWinner={winningTeam === 'team_1'}
+          teamName="Team 1"
+          color="text-red-400"
+        />
       </div>
 
+      {/* Winner */}
       {winningTeam && (
         <div className="flex items-center gap-2 text-green-400 font-semibold mb-4">
           <Trophy className="w-4 h-4" />
@@ -90,60 +170,11 @@ export default function GameHistoryCard({
         </div>
       )}
 
-      {offers.length > 0 && (
-        <div className="mb-4">
-          <h4 className="text-yellow-300 font-semibold mb-1">Offers</h4>
-          <ul className="space-y-1 text-sm">
-            {offers.map((offer) => (
-              <li key={offer.id} className="flex justify-between items-center px-2 py-1 bg-gray-800 rounded">
-                <span className="text-gray-300">
-                  {offer.from_username} → {offer.target_username}
-                </span>
-                <span
-                  className={`text-sm ${
-                    offer.status === 'accepted'
-                      ? 'text-green-400'
-                      : offer.status === 'rejected'
-                      ? 'text-red-400'
-                      : 'text-yellow-400'
-                  }`}
-                >
-                  {offer.status === 'pending' ? '?' : offer.offer_amount}g ({offer.status})
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Offers */}
+      {offers.length > 0 && <OfferList offers={offers} />}
 
-      {playerStats.length > 0 && (
-        <div>
-          <h4 className="text-cyan-300 font-semibold mb-1">Gold Changes</h4>
-          <ul className="space-y-1 text-sm">
-            {playerStats.map((stat) => (
-              <li key={stat.id || `${stat.playerId}-${stat.reason}`} className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded">
-                <span className="text-gray-300">
-                  {/* Display username instead of team */}
-                  {stat.username || `Player#${stat.playerId}`} – {
-                    stat.reason === 'win_reward'
-                      ? 'Win Bonus'
-                      : stat.reason === 'loss_penalty'
-                      ? 'Loss Penalty'
-                      : stat.reason === 'offer_accepted'
-                      ? 'Offer Accepted'
-                      : stat.reason
-                    }
-                </span>
-                <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
-                  <Coins className="inline w-4 h-4 mr-1" />
-                  {stat.goldChange >= 0 ? '+' : ''}
-                  {stat.goldChange}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Gold Changes */}
+      {playerStats.length > 0 && <GoldChangeList playerStats={playerStats} />}
     </motion.div>
   )
 }
