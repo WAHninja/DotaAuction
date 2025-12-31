@@ -1,53 +1,49 @@
 'use client';
 
-import { createContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
-export type User = {
-  username: string;
-} | null;
+type User = { id: number; username: string } | null;
 
-export type UserContextType = {
+type UserContextType = {
   user: User;
   setUser: (user: User) => void;
+  refreshUser: () => Promise<void>;
+  loading: boolean;
 };
 
 export const UserContext = createContext<UserContextType>({
   user: null,
   setUser: () => {},
+  refreshUser: async () => {},
+  loading: true,
 });
 
-type Props = {
-  children: ReactNode;
-};
-
-export default function UserProvider({ children }: Props) {
+export default function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch('/api/me', {
-          headers: { Accept: 'application/json' },
-          cache: 'no-store', // always get latest user data
-        });
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await fetch('/api/me', {
+        cache: 'no-store',
+        credentials: 'include',
+      });
 
-        if (!res.ok) {
-          console.error('Failed to fetch user:', res.statusText);
-          return;
-        }
-
-        const data = await res.json();
-        setUser(data.user ?? null);
-      } catch (err) {
-        console.error('Error fetching user:', err);
-      }
-    };
-
-    fetchUser();
+      const data = await res.json();
+      setUser(data.user ?? null);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, refreshUser, loading }}>
       {children}
     </UserContext.Provider>
   );
