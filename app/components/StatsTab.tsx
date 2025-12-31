@@ -20,7 +20,7 @@ type PlayerStats = {
 };
 
 type TeamCombo = {
-  combo: string;
+  combo: string; // comma separated usernames
   wins: number;
 };
 
@@ -83,8 +83,14 @@ export default function StatsTab() {
      Derived Data
   ======================= */
 
+  // Filter out any players starting with "ztest"
+  const filteredPlayers = useMemo(
+    () => players.filter(p => !p.username.toLowerCase().startsWith('ztest')),
+    [players]
+  );
+
   const sortedPlayers = useMemo(() => {
-    return [...players].sort((a, b) => {
+    return [...filteredPlayers].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
 
@@ -98,13 +104,23 @@ export default function StatsTab() {
         ? (aVal as number) - (bVal as number)
         : (bVal as number) - (aVal as number);
     });
-  }, [players, sortKey, sortDir]);
+  }, [filteredPlayers, sortKey, sortDir]);
+
+  // Filter top combos to remove any that include a ztest player
+  const filteredTopCombos = useMemo(() => {
+    return topWinningCombos.filter(
+      combo =>
+        !combo.combo
+          .split(',')
+          .some(name => name.trim().toLowerCase().startsWith('ztest'))
+    );
+  }, [topWinningCombos]);
 
   const topCombos = useMemo(() => {
-    return [...topWinningCombos]
+    return [...filteredTopCombos]
       .sort((a, b) => b.wins - a.wins)
       .slice(0, 5);
-  }, [topWinningCombos]);
+  }, [filteredTopCombos]);
 
   /* =======================
      Handlers
@@ -112,7 +128,7 @@ export default function StatsTab() {
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
       setSortDir('desc');
@@ -195,7 +211,7 @@ export default function StatsTab() {
             </thead>
 
             <tbody>
-              {sortedPlayers.map((p) => (
+              {sortedPlayers.map(p => (
                 <tr
                   key={p.username}
                   className="border-b border-slate-600 hover:bg-slate-700/40"
@@ -233,9 +249,7 @@ export default function StatsTab() {
         ) : (
           <ul className="space-y-2">
             {topCombos.map((combo, idx) => {
-              const maxWins = topCombos[0]?.wins || 1;
-              const barWidthPct = Math.round((combo.wins / maxWins) * 100);
-              const greenValue = 120 + Math.round((combo.wins / maxWins) * 80);
+              const greenValue = 120 + Math.round((combo.wins / topCombos[0].wins) * 80);
               const barColor = `rgb(0, ${greenValue}, 0)`;
 
               return (
@@ -244,7 +258,7 @@ export default function StatsTab() {
                   className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-800/80 p-3 rounded-md hover:bg-slate-700/50 transition"
                 >
                   {/* Rank + Name */}
-                  <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                  <div className="flex items-center gap-2 flex-shrink-0 w-max min-w-[200px] sm:min-w-[250px]">
                     <span className="font-semibold text-yellow-400 text-base sm:text-lg">{idx + 1}.</span>
                     <span
                       className="truncate text-white text-sm sm:text-base"
@@ -254,12 +268,12 @@ export default function StatsTab() {
                     </span>
                   </div>
 
-                  {/* Mini bar */}
+                  {/* Uniform Bar */}
                   <div className="relative flex-1 h-4 bg-slate-600 rounded-md overflow-hidden mt-2 sm:mt-0">
                     <div
                       className="h-full rounded-md transition-all duration-500"
                       style={{
-                        width: `${barWidthPct}%`,
+                        width: '100%',
                         background: `linear-gradient(to right, ${barColor}, limegreen)`,
                       }}
                     />
