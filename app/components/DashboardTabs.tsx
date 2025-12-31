@@ -11,9 +11,9 @@ const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 type Match = {
   id: number;
   winner_id?: number;
+  winner_username?: string; // ✅ added
   team_a_usernames?: string[];
   team_1_usernames?: string[];
-  players?: string[];
 };
 
 export default function CreateMatchForm({
@@ -29,48 +29,32 @@ export default function CreateMatchForm({
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
 
-  // Store number of games played for each match
-  const [gamesPlayedMap, setGamesPlayedMap] = useState<{ [matchId: number]: number }>({});
-  // Store winner usernames for completed matches
-  const [winnerUsernames, setWinnerUsernames] = useState<{ [matchId: number]: string }>({});
+  const [gamesPlayedMap, setGamesPlayedMap] = useState<Record<number, number>>({});
 
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
       setLoadingOngoing(true);
       setTimeout(() => {
-        setOngoingVisible(prev => prev + 5);
+        setOngoingVisible(v => v + 5);
         setLoadingOngoing(false);
       }, 500);
     } else {
       setLoadingCompleted(true);
       setTimeout(() => {
-        setCompletedVisible(prev => prev + 5);
+        setCompletedVisible(v => v + 5);
         setLoadingCompleted(false);
       }, 500);
     }
   };
 
-  // Fetch games played for a match
   const fetchGamesPlayed = async (matchId: number) => {
-    if (gamesPlayedMap[matchId] !== undefined) return; // already fetched
+    if (gamesPlayedMap[matchId] !== undefined) return;
     try {
       const res = await fetch(`/api/match/${matchId}/games-played`);
       const data = await res.json();
       setGamesPlayedMap(prev => ({ ...prev, [matchId]: data.gamesPlayed }));
     } catch (err) {
-      console.error('Failed to fetch games played for match', matchId, err);
-    }
-  };
-
-  // Fetch winner username for completed match
-  const fetchWinnerUsername = async (matchId: number, winnerId?: number) => {
-    if (!winnerId || winnerUsernames[matchId]) return;
-    try {
-      const res = await fetch(`/api/users/${winnerId}`);
-      const data = await res.json();
-      setWinnerUsernames(prev => ({ ...prev, [matchId]: data.username }));
-    } catch (err) {
-      console.error('Failed to fetch winner username for match', matchId, err);
+      console.error('Failed to fetch games played:', err);
     }
   };
 
@@ -83,28 +67,33 @@ export default function CreateMatchForm({
           : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
       }`}
     >
-      {tab === 'ongoing' && 'Ongoing'}
-      {tab === 'completed' && 'Completed'}
-      {tab === 'stats' && 'Stats'}
+      {tab.charAt(0).toUpperCase() + tab.slice(1)}
     </button>
   );
 
-  const MatchTeams = ({ match }: { match: Pick<Match, 'team_a_usernames' | 'team_1_usernames'> }) => (
+  const MatchTeams = ({
+    team_a_usernames,
+    team_1_usernames,
+  }: {
+    team_a_usernames?: string[];
+    team_1_usernames?: string[];
+  }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="bg-lime-900/30 p-3 rounded-lg border border-lime-700/40">
         <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
-          {match.team_a_usernames?.map(u => (
+          {team_a_usernames?.map(u => (
             <span key={u} className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
         </div>
       </div>
+
       <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
-          {match.team_1_usernames?.map(u => (
+          {team_1_usernames?.map(u => (
             <span key={u} className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
@@ -117,19 +106,13 @@ export default function CreateMatchForm({
   const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
     const isCompleted = type === 'completed';
 
-    // fetch games played for ongoing matches or winner username for completed
     useEffect(() => {
-      if (isCompleted) fetchWinnerUsername(match.id, match.winner_id);
-      else fetchGamesPlayed(match.id);
-    }, [match.id, match.winner_id, isCompleted]);
-
-    const currentGameNumber = !isCompleted
-      ? gamesPlayedMap[match.id] ?? undefined
-      : undefined;
+      if (!isCompleted) fetchGamesPlayed(match.id);
+    }, [match.id, isCompleted]);
 
     return (
       <div
-        className={`p-4 rounded-xl shadow-xl transition-transform duration-300 hover:scale-[1.02] ${
+        className={`p-4 rounded-xl shadow-xl transition-transform hover:scale-[1.02] ${
           isCompleted
             ? 'bg-slate-800/80 border border-slate-600'
             : 'bg-slate-700/80 border border-orange-500/40'
@@ -139,119 +122,66 @@ export default function CreateMatchForm({
           <span className="font-semibold text-sm">
             Match #{match.id}{' '}
             {isCompleted ? (
-              <span className="text-yellow-400 font-normal text-xs flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" /> Winner: {winnerUsernames[match.id] ?? '...'}
+              <span className="text-yellow-400 text-xs flex items-center gap-1">
+                <CheckCircle className="h-4 w-4" />
+                Winner: {match.winner_username ?? 'Unknown'}
               </span>
             ) : (
-              <span className="text-orange-400 font-normal text-xs flex items-center gap-1">
-                <PlayCircle className="h-4 w-4" /> Current Game #{currentGameNumber ?? '?'}
+              <span className="text-orange-400 text-xs flex items-center gap-1">
+                <PlayCircle className="h-4 w-4" />
+                Current Game #{gamesPlayedMap[match.id] ?? '?'}
               </span>
             )}
           </span>
+
           <Link href={`/match/${match.id}`}>
             <button
-              className={`px-3 py-1 text-sm rounded-md font-semibold transition ${
+              className={`px-3 py-1 text-sm rounded-md font-semibold ${
                 isCompleted
-                  ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                  : 'bg-orange-500 hover:bg-orange-600 text-white'
-              }`}
+                  ? 'bg-slate-600 hover:bg-slate-700'
+                  : 'bg-orange-500 hover:bg-orange-600'
+              } text-white`}
             >
               {isCompleted ? 'View' : 'Continue'}
             </button>
           </Link>
         </div>
 
-        {/* Show teams for both ongoing and completed matches */}
-        <MatchTeams match={{ team_a_usernames: match.team_a_usernames, team_1_usernames: match.team_1_usernames }} />
+        <MatchTeams
+          team_a_usernames={match.team_a_usernames}
+          team_1_usernames={match.team_1_usernames}
+        />
       </div>
     );
   };
 
-  const LoadMoreButton = ({
-    onClick,
-    loading,
-    hidden,
-  }: {
-    onClick: () => void;
-    loading: boolean;
-    hidden: boolean;
-  }) =>
-    !hidden ? (
-      <div className="col-span-full text-center mt-4">
-        <button
-          onClick={onClick}
-          disabled={loading}
-          className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin h-5 w-5" /> Loading...
-            </>
-          ) : (
-            'Load More'
-          )}
-        </button>
-      </div>
-    ) : null;
-
   return (
     <div className="space-y-6">
-      {/* Tabs */}
       <div className="flex justify-center gap-4 mb-2">
         {(['ongoing', 'completed', 'stats'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
         ))}
       </div>
 
-      {/* Add small spacing under tabs */}
       <div className="mb-4 border-b border-slate-600" />
 
-      {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ongoingMatches.length ? (
-            <>
-              {ongoingMatches.slice(0, ongoingVisible).map(match => (
-                <MatchCard key={match.id} match={match} type="ongoing" />
-              ))}
-              <LoadMoreButton
-                onClick={() => loadMore('ongoing')}
-                loading={loadingOngoing}
-                hidden={ongoingVisible >= ongoingMatches.length}
-              />
-            </>
-          ) : (
-            <p className="text-center text-gray-400 col-span-full">No ongoing matches yet.</p>
-          )}
+          {ongoingMatches.slice(0, ongoingVisible).map(m => (
+            <MatchCard key={m.id} match={m} type="ongoing" />
+          ))}
         </div>
       )}
 
-      {/* Completed Matches */}
       {activeTab === 'completed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {completedMatches.length ? (
-            <>
-              {completedMatches.slice(0, completedVisible).map(match => (
-                <MatchCard key={match.id} match={match} type="completed" />
-              ))}
-              <LoadMoreButton
-                onClick={() => loadMore('completed')}
-                loading={loadingCompleted}
-                hidden={completedVisible >= completedMatches.length}
-              />
-            </>
-          ) : (
-            <p className="text-center text-gray-400 col-span-full">No completed matches.</p>
-          )}
+          {completedMatches.slice(0, completedVisible).map(m => (
+            <MatchCard key={m.id} match={m} type="completed" />
+          ))}
         </div>
       )}
 
-      {/* Stats */}
-      {activeTab === 'stats' && (
-        <div className="px-2 md:px-0">
-          <StatsTab />
-        </div>
-      )}
+      {activeTab === 'stats' && <StatsTab />}
     </div>
   );
 }
