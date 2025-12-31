@@ -190,7 +190,7 @@ export default function CreateMatchForm({
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex justify-center gap-4 border-b border-slate-600 mb-2">
+      <div className="flex justify-center gap-4 mb-2">
         {(['ongoing', 'completed', 'stats'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
         ))}
