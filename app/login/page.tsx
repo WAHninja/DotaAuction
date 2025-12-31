@@ -21,21 +21,17 @@ export default function LoginPage() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // 🔑 REQUIRED for session cookie
         body: JSON.stringify({ username, pin }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || 'Login failed');
       }
 
-      // 🔥 THIS IS THE KEY LINE
-      await refreshUser();
-      
-      // Session cookie is set server-side
-      router.push('/');
-      router.refresh(); // ensures UserProvider re-fetches /api/me
+      // ✅ Force a clean navigation so UserProvider re-runs /api/me
+      router.replace('/');
     } catch (err: any) {
       setError(err.message);
     } finally {
