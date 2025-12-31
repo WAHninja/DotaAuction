@@ -7,7 +7,6 @@ import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
-/* ----------------------------- Types ----------------------------- */
 type Match = {
   id: number;
   winner_id?: number;
@@ -23,7 +22,6 @@ type DashboardTabsProps = {
 
 type GamesPlayedMap = Record<number, number>;
 
-/* -------------------------- Component ---------------------------- */
 export default function DashboardTabs({ ongoingMatches, completedMatches }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
   const [ongoingVisible, setOngoingVisible] = useState(6);
@@ -32,7 +30,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
 
-  /* ---------------------- Fetch Ongoing Games Played ---------------------- */
   useEffect(() => {
     ongoingMatches.forEach(match => {
       if (gamesPlayedMap[match.id] !== undefined) return;
@@ -48,7 +45,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
     });
   }, [ongoingMatches]);
 
-  /* ------------------------- Helpers -------------------------- */
   const loadMore = (type: 'ongoing' | 'completed') => {
     if (type === 'ongoing') {
       setLoadingOngoing(true);
@@ -80,42 +76,47 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
   const MatchTeams = ({ team_a_usernames, team_1_usernames }: { team_a_usernames?: string[], team_1_usernames?: string[] }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div className="bg-lime-900/30 p-3 rounded-lg border border-lime-700/40">
-        <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
-        <div className="flex flex-wrap gap-2">
-          {team_a_usernames?.map(u => (
-            <span key={u} className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full">
-              {u}
-            </span>
-          ))}
+      {team_a_usernames && (
+        <div className="bg-lime-900/30 p-2 sm:p-3 rounded-lg border border-lime-700/40">
+          <p className="text-xs font-semibold text-lime-300 mb-1 sm:mb-2">Team A</p>
+          <div className="flex flex-wrap gap-2">
+            {team_a_usernames.map(u => (
+              <span key={u} className="bg-lime-700/80 text-white text-xs px-2 py-1 rounded-full">
+                {u}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
-        <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
-        <div className="flex flex-wrap gap-2">
-          {team_1_usernames?.map(u => (
-            <span key={u} className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full">
-              {u}
-            </span>
-          ))}
+      )}
+      {team_1_usernames && (
+        <div className="bg-red-900/30 p-2 sm:p-3 rounded-lg border border-red-700/40">
+          <p className="text-xs font-semibold text-red-300 mb-1 sm:mb-2">Team 1</p>
+          <div className="flex flex-wrap gap-2">
+            {team_1_usernames.map(u => (
+              <span key={u} className="bg-red-700/80 text-white text-xs px-2 py-1 rounded-full">
+                {u}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
-  const MatchCard = ({ match, type }: { match: Match; type: 'ongoing' | 'completed' }) => {
-    const isCompleted = type === 'completed';
+  const MatchCard = ({ match, isCompleted }: { match: Match; isCompleted: boolean }) => {
     const gamesPlayed = gamesPlayedMap[match.id];
 
     return (
-      <div className={`p-4 rounded-xl shadow-xl transition-transform hover:scale-[1.02] ${
-        isCompleted
-          ? 'bg-slate-800/80 border border-slate-600'
-          : 'bg-slate-700/80 border border-orange-500/40'
-      }`}>
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-semibold text-sm">
-            Match #{match.id}{' '}
+      <div
+        className={`p-4 rounded-xl shadow-xl transition-transform hover:scale-[1.02] flex flex-col justify-between ${
+          isCompleted
+            ? 'bg-slate-800/80 border border-slate-600'
+            : 'bg-slate-700/80 border border-orange-500/40'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-2 gap-2 sm:gap-0">
+          <span className="font-semibold text-sm flex items-center gap-2 flex-wrap">
+            Match #{match.id}
             {isCompleted ? (
               <span className="text-yellow-400 text-xs flex items-center gap-1">
                 <CheckCircle className="h-4 w-4" />
@@ -135,10 +136,12 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
             )}
           </span>
 
-          <Link href={`/match/${match.id}`}>
-            <button className={`px-3 py-1 text-sm rounded-md font-semibold text-white ${
-              isCompleted ? 'bg-slate-600 hover:bg-slate-700' : 'bg-orange-500 hover:bg-orange-600'
-            }`}>
+          <Link href={`/match/${match.id}`} className="mt-2 sm:mt-0">
+            <button
+              className={`px-3 py-1 text-sm rounded-md font-semibold text-white ${
+                isCompleted ? 'bg-slate-600 hover:bg-slate-700' : 'bg-orange-500 hover:bg-orange-600'
+              }`}
+            >
               {isCompleted ? 'View' : 'Continue'}
             </button>
           </Link>
@@ -152,7 +155,29 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
     );
   };
 
-  /* ---------------------------- Render ---------------------------- */
+  const MatchGrid = ({ matches, visible, type }: { matches: Match[]; visible: number; type: 'ongoing' | 'completed' }) => {
+    const isCompleted = type === 'completed';
+    const loading = type === 'ongoing' ? loadingOngoing : loadingCompleted;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {matches.slice(0, visible).map(match => (
+          <MatchCard key={match.id} match={match} isCompleted={isCompleted} />
+        ))}
+        {visible < matches.length && (
+          <div className="col-span-full flex justify-center mt-2 sm:mt-4">
+            <button
+              onClick={() => loadMore(type)}
+              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
+            >
+              {loading ? 'Loading…' : 'Load More'}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Tabs */}
@@ -164,45 +189,8 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
       <div className="mb-4 border-b border-slate-600" />
 
-      {/* Ongoing Matches */}
-      {activeTab === 'ongoing' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ongoingMatches.slice(0, ongoingVisible).map(match => (
-            <MatchCard key={match.id} match={match} type="ongoing" />
-          ))}
-          {ongoingVisible < ongoingMatches.length && (
-            <div className="col-span-full text-center">
-              <button
-                onClick={() => loadMore('ongoing')}
-                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
-              >
-                {loadingOngoing ? 'Loading…' : 'Load More'}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Completed Matches */}
-      {activeTab === 'completed' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {completedMatches.slice(0, completedVisible).map(match => (
-            <MatchCard key={match.id} match={match} type="completed" />
-          ))}
-          {completedVisible < completedMatches.length && (
-            <div className="col-span-full text-center">
-              <button
-                onClick={() => loadMore('completed')}
-                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
-              >
-                {loadingCompleted ? 'Loading…' : 'Load More'}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Stats */}
+      {activeTab === 'ongoing' && <MatchGrid matches={ongoingMatches} visible={ongoingVisible} type="ongoing" />}
+      {activeTab === 'completed' && <MatchGrid matches={completedMatches} visible={completedVisible} type="completed" />}
       {activeTab === 'stats' && <StatsTab />}
     </div>
   );
