@@ -30,6 +30,9 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
+      // 🔥 THIS IS THE KEY LINE
+      await refreshUser();
+      
       // Session cookie is set server-side
       router.push('/');
       router.refresh(); // ensures UserProvider re-fetches /api/me
