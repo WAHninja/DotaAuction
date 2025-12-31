@@ -1,9 +1,8 @@
-// app/layout.tsx
 import './globals.css';
 import { Cinzel } from 'next/font/google';
 import BodyClassWrapper from '@/app/components/BodyClassWrapper';
 import MobileResponsiveHeader from '@/app/components/MobileResponsiveHeader';
-import UserProvider from './context/UserContext'; // import the context provider
+import UserProvider from './context/UserContext';
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -11,9 +10,7 @@ const cinzel = Cinzel({
   variable: '--font-cinzel',
 });
 
-type RootLayoutProps = {
-  children: React.ReactNode;
-};
+type RootLayoutProps = { children: React.ReactNode };
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
@@ -23,9 +20,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <BodyClassWrapper />
           <MobileResponsiveHeader />
 
-          <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-8">
-            {children}
-          </main>
+          <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-8">{children}</main>
 
           <footer className="bg-surface text-text-muted text-center p-4 border-t border-cooldown">
             <p className="text-sm">© 2025 Dota Auctions</p>
