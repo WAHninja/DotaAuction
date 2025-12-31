@@ -4,6 +4,8 @@ import BodyClassWrapper from '@/app/components/BodyClassWrapper';
 import MobileResponsiveHeader from '@/app/components/MobileResponsiveHeader';
 import UserProvider from './context/UserContext';
 
+export const dynamic = 'force-dynamic'; // <-- Important for server-side session usage
+
 const cinzel = Cinzel({
   subsets: ['latin'],
   weight: ['400', '700'],
