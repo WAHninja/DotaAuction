@@ -1,19 +1,26 @@
 'use client';
 
-import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import {
+  createContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react';
 
-type User = { id: number; username: string } | null;
+type User = {
+  id: number;
+  username: string;
+} | null;
 
 type UserContextType = {
   user: User;
-  setUser: (user: User) => void;
   refreshUser: () => Promise<void>;
   loading: boolean;
 };
 
 export const UserContext = createContext<UserContextType>({
   user: null,
-  setUser: () => {},
   refreshUser: async () => {},
   loading: true,
 });
@@ -23,11 +30,18 @@ export default function UserProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
+    setLoading(true);
+
     try {
       const res = await fetch('/api/me', {
-        cache: 'no-store',
         credentials: 'include',
+        cache: 'no-store',
       });
+
+      if (!res.ok) {
+        setUser(null);
+        return;
+      }
 
       const data = await res.json();
       setUser(data.user ?? null);
@@ -38,12 +52,19 @@ export default function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 🔥 Runs on first load AND after router.replace('/')
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
 
   return (
-    <UserContext.Provider value={{ user, setUser, refreshUser, loading }}>
+    <UserContext.Provider
+      value={{
+        user,
+        refreshUser,
+        loading,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
