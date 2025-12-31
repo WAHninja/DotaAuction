@@ -1,7 +1,6 @@
 import { getSession } from '@/app/session';
 import db from '@/lib/db';
 import { redirect } from 'next/navigation';
-
 import CreateMatchFormWrapper from '@/app/components/CreateMatchFormWrapper';
 import DashboardTabs from '@/app/components/DashboardTabs';
 import GameRulesCard from '@/app/components/GameRulesCard';
@@ -11,10 +10,40 @@ export default async function DashboardPage() {
   if (!session) redirect('/login');
 
   try {
-    /* ===============================
-       Shared SQL: Latest Game Per Match
-    =============================== */
-    const latestGameJoin = `
+    // Current user
+    const { rows: [user] } = await db.query(
+      `SELECT id, username FROM users WHERE id = $1`,
+      [session.userId]
+    );
+
+    // ===== Ongoing Matches =====
+    const { rows: ongoingMatches } = await db.query(
+      `
+      SELECT
+        m.id AS match_id,
+        m.created_at,
+
+        g.id AS game_id,
+        g.status,
+
+        g.team_a_members,
+        g.team_1_members,
+
+        -- Team A usernames
+        (
+          SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
+          FROM UNNEST(g.team_a_members) AS uid
+          JOIN users u2 ON u2.id = uid
+        ) AS team_a_usernames,
+
+        -- Team 1 usernames
+        (
+          SELECT ARRAY_AGG(u3.username ORDER BY u3.username)
+          FROM UNNEST(g.team_1_members) AS uid
+          JOIN users u3 ON u3.id = uid
+        ) AS team_1_usernames
+
+      FROM matches m
       JOIN LATERAL (
         SELECT *
         FROM games g
@@ -22,40 +51,12 @@ export default async function DashboardPage() {
         ORDER BY g.id DESC
         LIMIT 1
       ) g ON true
-    `;
 
-    /* ===============================
-       Shared SQL: Team Username Mapping
-    =============================== */
-    const teamUsernameSelect = `
-      (
-        SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
-        FROM UNNEST(g.team_a_members) AS id
-        JOIN users u2 ON u2.id = id
-      ) AS team_a_usernames,
-
-      (
-        SELECT ARRAY_AGG(u3.username ORDER BY u3.username)
-        FROM UNNEST(g.team_1_members) AS id
-        JOIN users u3 ON u3.id = id
-      ) AS team_1_usernames
-    `;
-
-    /* ===============================
-       Ongoing Matches
-    =============================== */
-    const ongoingResult = await db.query(
-      `
-      SELECT
-        m.id,
-        m.created_at,
-        ${teamUsernameSelect}
-
-      FROM matches m
-      ${latestGameJoin}
-
-      WHERE m.id IN (
-        SELECT match_id FROM match_players WHERE user_id = $1
+      WHERE EXISTS (
+        SELECT 1
+        FROM match_players mp
+        WHERE mp.match_id = m.id
+          AND mp.user_id = $1
       )
       AND m.winner_id IS NULL
 
@@ -64,27 +65,24 @@ export default async function DashboardPage() {
       [session.userId]
     );
 
-    /* ===============================
-       Completed Matches
-    =============================== */
-    const completedResult = await db.query(
+    // ===== Completed Matches =====
+    const { rows: completedMatches } = await db.query(
       `
       SELECT
-        m.id,
+        m.id AS match_id,
         m.created_at,
         m.winner_id,
-        wu.username AS winner_username,
-        ${teamUsernameSelect}
+
+        ARRAY_AGG(u.username ORDER BY u.username) AS players
 
       FROM matches m
-      ${latestGameJoin}
-      LEFT JOIN users wu ON wu.id = m.winner_id
+      JOIN match_players mp ON mp.match_id = m.id
+      JOIN users u ON u.id = mp.user_id
 
-      WHERE m.id IN (
-        SELECT match_id FROM match_players WHERE user_id = $1
-      )
-      AND m.winner_id IS NOT NULL
+      WHERE mp.user_id = $1
+        AND m.winner_id IS NOT NULL
 
+      GROUP BY m.id
       ORDER BY m.created_at DESC
       `,
       [session.userId]
@@ -94,7 +92,7 @@ export default async function DashboardPage() {
       <div className="relative min-h-screen animate-fadeIn">
         <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-10 text-white">
 
-          {/* ===== Create Match + Rules ===== */}
+          {/* Create Match + Rules */}
           <section className="flex flex-col lg:flex-row gap-6">
             <div className="lg:w-1/2">
               <CreateMatchFormWrapper />
@@ -104,14 +102,15 @@ export default async function DashboardPage() {
             </div>
           </section>
 
-          {/* ===== Matches ===== */}
+          {/* Tabs */}
           <DashboardTabs
-            ongoingMatches={ongoingResult.rows}
-            completedMatches={completedResult.rows}
+            ongoingMatches={ongoingMatches}
+            completedMatches={completedMatches}
           />
         </div>
       </div>
     );
+
   } catch (error) {
     console.error('Dashboard load error:', error);
     redirect('/login');
