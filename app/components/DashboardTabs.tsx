@@ -5,11 +5,9 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
 
-// Dynamically import StatsTab to avoid SSR issues
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
 /* ----------------------------- Types ----------------------------- */
-
 type Match = {
   id: number;
   winner_id?: number;
@@ -18,29 +16,23 @@ type Match = {
   team_1_usernames?: string[];
 };
 
+type DashboardTabsProps = {
+  ongoingMatches: Match[];
+  completedMatches: Match[];
+};
+
 type GamesPlayedMap = Record<number, number>;
 
 /* -------------------------- Component ---------------------------- */
-
-export default function DashboardTabs({
-  ongoingMatches,
-  completedMatches,
-}: {
-  ongoingMatches: Match[];
-  completedMatches: Match[];
-}) {
+export default function DashboardTabs({ ongoingMatches, completedMatches }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'stats'>('ongoing');
-
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
-
   const [loadingOngoing, setLoadingOngoing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
-
   const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
 
-  /* ---------------------- Data Fetching ---------------------- */
-
+  /* ---------------------- Fetch Ongoing Games Played ---------------------- */
   useEffect(() => {
     ongoingMatches.forEach(match => {
       if (gamesPlayedMap[match.id] !== undefined) return;
@@ -48,31 +40,30 @@ export default function DashboardTabs({
       fetch(`/api/match/${match.id}/games-played`)
         .then(res => res.json())
         .then(data => {
-          setGamesPlayedMap(prev => ({
-            ...prev,
-            [match.id]: data.gamesPlayed,
-          }));
+          setGamesPlayedMap(prev => ({ ...prev, [match.id]: data.gamesPlayed }));
         })
         .catch(err => {
           console.error(`Failed to fetch games played for match ${match.id}`, err);
         });
     });
-  }, [ongoingMatches]);
+  }, [ongoingMatches, gamesPlayedMap]);
 
   /* ------------------------- Helpers -------------------------- */
-
   const loadMore = (type: 'ongoing' | 'completed') => {
-    const setLoading = type === 'ongoing' ? setLoadingOngoing : setLoadingCompleted;
-    const setVisible = type === 'ongoing' ? setOngoingVisible : setCompletedVisible;
-
-    setLoading(true);
-    setTimeout(() => {
-      setVisible(v => v + 5);
-      setLoading(false);
-    }, 500);
+    if (type === 'ongoing') {
+      setLoadingOngoing(true);
+      setTimeout(() => {
+        setOngoingVisible(v => v + 5);
+        setLoadingOngoing(false);
+      }, 500);
+    } else {
+      setLoadingCompleted(true);
+      setTimeout(() => {
+        setCompletedVisible(v => v + 5);
+        setLoadingCompleted(false);
+      }, 500);
+    }
   };
-
-  /* ---------------------- Subcomponents ----------------------- */
 
   const TabButton = ({ tab }: { tab: 'ongoing' | 'completed' | 'stats' }) => (
     <button
@@ -87,36 +78,23 @@ export default function DashboardTabs({
     </button>
   );
 
-  const MatchTeams = ({
-    team_a_usernames,
-    team_1_usernames,
-  }: {
-    team_a_usernames?: string[];
-    team_1_usernames?: string[];
-  }) => (
+  const MatchTeams = ({ team_a_usernames, team_1_usernames }: { team_a_usernames?: string[], team_1_usernames?: string[] }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="bg-lime-900/30 p-3 rounded-lg border border-lime-700/40">
         <p className="text-xs font-semibold text-lime-300 mb-2">Team A</p>
         <div className="flex flex-wrap gap-2">
           {team_a_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
+            <span key={u} className="bg-lime-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
         </div>
       </div>
-
       <div className="bg-red-900/30 p-3 rounded-lg border border-red-700/40">
         <p className="text-xs font-semibold text-red-300 mb-2">Team 1</p>
         <div className="flex flex-wrap gap-2">
           {team_1_usernames?.map(u => (
-            <span
-              key={u}
-              className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full"
-            >
+            <span key={u} className="bg-red-700/80 text-white text-xs px-3 py-1 rounded-full">
               {u}
             </span>
           ))}
@@ -130,13 +108,11 @@ export default function DashboardTabs({
     const gamesPlayed = gamesPlayedMap[match.id];
 
     return (
-      <div
-        className={`p-4 rounded-xl shadow-xl transition-transform hover:scale-[1.02] ${
-          isCompleted
-            ? 'bg-slate-800/80 border border-slate-600'
-            : 'bg-slate-700/80 border border-orange-500/40'
-        }`}
-      >
+      <div className={`p-4 rounded-xl shadow-xl transition-transform hover:scale-[1.02] ${
+        isCompleted
+          ? 'bg-slate-800/80 border border-slate-600'
+          : 'bg-slate-700/80 border border-orange-500/40'
+      }`}>
         <div className="flex justify-between items-center mb-2">
           <span className="font-semibold text-sm">
             Match #{match.id}{' '}
@@ -150,8 +126,7 @@ export default function DashboardTabs({
                 <PlayCircle className="h-4 w-4" />
                 {gamesPlayed === undefined ? (
                   <span className="flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Loading…
+                    <Loader2 className="h-3 w-3 animate-spin" /> Loading…
                   </span>
                 ) : (
                   <>Current Game #{gamesPlayed}</>
@@ -161,13 +136,9 @@ export default function DashboardTabs({
           </span>
 
           <Link href={`/match/${match.id}`}>
-            <button
-              className={`px-3 py-1 text-sm rounded-md font-semibold text-white ${
-                isCompleted
-                  ? 'bg-slate-600 hover:bg-slate-700'
-                  : 'bg-orange-500 hover:bg-orange-600'
-              }`}
-            >
+            <button className={`px-3 py-1 text-sm rounded-md font-semibold text-white ${
+              isCompleted ? 'bg-slate-600 hover:bg-slate-700' : 'bg-orange-500 hover:bg-orange-600'
+            }`}>
               {isCompleted ? 'View' : 'Continue'}
             </button>
           </Link>
@@ -182,7 +153,6 @@ export default function DashboardTabs({
   };
 
   /* ---------------------------- Render ---------------------------- */
-
   return (
     <div className="space-y-6">
       {/* Tabs */}
