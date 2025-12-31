@@ -234,31 +234,39 @@ export default function StatsTab() {
           <ul className="space-y-2">
             {topCombos.map((combo, idx) => {
               const maxWins = topCombos[0]?.wins || 1;
-              const barWidth = Math.round((combo.wins / maxWins) * 100);
+              const barWidthPct = Math.round((combo.wins / maxWins) * 100);
+              const greenValue = 120 + Math.round((combo.wins / maxWins) * 80);
+              const barColor = `rgb(0, ${greenValue}, 0)`;
 
               return (
                 <li
                   key={combo.combo}
                   className="flex flex-col md:flex-row md:items-center gap-2 bg-slate-800/80 p-3 rounded-md hover:bg-slate-700/50 transition"
                 >
-                  <div className="flex items-center gap-2 md:w-24">
+                  {/* Rank + Name */}
+                  <div className="flex items-center gap-2 flex-shrink-0 md:w-auto">
                     <span className="font-semibold text-yellow-400">{idx + 1}.</span>
                     <span
-                      className="truncate text-white"
+                      className="truncate text-white max-w-[calc(50vw-100px)] md:max-w-[250px]"
                       title={combo.combo}
                     >
                       {combo.combo}
                     </span>
                   </div>
 
+                  {/* Mini bar */}
                   <div className="relative flex-1 h-4 bg-slate-600 rounded-md overflow-hidden mt-1 md:mt-0">
                     <div
-                      className="h-full bg-green-400 rounded-md"
-                      style={{ width: `${barWidth}%` }}
+                      className="h-full rounded-md transition-all duration-500"
+                      style={{
+                        width: `${barWidthPct}%`,
+                        background: `linear-gradient(to right, ${barColor}, limegreen)`,
+                      }}
                     />
                   </div>
 
-                  <span className="ml-auto font-bold text-green-300 md:ml-4">
+                  {/* Wins */}
+                  <span className="ml-2 md:ml-4 font-bold text-green-300 flex-shrink-0">
                     {combo.wins} win{combo.wins > 1 ? 's' : ''}
                   </span>
                 </li>
