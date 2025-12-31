@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage() {
-  const router = useRouter();
-
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +23,6 @@ export default function RegisterPage() {
       });
 
       const registerData = await registerRes.json();
-
       if (!registerRes.ok) {
         throw new Error(registerData.error || 'Registration failed');
       }
@@ -35,21 +31,19 @@ export default function RegisterPage() {
       const loginRes = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // ✅ include cookie
         body: JSON.stringify({ username, pin }),
       });
 
       const loginData = await loginRes.json();
-
       if (!loginRes.ok) {
         throw new Error(loginData.error || 'Login failed after registration');
       }
 
-      // 3️⃣ Redirect (session cookie already set)
-      router.push('/');
-      router.refresh();
+      // 3️⃣ Hard redirect so UserProvider refreshes immediately
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
