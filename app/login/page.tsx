@@ -6,24 +6,37 @@ import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, pin }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, pin }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      window.location.href = 'https://dotaauction.onrender.com/';
-    } else {
-      setError(data.error || 'Login failed');
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Session cookie is set server-side
+      router.push('/');
+      router.refresh(); // ensures UserProvider re-fetches /api/me
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,12 +53,15 @@ export default function LoginPage() {
               Username
             </label>
             <input
-              type="text"
               id="username"
+              type="text"
               value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={loading}
               required
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2
+                         focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white
+                         disabled:opacity-60"
             />
           </div>
 
@@ -54,22 +70,28 @@ export default function LoginPage() {
               PIN (4+ digits)
             </label>
             <input
-              type="password"
               id="pin"
+              type="password"
               value={pin}
-              onChange={e => setPin(e.target.value)}
-              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white"
+              onChange={(e) => setPin(e.target.value)}
+              disabled={loading}
               pattern="\d{4,}"
               inputMode="numeric"
               required
+              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2
+                         focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white
+                         disabled:opacity-60"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold py-2 rounded shadow-lg transition-all duration-200"
+            disabled={loading}
+            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold
+                       py-2 rounded shadow-lg transition-all duration-200
+                       disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Login
+            {loading ? 'Logging in…' : 'Login'}
           </button>
         </form>
 
@@ -81,7 +103,9 @@ export default function LoginPage() {
         </p>
 
         {error && (
-          <p className="mt-4 text-center text-sm text-orange-400">{error}</p>
+          <p className="mt-4 text-center text-sm text-orange-400">
+            {error}
+          </p>
         )}
       </div>
     </div>
