@@ -46,7 +46,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           console.error(`Failed to fetch games played for match ${match.id}`, err);
         });
     });
-  }, [ongoingMatches, gamesPlayedMap]);
+  }, [ongoingMatches]);
 
   /* ------------------------- Helpers -------------------------- */
   const loadMore = (type: 'ongoing' | 'completed') => {
@@ -164,7 +164,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
       <div className="mb-4 border-b border-slate-600" />
 
-      {/* Ongoing */}
+      {/* Ongoing Matches */}
       {activeTab === 'ongoing' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ongoingMatches.slice(0, ongoingVisible).map(match => (
@@ -183,7 +183,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
         </div>
       )}
 
-      {/* Completed */}
+      {/* Completed Matches */}
       {activeTab === 'completed' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {completedMatches.slice(0, completedVisible).map(match => (
