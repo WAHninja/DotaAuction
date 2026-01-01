@@ -183,7 +183,57 @@ export default function StatsTab() {
         </table>
       </div>
 
-      {/* Top Combos section unchanged */}
+      {/* =======================Top 5 Winning Team Combinations======================= */}
+      <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
+        <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
+          Top 5 Winning Team Combinations
+        </h3>
+
+        {topCombos.length === 0 ? (
+          <p className="text-center text-gray-400 py-6">
+            No team combination data available yet.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {topCombos.map((combo, idx) => {
+              const maxWins = topCombos[0].wins
+              const widthPct = (combo.wins / maxWins) * 100
+
+              return (
+                <li
+                  key={combo.combo}
+                  className="bg-slate-800/80 p-3 rounded-md hover:bg-slate-700/60 transition"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-yellow-400 font-bold text-lg">
+                      {idx + 1}.
+                    </span>
+
+                    <span
+                      className="font-semibold text-white truncate"
+                      title={combo.combo}
+                    >
+                      {combo.combo}
+                    </span>
+
+                    <span className="ml-auto text-green-300 font-bold">
+                      {combo.wins} win{combo.wins !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full h-3 bg-slate-600 rounded overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-lime-400 transition-all"
+                      style={{ width: `${widthPct}%` }}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>      
     </div>
   );
 }
