@@ -108,15 +108,17 @@ export async function GET(req: NextRequest) {
         gamesWon: stats.gamesWon,
         gamesWinRate:
           stats.gamesPlayed > 0 ? +(stats.gamesWon / stats.gamesPlayed * 100).toFixed(1) : 0,
+
         offersMade: stats.offersMade,
         offersAccepted: stats.offersAccepted,
         offersAcceptedRate:
           stats.offersMade > 0 ? +(stats.offersAccepted / stats.offersMade * 100).toFixed(1) : 0,
+
         timesSold: stats.timesSold,
+        timesOffered: stats.timesOffered, // ✅ REQUIRED
         timesSoldRate:
           stats.timesOffered > 0 ? +(stats.timesSold / stats.timesOffered * 100).toFixed(1) : 0,
       }
-    })
 
     const topWinningCombos = Array.from(teamComboWins.entries())
       .map(([combo, wins]) => ({ combo, wins }))
