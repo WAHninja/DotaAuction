@@ -1,45 +1,48 @@
-'use client';
+'use client'
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react'
 
 /* =======================
    Types
 ======================= */
 
 type PlayerStats = {
-  username: string;
-  matches: number;
-  gamesPlayed: number;
-  gamesWon: number;
-  gamesWinRate: number;
-  offersMade: number;
-  offersAccepted: number;
-  offersAcceptedRate: number;
-  timesSold: number;
-  timesOffered: number; // ✅ NEW
-  timesSoldRate: number;
-};
+  username: string
+  matchesPlayed: number
+  gamesPlayed: number
+  gamesWon: number
+
+  timesOffered: number
+  timesSold: number
+
+  offersMade: number
+  offersAccepted: number
+
+  averageOfferValue: number
+}
 
 type TeamCombo = {
-  combo: string;
-  wins: number;
-};
+  combo: string
+  wins: number
+}
 
 type SortKey =
   | 'username'
-  | 'matches'
+  | 'matchesPlayed'
   | 'gamesWinRate'
   | 'offersAcceptedRate'
-  | 'timesSoldRate';
+  | 'timesSoldRate'
 
 /* =======================
    Helpers
 ======================= */
 
-function formatStat(success: number, total: number) {
-  if (!total) return '0 / 0 (0%)';
-  const pct = ((success / total) * 100).toFixed(1);
-  return `${success} / ${total} (${pct}%)`;
+function pct(success: number, total: number) {
+  return total > 0 ? +(success / total * 100).toFixed(1) : 0
+}
+
+function format(success: number, total: number) {
+  return `${success} / ${total} (${pct(success, total)}%)`
 }
 
 /* =======================
@@ -47,79 +50,72 @@ function formatStat(success: number, total: number) {
 ======================= */
 
 export default function StatsTab() {
-  const [loading, setLoading] = useState(true);
-  const [players, setPlayers] = useState<PlayerStats[]>([]);
-  const [topWinningCombos, setTopWinningCombos] = useState<TeamCombo[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [players, setPlayers] = useState<PlayerStats[]>([])
+  const [combos, setCombos] = useState<TeamCombo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [sortKey, setSortKey] = useState<SortKey>('gamesWinRate');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [sortKey, setSortKey] = useState<SortKey>('gamesWinRate')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   /* =======================
-     Data Fetch
+     Fetch
   ======================= */
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch('/api/stats');
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || 'Failed to load stats');
-
-        setPlayers(data.players ?? []);
-        setTopWinningCombos(data.topWinningCombos ?? []);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load statistics. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => {
+        setPlayers(data.players ?? [])
+        setCombos(data.topWinningCombos ?? [])
+      })
+      .catch(err => {
+        console.error(err)
+        setError('Failed to load statistics')
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   /* =======================
-     Derived Data
+     Derived
   ======================= */
 
   const filteredPlayers = useMemo(
-    () => players.filter(p => !p.username.toLowerCase().startsWith('ztest')),
+    () =>
+      players.filter(
+        p => !p.username.toLowerCase().startsWith('ztest')
+      ),
     [players]
-  );
+  )
+
+  const enrichedPlayers = useMemo(() => {
+    return filteredPlayers.map(p => ({
+      ...p,
+      gamesWinRate: pct(p.gamesWon, p.gamesPlayed),
+      offersAcceptedRate: pct(p.offersAccepted, p.offersMade),
+      timesSoldRate: pct(p.timesSold, p.timesOffered),
+    }))
+  }, [filteredPlayers])
 
   const sortedPlayers = useMemo(() => {
-    return [...filteredPlayers].sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
+    return [...enrichedPlayers].sort((a: any, b: any) => {
+      const aVal = a[sortKey]
+      const bVal = b[sortKey]
 
       if (typeof aVal === 'string') {
         return sortDir === 'asc'
-          ? aVal.localeCompare(bVal as string)
-          : (bVal as string).localeCompare(aVal);
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal)
       }
 
-      return sortDir === 'asc'
-        ? (aVal as number) - (bVal as number)
-        : (bVal as number) - (aVal as number);
-    });
-  }, [filteredPlayers, sortKey, sortDir]);
+      return sortDir === 'asc' ? aVal - bVal : bVal - aVal
+    })
+  }, [enrichedPlayers, sortKey, sortDir])
 
-  const filteredTopCombos = useMemo(() => {
-    return topWinningCombos.filter(
-      combo =>
-        !combo.combo
-          .split(',')
-          .some(name => name.trim().toLowerCase().startsWith('ztest'))
-    );
-  }, [topWinningCombos]);
-
-  const topCombos = useMemo(() => {
-    return [...filteredTopCombos]
-      .sort((a, b) => b.wins - a.wins)
-      .slice(0, 5);
-  }, [filteredTopCombos]);
+  const topCombos = useMemo(
+    () => combos.slice(0, 5),
+    [combos]
+  )
 
   /* =======================
      UI States
@@ -127,18 +123,18 @@ export default function StatsTab() {
 
   if (loading) {
     return (
-      <div className="bg-slate-700/60 p-6 rounded-xl border border-slate-600 shadow-xl text-center text-gray-300">
+      <div className="bg-slate-700/60 p-6 rounded-xl text-center text-gray-300">
         Loading statistics…
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="bg-slate-700/60 p-6 rounded-xl border border-slate-600 shadow-xl text-center text-red-400">
+      <div className="bg-slate-700/60 p-6 rounded-xl text-center text-red-400">
         {error}
       </div>
-    );
+    )
   }
 
   /* =======================
@@ -147,35 +143,52 @@ export default function StatsTab() {
 
   return (
     <div className="space-y-10">
-      <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl overflow-x-auto">
+      {/* ================= Player Table ================= */}
+      <div className="bg-slate-700/60 p-4 rounded-xl overflow-x-auto">
         <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
-          Player Stats
+          Player Statistics
         </h3>
 
-        <table className="min-w-full text-sm sm:text-base text-left text-white">
-          <thead>
-            <tr className="bg-slate-800/80">
-              <SortableHeader label="Player" active={sortKey === 'username'} direction={sortDir} onClick={() => setSortKey('username')} />
-              <SortableHeader label="Matches" active={sortKey === 'matches'} direction={sortDir} onClick={() => setSortKey('matches')} />
-              <SortableHeader label="Game Win Rate" active={sortKey === 'gamesWinRate'} direction={sortDir} onClick={() => setSortKey('gamesWinRate')} />
-              <SortableHeader label="Offers Accepted" active={sortKey === 'offersAcceptedRate'} direction={sortDir} onClick={() => setSortKey('offersAcceptedRate')} />
-              <SortableHeader label="Sale Success" active={sortKey === 'timesSoldRate'} direction={sortDir} onClick={() => setSortKey('timesSoldRate')} />
+        <table className="min-w-full text-sm text-white">
+          <thead className="bg-slate-800/80">
+            <tr>
+              <Header label="Player" />
+              <Header label="Matches" />
+              <Header label="Game Win Rate" />
+              <Header label="Offers Accepted" />
+              <Header label="Sale Success" />
+              <Header label="Avg Offer (£)" />
             </tr>
           </thead>
 
           <tbody>
             {sortedPlayers.map(p => (
-              <tr key={p.username} className="border-b border-slate-600 hover:bg-slate-700/40">
-                <td className="px-3 py-2 font-semibold">{p.username}</td>
-                <td className="px-3 py-2 text-center">{p.matches}</td>
-                <td className="px-3 py-2 text-center">
-                  {formatStat(p.gamesWon, p.gamesPlayed)}
+              <tr
+                key={p.username}
+                className="border-b border-slate-600 hover:bg-slate-700/40"
+              >
+                <td className="px-3 py-2 font-semibold">
+                  {p.username}
                 </td>
+
                 <td className="px-3 py-2 text-center">
-                  {formatStat(p.offersAccepted, p.offersMade)}
+                  {p.matchesPlayed}
                 </td>
+
                 <td className="px-3 py-2 text-center">
-                  {formatStat(p.timesSold, p.timesOffered)} {/* ✅ FIXED */}
+                  {format(p.gamesWon, p.gamesPlayed)}
+                </td>
+
+                <td className="px-3 py-2 text-center">
+                  {format(p.offersAccepted, p.offersMade)}
+                </td>
+
+                <td className="px-3 py-2 text-center">
+                  {format(p.timesSold, p.timesOffered)}
+                </td>
+
+                <td className="px-3 py-2 text-center text-green-300">
+                  {p.averageOfferValue.toFixed(1)}
                 </td>
               </tr>
             ))}
@@ -183,49 +196,43 @@ export default function StatsTab() {
         </table>
       </div>
 
-      {/* =======================Top 5 Winning Team Combinations======================= */}
-      <div className="bg-slate-700/60 p-4 rounded-xl border border-slate-600 shadow-xl">
+      {/* ================= Winning Combos ================= */}
+      <div className="bg-slate-700/60 p-4 rounded-xl">
         <h3 className="text-lg font-bold text-yellow-400 mb-4 text-center">
           Top 5 Winning Team Combinations
         </h3>
 
         {topCombos.length === 0 ? (
           <p className="text-center text-gray-400 py-6">
-            No team combination data available yet.
+            No completed games yet.
           </p>
         ) : (
           <ul className="space-y-3">
-            {topCombos.map((combo, idx) => {
-              const maxWins = topCombos[0].wins
-              const widthPct = (combo.wins / maxWins) * 100
+            {topCombos.map((c, i) => {
+              const max = topCombos[0].wins
+              const pct = (c.wins / max) * 100
 
               return (
                 <li
-                  key={combo.combo}
-                  className="bg-slate-800/80 p-3 rounded-md hover:bg-slate-700/60 transition"
+                  key={c.combo}
+                  className="bg-slate-800/80 p-3 rounded"
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-yellow-400 font-bold text-lg">
-                      {idx + 1}.
+                    <span className="text-yellow-400 font-bold">
+                      {i + 1}.
                     </span>
-
-                    <span
-                      className="font-semibold text-white truncate"
-                      title={combo.combo}
-                    >
-                      {combo.combo}
+                    <span className="truncate font-semibold">
+                      {c.combo}
                     </span>
-
                     <span className="ml-auto text-green-300 font-bold">
-                      {combo.wins} win{combo.wins !== 1 ? 's' : ''}
+                      {c.wins} wins
                     </span>
                   </div>
 
-                  {/* Progress bar */}
-                  <div className="w-full h-3 bg-slate-600 rounded overflow-hidden">
+                  <div className="h-3 bg-slate-600 rounded">
                     <div
-                      className="h-full bg-gradient-to-r from-green-500 to-lime-400 transition-all"
-                      style={{ width: `${widthPct}%` }}
+                      className="h-full bg-gradient-to-r from-green-500 to-lime-400 rounded"
+                      style={{ width: `${pct}%` }}
                     />
                   </div>
                 </li>
@@ -233,34 +240,19 @@ export default function StatsTab() {
             })}
           </ul>
         )}
-      </div>      
+      </div>
     </div>
-  );
+  )
 }
 
 /* =======================
-   Sub Components
+   Sub
 ======================= */
 
-function SortableHeader({
-  label,
-  active,
-  direction,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  direction: 'asc' | 'desc';
-  onClick: () => void;
-}) {
+function Header({ label }: { label: string }) {
   return (
-    <th
-      onClick={onClick}
-      className="px-3 py-2 cursor-pointer select-none hover:text-orange-400"
-      aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-    >
+    <th className="px-3 py-2 text-left text-gray-300">
       {label}
-      {active && <span className="ml-1">{direction === 'asc' ? '▲' : '▼'}</span>}
     </th>
-  );
+  )
 }
