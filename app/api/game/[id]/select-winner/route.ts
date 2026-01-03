@@ -1,208 +1,106 @@
-import { NextRequest, NextResponse } from 'next/server'
-import db from '@/lib/db'
-import Ably from 'ably/promises'
+'use client';
 
-type TeamId = 'team_1' | 'team_a'
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
-export async function POST(req: NextRequest) {
-  const client = await db.connect()
+type Offer = {
+  id: number;
+  game_id: number;
+  from_player_id: number;
+  target_player_id: number;
+  offer_amount: number;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  from_username: string;
+};
 
-  try {
-    /* =============================
-       Parse & Validate Input
-    ============================== */
-    const url = new URL(req.url)
-    const gameId = Number(url.pathname.split('/')[3])
+type AcceptOfferSectionProps = {
+  matchId: number;
+  currentPlayerId: number;
+  offers: Offer[];
+  show: boolean;
+  onUpdateOffers?: () => void; // Optional callback to refresh parent state
+};
 
-    if (!Number.isInteger(gameId)) {
-      return NextResponse.json({ error: 'Invalid game ID' }, { status: 400 })
+export default function AcceptOfferSection({
+  matchId,
+  currentPlayerId,
+  offers,
+  show,
+  onUpdateOffers,
+}: AcceptOfferSectionProps) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Only show offers targeted at the current player
+  const playerOffers = offers.filter(o => o.target_player_id === currentPlayerId);
+
+  if (!show || playerOffers.length === 0) return null;
+
+  const handleAccept = async (offerId: number) => {
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const res = await fetch(`/api/game/${matchId}/accept-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerId }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessage('✅ Offer accepted!');
+        // Trigger parent to refresh offers and match state
+        onUpdateOffers?.();
+      } else {
+        setMessage(data.error || 'Error accepting offer.');
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage('Server error.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const { winningTeamId }: { winningTeamId: TeamId } = await req.json()
+  return (
+    <div className="border p-4 rounded-2xl bg-gray-800 shadow-lg mt-6 text-white">
+      <h2 className="text-xl font-bold mb-4 text-center">Offers Made To You</h2>
 
-    if (!['team_1', 'team_a'].includes(winningTeamId)) {
-      return NextResponse.json({ error: 'Invalid winningTeamId' }, { status: 400 })
-    }
+      {playerOffers.map((offer) => (
+        <div key={offer.id} className="flex items-center justify-between border-b py-2">
+          <div>
+            <p>
+              <span className="font-semibold">{offer.from_username}</span> offered{' '}
+              <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
+              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
+            </p>
+            <p className="text-xs text-gray-400">Status: {offer.status}</p>
+          </div>
 
-    await client.query('BEGIN')
+          {offer.status === 'pending' ? (
+            <button
+              onClick={() => handleAccept(offer.id)}
+              disabled={loading}
+              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50"
+            >
+              {loading ? 'Accepting...' : 'Accept'}
+            </button>
+          ) : (
+            <span
+              className={`px-3 py-1 rounded font-semibold ${
+                offer.status === 'accepted' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+              }`}
+            >
+              {offer.status === 'accepted' ? 'Accepted' : 'Rejected'}
+            </span>
+          )}
+        </div>
+      ))}
 
-    /* =============================
-       Lock Game Row (Prevents races)
-    ============================== */
-    const gameRes = await client.query(
-      `SELECT * FROM games WHERE id = $1 FOR UPDATE`,
-      [gameId]
-    )
-
-    if (gameRes.rows.length === 0) {
-      await client.query('ROLLBACK')
-      return NextResponse.json({ error: 'Game not found' }, { status: 404 })
-    }
-
-    const game = gameRes.rows[0]
-
-    /* =============================
-       Idempotency Guard
-    ============================== */
-    if (game.winning_team) {
-      await client.query('ROLLBACK')
-      return NextResponse.json(
-        { error: 'Winner already submitted for this game' },
-        { status: 409 }
-      )
-    }
-
-    if (game.status !== 'in progress') {
-      await client.query('ROLLBACK')
-      return NextResponse.json(
-        { error: 'Game is not in progress' },
-        { status: 400 }
-      )
-    }
-
-    const winningMembers: number[] = game[`${winningTeamId}_members`]
-    const losingTeamId: TeamId =
-      winningTeamId === 'team_1' ? 'team_a' : 'team_1'
-    const losingMembers: number[] = game[`${losingTeamId}_members`]
-
-    /* =============================
-       Single Winner Shortcut
-    ============================== */
-    if (winningMembers.length === 1) {
-      const winnerId = winningMembers[0]
-
-      await client.query(
-        `UPDATE games
-         SET status = 'finished', winning_team = $1
-         WHERE id = $2`,
-        [winningTeamId, gameId]
-      )
-
-      await client.query(
-        `UPDATE matches
-         SET status = 'finished', winner_id = $1
-         WHERE id = $2`,
-        [winnerId, game.match_id]
-      )
-
-      await client.query('COMMIT')
-      await publishAbly(game.match_id, {
-        gameId,
-        matchId: game.match_id,
-        winnerId,
-      })
-
-      return NextResponse.json({
-        success: true,
-        message: 'Match finished with single winner.',
-      })
-    }
-
-    /* =============================
-       Calculate Losing Gold (Once)
-    ============================== */
-    const losingGoldRes = await client.query(
-      `SELECT user_id, gold
-       FROM match_players
-       WHERE match_id = $1 AND user_id = ANY($2)`,
-      [game.match_id, losingMembers]
-    )
-
-    const losingGoldMap = new Map<number, number>()
-    let bonusPool = 0
-
-    for (const row of losingGoldRes.rows) {
-      losingGoldMap.set(row.user_id, row.gold)
-      bonusPool += Math.floor(row.gold * 0.5)
-    }
-
-    const perWinnerBonus = Math.floor(bonusPool / winningMembers.length)
-
-    /* =============================
-       Update Game State
-    ============================== */
-    await client.query(
-      `UPDATE games
-       SET status = 'auction pending', winning_team = $1
-       WHERE id = $2`,
-      [winningTeamId, gameId]
-    )
-
-    /* =============================
-       Reward Winners
-    ============================== */
-    for (const playerId of winningMembers) {
-      const reward = 1000 + perWinnerBonus
-
-      await client.query(
-        `UPDATE match_players
-         SET gold = gold + $1
-         WHERE match_id = $2 AND user_id = $3`,
-        [reward, game.match_id, playerId]
-      )
-
-      await client.query(
-        `INSERT INTO game_player_stats
-         (game_id, player_id, team_id, gold_change, reason)
-         VALUES ($1, $2, $3, $4, 'win_reward')`,
-        [gameId, playerId, winningTeamId, reward]
-      )
-    }
-
-    /* =============================
-       Penalise Losers
-    ============================== */
-    for (const playerId of losingMembers) {
-      const originalGold = losingGoldMap.get(playerId) ?? 0
-      const penalty = Math.floor(originalGold * 0.5)
-
-      await client.query(
-        `UPDATE match_players
-         SET gold = gold - $1
-         WHERE match_id = $2 AND user_id = $3`,
-        [penalty, game.match_id, playerId]
-      )
-
-      await client.query(
-        `INSERT INTO game_player_stats
-         (game_id, player_id, team_id, gold_change, reason)
-         VALUES ($1, $2, $3, $4, 'loss_penalty')`,
-        [gameId, playerId, losingTeamId, -penalty]
-      )
-    }
-
-    await client.query('COMMIT')
-
-    /* =============================
-       Notify Clients
-    ============================== */
-    await publishAbly(game.match_id, {
-      gameId,
-      matchId: game.match_id,
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Winner selected, auction pending.',
-    })
-
-  } catch (err) {
-    await client.query('ROLLBACK')
-    console.error('select-winner error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  } finally {
-    client.release()
-  }
-}
-
-/* =============================
-   Ably Helper
-============================= */
-async function publishAbly(matchId: number, payload: any) {
-  const ably = new Ably.Rest(process.env.ABLY_API_KEY!)
-  const channel = ably.channels.get(`match-${matchId}`)
-  await channel.publish('game-winner-selected', payload)
+      {message && <p className="mt-3 text-center text-yellow-400 font-medium">{message}</p>}
+    </div>
+  );
 }
