@@ -8,11 +8,11 @@ type Player = {
 };
 
 type SubmitOfferFormProps = {
-  matchId: number;
-  gameId: number; // Add this
+  gameId: number;
   currentPlayerId: number;
   winningTeamMembers: Player[];
   show: boolean;
+  onSuccess?: () => void;
 };
 
 export default function SubmitOfferForm({
@@ -20,6 +20,7 @@ export default function SubmitOfferForm({
   currentPlayerId,
   winningTeamMembers,
   show,
+  onSuccess,
 }: SubmitOfferFormProps) {
   const [targetId, setTargetId] = useState<number | null>(null);
   const [amount, setAmount] = useState('');
@@ -31,39 +32,38 @@ export default function SubmitOfferForm({
   const filteredTeammates = winningTeamMembers.filter(p => p.id !== currentPlayerId);
 
   const handleSubmit = async () => {
-  const numAmount = parseInt(amount);
+    const numAmount = parseInt(amount);
 
-  if (!targetId || isNaN(numAmount) || numAmount < 250 || numAmount > 2000) {
-    setMessage('Please enter a valid offer (250–2000) and select a teammate.');
-    return;
-  }
-
-  setLoading(true);
-  setMessage('');
-
-  try {
-    const res = await fetch(`/api/game/${gameId}/submit-offer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        target_player_id: targetId,
-        offer_amount: numAmount,
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      setMessage('Offer submitted!');
-    } else {
-      setMessage(data.error || 'Something went wrong.');
+    if (!targetId || isNaN(numAmount) || numAmount < 250 || numAmount > 2000) {
+      return setMessage('Please enter a valid offer (250–2000) and select a teammate.');
     }
-  } catch (err) {
-    console.error(err);
-    setMessage('Error submitting offer.');
-  } finally {
-    setLoading(false);
-  }
-};
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const res = await fetch(`/api/game/${gameId}/submit-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_player_id: targetId, offer_amount: numAmount }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage('Offer submitted!');
+        setTargetId(null);
+        setAmount('');
+        onSuccess?.();
+      } else {
+        setMessage(data.error || 'Something went wrong.');
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage('Error submitting offer.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="border p-4 rounded-xl bg-white shadow-md mt-6">
@@ -73,6 +73,7 @@ export default function SubmitOfferForm({
         <label className="block mb-1 font-medium">Target Teammate</label>
         <select
           className="w-full border px-2 py-1 rounded"
+          value={targetId || ''}
           onChange={e => setTargetId(Number(e.target.value))}
         >
           <option value="">-- Select --</option>
@@ -104,7 +105,11 @@ export default function SubmitOfferForm({
         {loading ? 'Submitting...' : 'Submit Offer'}
       </button>
 
-      {message && <p className="mt-2 text-sm text-red-500">{message}</p>}
+      {message && (
+        <p className={`mt-2 text-sm ${message === 'Offer submitted!' ? 'text-green-500' : 'text-red-500'}`}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }
