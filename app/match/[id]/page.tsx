@@ -28,9 +28,6 @@ export default function MatchPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
-  const [submittingWinner, setSubmittingWinner] = useState(false);
-  const [winnerError, setWinnerError] = useState<string | null>(null);
-
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
     if (user === null) router.push('/');
@@ -97,39 +94,6 @@ export default function MatchPage() {
     fetchGameHistory
   );
 
-  /* ---------------- Winner Submit ---------------- */
-  const handleWinnerSubmit = async (team: 'team_1' | 'team_a') => {
-    if (!data?.latestGame?.id) return;
-
-    setSubmittingWinner(true);
-    setWinnerError(null);
-
-    try {
-      const res = await fetch(`/api/game/${data.latestGame.id}/select-winner`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ winning_team: team }), // match your API
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        setWinnerError(result.error || 'Failed to submit winner.');
-        return;
-      }
-
-      // Refresh match state after submission
-      fetchMatchData();
-      fetchGamesPlayed();
-      fetchGameHistory();
-    } catch (err) {
-      console.error(err);
-      setWinnerError('Server error submitting winner.');
-    } finally {
-      setSubmittingWinner(false);
-    }
-  };
-
   /* ---------------- Guards ---------------- */
   if (!user)
     return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
@@ -141,7 +105,6 @@ export default function MatchPage() {
     return <div className="p-6 text-center text-gray-300">Match not found.</div>;
 
   const { match, latestGame, players, currentUserId } = data;
-
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
 
@@ -190,13 +153,7 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Winner Submission ---------------- */}
-      {isInProgress && (
-        <SelectGameWinnerForm
-          loading={submittingWinner}
-          error={winnerError}
-          onSubmit={handleWinnerSubmit}
-        />
-      )}
+      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
 
       {/* ---------------- Auction Phase ---------------- */}
       {isAuction && (
@@ -215,58 +172,57 @@ export default function MatchPage() {
 
       {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
-  <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
-  {[...history].reverse().map((game) => {
-    const isExpanded = expandedGameId === game.gameNumber;
-    const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
+        {[...history].reverse().map((game) => {
+          const isExpanded = expandedGameId === game.gameNumber;
+          const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
 
-    // Highlight latest game
-    const isLatest = game.gameNumber === data.latestGame?.gameNumber;
+          // Highlight latest game
+          const isLatest = game.gameNumber === data.latestGame?.gameNumber;
 
-    return (
-      <div
-        key={game.gameNumber}
-        ref={isLatest ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : null}
-        className={`mb-4 p-4 border rounded-lg shadow cursor-pointer transition-all ${
-          isLatest ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300 bg-white'
-        }`}
-        onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
-      >
-        <h3 className="text-xl font-semibold flex justify-between">
-          <span>
-            Game #{game.gameNumber} – {game.status}
-          </span>
-          <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
-        </h3>
+          return (
+            <div
+              key={game.gameNumber}
+              ref={isLatest ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : null}
+              className={`mb-4 p-4 border rounded-lg shadow cursor-pointer transition-all ${
+                isLatest ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300 bg-white'
+              }`}
+              onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
+            >
+              <h3 className="text-xl font-semibold flex justify-between">
+                <span>
+                  Game #{game.gameNumber} – {game.status}
+                </span>
+                <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
+              </h3>
 
-        {!isExpanded && acceptedOffer && (
-          <p className="mt-2 text-sm font-medium">
-            {acceptedOffer.fromUsername} traded{' '}
-            {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
-            <Image
-              src="/Gold_symbol.webp"
-              alt="Gold"
-              width={16}
-              height={16}
-              className="inline-block ml-1"
-            />
-          </p>
-        )}
+              {!isExpanded && acceptedOffer && (
+                <p className="mt-2 text-sm font-medium">
+                  {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
+                  <Image
+                    src="/Gold_symbol.webp"
+                    alt="Gold"
+                    width={16}
+                    height={16}
+                    className="inline-block ml-1"
+                  />
+                </p>
+              )}
 
-        {isExpanded && (
-          <div className="mt-2">
-            <strong>Winner:</strong> {game.winningTeam || 'N/A'}
-            <br />
-            <strong>Team A:</strong> {game.teamAMembers.join(', ')}
-            <br />
-            <strong>Team 1:</strong> {game.team1Members.join(', ')}
-          </div>
-        )}
-      </div>
-    );
-  })}
-</section>
+              {isExpanded && (
+                <div className="mt-2">
+                  <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+                  <br />
+                  <strong>Team A:</strong> {game.teamAMembers.join(', ')}
+                  <br />
+                  <strong>Team 1:</strong> {game.team1Members.join(', ')}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </section>
     </>
   );
 }
