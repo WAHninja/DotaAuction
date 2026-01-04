@@ -1,20 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import * as Ably from 'ably/promises';
 
 const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<Response> {
-  const matchId = params.id; // Use the dynamic route param
+export async function POST(req: NextRequest): Promise<Response> {
+  // Extract ID from the URL
+  const url = new URL(req.url);
+  const parts = url.pathname.split('/'); // ['','api','game','[id]','accept-offer']
+  const matchId = parts[3]; // index 3 = dynamic [id]
 
   if (!matchId) {
-    return new Response(JSON.stringify({ message: 'Missing match ID.' }), {
-      status: 400,
-    });
+    return new Response(JSON.stringify({ message: 'Missing match ID.' }), { status: 400 });
   }
 
   const { offerId } = await req.json();
@@ -51,19 +49,16 @@ export async function POST(
     await db.query('BEGIN');
 
     await db.query('UPDATE Offers SET status = $1 WHERE id = $2', ['accepted', offerId]);
-    await db.query(
-      'UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
+    await db.query('UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
       ['rejected', game.id, offerId, 'pending']
     );
 
-    await db.query(
-      'UPDATE match_players SET gold = gold + $1 WHERE user_id = $2 AND match_id = $3',
+    await db.query('UPDATE match_players SET gold = gold + $1 WHERE user_id = $2 AND match_id = $3',
       [offer_amount, from_player_id, game.match_id]
     );
 
-    await db.query(
-      `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-       VALUES ($1, $2, $3, $4, 'offer_gain')`,
+    await db.query(`INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+      VALUES ($1, $2, $3, $4, 'offer_gain')`,
       [game.id, from_player_id, winningTeam, offer_amount]
     );
 
@@ -73,36 +68,30 @@ export async function POST(
     const newTeam1 = [...team1];
 
     if (teamA.includes(target_player_id)) {
-      const index = newTeamA.indexOf(target_player_id);
-      if (index > -1) newTeamA.splice(index, 1);
+      newTeamA.splice(newTeamA.indexOf(target_player_id), 1);
       newTeam1.push(target_player_id);
     } else if (team1.includes(target_player_id)) {
-      const index = newTeam1.indexOf(target_player_id);
-      if (index > -1) newTeam1.splice(index, 1);
+      newTeam1.splice(newTeam1.indexOf(target_player_id), 1);
       newTeamA.push(target_player_id);
     }
 
     const { rows: newGameRows } = await db.query(
       `INSERT INTO Games (match_id, team_a_members, team_1_members, status)
-       VALUES ($1, $2, $3, 'in progress')
-       RETURNING *`,
+       VALUES ($1, $2, $3, 'in progress') RETURNING *`,
       [game.match_id, newTeamA, newTeam1]
     );
 
     await db.query('COMMIT');
 
-    await ably.channels
-      .get(`match-${matchId}-offers`)
-      .publish('offer-accepted', {
-        acceptedOffer: offer,
-        newGame: newGameRows[0],
-      });
+    await ably.channels.get(`match-${matchId}-offers`).publish('offer-accepted', {
+      acceptedOffer: offer,
+      newGame: newGameRows[0],
+    });
 
     return new Response(JSON.stringify({ message: 'Offer accepted and new game started.' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-
   } catch (err) {
     await db.query('ROLLBACK');
     console.error(err);
