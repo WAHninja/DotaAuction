@@ -6,26 +6,37 @@ import * as Ably from 'ably/promises';
 const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
 
 export async function POST(req: NextRequest): Promise<Response> {
-  // Extract ID from the URL
-  const url = new URL(req.url);
-  const parts = url.pathname.split('/'); // ['','api','game','[id]','accept-offer']
-  const matchId = parts[3]; // index 3 = dynamic [id]
-
-  if (!matchId) {
-    return new Response(JSON.stringify({ message: 'Missing match ID.' }), { status: 400 });
-  }
-
-  const { offerId } = await req.json();
-  const session = await getSession();
-  const userId = session?.userId;
-  if (!userId) return new Response(JSON.stringify({ message: 'Not authenticated.' }), { status: 401 });
-
   try {
+    // 1️⃣ Extract game ID from URL
+    const url = new URL(req.url);
+    const parts = url.pathname.split('/');
+    const gameId = Number(parts[3]); // /api/game/{gameId}/accept-offer
+
+    if (!gameId || isNaN(gameId)) {
+      return new Response(JSON.stringify({ message: 'Missing or invalid game ID.' }), {
+        status: 400,
+      });
+    }
+
+    // 2️⃣ Get the offerId from the request body
+    const { offerId } = await req.json();
+    const session = await getSession();
+    const userId = session?.userId;
+
+    if (!userId) {
+      return new Response(JSON.stringify({ message: 'Not authenticated.' }), { status: 401 });
+    }
+
+    // 3️⃣ Fetch the game by its ID
     const { rows: gameRows } = await db.query(
-      'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
-      [matchId]
+      'SELECT * FROM Games WHERE id = $1 LIMIT 1',
+      [gameId]
     );
-    if (gameRows.length === 0) return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
+
+    if (gameRows.length === 0) {
+      return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
+    }
+
     const game = gameRows[0];
 
     const teamA = game.team_a_members;
@@ -37,33 +48,47 @@ export async function POST(req: NextRequest): Promise<Response> {
       return new Response(JSON.stringify({ message: 'You are not on the losing team.' }), { status: 403 });
     }
 
+    // 4️⃣ Fetch the offer
     const { rows: offerRows } = await db.query(
       'SELECT * FROM Offers WHERE id = $1 AND game_id = $2 AND status = $3',
       [offerId, game.id, 'pending']
     );
-    if (offerRows.length === 0) return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), { status: 404 });
-    const offer = offerRows[0];
 
+    if (offerRows.length === 0) {
+      return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), { status: 404 });
+    }
+
+    const offer = offerRows[0];
     const { from_player_id, target_player_id, offer_amount } = offer;
 
+    // 5️⃣ Start transaction
     await db.query('BEGIN');
 
+    // Accept the offer
     await db.query('UPDATE Offers SET status = $1 WHERE id = $2', ['accepted', offerId]);
-    await db.query('UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
+    // Reject all other pending offers for this game
+    await db.query(
+      'UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
       ['rejected', game.id, offerId, 'pending']
     );
 
-    await db.query('UPDATE match_players SET gold = gold + $1 WHERE user_id = $2 AND match_id = $3',
+    // Update gold for offering player
+    await db.query(
+      'UPDATE match_players SET gold = gold + $1 WHERE user_id = $2 AND match_id = $3',
       [offer_amount, from_player_id, game.match_id]
     );
 
-    await db.query(`INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-      VALUES ($1, $2, $3, $4, 'offer_gain')`,
+    // Track gold change
+    await db.query(
+      `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
+       VALUES ($1, $2, $3, $4, 'offer_gain')`,
       [game.id, from_player_id, winningTeam, offer_amount]
     );
 
+    // Finish current game
     await db.query('UPDATE Games SET status = $1 WHERE id = $2', ['finished', game.id]);
 
+    // 6️⃣ Swap the targeted player to the winning team in the new game
     const newTeamA = [...teamA];
     const newTeam1 = [...team1];
 
@@ -81,12 +106,13 @@ export async function POST(req: NextRequest): Promise<Response> {
       [game.match_id, newTeamA, newTeam1]
     );
 
+    // Commit transaction
     await db.query('COMMIT');
 
-    await ably.channels.get(`match-${matchId}-offers`).publish('offer-accepted', {
-      acceptedOffer: offer,
-      newGame: newGameRows[0],
-    });
+    // 7️⃣ Notify via Ably
+    await ably.channels
+      .get(`match-${game.match_id}-offers`)
+      .publish('offer-accepted', { acceptedOffer: offer, newGame: newGameRows[0] });
 
     return new Response(JSON.stringify({ message: 'Offer accepted and new game started.' }), {
       status: 200,
