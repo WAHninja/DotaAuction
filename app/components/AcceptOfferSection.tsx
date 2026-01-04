@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 
 type Offer = {
@@ -15,7 +15,7 @@ type Offer = {
 };
 
 type AcceptOfferSectionProps = {
-  matchId: number;
+  gameId: number; // <-- must be the latestGame.id
   currentPlayerId: number;
   offers: Offer[];
   show: boolean;
@@ -23,7 +23,7 @@ type AcceptOfferSectionProps = {
 };
 
 export default function AcceptOfferSection({
-  matchId,
+  gameId,
   currentPlayerId,
   offers,
   show,
@@ -42,20 +42,20 @@ export default function AcceptOfferSection({
     setMessage('');
 
     try {
-      const res = await fetch(`/api/game/${matchId}/accept-offer`, {
+      const res = await fetch(`/api/game/${gameId}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId }),
+        body: JSON.stringify({ offerId }), // must send offerId
       });
 
       const data = await res.json();
 
       if (res.ok) {
         setMessage('✅ Offer accepted!');
-        // Trigger parent to refresh offers and match state
+        // Refresh parent state (offers, match data)
         onUpdateOffers?.();
       } else {
-        setMessage(data.error || 'Error accepting offer.');
+        setMessage(data.message || 'Error accepting offer.');
       }
     } catch (err) {
       console.error(err);
@@ -75,7 +75,13 @@ export default function AcceptOfferSection({
             <p>
               <span className="font-semibold">{offer.from_username}</span> offered{' '}
               <span className="text-yellow-400 font-bold">{offer.offer_amount}</span>{' '}
-              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
+              <Image
+                src="/Gold_symbol.webp"
+                alt="Gold"
+                width={16}
+                height={16}
+                className="inline-block ml-1 align-middle"
+              />
             </p>
             <p className="text-xs text-gray-400">Status: {offer.status}</p>
           </div>
@@ -100,7 +106,9 @@ export default function AcceptOfferSection({
         </div>
       ))}
 
-      {message && <p className="mt-3 text-center text-yellow-400 font-medium">{message}</p>}
+      {message && (
+        <p className="mt-3 text-center text-yellow-400 font-medium">{message}</p>
+      )}
     </div>
   );
 }
