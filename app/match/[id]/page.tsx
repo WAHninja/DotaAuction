@@ -215,56 +215,58 @@ export default function MatchPage() {
 
       {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+  <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
-        {[...history].reverse().map((game) => {
-          const isExpanded = expandedGameId === game.gameNumber;
-          const acceptedOffer = game.offers.find(
-            (o: any) => o.status === 'accepted'
-          );
+  {[...history].reverse().map((game) => {
+    const isExpanded = expandedGameId === game.gameNumber;
+    const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
 
-          return (
-            <div
-              key={game.gameNumber}
-              className="mb-4 p-4 border rounded-lg shadow cursor-pointer"
-              onClick={() =>
-                setExpandedGameId(isExpanded ? null : game.gameNumber)
-              }
-            >
-              <h3 className="text-xl font-semibold flex justify-between">
-                <span>
-                  Game #{game.gameNumber} – {game.status}
-                </span>
-                <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
-              </h3>
+    // Highlight latest game
+    const isLatest = game.gameNumber === data.latestGame?.gameNumber;
 
-              {!isExpanded && acceptedOffer && (
-                <p className="mt-2 text-sm font-medium">
-                  {acceptedOffer.fromUsername} traded{' '}
-                  {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
-                  <Image
-                    src="/Gold_symbol.webp"
-                    alt="Gold"
-                    width={16}
-                    height={16}
-                    className="inline-block ml-1"
-                  />
-                </p>
-              )}
+    return (
+      <div
+        key={game.gameNumber}
+        ref={isLatest ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : null}
+        className={`mb-4 p-4 border rounded-lg shadow cursor-pointer transition-all ${
+          isLatest ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300 bg-white'
+        }`}
+        onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
+      >
+        <h3 className="text-xl font-semibold flex justify-between">
+          <span>
+            Game #{game.gameNumber} – {game.status}
+          </span>
+          <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
+        </h3>
 
-              {isExpanded && (
-                <div className="mt-2">
-                  <strong>Winner:</strong> {game.winningTeam || 'N/A'}
-                  <br />
-                  <strong>Team A:</strong> {game.teamAMembers.join(', ')}
-                  <br />
-                  <strong>Team 1:</strong> {game.team1Members.join(', ')}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </section>
+        {!isExpanded && acceptedOffer && (
+          <p className="mt-2 text-sm font-medium">
+            {acceptedOffer.fromUsername} traded{' '}
+            {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
+            <Image
+              src="/Gold_symbol.webp"
+              alt="Gold"
+              width={16}
+              height={16}
+              className="inline-block ml-1"
+            />
+          </p>
+        )}
+
+        {isExpanded && (
+          <div className="mt-2">
+            <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+            <br />
+            <strong>Team A:</strong> {game.teamAMembers.join(', ')}
+            <br />
+            <strong>Team 1:</strong> {game.team1Members.join(', ')}
+          </div>
+        )}
+      </div>
+    );
+  })}
+</section>
     </>
   );
 }
