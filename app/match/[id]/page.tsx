@@ -105,14 +105,11 @@ export default function MatchPage() {
     setWinnerError(null);
 
     try {
-      const res = await fetch(
-        `/api/game/${data.latestGame.id}/select-winner`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ winning_team: team }),
-        }
-      );
+      const res = await fetch(`/api/game/${data.latestGame.id}/select-winner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winningTeamId: team }), // ✅ FIXED FIELD NAME
+      });
 
       const result = await res.json();
 
@@ -121,6 +118,7 @@ export default function MatchPage() {
         return;
       }
 
+      // Refresh match state
       fetchMatchData();
       fetchGamesPlayed();
       fetchGameHistory();
@@ -149,8 +147,7 @@ export default function MatchPage() {
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
 
-  const getPlayer = (id: number) =>
-    players.find((p: any) => p.id === id);
+  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
 
   const isAuction = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
@@ -196,9 +193,7 @@ export default function MatchPage() {
 
       {isInProgress && (
         <SelectGameWinnerForm
-          loading={submittingWinner}
-          error={winnerError}
-          onSubmit={handleWinnerSubmit}
+          gameId={latestGame.id} // ✅ send gameId instead of callback
         />
       )}
 
