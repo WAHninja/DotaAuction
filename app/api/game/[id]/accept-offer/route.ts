@@ -1,4 +1,3 @@
-// app/api/game/[id]/accept-offer/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
@@ -6,12 +5,11 @@ import * as Ably from 'ably/promises';
 
 const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
 
-interface Context {
-  params: { id: string };
-}
-
-export async function POST(req: NextRequest, context: Context) {
-  const matchId = context.params.id;
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const matchId = params.id;
   if (!matchId) {
     return NextResponse.json({ message: 'Missing match ID.' }, { status: 400 });
   }
