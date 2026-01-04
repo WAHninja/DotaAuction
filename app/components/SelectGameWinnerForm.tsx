@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import Image from 'next/image';
 
-type SelectGameWinnerFormProps = {
+type SelectWinnerFormProps = {
   gameId: number;
   show: boolean;
 };
 
-export default function SelectGameWinnerForm({ gameId, show }: SelectGameWinnerFormProps) {
+export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps) {
   const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
