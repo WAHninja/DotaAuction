@@ -15,7 +15,7 @@ type Offer = {
 };
 
 type AcceptOfferSectionProps = {
-  gameId: number; // <-- must be the latestGame.id
+  gameId: number; // Latest game ID
   currentPlayerId: number;
   offers: Offer[];
   show: boolean;
@@ -29,30 +29,41 @@ export default function AcceptOfferSection({
   show,
   onUpdateOffers,
 }: AcceptOfferSectionProps) {
-  const [loading, setLoading] = useState(false);
+  const [localOffers, setLocalOffers] = useState(offers);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
 
   // Only show offers targeted at the current player
-  const playerOffers = offers.filter(o => o.target_player_id === currentPlayerId);
+  const playerOffers = localOffers.filter(o => o.target_player_id === currentPlayerId);
 
   if (!show || playerOffers.length === 0) return null;
 
   const handleAccept = async (offerId: number) => {
-    setLoading(true);
+    setLoadingId(offerId);
     setMessage('');
 
     try {
       const res = await fetch(`/api/game/${gameId}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId }), // must send offerId
+        body: JSON.stringify({ offerId }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
         setMessage('✅ Offer accepted!');
-        // Refresh parent state (offers, match data)
+
+        // Update local offers immediately
+        setLocalOffers(prev =>
+          prev.map(o => {
+            if (o.id === offerId) return { ...o, status: 'accepted' };
+            if (o.status === 'pending') return { ...o, status: 'rejected' };
+            return o;
+          })
+        );
+
+        // Trigger parent refresh if provided
         onUpdateOffers?.();
       } else {
         setMessage(data.message || 'Error accepting offer.');
@@ -61,7 +72,7 @@ export default function AcceptOfferSection({
       console.error(err);
       setMessage('Server error.');
     } finally {
-      setLoading(false);
+      setLoadingId(null);
     }
   };
 
@@ -89,10 +100,10 @@ export default function AcceptOfferSection({
           {offer.status === 'pending' ? (
             <button
               onClick={() => handleAccept(offer.id)}
-              disabled={loading}
+              disabled={loadingId === offer.id}
               className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50"
             >
-              {loading ? 'Accepting...' : 'Accept'}
+              {loadingId === offer.id ? 'Accepting...' : 'Accept'}
             </button>
           ) : (
             <span
