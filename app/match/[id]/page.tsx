@@ -108,7 +108,7 @@ export default function MatchPage() {
       const res = await fetch(`/api/game/${data.latestGame.id}/select-winner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ winningTeamId: team }), // ✅ FIXED FIELD NAME
+        body: JSON.stringify({ winning_team: team }), // match your API
       });
 
       const result = await res.json();
@@ -118,7 +118,7 @@ export default function MatchPage() {
         return;
       }
 
-      // Refresh match state
+      // Refresh match state after submission
       fetchMatchData();
       fetchGamesPlayed();
       fetchGameHistory();
@@ -138,9 +138,7 @@ export default function MatchPage() {
   if (error)
     return <div className="p-6 text-center text-red-500">Error: {error}</div>;
   if (!data)
-    return (
-      <div className="p-6 text-center text-gray-300">Match not found.</div>
-    );
+    return <div className="p-6 text-center text-gray-300">Match not found.</div>;
 
   const { match, latestGame, players, currentUserId } = data;
 
@@ -191,18 +189,27 @@ export default function MatchPage() {
         />
       </div>
 
+      {/* ---------------- Winner Submission ---------------- */}
       {isInProgress && (
         <SelectGameWinnerForm
-          gameId={latestGame.id} // ✅ send gameId instead of callback
+          loading={submittingWinner}
+          error={winnerError}
+          onSubmit={handleWinnerSubmit}
         />
       )}
 
+      {/* ---------------- Auction Phase ---------------- */}
       {isAuction && (
         <AuctionPhase
           latestGame={latestGame}
           players={players}
           currentUserId={currentUserId}
           gamesPlayed={gamesPlayed}
+          onRefreshMatch={() => {
+            fetchMatchData();
+            fetchGamesPlayed();
+            fetchGameHistory();
+          }}
         />
       )}
 
@@ -210,7 +217,7 @@ export default function MatchPage() {
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
-        {[...history].reverse().map(game => {
+        {[...history].reverse().map((game) => {
           const isExpanded = expandedGameId === game.gameNumber;
           const acceptedOffer = game.offers.find(
             (o: any) => o.status === 'accepted'
@@ -228,16 +235,13 @@ export default function MatchPage() {
                 <span>
                   Game #{game.gameNumber} – {game.status}
                 </span>
-                <span className="text-sm">
-                  {isExpanded ? 'Hide' : 'Show'} details
-                </span>
+                <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
               </h3>
 
               {!isExpanded && acceptedOffer && (
                 <p className="mt-2 text-sm font-medium">
                   {acceptedOffer.fromUsername} traded{' '}
-                  {acceptedOffer.targetUsername} for{' '}
-                  {acceptedOffer.offerAmount}
+                  {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
                   <Image
                     src="/Gold_symbol.webp"
                     alt="Gold"
@@ -249,15 +253,13 @@ export default function MatchPage() {
               )}
 
               {isExpanded && (
-                <>
-                  <div className="mt-2">
-                    <strong>Winner:</strong> {game.winningTeam || 'N/A'}
-                    <br />
-                    <strong>Team A:</strong> {game.teamAMembers.join(', ')}
-                    <br />
-                    <strong>Team 1:</strong> {game.team1Members.join(', ')}
-                  </div>
-                </>
+                <div className="mt-2">
+                  <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+                  <br />
+                  <strong>Team A:</strong> {game.teamAMembers.join(', ')}
+                  <br />
+                  <strong>Team 1:</strong> {game.team1Members.join(', ')}
+                </div>
               )}
             </div>
           );
