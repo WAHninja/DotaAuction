@@ -1,25 +1,49 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 type Props = {
-  loading?: boolean;
-  error?: string | null;
-  onSubmit: (team: 'team_1' | 'team_a') => void;
-};
+  gameId: number
+}
 
-export default function SelectGameWinnerForm({
-  loading = false,
-  error = null,
-  onSubmit,
-}: Props) {
-  const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(null);
+export default function SelectGameWinnerForm({ gameId }: Props) {
+  const router = useRouter()
 
-  const handleSubmit = () => {
-    if (!selectedTeam) return;
-    onSubmit(selectedTeam);
-  };
+  const [selectedTeam, setSelectedTeam] =
+    useState<'team_1' | 'team_a' | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async () => {
+    if (!selectedTeam) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch(`/api/game/${gameId}/select-winner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          winningTeamId: selectedTeam, // ✅ REQUIRED BY API
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to submit winner')
+      }
+
+      // Refresh match page (loads auction phase)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="relative my-8">
@@ -28,14 +52,24 @@ export default function SelectGameWinnerForm({
         className="hidden sm:block absolute left-10 transform -translate-y-1/2 z-20"
         style={{ top: 'calc(50% - 5px)' }}
       >
-        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={220} height={220} />
+        <Image
+          src="/radiantcreeps.png"
+          alt="Radiant Creeps"
+          width={220}
+          height={220}
+        />
       </div>
 
       <div
         className="hidden sm:block absolute right-10 transform -translate-y-1/2 z-20"
         style={{ top: 'calc(50% - 5px)' }}
       >
-        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={220} height={220} />
+        <Image
+          src="/direcreeps.PNG"
+          alt="Dire Creeps"
+          width={220}
+          height={220}
+        />
       </div>
 
       <div className="relative z-10 bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg">
@@ -80,5 +114,5 @@ export default function SelectGameWinnerForm({
         )}
       </div>
     </div>
-  );
+  )
 }
