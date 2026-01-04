@@ -50,9 +50,6 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
   const myTeam = winningTeam === 'team_1' ? team1 : teamA;
   const offerCandidates = myTeam.filter((id) => id !== currentUserId);
 
-  const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
-  const alreadyAcceptedOffer = offers.find((o) => o.status === 'accepted' && o.target_player_id === currentUserId);
-
   const minOffer = 250 + gamesPlayed * 200;
   const maxOffer = 2000 + gamesPlayed * 500;
 
@@ -71,6 +68,9 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
   useEffect(() => {
     fetchOffers();
   }, [latestGame.id]);
+
+  const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
+  const alreadyAcceptedOffer = offers.find((o) => o.status === 'accepted' && o.target_player_id === currentUserId);
 
   /* ---------------- Submit Offer (Winner) ---------------- */
   const handleSubmitOffer = async () => {
@@ -100,7 +100,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
       setOfferAmount('');
       fetchOffers();
       setMessage('✅ Offer submitted!');
-      onRefreshMatch?.();
+      onRefreshMatch?.(); // refresh parent state
     } catch (err: any) {
       console.error(err);
       alert(err.message || 'Failed to submit offer');
@@ -111,6 +111,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
 
   /* ---------------- Accept Offer (Loser) ---------------- */
   const handleAcceptOffer = async (offerId: number) => {
+    if (alreadyAcceptedOffer) return;
     setAccepting(true);
     setMessage('');
     try {
@@ -124,8 +125,8 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
       if (!res.ok) throw new Error(data.message || 'Error accepting offer');
 
       setMessage('✅ Offer accepted!');
-      fetchOffers();
-      onRefreshMatch?.();
+      await fetchOffers();          // refresh offers
+      onRefreshMatch?.();           // refresh parent match state
     } catch (err: any) {
       console.error(err);
       setMessage(err.message || 'Failed to accept offer');
@@ -143,7 +144,11 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
       {isWinner && (
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <select value={selectedPlayer} onChange={(e) => setSelectedPlayer(e.target.value)} className="p-2 rounded border w-full sm:w-auto">
+            <select
+              value={selectedPlayer}
+              onChange={(e) => setSelectedPlayer(e.target.value)}
+              className="p-2 rounded border w-full sm:w-auto"
+            >
               <option value="">Select Teammate</option>
               {offerCandidates.map((pid) => {
                 const player = getPlayer(pid);
@@ -190,7 +195,13 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
                   {isLoser && (
                     <div className="flex items-center">
                       <span>{offer.offer_amount}</span>
-                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="ml-1 inline-block" />
+                      <Image
+                        src="/Gold_symbol.webp"
+                        alt="Gold"
+                        width={16}
+                        height={16}
+                        className="ml-1 inline-block"
+                      />
                     </div>
                   )}
                 </div>
@@ -206,7 +217,11 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
                 )}
 
                 {(offer.status === 'accepted' || offer.status === 'rejected') && (
-                  <span className={`px-3 py-1 rounded font-semibold ${offer.status === 'accepted' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                  <span
+                    className={`px-3 py-1 rounded font-semibold ${
+                      offer.status === 'accepted' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}
+                  >
                     {offer.status === 'accepted' ? 'Accepted' : 'Rejected'}
                   </span>
                 )}
