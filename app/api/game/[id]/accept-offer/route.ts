@@ -1,32 +1,27 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import * as Ably from 'ably/promises';
 
 const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } } // <- this is the fix
-) {
-  const matchId = params.id;
+export async function POST(req: NextRequest, context: { params: { id: string } }) {
+  const matchId = context.params.id;
   if (!matchId) {
-    return new Response(JSON.stringify({ message: 'Missing match ID.' }), {
-      status: 400,
-    });
+    return NextResponse.json({ message: 'Missing match ID.' }, { status: 400 });
   }
 
   const { offerId } = await req.json();
   const session = await getSession();
   const userId = session?.userId;
-  if (!userId) return new Response(JSON.stringify({ message: 'Not authenticated.' }), { status: 401 });
+  if (!userId) return NextResponse.json({ message: 'Not authenticated.' }, { status: 401 });
 
   try {
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE match_id = $1 ORDER BY id DESC LIMIT 1',
       [matchId]
     );
-    if (gameRows.length === 0) return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
+    if (gameRows.length === 0) return NextResponse.json({ message: 'Game not found.' }, { status: 404 });
     const game = gameRows[0];
 
     const teamA = game.team_a_members;
@@ -35,14 +30,14 @@ export async function POST(
     const losingTeam = winningTeam === 'team_a' ? team1 : teamA;
 
     if (!losingTeam.includes(userId)) {
-      return new Response(JSON.stringify({ message: 'You are not on the losing team.' }), { status: 403 });
+      return NextResponse.json({ message: 'You are not on the losing team.' }, { status: 403 });
     }
 
     const { rows: offerRows } = await db.query(
       'SELECT * FROM Offers WHERE id = $1 AND game_id = $2 AND status = $3',
       [offerId, game.id, 'pending']
     );
-    if (offerRows.length === 0) return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), { status: 404 });
+    if (offerRows.length === 0) return NextResponse.json({ message: 'Offer not found or already accepted.' }, { status: 404 });
     const offer = offerRows[0];
 
     const { from_player_id, target_player_id, offer_amount } = offer;
@@ -92,7 +87,7 @@ export async function POST(
 
     await db.query('COMMIT');
 
-    // 📣 Notify clients via Ably
+    // Notify clients via Ably
     await ably.channels
       .get(`match-${matchId}-offers`)
       .publish('offer-accepted', {
@@ -100,13 +95,10 @@ export async function POST(
         newGame: newGameRows[0],
       });
 
-    return new Response(JSON.stringify({ message: 'Offer accepted and new game started.' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ message: 'Offer accepted and new game started.' }, { status: 200 });
   } catch (err) {
     await db.query('ROLLBACK');
     console.error(err);
-    return new Response(JSON.stringify({ message: 'Server error.' }), { status: 500 });
+    return NextResponse.json({ message: 'Server error.' }, { status: 500 });
   }
 }
