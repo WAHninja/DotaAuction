@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { publishToMatchChannel } from '@/lib/publishToMatchChannel';
+import { fetchPublish } from '@/utils/fetchPublish'; // <-- new server-friendly wrapper
 
 type TeamId = 'team_1' | 'team_a';
 
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       await client.query('COMMIT');
       transactionStarted = false;
 
-      // Notify via Ably
-      await publishToMatchChannel(game.match_id, 'game-winner-selected', {
+      // Notify via fetchPublish
+      await fetchPublish(game.match_id, 'game-winner-selected', {
         gameId,
         matchId: game.match_id,
         winnerId,
@@ -132,11 +132,11 @@ export async function POST(req: NextRequest) {
     await client.query('COMMIT');
     transactionStarted = false;
 
-    // ---------------- Notify via Ably ----------------
-     await publishToMatchChannel(game.match_id, 'game-winner-selected', {
-        gameId,
-        matchId: game.match_id,
-      });
+    // ---------------- Notify via fetchPublish ----------------
+    await fetchPublish(game.match_id, 'game-winner-selected', {
+      gameId,
+      matchId: game.match_id,
+    });
 
     return NextResponse.json({
       success: true,
