@@ -7,7 +7,7 @@ import Image from 'next/image';
    Types
 ======================== */
 
-type Player = { id: number; username: string; };
+type Player = { id: number; username: string };
 
 type Offer = {
   id: number;
@@ -23,6 +23,7 @@ type Game = {
   team_a_members: number[];
   winning_team: 'team_1' | 'team_a' | null;
   status: string;
+  offers?: Offer[]; // ← now comes from parent
 };
 
 type AuctionPhaseProps = {
@@ -46,7 +47,7 @@ export default function AuctionPhase({
   onRefreshMatch,
   subscribeToGameEvents,
 }: AuctionPhaseProps) {
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const [offers, setOffers] = useState<Offer[]>(latestGame.offers || []);
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [offerAmount, setOfferAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -67,31 +68,19 @@ export default function AuctionPhase({
 
   const getPlayer = (id: number) => players.find((p) => p.id === id);
 
-  /* ---------------- Fetch Offers ---------------- */
-  const fetchOffers = async () => {
-    try {
-      const res = await fetch(`/api/game/offers?id=${gameId}`);
-      const data = await res.json();
-      setOffers(data.offers || []);
-    } catch (err) {
-      console.error('Error fetching offers:', err);
-    }
-  };
-
+  /* ---------------- Subscribe to Realtime Events ---------------- */
   useEffect(() => {
-    fetchOffers();
+    if (!subscribeToGameEvents) return;
 
-    // Subscribe to realtime updates
-    if (subscribeToGameEvents) {
-      const unsubscribe = subscribeToGameEvents(gameId, (event) => {
-        if (event.type === 'new-offer' || event.type === 'offer-accepted') {
-          fetchOffers();
-          onRefreshMatch?.();
-        }
-      });
-      return unsubscribe;
-    }
-  }, [gameId]);
+    const unsubscribe = subscribeToGameEvents(gameId, (event) => {
+      if (event.type === 'new-offer' || event.type === 'offer-accepted') {
+        setOffers(event.offers || []); // update offers from parent event
+        onRefreshMatch?.();
+      }
+    });
+
+    return unsubscribe;
+  }, [gameId, subscribeToGameEvents, onRefreshMatch]);
 
   /* ---------------- Offer State ---------------- */
   const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
@@ -130,8 +119,6 @@ export default function AuctionPhase({
       setSelectedPlayer('');
       setOfferAmount('');
       setMessage('✅ Offer submitted!');
-      fetchOffers();
-      onRefreshMatch?.();
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer');
     } finally {
@@ -154,8 +141,6 @@ export default function AuctionPhase({
       if (!res.ok) throw new Error('Failed to accept offer');
 
       setMessage('✅ Offer accepted!');
-      fetchOffers();
-      onRefreshMatch?.();
     } catch (err: any) {
       setMessage(err.message || 'Failed to accept offer');
     } finally {
