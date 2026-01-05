@@ -10,9 +10,7 @@ import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionPhase from '@/app/components/AuctionPhase';
-
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
-import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -29,25 +27,21 @@ export default function MatchPage() {
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
   /* ---------------- Protect Route ---------------- */
-  // Only redirect if we *know* the user is not logged in
   useEffect(() => {
-    if (user === null) {
-      router.push('/');
-    }
+    if (user === null) router.push('/');
   }, [user, router]);
 
-  // Early return while user context is loading
-  if (user === undefined) {
-    return <div className="p-6 text-center text-gray-300">Loading user...</div>;
-  }
+  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user...</div>;
 
-  /* ---------------- Fetch Data ---------------- */
+  /* ---------------- Fetch Match Data ---------------- */
   const fetchMatchData = async () => {
     try {
       const res = await fetch(`/api/match/${matchId}`);
       if (!res.ok) throw new Error('Failed to fetch match data');
       const json = await res.json();
       setData(json);
+      setGamesPlayed(json.gamesPlayed || 0);
+      setHistory(json.history || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -55,52 +49,14 @@ export default function MatchPage() {
     }
   };
 
-  const fetchGamesPlayed = async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const json = await res.json();
-      setGamesPlayed(json.gamesPlayed);
-    } catch (err) {
-      console.error('Failed to fetch games played', err);
-    }
-  };
-
-  const fetchGameHistory = async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/history`);
-      if (!res.ok) throw new Error('Failed to fetch game history');
-      const json = await res.json();
-      setHistory(json.history || []);
-    } catch (err) {
-      console.error('Failed to fetch game history:', err);
-    }
-  };
-
   useEffect(() => {
-    if (user) {
-      fetchMatchData();
-      fetchGamesPlayed();
-      fetchGameHistory();
-    }
+    if (user) fetchMatchData();
   }, [matchId, user]);
 
-  /* ---------------- Listeners ---------------- */
+  /* ---------------- Game Winner Listener ---------------- */
   useGameWinnerListener(matchId, () => {
-    if (user) {
-      fetchMatchData();
-      fetchGamesPlayed();
-      fetchGameHistory();
-    }
+    fetchMatchData();
   });
-
-  useAuctionListener(
-    matchId,
-    data?.latestGame?.id || null,
-    fetchMatchData,
-    undefined,
-    fetchGamesPlayed,
-    fetchGameHistory
-  );
 
   /* ---------------- Guards ---------------- */
   if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
@@ -125,9 +81,7 @@ export default function MatchPage() {
           matchId={matchId}
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
-          matchWinnerUsername={
-            players.find((p: any) => p.id === match.winner_id)?.username
-          }
+          matchWinnerUsername={players.find((p: any) => p.id === match.winner_id)?.username}
         />
       )}
 
@@ -154,33 +108,24 @@ export default function MatchPage() {
         />
       </div>
 
-      {/* ---------------- Winner Submission ---------------- */}
       {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
 
-      {/* ---------------- Auction Phase ---------------- */}
       {isAuction && (
         <AuctionPhase
           latestGame={latestGame}
           players={players}
           currentUserId={currentUserId}
           gamesPlayed={gamesPlayed}
-          onRefreshMatch={() => {
-            fetchMatchData();
-            fetchGamesPlayed();
-            fetchGameHistory();
-          }}
+          onRefreshMatch={fetchMatchData} // Simplified
         />
       )}
 
       {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
-
         {[...history].reverse().map((game) => {
           const isExpanded = expandedGameId === game.gameNumber;
           const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
-
-          // Highlight latest game
           const isLatest = game.gameNumber === data.latestGame?.gameNumber;
 
           return (
