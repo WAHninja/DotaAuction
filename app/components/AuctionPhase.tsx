@@ -54,7 +54,7 @@ export default function AuctionPhase({
   const [accepting, setAccepting] = useState(false);
   const [message, setMessage] = useState('');
 
-  /** Animation control */
+  /* Reveal animation */
   const [revealAnimation, setRevealAnimation] = useState(false);
   const hasRevealedRef = useRef(false);
 
@@ -110,16 +110,15 @@ export default function AuctionPhase({
       o.target_player_id === currentUserId
   );
 
-  /** 🔐 Viewer-agnostic reveal condition */
-  const expectedOfferCount = winningTeamMembers.length;
+  /* 🔐 Correct reveal logic (NO LEAKS) */
   const submittedOfferCount = offers.filter((o) =>
     winningTeamMembers.includes(o.from_player_id)
   ).length;
 
   const allOffersSubmitted =
-    submittedOfferCount === expectedOfferCount;
+    submittedOfferCount === winningTeamMembers.length;
 
-  /* ---------------- Reveal Animation Trigger ---------------- */
+  /* ---------------- Reveal Animation ---------------- */
 
   useEffect(() => {
     if (allOffersSubmitted && !hasRevealedRef.current) {
@@ -128,7 +127,7 @@ export default function AuctionPhase({
 
       const timer = setTimeout(() => {
         setRevealAnimation(false);
-      }, 2000);
+      }, 1800);
 
       return () => clearTimeout(timer);
     }
@@ -171,7 +170,7 @@ export default function AuctionPhase({
 
       setSelectedPlayer('');
       setOfferAmount('');
-      setMessage('✅ Offer submitted!');
+      setMessage('✅ Offer submitted');
       fetchOffers();
       onRefreshMatch?.();
     } catch (err: any) {
@@ -201,7 +200,7 @@ export default function AuctionPhase({
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      setMessage('✅ Offer accepted!');
+      setMessage('✅ Offer accepted');
       fetchOffers();
       onRefreshMatch?.();
     } catch (err: any) {
@@ -216,21 +215,72 @@ export default function AuctionPhase({
   ========================= */
 
   return (
-    <div className="bg-gray-900 bg-opacity-70 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
+    <div className="bg-gray-900/80 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
 
-      <h3 className="text-3xl font-extrabold mb-4 text-center text-red-500 drop-shadow-lg">
+      <h3 className="text-3xl font-extrabold mb-4 text-center text-red-500 tracking-wide">
         🏛 Auction House
       </h3>
 
-      {/* 🎉 Reveal Banner */}
       {revealAnimation && (
         <div className="mb-6 text-center text-green-400 font-extrabold text-xl animate-pulse">
-          💰 Offers Revealed!
+          💥 Offers Revealed
         </div>
       )}
 
-      {/* ---------------- Offers ---------------- */}
+      {/* -------- Submit (Winners) -------- */}
+      {isWinner && !alreadySubmittedOffer && (
+        <div className="max-w-md mx-auto mb-8">
+          <p className="text-center text-red-400 font-semibold mb-2">
+            Make Your Offer
+          </p>
 
+          <p className="text-sm text-center text-gray-400 mb-4">
+            {minOfferAmount} – {maxOfferAmount}
+            <Image
+              src="/Gold_symbol.webp"
+              alt="Gold"
+              width={16}
+              height={16}
+              className="inline-block ml-1"
+            />
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <select
+              value={selectedPlayer}
+              onChange={(e) => setSelectedPlayer(e.target.value)}
+              className="px-4 py-2 rounded-lg text-black"
+            >
+              <option value="">Select Player</option>
+              {offerCandidates.map((id) => (
+                <option key={id} value={id}>
+                  {getPlayer(id)?.username}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              min={minOfferAmount}
+              max={maxOfferAmount}
+              value={offerAmount}
+              onChange={(e) => setOfferAmount(e.target.value)}
+              className="px-4 py-2 rounded-lg text-black"
+              placeholder="Gold amount"
+            />
+
+            <button
+              onClick={handleSubmitOffer}
+              disabled={submitting}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg"
+            >
+              {submitting ? 'Submitting…' : 'Submit Offer'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* -------- Offers -------- */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {offers.map((offer) => {
           const from = getPlayer(offer.from_player_id);
@@ -245,42 +295,31 @@ export default function AuctionPhase({
           return (
             <div
               key={offer.id}
-              className="bg-gray-800 p-5 rounded-2xl shadow-lg border border-gray-700 hover:scale-105 transition-transform"
+              className="bg-gray-800 p-5 rounded-2xl border border-gray-700 shadow-lg"
             >
               <div className="flex justify-between mb-2">
-                <span className="text-gray-400">From:</span>
+                <span className="text-gray-400">From</span>
                 <span className="text-cyan-300 font-bold">
                   {from?.username}
                 </span>
               </div>
 
               <div className="flex justify-between mb-4">
-                <span className="text-gray-400">For:</span>
+                <span className="text-gray-400">For</span>
                 <span className="text-cyan-300 font-bold">
                   {to?.username}
                 </span>
               </div>
 
-              <div
-                className={`text-center text-sm transition-all duration-700 ${
-                  allOffersSubmitted
-                    ? 'opacity-100 scale-100'
-                    : 'opacity-40'
-                }`}
-              >
+              <div className="text-center min-h-[28px]">
                 {allOffersSubmitted ? (
-                  <div className="flex justify-center items-center gap-1 text-red-400 font-bold text-lg">
+                  <div className="flex justify-center items-center gap-1 text-red-400 font-bold text-lg animate-fade">
                     {offer.offer_amount}
-                    <Image
-                      src="/Gold_symbol.webp"
-                      alt="Gold"
-                      width={18}
-                      height={18}
-                    />
+                    <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} />
                   </div>
                 ) : (
-                  <span className="text-gray-500">
-                    Waiting for all offers...
+                  <span className="text-gray-500 text-sm">
+                    Waiting for all offers…
                   </span>
                 )}
               </div>
@@ -289,7 +328,7 @@ export default function AuctionPhase({
                 <button
                   onClick={() => handleAcceptOffer(offer.id)}
                   disabled={accepting}
-                  className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition"
+                  className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold"
                 >
                   Accept Offer
                 </button>
