@@ -6,6 +6,6 @@ export async function publishToMatchChannel(
   event: string,
   data: any
 ) {
-  const channel = ablyServer.channels.get(`match-${matchId}`);
+  const channel = ablyServer.channels.get(`match-${matchId}-offers`);
   await channel.publish(event, data);
 }
