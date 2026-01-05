@@ -1,11 +1,22 @@
 // lib/ably.ts
 import Ably from "ably/promises";
 
-// Check if the API key is provided, and throw an error if not
-const ablyApiKey = process.env.ABLY_API_KEY;
+let ablyServer: Ably.Types.RealtimePromise | null = null;
 
-if (!ablyApiKey) {
-  throw new Error("ABLY_API_KEY environment variable is missing.");
+export function getAblyServer(): Ably.Types.RealtimePromise {
+  if (ablyServer) return ablyServer;
+
+  const key = process.env.ABLY_API_KEY;
+  if (!key) throw new Error("ABLY_API_KEY environment variable is missing.");
+
+  ablyServer = new Ably.Realtime.Promise(key);
+  return ablyServer;
 }
 
-export const ablyServer = new Ably.Realtime.Promise(ablyApiKey);
+/**
+ * Publish an event to a match channel
+ */
+export async function publishMatchEvent(matchId: number, eventName: string, payload: any) {
+  const ably = getAblyServer();
+  await ably.channels.get(`match-${matchId}`).publish(eventName, payload);
+}
