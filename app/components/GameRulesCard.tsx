@@ -204,13 +204,13 @@ export default function GameRulesCard() {
               <div className="bg-slate-900/60 p-3 rounded-md border border-slate-700">
                 <p className="font-semibold mb-1"><strong>Example</strong></p>
                 <p>
-                  Game 1 range: <strong>250 – 2000</strong>
+                  Game 1 range: <strong>450 – 2500</strong>
                 </p>
                 <p>
-                  Game 3 range: <strong>650 – 3000</strong>
+                  Game 3 range: <strong>850 – 3500</strong>
                 </p>
                 <p>
-                  Game 7 range: <strong>1450 – 5000</strong>
+                  Game 7 range: <strong>1650 – 5500</strong>
                 </p>
               </div>
             </div>
