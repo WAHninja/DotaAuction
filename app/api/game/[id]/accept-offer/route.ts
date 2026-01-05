@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { publishToMatchChannel } from '@/lib/publishToMatchChannel';
+import { fetchPublish } from '@/utils/fetchPublish'; // <-- new server-friendly wrapper
 
 export async function POST(req: NextRequest): Promise<Response> {
   let transactionStarted = false;
@@ -11,26 +11,20 @@ export async function POST(req: NextRequest): Promise<Response> {
     const url = new URL(req.url);
     const gameId = Number(url.pathname.split('/')[3]); // /api/game/{id}/accept-offer
     if (isNaN(gameId)) {
-      return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
-        status: 400,
-      });
+      return new Response(JSON.stringify({ message: 'Invalid game ID.' }), { status: 400 });
     }
 
     // ---------------- Parse offer ID ----------------
     const { offerId } = await req.json();
     if (!offerId || isNaN(Number(offerId))) {
-      return new Response(JSON.stringify({ message: 'Invalid offer ID.' }), {
-        status: 400,
-      });
+      return new Response(JSON.stringify({ message: 'Invalid offer ID.' }), { status: 400 });
     }
 
     // ---------------- Authenticate ----------------
     const session = await getSession();
     const userId = session?.userId;
     if (!userId) {
-      return new Response(JSON.stringify({ message: 'Not authenticated.' }), {
-        status: 401,
-      });
+      return new Response(JSON.stringify({ message: 'Not authenticated.' }), { status: 401 });
     }
 
     // ---------------- Fetch Game ----------------
@@ -39,9 +33,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       [gameId]
     );
     if (gameRows.length === 0) {
-      return new Response(JSON.stringify({ message: 'Game not found.' }), {
-        status: 404,
-      });
+      return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
     }
 
     const game = gameRows[0];
@@ -51,10 +43,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const losingTeam = winningTeam === 'team_a' ? team1 : teamA;
     if (!losingTeam.includes(userId)) {
-      return new Response(
-        JSON.stringify({ message: 'Only losing team members can accept offers.' }),
-        { status: 403 }
-      );
+      return new Response(JSON.stringify({ message: 'Only losing team members can accept offers.' }), { status: 403 });
     }
 
     // ---------------- Fetch Offer ----------------
@@ -63,10 +52,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       [offerId, gameId, 'pending']
     );
     if (offerRows.length === 0) {
-      return new Response(
-        JSON.stringify({ message: 'Offer not found or already accepted.' }),
-        { status: 404 }
-      );
+      return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), { status: 404 });
     }
 
     const offer = offerRows[0];
@@ -77,10 +63,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     transactionStarted = true;
 
     // Accept the offer
-    await db.query('UPDATE Offers SET status = $1 WHERE id = $2', [
-      'accepted',
-      offerId,
-    ]);
+    await db.query('UPDATE Offers SET status = $1 WHERE id = $2', ['accepted', offerId]);
 
     // Reject all other pending offers for this game
     await db.query(
@@ -102,10 +85,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
 
     // Finish current game
-    await db.query('UPDATE Games SET status = $1 WHERE id = $2', [
-      'finished',
-      gameId,
-    ]);
+    await db.query('UPDATE Games SET status = $1 WHERE id = $2', ['finished', gameId]);
 
     // ---------------- Swap Target Player ----------------
     const newTeamA = [...teamA];
@@ -128,27 +108,25 @@ export async function POST(req: NextRequest): Promise<Response> {
     await db.query('COMMIT');
     transactionStarted = false;
 
-    // ---------------- Notify via Ably ----------------
-     await publishToMatchChannel(game.match_id, 'offer-accepted', {
-        acceptedOffer: offer,
-        newGame: newGameRows[0],
-      });
+    // ---------------- Notify via fetchPublish ----------------
+    await fetchPublish(game.match_id, 'offer-accepted', {
+      acceptedOffer: offer,
+      newGame: newGameRows[0],
+    });
 
-    return new Response(
-      JSON.stringify({
-        message: 'Offer accepted and new game started.',
-        acceptedOffer: offer,
-        newGame: newGameRows[0],
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({
+      message: 'Offer accepted and new game started.',
+      acceptedOffer: offer,
+      newGame: newGameRows[0],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     if (transactionStarted) {
       await db.query('ROLLBACK');
     }
     console.error('Error accepting offer:', err);
-    return new Response(JSON.stringify({ message: 'Server error.' }), {
-      status: 500,
-    });
+    return new Response(JSON.stringify({ message: 'Server error.' }), { status: 500 });
   }
 }
