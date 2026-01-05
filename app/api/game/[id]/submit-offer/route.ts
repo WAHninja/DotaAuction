@@ -2,7 +2,7 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ablyServerClient from '@/lib/ably-server';
+import { publishToMatchChannel } from '@/utils/publishToMatchChannel';
 
 export async function POST(
   req: NextRequest,
@@ -115,9 +115,7 @@ export async function POST(
     const savedOffer = inserted[0];
 
     // ---------------- Publish via Ably ----------------
-    await ablyServerClient.channels
-      .get(`match-${matchId}-offers`)
-      .publish('new-offer', savedOffer);
+    await publishToMatchChannel(matchId, 'new-offer', savedOffer);
 
     // ---------------- Return Response ----------------
     return new Response(
