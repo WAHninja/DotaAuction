@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { publishToMatchChannel } from '@/lib/publishToMatchChannel'; // <- server-only
-
+import { fetchPublish } from '@/utils/fetchPublish'; // <- server-friendly wrapper
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
@@ -113,8 +112,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const savedOffer = inserted[0];
 
-    // ---------------- Publish via Ably ----------------
-    await publishToMatchChannel(matchId, 'new-offer', savedOffer);
+    // ---------------- Publish via fetchPublish ----------------
+    await fetchPublish(matchId, 'new-offer', savedOffer);
 
     // ---------------- Return Response ----------------
     return new Response(
