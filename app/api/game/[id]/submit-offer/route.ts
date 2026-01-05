@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { publishToMatchChannel } from '@/utils/publishToMatchChannel';
+import { publishToMatchChannel } from '@/lib/publishToMatchChannel'; // <- server-only
+
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
