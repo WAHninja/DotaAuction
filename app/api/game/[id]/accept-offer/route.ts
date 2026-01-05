@@ -1,29 +1,22 @@
-// app/api/game/[id]/accept-offer/route.ts
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { publishToAbly } from '@/utils/publishToAbly';
+import ablyServerClient from '@/lib/ably-server';
 
-await publishToAbly(`match-${game.match_id}-offers`, 'offer-accepted', {
-  acceptedOffer: offer,
-  newGame: newGameRows[0],
-});
-
-
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<Response> {
+export async function POST(req: NextRequest): Promise<Response> {
   let transactionStarted = false;
 
   try {
-    const gameId = Number(params.id);
+    // ---------------- Parse game ID ----------------
+    const url = new URL(req.url);
+    const gameId = Number(url.pathname.split('/')[3]); // /api/game/{id}/accept-offer
     if (isNaN(gameId)) {
       return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
         status: 400,
       });
     }
 
+    // ---------------- Parse offer ID ----------------
     const { offerId } = await req.json();
     if (!offerId || isNaN(Number(offerId))) {
       return new Response(JSON.stringify({ message: 'Invalid offer ID.' }), {
@@ -31,6 +24,7 @@ export async function POST(
       });
     }
 
+    // ---------------- Authenticate ----------------
     const session = await getSession();
     const userId = session?.userId;
     if (!userId) {
