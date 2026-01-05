@@ -29,7 +29,7 @@ type AuctionPhaseProps = {
   players: Player[];
   currentUserId: number;
   gamesPlayed: number;
-  onRefreshMatch?: () => void; // parent callback
+  onRefreshMatch?: () => void;
 };
 
 export default function AuctionPhase({ latestGame, players, currentUserId, gamesPlayed, onRefreshMatch }: AuctionPhaseProps) {
@@ -71,6 +71,8 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
 
   const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
   const alreadyAcceptedOffer = offers.find((o) => o.status === 'accepted' && o.target_player_id === currentUserId);
+
+  // Determines if all winners have submitted their offers
   const allOffersSubmitted = offerCandidates.length === offers.filter(o => o.from_player_id !== currentUserId).length;
 
   /* ---------------- Submit Offer ---------------- */
@@ -136,21 +138,21 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
 
   /* ---------------- Render ---------------- */
   return (
-    <div className="bg-slate-700 bg-opacity-50 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-600">
-      <h3 className="text-3xl font-extrabold mb-6 text-center text-yellow-400 drop-shadow-lg">
+    <div className="bg-gray-900 bg-opacity-70 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
+      <h3 className="text-3xl font-extrabold mb-6 text-center text-red-500 drop-shadow-lg">
         🏛 Auction House
       </h3>
 
       {/* Winner Submission */}
       {isWinner && !alreadySubmittedOffer && (
         <div className="w-full max-w-md mx-auto mb-8">
-          <p className="font-semibold mb-3 text-center text-yellow-300 text-lg">
+          <p className="font-semibold mb-3 text-center text-red-400 text-lg">
             Make Your Offer
           </p>
           <p className="text-sm text-gray-300 text-center mb-4">
             Offer must be between{' '}
-            <span className="font-bold text-white">{minOfferAmount}</span> and{' '}
-            <span className="font-bold text-white">{maxOfferAmount}</span>
+            <span className="font-bold text-cyan-300">{minOfferAmount}</span> and{' '}
+            <span className="font-bold text-cyan-300">{maxOfferAmount}</span>
             <Image
               src="/Gold_symbol.webp"
               alt="Gold"
@@ -164,7 +166,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
             <select
               value={selectedPlayer}
               onChange={(e) => setSelectedPlayer(e.target.value)}
-              className="px-4 py-2 rounded-lg text-black w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-yellow-300"
+              className="px-4 py-2 rounded-lg text-black w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select Player</option>
               {offerCandidates.map((pid) => {
@@ -180,7 +182,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
               placeholder={`${minOfferAmount}-${maxOfferAmount}`}
               min={minOfferAmount}
               max={maxOfferAmount}
-              className="px-4 py-2 rounded-lg text-black w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-yellow-300"
+              className="px-4 py-2 rounded-lg text-black w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
 
@@ -194,7 +196,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
                 Number(offerAmount) < minOfferAmount ||
                 Number(offerAmount) > maxOfferAmount
               }
-              className="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-2 rounded-lg w-full max-w-xs shadow-md hover:shadow-xl transition-all"
+              className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-lg w-full max-w-xs shadow-md hover:shadow-xl transition-all"
             >
               {submitting ? 'Submitting...' : 'Submit Offer'}
             </button>
@@ -203,7 +205,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
       )}
 
       {isWinner && alreadySubmittedOffer && (
-        <div className="w-full max-w-md mx-auto mb-8 text-center text-yellow-300 font-semibold text-lg drop-shadow">
+        <div className="w-full max-w-md mx-auto mb-8 text-center text-red-400 font-semibold text-lg drop-shadow">
           ✅ You've already submitted your offer.
         </div>
       )}
@@ -211,7 +213,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
       {/* Current Offers */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <div className="flex-1">
-          <h4 className="text-2xl font-bold text-center mb-6 text-yellow-400 drop-shadow-lg">
+          <h4 className="text-2xl font-bold text-center mb-6 text-red-500 drop-shadow-lg">
             Current Offers
           </h4>
 
@@ -229,18 +231,18 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
                   <div className="flex flex-col gap-3 mb-4">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 font-semibold">From:</span>
-                      <span className="text-yellow-300 font-bold text-lg">{from?.username}</span>
+                      <span className="text-cyan-300 font-bold text-lg">{from?.username}</span>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-300 font-semibold">To:</span>
-                      <span className="text-yellow-300 font-bold text-lg">{to?.username}</span>
+                      <span className="text-gray-300 font-semibold">For:</span>
+                      <span className="text-cyan-300 font-bold text-lg">{to?.username}</span>
                     </div>
 
                     <div className="mt-2 text-gray-300 text-center text-sm">
                       {allOffersSubmitted ? (
                         <>
-                          Offer: <span className="font-bold text-yellow-300">{offer.offer_amount}</span>{' '}
+                          Offer: <span className="font-bold text-red-400">{offer.offer_amount}</span>{' '}
                           <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} className="inline-block ml-1 align-middle" />
                         </>
                       ) : (
@@ -253,7 +255,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
                     <button
                       onClick={() => handleAcceptOffer(offer.id)}
                       disabled={accepting}
-                      className="mt-auto bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-xl transition-all"
+                      className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-xl transition-all"
                     >
                       {accepting ? 'Accepting...' : 'Accept Offer'}
                     </button>
@@ -275,7 +277,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
         </div>
       </div>
 
-      {message && <p className="mt-4 text-center text-yellow-400 font-medium drop-shadow">{message}</p>}
+      {message && <p className="mt-4 text-center text-red-400 font-medium drop-shadow">{message}</p>}
     </div>
   );
 }
