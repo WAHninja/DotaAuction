@@ -1,9 +1,10 @@
-/* styles/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* =========================
+   Base styles (Dota theme)
+========================= */
 @layer base {
   body {
     @apply bg-gray-950 text-gray-200 font-sans;
@@ -14,11 +15,13 @@
   }
 
   a {
-    @apply text-yellow-400 hover:text-yellow-300 transition;
+    @apply text-amber-400 hover:text-amber-300 transition;
   }
 
-  button, input[type="submit"] {
-    @apply bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded shadow transition disabled:bg-gray-600 disabled:cursor-not-allowed;
+  button,
+  input[type="submit"] {
+    @apply bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded shadow
+           transition disabled:bg-gray-600 disabled:cursor-not-allowed;
   }
 
   input[type="checkbox"] {
@@ -26,8 +29,11 @@
   }
 }
 
-/* Extra utilities */
+/* =========================
+   Animations & utilities
+========================= */
 @layer utilities {
+  /* Generic fade-in */
   .animate-fadeIn {
     @apply opacity-0 animate-fade;
   }
@@ -40,8 +46,36 @@
   .animate-fade {
     animation: fade 0.5s ease-out forwards;
   }
+
+  /* =========================
+     Offer reveal (Auction)
+  ========================= */
+  .reveal-glow {
+    animation: revealGlow 1.2s ease-out forwards;
+  }
+
+  @keyframes revealGlow {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+      text-shadow: 0 0 0 rgba(255, 215, 0, 0);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.05);
+      text-shadow: 0 0 18px rgba(255, 215, 0, 0.45);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      text-shadow: 0 0 6px rgba(255, 215, 0, 0.25);
+    }
+  }
 }
 
+/* =========================
+   Remove number input arrows
+========================= */
 .hide-arrow[type="number"]::-webkit-inner-spin-button,
 .hide-arrow[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
