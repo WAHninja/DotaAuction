@@ -2,7 +2,13 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ablyServerClient from '@/lib/ably-server';
+import { publishToAbly } from '@/utils/publishToAbly';
+
+await publishToAbly(`match-${game.match_id}-offers`, 'offer-accepted', {
+  acceptedOffer: offer,
+  newGame: newGameRows[0],
+});
+
 
 export async function POST(
   req: NextRequest,
