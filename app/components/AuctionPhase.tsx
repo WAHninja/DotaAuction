@@ -4,6 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { fetchPublish } from '@/utils/fetchPublish'; // <-- updated import
 
+console.log('currentUserId:', currentUserId);
+console.log('latestGame:', latestGame);
+console.log('winning_team:', latestGame?.winning_team);
+console.log('teamA:', latestGame?.team_a_members);
+console.log('team1:', latestGame?.team_1_members);
+console.log('offers:', offers);
+console.log('isWinner:', winningTeamMembers?.includes(currentUserId));
+
 /* =========================
    Types
 ======================== */
