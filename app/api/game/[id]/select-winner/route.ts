@@ -1,7 +1,13 @@
 // app/api/game/[id]/select-winner/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
-import ablyServerClient from '@/lib/ably-server'
+import { publishToAbly } from '@/utils/publishToAbly';
+
+await publishToAbly(`match-${game.match_id}`, 'game-winner-selected', {
+  gameId,
+  matchId: game.match_id,
+  winnerId: winningMembers.length === 1 ? winningMembers[0] : undefined,
+});
 
 type TeamId = 'team_1' | 'team_a'
 
