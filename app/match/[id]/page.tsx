@@ -29,9 +29,17 @@ export default function MatchPage() {
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
   /* ---------------- Protect Route ---------------- */
+  // Only redirect if we *know* the user is not logged in
   useEffect(() => {
-    if (user === null) router.push('/');
+    if (user === null) {
+      router.push('/');
+    }
   }, [user, router]);
+
+  // Early return while user context is loading
+  if (user === undefined) {
+    return <div className="p-6 text-center text-gray-300">Loading user...</div>;
+  }
 
   /* ---------------- Fetch Data ---------------- */
   const fetchMatchData = async () => {
@@ -95,14 +103,10 @@ export default function MatchPage() {
   );
 
   /* ---------------- Guards ---------------- */
-  if (!user)
-    return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
-  if (loading)
-    return <div className="p-6 text-center text-gray-300">Loading match...</div>;
-  if (error)
-    return <div className="p-6 text-center text-red-500">Error: {error}</div>;
-  if (!data)
-    return <div className="p-6 text-center text-gray-300">Match not found.</div>;
+  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
+  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
+  if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
+  if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
 
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
@@ -129,9 +133,7 @@ export default function MatchPage() {
 
       {latestGame?.status === 'finished' && (
         <WinnerBanner
-          winnerName={
-            players.find((p: any) => p.id === match.winner_id)?.username
-          }
+          winnerName={players.find((p: any) => p.id === match.winner_id)?.username}
         />
       )}
 
