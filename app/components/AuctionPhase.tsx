@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+
+/* =========================
+   Types
+========================= */
 
 type Player = {
   id: number;
@@ -32,7 +36,17 @@ type AuctionPhaseProps = {
   onRefreshMatch?: () => void;
 };
 
-export default function AuctionPhase({ latestGame, players, currentUserId, gamesPlayed, onRefreshMatch }: AuctionPhaseProps) {
+/* =========================
+   Component
+========================= */
+
+export default function AuctionPhase({
+  latestGame,
+  players,
+  currentUserId,
+  gamesPlayed,
+  onRefreshMatch,
+}: AuctionPhaseProps) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [offerAmount, setOfferAmount] = useState('');
@@ -40,20 +54,35 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
   const [accepting, setAccepting] = useState(false);
   const [message, setMessage] = useState('');
 
+  /** Animation control */
+  const [revealAnimation, setRevealAnimation] = useState(false);
+  const hasRevealedRef = useRef(false);
+
+  /* ---------------- Teams ---------------- */
+
   const team1 = latestGame.team_1_members || [];
   const teamA = latestGame.team_a_members || [];
   const winningTeam = latestGame.winning_team;
 
-  const isWinner = winningTeam === 'team_1' ? team1.includes(currentUserId) : teamA.includes(currentUserId);
+  const winningTeamMembers =
+    winningTeam === 'team_1' ? team1 : teamA;
+
+  const isWinner = winningTeamMembers.includes(currentUserId);
   const isLoser = winningTeam ? !isWinner : false;
 
-  const myTeam = winningTeam === 'team_1' ? team1 : teamA;
-  const offerCandidates = myTeam.filter((id) => id !== currentUserId);
+  const offerCandidates = winningTeamMembers.filter(
+    (id) => id !== currentUserId
+  );
+
+  /* ---------------- Offer Rules ---------------- */
 
   const minOfferAmount = 250 + gamesPlayed * 200;
   const maxOfferAmount = 2000 + gamesPlayed * 500;
 
-  const getPlayer = (id: number) => players.find((p) => p.id === id);
+  const getPlayer = (id: number) =>
+    players.find((p) => p.id === id);
+
+  /* ---------------- Fetch Offers ---------------- */
 
   const fetchOffers = async () => {
     try {
@@ -69,43 +98,83 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
     fetchOffers();
   }, [latestGame.id]);
 
-  const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
-  const alreadyAcceptedOffer = offers.find((o) => o.status === 'accepted' && o.target_player_id === currentUserId);
+  /* ---------------- Offer State ---------------- */
 
-  // Check if all winning team members have submitted their offers
+  const alreadySubmittedOffer = offers.some(
+    (o) => o.from_player_id === currentUserId
+  );
+
+  const alreadyAcceptedOffer = offers.find(
+    (o) =>
+      o.status === 'accepted' &&
+      o.target_player_id === currentUserId
+  );
+
+  /** 🔐 Viewer-agnostic reveal condition */
+  const expectedOfferCount = winningTeamMembers.length;
+  const submittedOfferCount = offers.filter((o) =>
+    winningTeamMembers.includes(o.from_player_id)
+  ).length;
+
   const allOffersSubmitted =
-    offerCandidates.length === offers.filter((o) => myTeam.includes(o.from_player_id)).length;
+    submittedOfferCount === expectedOfferCount;
+
+  /* ---------------- Reveal Animation Trigger ---------------- */
+
+  useEffect(() => {
+    if (allOffersSubmitted && !hasRevealedRef.current) {
+      hasRevealedRef.current = true;
+      setRevealAnimation(true);
+
+      const timer = setTimeout(() => {
+        setRevealAnimation(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [allOffersSubmitted]);
 
   /* ---------------- Submit Offer ---------------- */
+
   const handleSubmitOffer = async () => {
-    if (alreadySubmittedOffer) return alert('You have already submitted an offer.');
+    if (alreadySubmittedOffer) return;
 
     const parsedAmount = Number(offerAmount);
-    if (!selectedPlayer || isNaN(parsedAmount) || parsedAmount < minOfferAmount || parsedAmount > maxOfferAmount) {
-      return alert(`Select a teammate and enter an offer between ${minOfferAmount}-${maxOfferAmount}`);
+    if (
+      !selectedPlayer ||
+      isNaN(parsedAmount) ||
+      parsedAmount < minOfferAmount ||
+      parsedAmount > maxOfferAmount
+    ) {
+      return alert(
+        `Select a teammate and enter an offer between ${minOfferAmount}-${maxOfferAmount}`
+      );
     }
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/game/${latestGame.id}/submit-offer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from_player_id: currentUserId,
-          target_player_id: Number(selectedPlayer),
-          offer_amount: parsedAmount,
-        }),
-      });
+      const res = await fetch(
+        `/api/game/${latestGame.id}/submit-offer`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from_player_id: currentUserId,
+            target_player_id: Number(selectedPlayer),
+            offer_amount: parsedAmount,
+          }),
+        }
+      );
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error submitting offer');
+      if (!res.ok) throw new Error(data.error);
 
       setSelectedPlayer('');
       setOfferAmount('');
-      fetchOffers();
       setMessage('✅ Offer submitted!');
+      fetchOffers();
       onRefreshMatch?.();
     } catch (err: any) {
-      console.error(err);
       alert(err.message || 'Failed to submit offer');
     } finally {
       setSubmitting(false);
@@ -113,176 +182,140 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
   };
 
   /* ---------------- Accept Offer ---------------- */
+
   const handleAcceptOffer = async (offerId: number) => {
     if (alreadyAcceptedOffer) return;
+
     setAccepting(true);
     setMessage('');
     try {
-      const res = await fetch(`/api/game/${latestGame.id}/accept-offer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId }),
-      });
+      const res = await fetch(
+        `/api/game/${latestGame.id}/accept-offer`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ offerId }),
+        }
+      );
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Error accepting offer');
+      if (!res.ok) throw new Error(data.message);
 
       setMessage('✅ Offer accepted!');
-      await fetchOffers();
+      fetchOffers();
       onRefreshMatch?.();
     } catch (err: any) {
-      console.error(err);
       setMessage(err.message || 'Failed to accept offer');
     } finally {
       setAccepting(false);
     }
   };
 
-  /* ---------------- Render ---------------- */
+  /* =========================
+     Render
+  ========================= */
+
   return (
     <div className="bg-gray-900 bg-opacity-70 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
-      <h3 className="text-3xl font-extrabold mb-6 text-center text-red-500 drop-shadow-lg">
+
+      <h3 className="text-3xl font-extrabold mb-4 text-center text-red-500 drop-shadow-lg">
         🏛 Auction House
       </h3>
 
-      {/* Winner Submission */}
-      {isWinner && !alreadySubmittedOffer && (
-        <div className="w-full max-w-md mx-auto mb-8">
-          <p className="font-semibold mb-3 text-center text-red-400 text-lg">
-            Make Your Offer
-          </p>
-          <p className="text-sm text-gray-300 text-center mb-4">
-            Offer must be between{' '}
-            <span className="font-bold text-cyan-300">{minOfferAmount}</span> and{' '}
-            <span className="font-bold text-cyan-300">{maxOfferAmount}</span>
-            <Image
-              src="/Gold_symbol.webp"
-              alt="Gold"
-              width={18}
-              height={18}
-              className="inline-block ml-1 align-middle"
-            />
-          </p>
-
-          <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
-            <select
-              value={selectedPlayer}
-              onChange={(e) => setSelectedPlayer(e.target.value)}
-              className="px-4 py-2 rounded-lg text-black w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <option value="">Select Player</option>
-              {offerCandidates.map((pid) => {
-                const player = getPlayer(pid);
-                return <option key={pid} value={pid}>{player?.username || 'Unknown'}</option>;
-              })}
-            </select>
-
-            <input
-              type="number"
-              value={offerAmount}
-              onChange={(e) => setOfferAmount(e.target.value)}
-              placeholder={`${minOfferAmount}-${maxOfferAmount}`}
-              min={minOfferAmount}
-              max={maxOfferAmount}
-              className="px-4 py-2 rounded-lg text-black w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={handleSubmitOffer}
-              disabled={
-                submitting ||
-                !selectedPlayer ||
-                !offerAmount ||
-                Number(offerAmount) < minOfferAmount ||
-                Number(offerAmount) > maxOfferAmount
-              }
-              className="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-lg w-full max-w-xs shadow-md hover:shadow-xl transition-all"
-            >
-              {submitting ? 'Submitting...' : 'Submit Offer'}
-            </button>
-          </div>
+      {/* 🎉 Reveal Banner */}
+      {revealAnimation && (
+        <div className="mb-6 text-center text-green-400 font-extrabold text-xl animate-pulse">
+          💰 Offers Revealed!
         </div>
       )}
 
-      {isWinner && alreadySubmittedOffer && (
-        <div className="w-full max-w-md mx-auto mb-8 text-center text-red-400 font-semibold text-lg drop-shadow">
-          ✅ You've already submitted your offer.
-        </div>
-      )}
+      {/* ---------------- Offers ---------------- */}
 
-      {/* Current Offers */}
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        <div className="flex-1">
-          <h4 className="text-2xl font-bold text-center mb-6 text-red-500 drop-shadow-lg">
-            Current Offers
-          </h4>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {offers.map((offer) => {
+          const from = getPlayer(offer.from_player_id);
+          const to = getPlayer(offer.target_player_id);
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {offers.map((offer) => {
-              const from = getPlayer(offer.from_player_id);
-              const to = getPlayer(offer.target_player_id);
+          const canAccept =
+            isLoser &&
+            offer.status === 'pending' &&
+            !alreadyAcceptedOffer &&
+            allOffersSubmitted;
 
-              // Offer value is only visible after all winners submitted
-              const showOfferAmount = allOffersSubmitted;
+          return (
+            <div
+              key={offer.id}
+              className="bg-gray-800 p-5 rounded-2xl shadow-lg border border-gray-700 hover:scale-105 transition-transform"
+            >
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400">From:</span>
+                <span className="text-cyan-300 font-bold">
+                  {from?.username}
+                </span>
+              </div>
 
-              const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer && allOffersSubmitted;
+              <div className="flex justify-between mb-4">
+                <span className="text-gray-400">For:</span>
+                <span className="text-cyan-300 font-bold">
+                  {to?.username}
+                </span>
+              </div>
 
-              return (
-                <div
-                  key={offer.id}
-                  className="bg-gray-800 p-5 rounded-2xl shadow-lg border border-gray-700 flex flex-col justify-between hover:scale-105 transform transition-all duration-200"
-                >
-                  <div className="flex flex-col gap-3 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300 font-semibold">From:</span>
-                      <span className="text-cyan-300 font-bold text-lg">{from?.username}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300 font-semibold">For:</span>
-                      <span className="text-cyan-300 font-bold text-lg">{to?.username}</span>
-                    </div>
-
-                    <div className="mt-2 text-gray-300 text-center text-sm">
-                      {showOfferAmount ? (
-                        <>
-                          Offer: <span className="font-bold text-red-400">{offer.offer_amount}</span>{' '}
-                          <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} className="inline-block ml-1 align-middle" />
-                        </>
-                      ) : (
-                        'Waiting for all offers...'
-                      )}
-                    </div>
+              <div
+                className={`text-center text-sm transition-all duration-700 ${
+                  allOffersSubmitted
+                    ? 'opacity-100 scale-100'
+                    : 'opacity-40'
+                }`}
+              >
+                {allOffersSubmitted ? (
+                  <div className="flex justify-center items-center gap-1 text-red-400 font-bold text-lg">
+                    {offer.offer_amount}
+                    <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={18}
+                      height={18}
+                    />
                   </div>
+                ) : (
+                  <span className="text-gray-500">
+                    Waiting for all offers...
+                  </span>
+                )}
+              </div>
 
-                  {canAccept && (
-                    <button
-                      onClick={() => handleAcceptOffer(offer.id)}
-                      disabled={accepting}
-                      className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-xl transition-all"
-                    >
-                      {accepting ? 'Accepting...' : 'Accept Offer'}
-                    </button>
-                  )}
+              {canAccept && (
+                <button
+                  onClick={() => handleAcceptOffer(offer.id)}
+                  disabled={accepting}
+                  className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition"
+                >
+                  Accept Offer
+                </button>
+              )}
 
-                  {(offer.status === 'accepted' || offer.status === 'rejected') && (
-                    <span
-                      className={`mt-2 px-3 py-1 rounded font-semibold text-center ${
-                        offer.status === 'accepted' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                      }`}
-                    >
-                      {offer.status === 'accepted' ? 'Accepted' : 'Rejected'}
-                    </span>
-                  )}
+              {offer.status !== 'pending' && (
+                <div
+                  className={`mt-3 text-center font-bold ${
+                    offer.status === 'accepted'
+                      ? 'text-green-400'
+                      : 'text-red-400'
+                  }`}
+                >
+                  {offer.status.toUpperCase()}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {message && <p className="mt-4 text-center text-red-400 font-medium drop-shadow">{message}</p>}
+      {message && (
+        <p className="mt-6 text-center text-red-400 font-medium">
+          {message}
+        </p>
+      )}
     </div>
   );
 }
