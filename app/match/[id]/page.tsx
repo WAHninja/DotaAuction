@@ -10,7 +10,7 @@ import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionPhase from '@/app/components/AuctionPhase';
-import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
+import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -49,14 +49,34 @@ export default function MatchPage() {
     }
   };
 
+  const fetchOffers = async (gameId: number) => {
+    if (!gameId) return;
+    try {
+      const res = await fetch(`/api/game/offers?id=${gameId}`);
+      const json = await res.json();
+      if (data && data.latestGame?.id === gameId) {
+        setData((prev: any) => ({
+          ...prev,
+          latestGame: { ...prev.latestGame, offers: json.offers || [] },
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch offers:', err);
+    }
+  };
+
+  /* ---------------- Realtime Listener ---------------- */
+  useRealtimeMatchListener(matchId, data?.latestGame?.id, {
+    fetchMatchData,
+    fetchOffers,
+    fetchGameHistory: () => setHistory((prev) => [...prev]), // refresh history
+    fetchGamesPlayed: () => setGamesPlayed(data?.gamesPlayed || 0),
+  });
+
+  /* ---------------- Initial Fetch ---------------- */
   useEffect(() => {
     if (user) fetchMatchData();
   }, [matchId, user]);
-
-  /* ---------------- Game Winner Listener ---------------- */
-  useGameWinnerListener(matchId, () => {
-    fetchMatchData();
-  });
 
   /* ---------------- Guards ---------------- */
   if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
@@ -116,7 +136,7 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId}
           gamesPlayed={gamesPlayed}
-          onRefreshMatch={fetchMatchData} // Simplified
+          onRefreshMatch={fetchMatchData} // still works for manual refresh
         />
       )}
 
@@ -125,7 +145,7 @@ export default function MatchPage() {
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
         {[...history].reverse().map((game) => {
           const isExpanded = expandedGameId === game.gameNumber;
-          const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
+          const acceptedOffer = game.offers?.find((o: any) => o.status === 'accepted');
           const isLatest = game.gameNumber === data.latestGame?.gameNumber;
 
           return (
