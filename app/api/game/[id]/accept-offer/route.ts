@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ablyServerClient from '@/lib/ably-server';
+import { publishToMatchChannel } from '@/lib/publishToMatchChannel';
 
 export async function POST(req: NextRequest): Promise<Response> {
   let transactionStarted = false;
@@ -129,9 +129,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     transactionStarted = false;
 
     // ---------------- Notify via Ably ----------------
-    await ablyServerClient.channels
-      .get(`match-${game.match_id}-offers`)
-      .publish('offer-accepted', { acceptedOffer: offer, newGame: newGameRows[0] });
+     await publishToMatchChannel(game.match_id, 'offer-accepted', {
+        acceptedOffer: offer,
+        newGame: newGameRows[0],
+      });
 
     return new Response(
       JSON.stringify({
