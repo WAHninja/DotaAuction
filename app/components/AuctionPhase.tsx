@@ -23,7 +23,6 @@ type Game = {
   team_a_members: number[];
   winning_team: 'team_1' | 'team_a' | null;
   status: string;
-  offers?: Offer[]; // ← now comes from parent
 };
 
 type AuctionPhaseProps = {
@@ -47,7 +46,7 @@ export default function AuctionPhase({
   onRefreshMatch,
   subscribeToGameEvents,
 }: AuctionPhaseProps) {
-  const [offers, setOffers] = useState<Offer[]>(latestGame.offers || []);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [offerAmount, setOfferAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -68,19 +67,32 @@ export default function AuctionPhase({
 
   const getPlayer = (id: number) => players.find((p) => p.id === id);
 
-  /* ---------------- Subscribe to Realtime Events ---------------- */
+  /* ---------------- Fetch Offers ---------------- */
+  const fetchOffers = async () => {
+    try {
+      const res = await fetch(`/api/game/offers?id=${gameId}`);
+      if (!res.ok) throw new Error('Failed to fetch offers');
+      const data = await res.json();
+      setOffers(data.offers || []);
+    } catch (err) {
+      console.error('Error fetching offers:', err);
+    }
+  };
+
   useEffect(() => {
-    if (!subscribeToGameEvents) return;
+    fetchOffers();
 
-    const unsubscribe = subscribeToGameEvents(gameId, (event) => {
-      if (event.type === 'new-offer' || event.type === 'offer-accepted') {
-        setOffers(event.offers || []); // update offers from parent event
-        onRefreshMatch?.();
-      }
-    });
-
-    return unsubscribe;
-  }, [gameId, subscribeToGameEvents, onRefreshMatch]);
+    // Subscribe to realtime updates
+    if (subscribeToGameEvents) {
+      const unsubscribe = subscribeToGameEvents(gameId, (event) => {
+        if (event.type === 'new-offer' || event.type === 'offer-accepted') {
+          fetchOffers();
+          onRefreshMatch?.();
+        }
+      });
+      return unsubscribe;
+    }
+  }, [gameId, subscribeToGameEvents]);
 
   /* ---------------- Offer State ---------------- */
   const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
@@ -114,11 +126,14 @@ export default function AuctionPhase({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_player_id: Number(selectedPlayer), offer_amount: amount }),
       });
-      if (!res.ok) throw new Error('Failed to submit offer');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to submit offer');
 
       setSelectedPlayer('');
       setOfferAmount('');
       setMessage('✅ Offer submitted!');
+      fetchOffers();          // ← refetch offers from API
+      onRefreshMatch?.();     // ← update match state
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer');
     } finally {
@@ -138,9 +153,12 @@ export default function AuctionPhase({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
       });
-      if (!res.ok) throw new Error('Failed to accept offer');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to accept offer');
 
       setMessage('✅ Offer accepted!');
+      fetchOffers();          // ← refetch offers from API
+      onRefreshMatch?.();
     } catch (err: any) {
       setMessage(err.message || 'Failed to accept offer');
     } finally {
