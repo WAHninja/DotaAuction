@@ -122,10 +122,7 @@ export default function AuctionPhase({
       hasRevealedRef.current = true;
       setRevealAnimation(true);
 
-      const timer = setTimeout(() => {
-        setRevealAnimation(false);
-      }, 2000);
-
+      const timer = setTimeout(() => setRevealAnimation(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [allOffersSubmitted]);
@@ -169,7 +166,7 @@ export default function AuctionPhase({
       setMessage('✅ Offer submitted!');
       fetchOffers(latestGame.id);
 
-      // ✅ Notify other users via Ably
+      // Notify other users via Ably
       await publishToMatchChannel(latestGame.id, 'new-offer', {
         gameId: latestGame.id,
       });
@@ -204,7 +201,7 @@ export default function AuctionPhase({
       setMessage('✅ Offer accepted!');
       fetchOffers(latestGame.id);
 
-      // ✅ Notify other users via Ably
+      // Notify other users via Ably
       await publishToMatchChannel(latestGame.id, 'offer-accepted', {
         gameId: latestGame.id,
       });
@@ -222,19 +219,18 @@ export default function AuctionPhase({
   ========================= */
   return (
     <div className="bg-gray-900 bg-opacity-70 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
-
       <h3 className="text-3xl font-extrabold mb-4 text-center text-red-500 drop-shadow-lg">
         🏛 Auction House
       </h3>
 
-      {/* 🎉 Reveal Banner */}
+      {/* Reveal Banner */}
       {revealAnimation && (
         <div className="mb-6 text-center text-green-400 font-extrabold text-xl animate-pulse">
           💰 Offers Revealed!
         </div>
       )}
 
-      {/* ---------------- Winner Submission ---------------- */}
+      {/* Winner Submission */}
       {isWinner && !alreadySubmittedOffer && (
         <div className="mb-8">
           <p className="font-semibold mb-3 text-center text-red-400 text-lg">
@@ -250,7 +246,11 @@ export default function AuctionPhase({
               <option value="">Select Player</option>
               {offerCandidates.map((pid) => {
                 const player = getPlayer(pid);
-                return <option key={pid} value={pid}>{player?.username || 'Unknown'}</option>;
+                return (
+                  <option key={pid} value={pid}>
+                    {player?.username || 'Unknown'}
+                  </option>
+                );
               })}
             </select>
 
@@ -284,78 +284,108 @@ export default function AuctionPhase({
       )}
 
       {/* ---------------- Offers Grid ---------------- */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {offers.map((offer) => {
-          const from = getPlayer(offer.from_player_id);
-          const to = getPlayer(offer.target_player_id);
+<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+  {offers.map((offer) => {
+    const from = getPlayer(offer.from_player_id);
+    const to = getPlayer(offer.target_player_id);
+    const showOfferAmount = allOffersSubmitted;
+    const canAccept =
+      isLoser &&
+      offer.status === 'pending' &&
+      !alreadyAcceptedOffer &&
+      allOffersSubmitted;
 
-          const showOfferAmount = allOffersSubmitted;
-          const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer && allOffersSubmitted;
+    return (
+      <div
+        key={offer.id}
+        className={`relative p-5 rounded-3xl shadow-2xl border transition-transform transform
+          hover:scale-105 hover:shadow-2xl
+          ${
+            offer.status === 'accepted'
+              ? 'bg-green-900/80 border-green-500'
+              : offer.status === 'rejected'
+              ? 'bg-red-900/80 border-red-500'
+              : 'bg-gradient-to-br from-gray-900/90 to-gray-800/80 border-gray-700'
+          }
+        `}
+      >
+        {/* Status Ribbon */}
+        {offer.status !== 'pending' && (
+          <div className={`absolute top-0 right-0 -translate-y-2 translate-x-2 px-3 py-1 rounded-bl-lg font-bold text-sm
+            ${offer.status === 'accepted' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            {offer.status.toUpperCase()}
+          </div>
+        )}
 
-          return (
-            <div
-              key={offer.id}
-              className="bg-gray-800 p-5 rounded-2xl shadow-lg border border-gray-700 hover:scale-105 transition-transform flex flex-col justify-between"
-            >
-
-               {/* Gold Offer */}
-              <div className={`text-center text-3xl font-bold mb-4 transition-all duration-700 ${showOfferAmount ? 'opacity-100 scale-100 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]' : 'opacity-40 scale-90'}`}>
-                {showOfferAmount ? (
-                  <div className="flex justify-center items-center gap-1">
-                    {offer.offer_amount}
-                    <Image src="/Gold_symbol.webp" alt="Gold" width={24} height={24} />
-                  </div>
-                ) : (
-                  <span className="text-gray-500 text-lg">Waiting for all offers...</span>
-                )}
-              </div>
-               
-               {/* Offer Maker */}
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-400 font-semibold">From:</span>
-                <span className="text-emerald-400 font-bold">{from?.username}</span>
-              </div>
-
-              {/* Target Player */}
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-400 font-semibold">For:</span>
-                <span className="text-cyan-300 font-bold">{to?.username}</span>
-              </div>
-
-              {/* Consequence */}
-              {showOfferAmount && (
-                <div className="text-xs text-gray-400 mb-2">
-                  • If accepted, {from?.username} gains {offer.offer_amount} <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} <br />
-                  • {to?.username} swaps teams
-                </div>
-              )}
-
-              {/* Accept Button */}
-              {canAccept && (
-                <button
-                  onClick={() => handleAcceptOffer(offer.id)}
-                  disabled={accepting}
-                  className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-                >
-                  Accept Offer
-                </button>
-              )}
-
-              {/* Status */}
-              {offer.status !== 'pending' && (
-                <div className={`mt-2 text-center font-bold text-lg ${offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
-                  {offer.status.toUpperCase()}
-                </div>
-              )}
+        {/* Gold Amount */}
+        <div className="flex justify-center items-center mb-4 relative">
+          {showOfferAmount ? (
+            <div className="flex items-center gap-2 text-3xl font-extrabold text-amber-400 animate-gold-glow drop-shadow-xl">
+              {offer.offer_amount}
+              <Image
+                src="/Gold_symbol.webp"
+                alt="Gold"
+                width={28}
+                height={28}
+                className="inline-block"
+              />
             </div>
-          );
-        })}
+          ) : (
+            <span className="text-gray-500 text-lg">Waiting...</span>
+          )}
+        </div>
+
+        {/* Player Info */}
+        <div className="flex flex-col gap-2 mb-3">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 font-medium flex items-center gap-1">🧑 From:</span>
+            <span className="text-emerald-400 font-bold">{from?.username}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 font-medium flex items-center gap-1">🎯 For:</span>
+            <span className="text-cyan-300 font-bold">{to?.username}</span>
+          </div>
+        </div>
+
+        {/* Consequences */}
+        {showOfferAmount && (
+          <div className="text-xs text-gray-300 mb-3">
+            • {from?.username} gains {offer.offer_amount}{' '}
+            <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+            <br />
+            • {to?.username} swaps teams if accepted
+          </div>
+        )}
+
+        {/* Accept Button */}
+        {canAccept && (
+          <button
+            onClick={() => handleAcceptOffer(offer.id)}
+            disabled={accepting}
+            className="w-full py-2 px-4 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 shadow-lg hover:shadow-2xl transition-all"
+          >
+            Accept Offer
+          </button>
+        )}
       </div>
+    );
+  })}
+</div>
+
+{/* ---------------- Gold Glow Animation ---------------- */}
+<style jsx>{`
+  @keyframes goldGlow {
+    0%, 100% { text-shadow: 0 0 8px rgba(251,191,36,0.5), 0 0 12px rgba(251,191,36,0.3); }
+    50% { text-shadow: 0 0 12px rgba(251,191,36,0.9), 0 0 20px rgba(251,191,36,0.5); }
+  }
+  .animate-gold-glow {
+    animation: goldGlow 1.5s ease-in-out infinite;
+  }
+`}</style>
+
 
       {message && (
-        <p className="mt-6 text-center text-red-400 font-medium">
-          {message}
-        </p>
+        <p className="mt-6 text-center text-red-400 font-medium">{message}</p>
       )}
     </div>
   );
