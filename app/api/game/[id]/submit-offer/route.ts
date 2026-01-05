@@ -1,39 +1,47 @@
+// app/api/game/[id]/submit-offer/route.ts
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import * as Ably from 'ably/promises';
+import ablyServerClient from '@/lib/ably-server';
 
-const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
-
-export async function POST(req: NextRequest): Promise<Response> {
-  const body = await req.json();
-  const { target_player_id, offer_amount } = body;
-
-  const url = new URL(req.url);
-  const id = url.pathname.split('/').at(-2); // Extract game ID
-
-  if (!id || isNaN(Number(id))) {
-    return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
-      status: 400,
-    });
-  }
-
-  const gameId = Number(id);
-  const session = await getSession();
-  const userId = session?.userId;
-
-  if (!userId) {
-    return new Response(JSON.stringify({ message: 'Not authenticated.' }), {
-      status: 401,
-    });
-  }
-
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+): Promise<Response> {
   try {
+    // ---------------- Parse Input ----------------
+    const body = await req.json();
+    const target_player_id = Number(body.target_player_id);
+    const offer_amount = Number(body.offer_amount);
+
+    if (isNaN(target_player_id) || isNaN(offer_amount)) {
+      return new Response(
+        JSON.stringify({ message: 'Invalid input data.' }),
+        { status: 400 }
+      );
+    }
+
+    const gameId = Number(params.id);
+    if (isNaN(gameId)) {
+      return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
+        status: 400,
+      });
+    }
+
+    // ---------------- Authenticate ----------------
+    const session = await getSession();
+    const userId = session?.userId;
+    if (!userId) {
+      return new Response(JSON.stringify({ message: 'Not authenticated.' }), {
+        status: 401,
+      });
+    }
+
+    // ---------------- Fetch Game ----------------
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE id = $1 LIMIT 1',
       [gameId]
     );
-
     if (gameRows.length === 0) {
       return new Response(JSON.stringify({ message: 'Game not found.' }), {
         status: 404,
@@ -42,36 +50,39 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const game = gameRows[0];
     const winningTeam = game.winning_team;
-    const teamA = game.team_a_members;
-    const team1 = game.team_1_members;
-
-    const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
+    const winningTeamMembers =
+      winningTeam === 'team_a' ? game.team_a_members : game.team_1_members;
 
     if (!winningTeamMembers.includes(userId)) {
       return new Response(
-        JSON.stringify({ message: 'Only winning team members can make offers.' }),
+        JSON.stringify({
+          message: 'Only winning team members can submit offers.',
+        }),
         { status: 403 }
       );
     }
 
-    // 🔁 Get the matchId using the game
-    const matchResult = await db.query(
+    // ---------------- Fetch Match & Games Played ----------------
+    const { rows: matchRows } = await db.query(
       'SELECT match_id FROM Games WHERE id = $1',
       [gameId]
     );
-    const matchId = matchResult.rows[0]?.match_id;
+    const matchId = matchRows[0]?.match_id;
+    if (!matchId) {
+      return new Response(JSON.stringify({ message: 'Match not found.' }), {
+        status: 404,
+      });
+    }
 
-    // Fetch the number of games played in the match
     const { rows: matchGames } = await db.query(
       'SELECT COUNT(*) FROM Games WHERE match_id = $1',
       [matchId]
     );
-
     const gamesPlayed = parseInt(matchGames[0].count, 10);
 
-    // Dynamically calculate the offer limit based on the number of games played
-    const maxOfferAmount = 2000 + gamesPlayed * 500; // Increase by 500 per game
-    const minOfferAmount = 250 + gamesPlayed * 200; // Increase by 500 per game
+    // ---------------- Validate Offer ----------------
+    const minOfferAmount = 250 + gamesPlayed * 200;
+    const maxOfferAmount = 2000 + gamesPlayed * 500;
 
     if (offer_amount < minOfferAmount || offer_amount > maxOfferAmount) {
       return new Response(
@@ -82,18 +93,18 @@ export async function POST(req: NextRequest): Promise<Response> {
       );
     }
 
-    const existing = await db.query(
+    const { rows: existingOffers } = await db.query(
       'SELECT * FROM Offers WHERE from_player_id = $1 AND game_id = $2',
       [userId, gameId]
     );
-
-    if (existing.rows.length > 0) {
+    if (existingOffers.length > 0) {
       return new Response(
         JSON.stringify({ message: 'You have already submitted an offer.' }),
         { status: 400 }
       );
     }
 
+    // ---------------- Insert Offer ----------------
     const { rows: inserted } = await db.query(
       `INSERT INTO Offers (game_id, from_player_id, target_player_id, offer_amount, status)
        VALUES ($1, $2, $3, $4, $5)
@@ -103,12 +114,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const savedOffer = inserted[0];
 
-    if (matchId) {
-      await ably.channels
-        .get(`match-${matchId}-offers`)
-        .publish('new-offer', savedOffer);
-    }
+    // ---------------- Publish via Ably ----------------
+    await ablyServerClient.channels
+      .get(`match-${matchId}-offers`)
+      .publish('new-offer', savedOffer);
 
+    // ---------------- Return Response ----------------
     return new Response(
       JSON.stringify({ message: 'Offer submitted.', offer: savedOffer }),
       {
@@ -118,9 +129,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
   } catch (err) {
     console.error('Error submitting offer:', err);
-    return new Response(
-      JSON.stringify({ message: 'Server error.' }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ message: 'Server error.' }), {
+      status: 500,
+    });
   }
 }
