@@ -1,13 +1,9 @@
-// app/api/game/[id]/submit-offer/route.ts
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { publishToMatchChannel } from '@/utils/publishToMatchChannel';
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<Response> {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     // ---------------- Parse Input ----------------
     const body = await req.json();
@@ -21,7 +17,9 @@ export async function POST(
       );
     }
 
-    const gameId = Number(params.id);
+    // ---------------- Parse game ID from URL ----------------
+    const url = new URL(req.url);
+    const gameId = Number(url.pathname.split('/')[3]); // /api/game/{id}/submit-offer
     if (isNaN(gameId)) {
       return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
         status: 400,
