@@ -1,75 +1,91 @@
+// app/api/game/[id]/accept-offer/route.ts
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import * as Ably from 'ably/promises';
+import ablyServerClient from '@/lib/ably-server';
 
-const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+): Promise<Response> {
+  let transactionStarted = false;
 
-export async function POST(req: NextRequest): Promise<Response> {
   try {
-    // 1️⃣ Extract game ID from URL
-    const url = new URL(req.url);
-    const parts = url.pathname.split('/');
-    const gameId = Number(parts[3]); // /api/game/{gameId}/accept-offer
-
-    if (!gameId || isNaN(gameId)) {
-      return new Response(JSON.stringify({ message: 'Missing or invalid game ID.' }), {
+    const gameId = Number(params.id);
+    if (isNaN(gameId)) {
+      return new Response(JSON.stringify({ message: 'Invalid game ID.' }), {
         status: 400,
       });
     }
 
-    // 2️⃣ Get the offerId from the request body
     const { offerId } = await req.json();
-    const session = await getSession();
-    const userId = session?.userId;
-
-    if (!userId) {
-      return new Response(JSON.stringify({ message: 'Not authenticated.' }), { status: 401 });
+    if (!offerId || isNaN(Number(offerId))) {
+      return new Response(JSON.stringify({ message: 'Invalid offer ID.' }), {
+        status: 400,
+      });
     }
 
-    // 3️⃣ Fetch the game by its ID
+    const session = await getSession();
+    const userId = session?.userId;
+    if (!userId) {
+      return new Response(JSON.stringify({ message: 'Not authenticated.' }), {
+        status: 401,
+      });
+    }
+
+    // ---------------- Fetch Game ----------------
     const { rows: gameRows } = await db.query(
       'SELECT * FROM Games WHERE id = $1 LIMIT 1',
       [gameId]
     );
-
     if (gameRows.length === 0) {
-      return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
+      return new Response(JSON.stringify({ message: 'Game not found.' }), {
+        status: 404,
+      });
     }
 
     const game = gameRows[0];
-
-    const teamA = game.team_a_members;
-    const team1 = game.team_1_members;
+    const teamA: number[] = game.team_a_members;
+    const team1: number[] = game.team_1_members;
     const winningTeam = game.winning_team;
-    const losingTeam = winningTeam === 'team_a' ? team1 : teamA;
 
+    const losingTeam = winningTeam === 'team_a' ? team1 : teamA;
     if (!losingTeam.includes(userId)) {
-      return new Response(JSON.stringify({ message: 'You are not on the losing team.' }), { status: 403 });
+      return new Response(
+        JSON.stringify({ message: 'Only losing team members can accept offers.' }),
+        { status: 403 }
+      );
     }
 
-    // 4️⃣ Fetch the offer
+    // ---------------- Fetch Offer ----------------
     const { rows: offerRows } = await db.query(
       'SELECT * FROM Offers WHERE id = $1 AND game_id = $2 AND status = $3',
-      [offerId, game.id, 'pending']
+      [offerId, gameId, 'pending']
     );
-
     if (offerRows.length === 0) {
-      return new Response(JSON.stringify({ message: 'Offer not found or already accepted.' }), { status: 404 });
+      return new Response(
+        JSON.stringify({ message: 'Offer not found or already accepted.' }),
+        { status: 404 }
+      );
     }
 
     const offer = offerRows[0];
     const { from_player_id, target_player_id, offer_amount } = offer;
 
-    // 5️⃣ Start transaction
+    // ---------------- Begin Transaction ----------------
     await db.query('BEGIN');
+    transactionStarted = true;
 
     // Accept the offer
-    await db.query('UPDATE Offers SET status = $1 WHERE id = $2', ['accepted', offerId]);
+    await db.query('UPDATE Offers SET status = $1 WHERE id = $2', [
+      'accepted',
+      offerId,
+    ]);
+
     // Reject all other pending offers for this game
     await db.query(
       'UPDATE Offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
-      ['rejected', game.id, offerId, 'pending']
+      ['rejected', gameId, offerId, 'pending']
     );
 
     // Update gold for offering player
@@ -82,13 +98,16 @@ export async function POST(req: NextRequest): Promise<Response> {
     await db.query(
       `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
        VALUES ($1, $2, $3, $4, 'offer_gain')`,
-      [game.id, from_player_id, winningTeam, offer_amount]
+      [gameId, from_player_id, winningTeam, offer_amount]
     );
 
     // Finish current game
-    await db.query('UPDATE Games SET status = $1 WHERE id = $2', ['finished', game.id]);
+    await db.query('UPDATE Games SET status = $1 WHERE id = $2', [
+      'finished',
+      gameId,
+    ]);
 
-    // 6️⃣ Swap the targeted player to the winning team in the new game
+    // ---------------- Swap Target Player ----------------
     const newTeamA = [...teamA];
     const newTeam1 = [...team1];
 
@@ -106,21 +125,29 @@ export async function POST(req: NextRequest): Promise<Response> {
       [game.match_id, newTeamA, newTeam1]
     );
 
-    // Commit transaction
     await db.query('COMMIT');
+    transactionStarted = false;
 
-    // 7️⃣ Notify via Ably
-    await ably.channels
+    // ---------------- Notify via Ably ----------------
+    await ablyServerClient.channels
       .get(`match-${game.match_id}-offers`)
       .publish('offer-accepted', { acceptedOffer: offer, newGame: newGameRows[0] });
 
-    return new Response(JSON.stringify({ message: 'Offer accepted and new game started.' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        message: 'Offer accepted and new game started.',
+        acceptedOffer: offer,
+        newGame: newGameRows[0],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (err) {
-    await db.query('ROLLBACK');
-    console.error(err);
-    return new Response(JSON.stringify({ message: 'Server error.' }), { status: 500 });
+    if (transactionStarted) {
+      await db.query('ROLLBACK');
+    }
+    console.error('Error accepting offer:', err);
+    return new Response(JSON.stringify({ message: 'Server error.' }), {
+      status: 500,
+    });
   }
 }
