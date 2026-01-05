@@ -283,55 +283,67 @@ export default function AuctionPhase({
         </div>
       )}
 
-      {/* ---------------- Offers ---------------- */}
+      {/* ---------------- Offers Grid ---------------- */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {offers.map((offer) => {
           const from = getPlayer(offer.from_player_id);
           const to = getPlayer(offer.target_player_id);
-          const canAccept =
-            isLoser &&
-            offer.status === 'pending' &&
-            !alreadyAcceptedOffer &&
-            allOffersSubmitted;
+
+          const showOfferAmount = allOffersSubmitted;
+          const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer && allOffersSubmitted;
 
           return (
             <div
               key={offer.id}
-              className="bg-gray-800 p-5 rounded-2xl shadow-lg border border-gray-700 hover:scale-105 transition-transform"
+              className="bg-gray-800 p-5 rounded-2xl shadow-lg border border-gray-700 hover:scale-105 transition-transform flex flex-col justify-between"
             >
+
+               {/* Gold Offer */}
+              <div className={`text-center text-3xl font-bold mb-4 transition-all duration-700 ${showOfferAmount ? 'opacity-100 scale-100 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]' : 'opacity-40 scale-90'}`}>
+                {showOfferAmount ? (
+                  <div className="flex justify-center items-center gap-1">
+                    {offer.offer_amount}
+                    <Image src="/Gold_symbol.webp" alt="Gold" width={24} height={24} />
+                  </div>
+                ) : (
+                  <span className="text-gray-500 text-lg">Waiting for all offers...</span>
+                )}
+              </div>
+               
+               {/* Offer Maker */}
               <div className="flex justify-between mb-2">
-                <span className="text-gray-400">From:</span>
-                <span className="text-cyan-300 font-bold">{from?.username}</span>
+                <span className="text-gray-400 font-semibold">From:</span>
+                <span className="text-emerald-400 font-bold">{from?.username}</span>
               </div>
 
-              <div className="flex justify-between mb-4">
-                <span className="text-gray-400">For:</span>
+              {/* Target Player */}
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-400 font-semibold">For:</span>
                 <span className="text-cyan-300 font-bold">{to?.username}</span>
               </div>
 
-              <div className={`text-center text-sm transition-all duration-700 ${allOffersSubmitted ? 'opacity-100 scale-100' : 'opacity-40'}`}>
-                {allOffersSubmitted ? (
-                  <div className="flex justify-center items-center gap-1 text-red-400 font-bold text-lg">
-                    {offer.offer_amount}
-                    <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} />
-                  </div>
-                ) : (
-                  <span className="text-gray-500">Waiting for all offers...</span>
-                )}
-              </div>
+              {/* Consequence */}
+              {showOfferAmount && (
+                <div className="text-xs text-gray-400 mb-2">
+                  • If accepted, {from?.username} gains {offer.offer_amount} <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} <br />
+                  • {to?.username} swaps teams
+                </div>
+              )}
 
+              {/* Accept Button */}
               {canAccept && (
                 <button
                   onClick={() => handleAcceptOffer(offer.id)}
                   disabled={accepting}
-                  className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition"
+                  className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition"
                 >
-                  {accepting ? 'Accepting...' : 'Accept Offer'}
+                  Accept Offer
                 </button>
               )}
 
+              {/* Status */}
               {offer.status !== 'pending' && (
-                <div className={`mt-3 text-center font-bold ${offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
+                <div className={`mt-2 text-center font-bold text-lg ${offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
                   {offer.status.toUpperCase()}
                 </div>
               )}
