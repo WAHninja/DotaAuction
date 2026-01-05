@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
-import ablyServerClient from '@/lib/ably-server';
+import { publishToMatchChannel } from '@/lib/publishToMatchChannel';
 
 type TeamId = 'team_1' | 'team_a';
 
@@ -70,9 +70,11 @@ export async function POST(req: NextRequest) {
       transactionStarted = false;
 
       // Notify via Ably
-      await ablyServerClient.channels
-        .get(`match-${game.match_id}`)
-        .publish('game-winner-selected', { gameId, matchId: game.match_id, winnerId });
+      await publishToMatchChannel(game.match_id, 'game-winner-selected', {
+        gameId,
+        matchId: game.match_id,
+        winnerId,
+      });
 
       return NextResponse.json({
         success: true,
@@ -131,9 +133,10 @@ export async function POST(req: NextRequest) {
     transactionStarted = false;
 
     // ---------------- Notify via Ably ----------------
-    await ablyServerClient.channels
-      .get(`match-${game.match_id}`)
-      .publish('game-winner-selected', { gameId, matchId: game.match_id });
+     await publishToMatchChannel(game.match_id, 'game-winner-selected', {
+        gameId,
+        matchId: game.match_id,
+      });
 
     return NextResponse.json({
       success: true,
