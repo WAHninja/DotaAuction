@@ -1,5 +1,5 @@
-// utils/publishToMatchChannel.ts
-import { ablyServer } from "@/lib/ably";
+// lib/publishToMatchChannel.ts (SERVER ONLY)
+import { ablyServer } from "@/lib/ably-server"; // <-- server-only import
 
 export async function publishToMatchChannel(
   matchId: number,
