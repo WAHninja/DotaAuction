@@ -72,8 +72,9 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
   const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
   const alreadyAcceptedOffer = offers.find((o) => o.status === 'accepted' && o.target_player_id === currentUserId);
 
-  // Determines if all winners have submitted their offers
-  const allOffersSubmitted = offerCandidates.length === offers.filter(o => o.from_player_id !== currentUserId).length;
+  // Check if all winning team members have submitted their offers
+  const allOffersSubmitted =
+    offerCandidates.length === offers.filter((o) => myTeam.includes(o.from_player_id)).length;
 
   /* ---------------- Submit Offer ---------------- */
   const handleSubmitOffer = async () => {
@@ -221,6 +222,10 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
             {offers.map((offer) => {
               const from = getPlayer(offer.from_player_id);
               const to = getPlayer(offer.target_player_id);
+
+              // Offer value is only visible after all winners submitted
+              const showOfferAmount = allOffersSubmitted;
+
               const canAccept = isLoser && offer.status === 'pending' && !alreadyAcceptedOffer && allOffersSubmitted;
 
               return (
@@ -240,7 +245,7 @@ export default function AuctionPhase({ latestGame, players, currentUserId, games
                     </div>
 
                     <div className="mt-2 text-gray-300 text-center text-sm">
-                      {allOffersSubmitted ? (
+                      {showOfferAmount ? (
                         <>
                           Offer: <span className="font-bold text-red-400">{offer.offer_amount}</span>{' '}
                           <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} className="inline-block ml-1 align-middle" />
