@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { fetchPublish } from '@/utils/fetchPublish'; // <-- updated import
+import { fetchPublish } from '@/utils/fetchPublish';
 
 /* =========================
    Types
@@ -55,10 +55,9 @@ export default function AuctionPhase({
   const [accepting, setAccepting] = useState(false);
   const [message, setMessage] = useState('');
 
-  const [revealAnimation, setRevealAnimation] = useState(false);
   const hasRevealedRef = useRef(false);
 
-  /* ---------------- Destructure Game ---------------- */
+  /* ---------------- Game Data ---------------- */
   const {
     id: gameId,
     team_1_members,
@@ -76,18 +75,6 @@ export default function AuctionPhase({
     (id) => id !== currentUserId
   );
 
-   // ✅ DEBUGGING LOGS
-  console.log('AuctionPhase debug:');
-  console.log('currentUserId:', currentUserId);
-  console.log('latestGame:', latestGame);
-  console.log('winning_team:', winning_team);
-  console.log('teamA:', team_a_members);
-  console.log('team1:', team_1_members);
-  console.log('offers:', offers);
-  console.log('winningTeamMembers:', winningTeamMembers);
-  console.log('isWinner:', isWinner);
-  console.log('offerCandidates:', offerCandidates);
-   
   /* ---------------- Offer Rules ---------------- */
   const minOfferAmount = 250 + gamesPlayed * 200;
   const maxOfferAmount = 2000 + gamesPlayed * 500;
@@ -115,31 +102,27 @@ export default function AuctionPhase({
   );
 
   const alreadyAcceptedOffer = offers.find(
-    (o) => o.status === 'accepted' && o.target_player_id === currentUserId
+    (o) => o.status === 'accepted'
   );
 
-  const allOffersSubmitted =
-    offers.filter((o) => winningTeamMembers.includes(o.from_player_id))
-      .length === winningTeamMembers.length;
-
-  /* ---------------- Reveal Animation ---------------- */
-  useEffect(() => {
-    if (allOffersSubmitted && !hasRevealedRef.current) {
-      hasRevealedRef.current = true;
-      setRevealAnimation(true);
-
-      const timer = setTimeout(() => setRevealAnimation(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [allOffersSubmitted]);
+  const isWaitingForOffers = isLoser && offers.length === 0;
+  const canAcceptOffer =
+    isLoser && offers.length > 0 && !alreadyAcceptedOffer;
 
   /* ---------------- Submit Offer ---------------- */
   const handleSubmitOffer = async () => {
     if (alreadySubmittedOffer) return;
 
     const amount = Number(offerAmount);
-    if (!selectedPlayer || isNaN(amount) || amount < minOfferAmount || amount > maxOfferAmount) {
-      return alert(`Select a teammate and enter an offer between ${minOfferAmount}-${maxOfferAmount}`);
+    if (
+      !selectedPlayer ||
+      isNaN(amount) ||
+      amount < minOfferAmount ||
+      amount > maxOfferAmount
+    ) {
+      return alert(
+        `Select a teammate and enter an offer between ${minOfferAmount}-${maxOfferAmount}`
+      );
     }
 
     setSubmitting(true);
@@ -162,9 +145,7 @@ export default function AuctionPhase({
       setMessage('✅ Offer submitted!');
       fetchOffers();
 
-      // Notify all clients via Ably using frontend-safe fetchPublish
       await fetchPublish(gameId, 'new-offer', { gameId });
-
       onRefreshMatch?.();
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer');
@@ -192,9 +173,7 @@ export default function AuctionPhase({
       setMessage('✅ Offer accepted!');
       fetchOffers();
 
-      // Notify all clients via Ably using frontend-safe fetchPublish
       await fetchPublish(gameId, 'offer-accepted', { gameId });
-
       onRefreshMatch?.();
     } catch (err: any) {
       setMessage(err.message || 'Failed to accept offer');
@@ -207,9 +186,99 @@ export default function AuctionPhase({
      Render
   ========================= */
   return (
-    // ... rest of the JSX remains unchanged
     <div className="bg-gray-900 bg-opacity-70 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
-      {/* ... all JSX code here stays the same */}
+
+      {/* ================= WINNING TEAM ================= */}
+      {isWinner && (
+        <>
+          <h3 className="text-lg font-bold text-green-400 mb-4">
+            Submit an offer
+          </h3>
+
+          <select
+            value={selectedPlayer}
+            onChange={(e) => setSelectedPlayer(e.target.value)}
+            className="w-full mb-3 p-2 rounded bg-gray-800"
+          >
+            <option value="">Select teammate</option>
+            {offerCandidates.map((id) => (
+              <option key={id} value={id}>
+                {getPlayer(id)?.username}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            value={offerAmount}
+            onChange={(e) => setOfferAmount(e.target.value)}
+            placeholder={`Gold (${minOfferAmount}-${maxOfferAmount})`}
+            className="w-full mb-3 p-2 rounded bg-gray-800"
+          />
+
+          <button
+            disabled={submitting || alreadySubmittedOffer}
+            onClick={handleSubmitOffer}
+            className="w-full bg-green-600 hover:bg-green-500 p-2 rounded"
+          >
+            Submit Offer
+          </button>
+        </>
+      )}
+
+      {/* ================= LOSER – WAITING ================= */}
+      {isWaitingForOffers && (
+        <p className="text-gray-400 italic text-center">
+          Waiting for the winning team to submit offers…
+        </p>
+      )}
+
+      {/* ================= LOSER – ACCEPT OFFER ================= */}
+      {canAcceptOffer && (
+        <>
+          <h3 className="text-lg font-bold text-red-400 mb-4">
+            Choose an offer to accept
+          </h3>
+
+          <div className="space-y-3">
+            {offers.map((offer) => {
+              const fromPlayer = getPlayer(offer.from_player_id);
+
+              return (
+                <div
+                  key={offer.id}
+                  className="flex items-center justify-between bg-gray-800 p-3 rounded-lg"
+                >
+                  <span className="text-gray-200">
+                    {fromPlayer?.username}
+                  </span>
+
+                  <button
+                    disabled={accepting}
+                    onClick={() => handleAcceptOffer(offer.id)}
+                    className="bg-green-600 hover:bg-green-500 px-3 py-1 rounded text-sm"
+                  >
+                    Accept
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ================= ACCEPTED ================= */}
+      {alreadyAcceptedOffer && (
+        <p className="text-green-400 font-semibold text-center">
+          ✅ Offer accepted. Waiting for next game…
+        </p>
+      )}
+
+      {message && (
+        <p className="mt-4 text-center text-sm text-gray-300">
+          {message}
+        </p>
+      )}
     </div>
   );
 }
