@@ -39,6 +39,7 @@ export default function MatchPage() {
       const res = await fetch(`/api/match/${matchId}`);
       if (!res.ok) throw new Error('Failed to fetch match data');
       const json = await res.json();
+      console.log('MATCH DATA FROM API:', json);
       setData(json);
       setGamesPlayed(json.gamesPlayed || 0);
       setHistory(json.history || []);
