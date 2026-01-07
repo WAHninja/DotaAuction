@@ -30,7 +30,8 @@ type AuctionPhaseProps = {
   players: Player[];
   currentUserId: number;
   gamesPlayed: number;
-  onRefreshMatch?: () => void; // parent triggers refetches
+  offers: Offer[]; // 👈 realtime-driven
+  onRefreshMatch?: () => void;
 };
 
 /* =========================
@@ -42,9 +43,9 @@ export default function AuctionPhase({
   players,
   currentUserId,
   gamesPlayed,
+  offers,
   onRefreshMatch,
 }: AuctionPhaseProps) {
-  const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [offerAmount, setOfferAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -70,25 +71,6 @@ export default function AuctionPhase({
 
   const getPlayer = (id: number) =>
     players.find((p) => p.id === id);
-
-  /* ---------------- Fetch Offers ---------------- */
-
-  const fetchOffers = async () => {
-    try {
-      const res = await fetch(`/api/game/offers?id=${gameId}`);
-      if (!res.ok) throw new Error('Failed to fetch offers');
-      const data = await res.json();
-      setOffers(data.offers || []);
-    } catch (err) {
-      console.error('Error fetching offers:', err);
-    }
-  };
-
-  // Initial fetch + refetch when game changes
-  useEffect(() => {
-    fetchOffers();
-    hasRevealedRef.current = false;
-  }, [gameId]);
 
   /* ---------------- Offer State ---------------- */
 
@@ -156,7 +138,7 @@ export default function AuctionPhase({
       setSelectedPlayer('');
       setOfferAmount('');
       setMessage('✅ Offer submitted!');
-      onRefreshMatch?.(); // realtime hook will refetch offers
+      onRefreshMatch?.(); // safety fallback
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer');
     } finally {
@@ -192,13 +174,12 @@ export default function AuctionPhase({
   };
 
   /* =========================
-     Render (unchanged UI)
+     Render (UI unchanged)
   ========================= */
 
   return (
     <div className="bg-gray-900 bg-opacity-70 p-6 rounded-3xl shadow-2xl mt-6 border border-gray-800">
       {/* UI unchanged */}
-      {/* ... */}
     </div>
   );
 }
