@@ -42,7 +42,7 @@ export default function MatchPage() {
       console.log('MATCH DATA FROM API:', json);
       setData(json);
       setGamesPlayed(json.gamesPlayed || 0);
-      setHistory(json.history || []);
+      setHistory(json.games || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -137,6 +137,7 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId}
           gamesPlayed={gamesPlayed}
+          offers={data.offers || []}
           onRefreshMatch={fetchMatchData} // still works for manual refresh
         />
       )}
