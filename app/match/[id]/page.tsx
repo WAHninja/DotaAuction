@@ -38,11 +38,18 @@ export default function MatchPage() {
     try {
       const res = await fetch(`/api/match/${matchId}`);
       if (!res.ok) throw new Error('Failed to fetch match data');
+
       const json = await res.json();
       console.log('MATCH DATA FROM API:', json);
+
       setData(json);
       setGamesPlayed(json.gamesPlayed || 0);
       setHistory(json.games || []);
+
+      // ✅ THIS IS THE MISSING PIECE
+      if (json.latestGame?.id) {
+        fetchOffers(json.latestGame.id);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
