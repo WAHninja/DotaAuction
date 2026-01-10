@@ -10,57 +10,66 @@ export function useRealtimeMatchListener(
   latestGameId: number | null,
   { fetchMatchData }: Callbacks
 ) {
-  const matchChannelRef = useRef<ReturnType<ReturnType<typeof getAblyClient>['channels']['get']> | null>(null);
-  const offersChannelRef = useRef<ReturnType<ReturnType<typeof getAblyClient>['channels']['get']> | null>(null);
+  const ablyClientRef = useRef<ReturnType<typeof getAblyClient> | null>(null);
+  const matchChannelRef = useRef<any>(null);
+  const offersChannelRef = useRef<any>(null);
 
+  // ---------------- Initialize Ably client once ----------------
   useEffect(() => {
-    // Only run in the browser
     if (typeof window === 'undefined') return;
+    if (!ablyClientRef.current) {
+      ablyClientRef.current = getAblyClient();
+      console.log('✅ Ably client initialized');
+    }
+  }, []);
 
-    const ablyClient = getAblyClient();
-    if (!matchId || !ablyClient) return;
+  // ---------------- Subscribe to match channel ----------------
+  useEffect(() => {
+    if (!matchId || !ablyClientRef.current) return;
 
-    console.log('🔔 Subscribing to Ably channels', { matchId, latestGameId });
-
-    // ---------------- Channels ----------------
-    const matchChannel = ablyClient.channels.get(`match-${matchId}`);
-    const offersChannel = latestGameId ? ablyClient.channels.get(`match-${matchId}-offers`) : null;
-
+    const matchChannel = ablyClientRef.current.channels.get(`match-${matchId}`);
     matchChannelRef.current = matchChannel;
-    offersChannelRef.current = offersChannel;
 
-    // ---------------- Handlers ----------------
     const handleMatchChange = () => {
       console.log('📡 Ably event received: match change');
-      // Safely call async fetch without returning anything
-      Promise.resolve(fetchMatchData()).catch(err => console.error(err));
+      Promise.resolve(fetchMatchData()).catch(console.error);
     };
 
-    const handleAuctionChange = () => {
-      console.log('📡 Ably event received: auction change');
-      Promise.resolve(fetchMatchData()).catch(err => console.error(err));
-    };
-
-    // ---------------- Subscribe ----------------
     matchChannel.subscribe('game-created', handleMatchChange);
     matchChannel.subscribe('game-winner-selected', handleMatchChange);
     matchChannel.subscribe('game-finished', handleMatchChange);
 
-    offersChannel?.subscribe('new-offer', handleAuctionChange);
-    offersChannel?.subscribe('offer-accepted', handleAuctionChange);
+    console.log('🔔 Subscribed to match channel', { matchId });
 
-    // ---------------- Cleanup ----------------
     return () => {
-      console.log('🔔 Unsubscribing from Ably channels', { matchId, latestGameId });
-      matchChannelRef.current?.unsubscribe('game-created', handleMatchChange);
-      matchChannelRef.current?.unsubscribe('game-winner-selected', handleMatchChange);
-      matchChannelRef.current?.unsubscribe('game-finished', handleMatchChange);
-      offersChannelRef.current?.unsubscribe('new-offer', handleAuctionChange);
-      offersChannelRef.current?.unsubscribe('offer-accepted', handleAuctionChange);
+      matchChannel.unsubscribe('game-created', handleMatchChange);
+      matchChannel.unsubscribe('game-winner-selected', handleMatchChange);
+      matchChannel.unsubscribe('game-finished', handleMatchChange);
+      console.log('🔔 Unsubscribed from match channel', { matchId });
+    };
+  }, [matchId, fetchMatchData]);
 
-      // Clear refs
-      matchChannelRef.current = null;
-      offersChannelRef.current = null;
+  // ---------------- Subscribe to offers channel separately ----------------
+  useEffect(() => {
+    if (!latestGameId || !matchId || !ablyClientRef.current) return;
+
+    const offersChannel = ablyClientRef.current.channels.get(`match-${matchId}-offers`);
+    offersChannelRef.current = offersChannel;
+
+    const handleAuctionChange = () => {
+      console.log('📡 Ably event received: auction change');
+      Promise.resolve(fetchMatchData()).catch(console.error);
+    };
+
+    offersChannel.subscribe('new-offer', handleAuctionChange);
+    offersChannel.subscribe('offer-accepted', handleAuctionChange);
+
+    console.log('🔔 Subscribed to offers channel', { matchId, latestGameId });
+
+    return () => {
+      offersChannel.unsubscribe('new-offer', handleAuctionChange);
+      offersChannel.unsubscribe('offer-accepted', handleAuctionChange);
+      console.log('🔔 Unsubscribed from offers channel', { matchId, latestGameId });
     };
   }, [matchId, latestGameId, fetchMatchData]);
 }
