@@ -127,28 +127,31 @@ export default async function DashboardPage() {
     }));
 
     return (
-      <AblyTest />
-      <div className="relative min-h-screen animate-fadeIn">
-        <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-10 text-white">
+  <>
+    <AblyTest />
+    <div className="relative min-h-screen animate-fadeIn">
+      <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-10 text-white">
 
-          {/* Create Match + Rules */}
-          <section className="flex flex-col lg:flex-row gap-6">
-            <div className="lg:w-1/2">
-              <CreateMatchFormWrapper />
-            </div>
-            <div className="lg:w-1/2">
-              <GameRulesCard />
-            </div>
-          </section>
+        {/* Create Match + Rules */}
+        <section className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-1/2">
+            <CreateMatchFormWrapper />
+          </div>
+          <div className="lg:w-1/2">
+            <GameRulesCard />
+          </div>
+        </section>
 
-          {/* Tabs */}
-          <DashboardTabs
-            ongoingMatches={ongoingMatches}
-            completedMatches={completedMatches}
-          />
-        </div>
+        {/* Tabs */}
+        <DashboardTabs
+          ongoingMatches={ongoingMatches}
+          completedMatches={completedMatches}
+        />
       </div>
-    );
+    </div>
+  </>
+);
+
 
   } catch (error) {
     console.error('Dashboard load error:', error);
