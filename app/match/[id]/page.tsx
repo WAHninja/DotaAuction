@@ -22,6 +22,7 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null)
+  const [nextStep, setNextStep] = useState<'select-winner' | 'auction' | null>(null)
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
@@ -30,21 +31,20 @@ export default function MatchPage() {
 
   /* ---------------- Fetch Match ---------------- */
   const fetchMatchData = useCallback(async () => {
-  try {
-    const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch match');
+    try {
+      const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('Failed to fetch match')
 
-    const json = await res.json();
-    console.log('Fetched match data:', json); // <-- log here
-    setData(json);
-  } catch (err: any) {
-    console.error('Error fetching match:', err);
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-}, [matchId]);
-
+      const json = await res.json()
+      console.log('Fetched match data:', json)
+      setData(json)
+    } catch (err: any) {
+      console.error('Error fetching match:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [matchId])
 
   /* ---------------- Initial Load ---------------- */
   useEffect(() => {
@@ -54,6 +54,7 @@ export default function MatchPage() {
   /* ---------------- Realtime Listener ---------------- */
   useRealtimeMatchListener(matchId, data?.latestGame?.id ?? null, {
     fetchMatchData,
+    setNextStep, // <-- pass setter to hook for UI step control
   })
 
   /* ---------------- Guards ---------------- */
@@ -85,8 +86,10 @@ export default function MatchPage() {
   const isFinished = latestGame?.status === 'finished'
 
   /* ---------------- Auto-advance helpers ---------------- */
-  // Hide winner form if auction started
-  const showWinnerForm = isInProgress && !isAuction
+  // Determine which phase to show: auction or winner form
+  const showWinnerForm =
+    (isInProgress && !isAuction) || nextStep === 'select-winner'
+  const showAuctionPhase = isAuction && nextStep !== 'select-winner'
 
   /* ---------------- Render ---------------- */
   return (
@@ -130,14 +133,13 @@ export default function MatchPage() {
 
       {/* ---------------- Phase Controls ---------------- */}
       {showWinnerForm && <SelectGameWinnerForm gameId={latestGame.id} />}
-
-      {isAuction && (
+      {showAuctionPhase && (
         <AuctionPhase
           latestGame={latestGame}
           players={players}
           currentUserId={currentUserId}
           gamesPlayed={games.length}
-          offers={data.offers ?? []} 
+          offers={data.offers ?? []}
           onRefreshMatch={fetchMatchData}
         />
       )}
@@ -167,9 +169,7 @@ export default function MatchPage() {
                 <span>
                   Game #{game.gameNumber} – {game.status}
                 </span>
-                <span className="text-sm">
-                  {isExpanded ? 'Hide' : 'Show'} details
-                </span>
+                <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
               </h3>
 
               {!isExpanded && acceptedOffer && (
