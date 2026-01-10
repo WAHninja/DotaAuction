@@ -87,6 +87,8 @@ export async function POST(req: NextRequest, context) {
       [game.match_id, newTeamA, newTeam1, 'in progress']
     )
 
+    const newGame = newGameRes.rows[0]
+
     await client.query('COMMIT')
     transactionStarted = false
 
@@ -105,7 +107,8 @@ export async function POST(req: NextRequest, context) {
     return new Response(
       JSON.stringify({
         acceptedOffer: offer,
-        newGame: newGameRes.rows[0],
+        newGame,
+        nextStep: 'select-winner', // ⚡ Frontend can automatically call /select-winner for this game
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
