@@ -11,47 +11,33 @@ export function useRealtimeMatchListener(
   { fetchMatchData }: Callbacks
 ) {
   useEffect(() => {
+    // Only run in the browser and if we have a matchId
     if (!matchId || !ablyClient) return
 
+    // ---------------- Channels ----------------
     const matchChannel = ablyClient.channels.get(`match-${matchId}`)
-
-    // Offers channel should ALWAYS be recreated when latestGameId changes
     const offersChannel = latestGameId
       ? ablyClient.channels.get(`match-${matchId}-offers`)
       : null
 
-    /* =========================
-       Match-level Events
-    ========================= */
-
+    // ---------------- Handlers ----------------
     const handleMatchChange = () => {
-      // Single source of truth
       fetchMatchData()
     }
 
+    const handleAuctionChange = () => {
+      fetchMatchData()
+    }
+
+    // ---------------- Subscribe ----------------
     matchChannel.subscribe('game-created', handleMatchChange)
     matchChannel.subscribe('game-winner-selected', handleMatchChange)
     matchChannel.subscribe('game-finished', handleMatchChange)
 
-    /* =========================
-       Auction-level Events
-    ========================= */
-
-    const handleAuctionChange = () => {
-      // Covers:
-      // - new offer
-      // - offer accepted
-      // - next game creation
-      fetchMatchData()
-    }
-
     offersChannel?.subscribe('new-offer', handleAuctionChange)
     offersChannel?.subscribe('offer-accepted', handleAuctionChange)
 
-    /* =========================
-       Cleanup
-    ========================= */
-
+    // ---------------- Cleanup ----------------
     return () => {
       matchChannel.unsubscribe('game-created', handleMatchChange)
       matchChannel.unsubscribe('game-winner-selected', handleMatchChange)
