@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -31,10 +31,13 @@ export default function MatchPage() {
     if (user === null) router.push('/');
   }, [user, router]);
 
-  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user...</div>;
+  if (user === undefined) {
+    return <div className="p-6 text-center text-gray-300">Loading user...</div>;
+  }
 
-  /* ---------------- Fetch Match Data ---------------- */
-  const fetchMatchData = async () => {
+  /* ---------------- Fetch Match ---------------- */
+
+  const fetchMatchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${matchId}`);
       if (!res.ok) throw new Error('Failed to fetch match data');
@@ -45,56 +48,74 @@ export default function MatchPage() {
       setData(json);
       setGamesPlayed(json.gamesPlayed || 0);
       setHistory(json.games || []);
-
-      // ✅ THIS IS THE MISSING PIECE
-      if (json.latestGame?.id) {
-        fetchOffers(json.latestGame.id);
-      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchId]);
 
-  const fetchOffers = async (gameId: number) => {
+  /* ---------------- Fetch Offers ---------------- */
+
+  const fetchOffers = useCallback(async (gameId: number) => {
     if (!gameId) return;
+
     try {
       const res = await fetch(`/api/game/offers?id=${gameId}`);
+      if (!res.ok) return;
+
       const json = await res.json();
-      if (data && data.latestGame?.id === gameId) {
-        setData((prev: any) => ({
+
+      setData((prev: any) => {
+        if (!prev?.latestGame || prev.latestGame.id !== gameId) return prev;
+
+        return {
           ...prev,
-          latestGame: { ...prev.latestGame, offers: json.offers || [] },
-        }));
-      }
+          latestGame: {
+            ...prev.latestGame,
+            offers: json.offers || [],
+          },
+        };
+      });
     } catch (err) {
       console.error('Failed to fetch offers:', err);
     }
-  };
+  }, []);
+
+  /* ---------------- Initial Load ---------------- */
+
+  useEffect(() => {
+    if (user) fetchMatchData();
+  }, [user, fetchMatchData]);
+
+  /* ---------------- ALWAYS Load Offers ---------------- */
+
+  useEffect(() => {
+    if (data?.latestGame?.id) {
+      fetchOffers(data.latestGame.id);
+    }
+  }, [data?.latestGame?.id, fetchOffers]);
 
   /* ---------------- Realtime Listener ---------------- */
+
   useRealtimeMatchListener(matchId, data?.latestGame?.id, {
     fetchMatchData,
     fetchOffers,
-    fetchGameHistory: () => setHistory((prev) => [...prev]), // refresh history
+    fetchGameHistory: () => setHistory((prev) => [...prev]),
     fetchGamesPlayed: () => setGamesPlayed(data?.gamesPlayed || 0),
   });
 
-  /* ---------------- Initial Fetch ---------------- */
-  useEffect(() => {
-    if (user) fetchMatchData();
-  }, [matchId, user]);
-
   /* ---------------- Guards ---------------- */
+
   if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
   if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
   if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
   if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
 
   const { match, latestGame, players, currentUserId } = data;
-  const team1: number[] = latestGame?.team_1_members || [];
-  const teamA: number[] = latestGame?.team_a_members || [];
+
+  const team1 = latestGame?.team_1_members || [];
+  const teamA = latestGame?.team_a_members || [];
 
   const getPlayer = (id: number) => players.find((p: any) => p.id === id);
 
@@ -102,6 +123,7 @@ export default function MatchPage() {
   const isInProgress = latestGame?.status === 'in progress';
 
   /* ---------------- Render ---------------- */
+
   return (
     <>
       {latestGame && (
@@ -145,13 +167,15 @@ export default function MatchPage() {
           currentUserId={currentUserId}
           gamesPlayed={gamesPlayed}
           offers={latestGame?.offers || []}
-          onRefreshMatch={fetchMatchData} // still works for manual refresh
+          onRefreshMatch={fetchMatchData}
         />
       )}
 
       {/* ---------------- Game History ---------------- */}
+
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+
         {[...history].reverse().map((game) => {
           const isExpanded = expandedGameId === game.gameNumber;
           const acceptedOffer = game.offers?.find((o: any) => o.status === 'accepted');
@@ -167,9 +191,7 @@ export default function MatchPage() {
               onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
             >
               <h3 className="text-xl font-semibold flex justify-between">
-                <span>
-                  Game #{game.gameNumber} – {game.status}
-                </span>
+                <span>Game #{game.gameNumber} – {game.status}</span>
                 <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
               </h3>
 
