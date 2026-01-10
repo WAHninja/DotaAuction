@@ -4,10 +4,7 @@ import ablyServerClient from '@/lib/ably-server'
 
 type TeamId = 'team_1' | 'team_a'
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, context) {
   const client = await db.connect()
   let transactionStarted = false
 
@@ -15,7 +12,7 @@ export async function POST(
     /* =========================
        PARAMS
     ========================= */
-    const gameId = Number(params.id)
+    const gameId = Number(context.params.id)
     if (!Number.isInteger(gameId)) {
       return new Response(JSON.stringify({ error: 'Invalid game ID' }), { status: 400 })
     }
@@ -35,7 +32,6 @@ export async function POST(
       'SELECT * FROM games WHERE id = $1 FOR UPDATE',
       [gameId]
     )
-
     if (gameRes.rows.length === 0) {
       return new Response(JSON.stringify({ error: 'Game not found' }), { status: 404 })
     }
@@ -98,7 +94,6 @@ export async function POST(
 
     const losingGoldMap = new Map<number, number>()
     let bonusPool = 0
-
     for (const row of losingGoldRes.rows) {
       losingGoldMap.set(row.user_id, row.gold)
       bonusPool += Math.floor(row.gold * 0.5)
@@ -159,9 +154,7 @@ export async function POST(
       { status: 200 }
     )
   } catch (err) {
-    if (transactionStarted) {
-      await client.query('ROLLBACK')
-    }
+    if (transactionStarted) await client.query('ROLLBACK')
     console.error('select-winner error:', err)
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   } finally {
