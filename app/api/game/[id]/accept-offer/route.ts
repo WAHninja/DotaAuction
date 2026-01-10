@@ -3,10 +3,7 @@ import db from '@/lib/db'
 import { getSession } from '@/app/session'
 import { getAblyServer } from '@/lib/ably'
 
-export async function POST(
-  req: NextRequest,
-  context: { params: Record<string, string> }
-) {
+export async function POST(req: NextRequest, context) {
   const client = await db.connect()
   let transactionStarted = false
 
