@@ -11,16 +11,30 @@ export function useRealtimeMatchListener(
   { fetchMatchData }: Callbacks
 ) {
   useEffect(() => {
+    // Only run in the browser
+    if (typeof window === 'undefined') return
+
     const ablyClient = getAblyClient()
     if (!matchId || !ablyClient) return
 
+    console.log('🔔 Subscribing to Ably channels', { matchId, latestGameId })
+
     // ---------------- Channels ----------------
     const matchChannel = ablyClient.channels.get(`match-${matchId}`)
-    const offersChannel = latestGameId ? ablyClient.channels.get(`match-${matchId}-offers`) : null
+    const offersChannel = latestGameId
+      ? ablyClient.channels.get(`match-${matchId}-offers`)
+      : null
 
     // ---------------- Handlers ----------------
-    const handleMatchChange = () => fetchMatchData()
-    const handleAuctionChange = () => fetchMatchData()
+    const handleMatchChange = () => {
+      console.log('📡 Ably event received: match change')
+      fetchMatchData()
+    }
+
+    const handleAuctionChange = () => {
+      console.log('📡 Ably event received: auction change')
+      fetchMatchData()
+    }
 
     // ---------------- Subscribe ----------------
     matchChannel.subscribe('game-created', handleMatchChange)
@@ -32,6 +46,7 @@ export function useRealtimeMatchListener(
 
     // ---------------- Cleanup ----------------
     return () => {
+      console.log('🔔 Unsubscribing from Ably channels', { matchId, latestGameId })
       matchChannel.unsubscribe('game-created', handleMatchChange)
       matchChannel.unsubscribe('game-winner-selected', handleMatchChange)
       matchChannel.unsubscribe('game-finished', handleMatchChange)
