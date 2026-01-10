@@ -127,6 +127,7 @@ export default async function DashboardPage() {
     }));
 
     return (
+      <AblyTest />
       <div className="relative min-h-screen animate-fadeIn">
         <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-10 text-white">
 
