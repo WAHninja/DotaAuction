@@ -1,54 +1,64 @@
-import { useEffect } from 'react';
-import ablyClient from '@/lib/ably-client';
+import { useEffect } from 'react'
+import ablyClient from '@/lib/ably-client'
 
 type Callbacks = {
-  fetchMatchData: () => void;
-  fetchOffers?: (gameId: number) => void;
-  fetchGameHistory?: () => void;
-  fetchGamesPlayed?: () => void;
-};
+  fetchMatchData: () => void
+}
 
 export function useRealtimeMatchListener(
   matchId: string,
   latestGameId: number | null,
-  callbacks: Callbacks
+  { fetchMatchData }: Callbacks
 ) {
-  const { fetchMatchData, fetchOffers, fetchGameHistory, fetchGamesPlayed } = callbacks;
-
   useEffect(() => {
-    if (!matchId || !ablyClient) return;
+    if (!matchId || !ablyClient) return
 
-    const matchChannel = ablyClient.channels.get(`match-${matchId}`);
-    const offersChannel = latestGameId ? ablyClient.channels.get(`match-${matchId}-offers`) : null;
+    const matchChannel = ablyClient.channels.get(`match-${matchId}`)
 
-    // ---------------- Match Events ----------------
-    const handleGameWinnerSelected = (msg: any) => {
-      fetchMatchData();
-      fetchGameHistory?.();
-      fetchGamesPlayed?.();
-    };
+    // Offers channel should ALWAYS be recreated when latestGameId changes
+    const offersChannel = latestGameId
+      ? ablyClient.channels.get(`match-${matchId}-offers`)
+      : null
 
-    matchChannel.subscribe('game-winner-selected', handleGameWinnerSelected);
+    /* =========================
+       Match-level Events
+    ========================= */
 
-    // ---------------- Auction Events ----------------
-    const handleNewOffer = () => {
-      if (latestGameId && fetchOffers) fetchOffers(latestGameId);
-    };
+    const handleMatchChange = () => {
+      // Single source of truth
+      fetchMatchData()
+    }
 
-    const handleOfferAccepted = () => {
-      fetchMatchData();
-      fetchGameHistory?.();
-      fetchGamesPlayed?.();
-    };
+    matchChannel.subscribe('game-created', handleMatchChange)
+    matchChannel.subscribe('game-winner-selected', handleMatchChange)
+    matchChannel.subscribe('game-finished', handleMatchChange)
 
-    offersChannel?.subscribe('new-offer', handleNewOffer);
-    offersChannel?.subscribe('offer-accepted', handleOfferAccepted);
+    /* =========================
+       Auction-level Events
+    ========================= */
 
-    // ---------------- Cleanup ----------------
+    const handleAuctionChange = () => {
+      // Covers:
+      // - new offer
+      // - offer accepted
+      // - next game creation
+      fetchMatchData()
+    }
+
+    offersChannel?.subscribe('new-offer', handleAuctionChange)
+    offersChannel?.subscribe('offer-accepted', handleAuctionChange)
+
+    /* =========================
+       Cleanup
+    ========================= */
+
     return () => {
-      matchChannel.unsubscribe('game-winner-selected', handleGameWinnerSelected);
-      offersChannel?.unsubscribe('new-offer', handleNewOffer);
-      offersChannel?.unsubscribe('offer-accepted', handleOfferAccepted);
-    };
-  }, [matchId, latestGameId, fetchMatchData, fetchOffers, fetchGameHistory, fetchGamesPlayed]);
+      matchChannel.unsubscribe('game-created', handleMatchChange)
+      matchChannel.unsubscribe('game-winner-selected', handleMatchChange)
+      matchChannel.unsubscribe('game-finished', handleMatchChange)
+
+      offersChannel?.unsubscribe('new-offer', handleAuctionChange)
+      offersChannel?.unsubscribe('offer-accepted', handleAuctionChange)
+    }
+  }, [matchId, latestGameId, fetchMatchData])
 }
