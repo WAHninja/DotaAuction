@@ -49,13 +49,11 @@ export default function MatchPage() {
   }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  useRealtimeMatchListener(matchId, data?.latestGame?.id, {
-    onWinnerSelected: fetchMatchData,
-    onOfferCreated: fetchMatchData,
-    onOfferAccepted: fetchMatchData,
-    onGameFinished: fetchMatchData,
-    onNewGameCreated: fetchMatchData,
-  })
+  useRealtimeMatchListener(
+    matchId as string,
+    data?.latestGame?.id ?? null,
+    { fetchMatchData }
+  )
 
   /* ---------------- Guards ---------------- */
   if (user === undefined)
