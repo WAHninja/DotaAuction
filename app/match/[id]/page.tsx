@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useContext, useCallback } from 'react'
+import { useEffect, useState, useCallback, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -35,11 +35,6 @@ export default function MatchPage() {
       if (!res.ok) throw new Error('Failed to fetch match')
       const json = await res.json()
       setData(json)
-
-      // Fetch offers for the latest game if auction phase
-      if (json.latestGame?.status === 'auction pending') {
-        fetchOffers(json.latestGame.id)
-      }
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -47,41 +42,29 @@ export default function MatchPage() {
     }
   }, [matchId])
 
-  const fetchOffers = useCallback(async (gameId: number) => {
-    try {
-      const res = await fetch(`/api/game/offers?id=${gameId}`)
-      if (!res.ok) throw new Error('Failed to fetch offers')
-      const json = await res.json()
-      setData((prev: any) => ({
-        ...prev,
-        latestGame: { ...prev.latestGame, offers: json.offers ?? [] }
-      }))
-    } catch (err) {
-      console.error('Failed to fetch offers:', err)
-    }
-  }, [])
-
   /* ---------------- Initial Load ---------------- */
   useEffect(() => {
     if (user) fetchMatchData()
   }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  useRealtimeMatchListener(
-    matchId as string,
-    data?.latestGame?.id ?? null,
-    { fetchMatchData }
-  )
+  useRealtimeMatchListener(matchId, data?.latestGame?.id ?? null, {
+    fetchMatchData,
+  })
 
   /* ---------------- Guards ---------------- */
   if (user === undefined)
     return <div className="p-6 text-center text-gray-300">Loading user...</div>
+
   if (!user)
     return <div className="p-6 text-center text-gray-300">Redirecting...</div>
+
   if (loading)
     return <div className="p-6 text-center text-gray-300">Loading match...</div>
+
   if (error)
     return <div className="p-6 text-center text-red-500">{error}</div>
+
   if (!data)
     return <div className="p-6 text-center text-gray-300">Match not found</div>
 
@@ -91,19 +74,15 @@ export default function MatchPage() {
   const team1 = latestGame?.team_1_members ?? []
   const teamA = latestGame?.team_a_members ?? []
 
-  const getPlayer = (id: number) =>
-    players.find((p: any) => p.id === id)
+  const getPlayer = (id: number) => players.find((p: any) => p.id === id)
 
   const isAuction = latestGame?.status === 'auction pending'
   const isInProgress = latestGame?.status === 'in progress'
   const isFinished = latestGame?.status === 'finished'
 
-  /* ---------------- Auto-refresh offers during auction ---------------- */
-  useEffect(() => {
-    if (isAuction && latestGame?.id) {
-      fetchOffers(latestGame.id)
-    }
-  }, [latestGame?.id, isAuction, fetchOffers])
+  /* ---------------- Auto-advance helpers ---------------- */
+  // Hide winner form if auction started
+  const showWinnerForm = isInProgress && !isAuction
 
   /* ---------------- Render ---------------- */
   return (
@@ -145,8 +124,9 @@ export default function MatchPage() {
         />
       </div>
 
-      {/* Phase Controls */}
-      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
+      {/* ---------------- Phase Controls ---------------- */}
+      {showWinnerForm && <SelectGameWinnerForm gameId={latestGame.id} />}
+
       {isAuction && (
         <AuctionPhase
           latestGame={latestGame}
@@ -160,9 +140,7 @@ export default function MatchPage() {
 
       {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-center">
-          Game History
-        </h2>
+        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
         {[...games].reverse().map((game: any) => {
           const isExpanded = expandedGameId === game.gameNumber
           const acceptedOffer = game.offers?.find(
@@ -172,7 +150,11 @@ export default function MatchPage() {
           return (
             <div
               key={game.gameNumber}
-              className="mb-4 p-4 border rounded-lg shadow cursor-pointer bg-white"
+              className={`mb-4 p-4 border rounded-lg shadow cursor-pointer ${
+                game.gameNumber === latestGame?.gameNumber
+                  ? 'border-yellow-400 bg-yellow-50'
+                  : 'border-gray-300 bg-white'
+              }`}
               onClick={() =>
                 setExpandedGameId(isExpanded ? null : game.gameNumber)
               }
@@ -188,8 +170,7 @@ export default function MatchPage() {
 
               {!isExpanded && acceptedOffer && (
                 <p className="mt-2 text-sm font-medium">
-                  {acceptedOffer.fromUsername} traded{' '}
-                  {acceptedOffer.targetUsername} for{' '}
+                  {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
                   {acceptedOffer.offerAmount}
                   <Image
                     src="/Gold_symbol.webp"
