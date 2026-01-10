@@ -137,7 +137,7 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId}
           gamesPlayed={games.length}
-          offers={latestGame.offers ?? []}
+          offers={data.offers ?? []} 
           onRefreshMatch={fetchMatchData}
         />
       )}
