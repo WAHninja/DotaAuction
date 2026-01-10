@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import ablyClient from '@/lib/ably-client'
+import { getAblyClient } from '@/lib/ably-client'
 
 type Callbacks = {
   fetchMatchData: () => void
@@ -11,23 +11,16 @@ export function useRealtimeMatchListener(
   { fetchMatchData }: Callbacks
 ) {
   useEffect(() => {
-    // Only run in the browser and if we have a matchId
+    const ablyClient = getAblyClient()
     if (!matchId || !ablyClient) return
 
     // ---------------- Channels ----------------
     const matchChannel = ablyClient.channels.get(`match-${matchId}`)
-    const offersChannel = latestGameId
-      ? ablyClient.channels.get(`match-${matchId}-offers`)
-      : null
+    const offersChannel = latestGameId ? ablyClient.channels.get(`match-${matchId}-offers`) : null
 
     // ---------------- Handlers ----------------
-    const handleMatchChange = () => {
-      fetchMatchData()
-    }
-
-    const handleAuctionChange = () => {
-      fetchMatchData()
-    }
+    const handleMatchChange = () => fetchMatchData()
+    const handleAuctionChange = () => fetchMatchData()
 
     // ---------------- Subscribe ----------------
     matchChannel.subscribe('game-created', handleMatchChange)
@@ -42,7 +35,6 @@ export function useRealtimeMatchListener(
       matchChannel.unsubscribe('game-created', handleMatchChange)
       matchChannel.unsubscribe('game-winner-selected', handleMatchChange)
       matchChannel.unsubscribe('game-finished', handleMatchChange)
-
       offersChannel?.unsubscribe('new-offer', handleAuctionChange)
       offersChannel?.unsubscribe('offer-accepted', handleAuctionChange)
     }
