@@ -30,14 +30,17 @@ export function useRealtimeMatchListener(
     const matchChannel = ablyClientRef.current.channels.get(`match-${matchId}`);
     matchChannelRef.current = matchChannel;
 
-    const handleMatchChange = () => {
-      console.log('📡 Ably event received: match change');
+    const handleMatchChange = (msg: any) => {
+      console.log('📡 Ably match event received:', msg.name, msg.data);
+      // Always refresh match data on match-level events
       Promise.resolve(fetchMatchData()).catch(console.error);
     };
 
+    // Match-level events
     matchChannel.subscribe('game-created', handleMatchChange);
     matchChannel.subscribe('game-winner-selected', handleMatchChange);
     matchChannel.subscribe('game-finished', handleMatchChange);
+    matchChannel.subscribe('new-game', handleMatchChange); // <-- NEW: triggers when backend creates next game
 
     console.log('🔔 Subscribed to match channel', { matchId });
 
@@ -45,6 +48,7 @@ export function useRealtimeMatchListener(
       matchChannel.unsubscribe('game-created', handleMatchChange);
       matchChannel.unsubscribe('game-winner-selected', handleMatchChange);
       matchChannel.unsubscribe('game-finished', handleMatchChange);
+      matchChannel.unsubscribe('new-game', handleMatchChange);
       console.log('🔔 Unsubscribed from match channel', { matchId });
     };
   }, [matchId, fetchMatchData]);
@@ -56,8 +60,9 @@ export function useRealtimeMatchListener(
     const offersChannel = ablyClientRef.current.channels.get(`match-${matchId}-offers`);
     offersChannelRef.current = offersChannel;
 
-    const handleAuctionChange = () => {
-      console.log('📡 Ably event received: auction change');
+    const handleAuctionChange = (msg: any) => {
+      console.log('📡 Ably auction event received:', msg.name, msg.data);
+      // Refresh match data whenever offers update
       Promise.resolve(fetchMatchData()).catch(console.error);
     };
 
