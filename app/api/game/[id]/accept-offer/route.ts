@@ -92,23 +92,34 @@ export async function POST(req: NextRequest, context) {
     await client.query('COMMIT')
     transactionStarted = false
 
-    // 🔔 Ably
+    const ably = getAblyServer()
+
+    // 🔔 Notify old game offer channel
     try {
-      const ably = getAblyServer()
       await ably.channels.get(`match-${game.match_id}-offers`).publish('offer-accepted', {
         gameId,
         offerId,
         acceptedBy: userId,
       })
-    } catch (ablyErr) {
-      console.error('Ably publish failed:', ablyErr)
+    } catch (err) {
+      console.error('Ably publish failed (offer-accepted):', err)
+    }
+
+    // 🔔 Notify match-level channel about new game
+    try {
+      await ably.channels.get(`match-${game.match_id}`).publish('new-game', {
+        newGame,
+        nextStep: 'select-winner', // frontend can auto-show select winner screen
+      })
+    } catch (err) {
+      console.error('Ably publish failed (new-game):', err)
     }
 
     return new Response(
       JSON.stringify({
         acceptedOffer: offer,
         newGame,
-        nextStep: 'select-winner', // ⚡ Frontend can automatically call /select-winner for this game
+        nextStep: 'select-winner',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
