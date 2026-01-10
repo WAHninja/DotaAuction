@@ -137,6 +137,13 @@ export default function AuctionPhase({
     }
   }
 
+  useEffect(() => {
+  // Automatically refresh when all offers are submitted (reveal phase) or offer is accepted (move to next game)
+    if (allOffersSubmitted || acceptedOffer) {
+      onRefreshMatch?.()
+    }
+  }, [allOffersSubmitted, acceptedOffer, onRefreshMatch])
+
   /* ========================= Render ========================= */
   return (
     <div className="bg-slate-800/70 p-6 rounded-3xl border border-slate-700 shadow-2xl mt-6">
