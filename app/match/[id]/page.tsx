@@ -1,129 +1,92 @@
-'use client';
+'use client'
 
-import { useEffect, useState, useContext, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { useEffect, useState, useContext, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 
-import { UserContext } from '@/app/context/UserContext';
-import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
-import MatchHeader from '@/app/components/MatchHeader';
-import TeamCard from '@/app/components/TeamCard';
-import WinnerBanner from '@/app/components/WinnerBanner';
-import AuctionPhase from '@/app/components/AuctionPhase';
-import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener';
+import { UserContext } from '@/app/context/UserContext'
+import MatchHeader from '@/app/components/MatchHeader'
+import TeamCard from '@/app/components/TeamCard'
+import WinnerBanner from '@/app/components/WinnerBanner'
+import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
+import AuctionPhase from '@/app/components/AuctionPhase'
+import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
 
 export default function MatchPage() {
-  const { id } = useParams();
-  const matchId = Array.isArray(id) ? id[0] : id;
-  const router = useRouter();
-  const { user } = useContext(UserContext);
+  const { id } = useParams()
+  const matchId = Array.isArray(id) ? id[0] : id
+  const router = useRouter()
+  const { user } = useContext(UserContext)
 
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [gamesPlayed, setGamesPlayed] = useState(0);
-  const [history, setHistory] = useState<any[]>([]);
-  const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [expandedGameId, setExpandedGameId] = useState<number | null>(null)
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
-    if (user === null) router.push('/');
-  }, [user, router]);
-
-  if (user === undefined) {
-    return <div className="p-6 text-center text-gray-300">Loading user...</div>;
-  }
+    if (user === null) router.push('/')
+  }, [user, router])
 
   /* ---------------- Fetch Match ---------------- */
-
   const fetchMatchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/match/${matchId}`);
-      if (!res.ok) throw new Error('Failed to fetch match data');
+      const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('Failed to fetch match')
 
-      const json = await res.json();
-      console.log('MATCH DATA FROM API:', json);
-
-      setData(json);
-      setGamesPlayed(json.gamesPlayed || 0);
-      setHistory(json.games || []);
+      const json = await res.json()
+      setData(json)
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [matchId]);
-
-  /* ---------------- Fetch Offers ---------------- */
-
-  const fetchOffers = useCallback(async (gameId: number) => {
-    if (!gameId) return;
-
-    try {
-      const res = await fetch(`/api/game/offers?id=${gameId}`);
-      if (!res.ok) return;
-
-      const json = await res.json();
-
-      setData((prev: any) => {
-        if (!prev?.latestGame || prev.latestGame.id !== gameId) return prev;
-
-        return {
-          ...prev,
-          latestGame: {
-            ...prev.latestGame,
-            offers: json.offers || [],
-          },
-        };
-      });
-    } catch (err) {
-      console.error('Failed to fetch offers:', err);
-    }
-  }, []);
+  }, [matchId])
 
   /* ---------------- Initial Load ---------------- */
-
   useEffect(() => {
-    if (user) fetchMatchData();
-  }, [user, fetchMatchData]);
-
-  /* ---------------- ALWAYS Load Offers ---------------- */
-
-  useEffect(() => {
-    if (data?.latestGame?.id) {
-      fetchOffers(data.latestGame.id);
-    }
-  }, [data?.latestGame?.id, fetchOffers]);
+    if (user) fetchMatchData()
+  }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-
   useRealtimeMatchListener(matchId, data?.latestGame?.id, {
-    fetchMatchData,
-    fetchOffers,
-    fetchGameHistory: () => setHistory((prev) => [...prev]),
-    fetchGamesPlayed: () => setGamesPlayed(data?.gamesPlayed || 0),
-  });
+    onWinnerSelected: fetchMatchData,
+    onOfferCreated: fetchMatchData,
+    onOfferAccepted: fetchMatchData,
+    onGameFinished: fetchMatchData,
+    onNewGameCreated: fetchMatchData,
+  })
 
   /* ---------------- Guards ---------------- */
+  if (user === undefined)
+    return <div className="p-6 text-center text-gray-300">Loading user...</div>
 
-  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
-  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>;
-  if (error) return <div className="p-6 text-center text-red-500">Error: {error}</div>;
-  if (!data) return <div className="p-6 text-center text-gray-300">Match not found.</div>;
+  if (!user)
+    return <div className="p-6 text-center text-gray-300">Redirecting...</div>
 
-  const { match, latestGame, players, currentUserId } = data;
+  if (loading)
+    return <div className="p-6 text-center text-gray-300">Loading match...</div>
 
-  const team1 = latestGame?.team_1_members || [];
-  const teamA = latestGame?.team_a_members || [];
+  if (error)
+    return <div className="p-6 text-center text-red-500">{error}</div>
 
-  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
+  if (!data)
+    return <div className="p-6 text-center text-gray-300">Match not found</div>
 
-  const isAuction = latestGame?.status === 'auction pending';
-  const isInProgress = latestGame?.status === 'in progress';
+  /* ---------------- Derived State ---------------- */
+  const { match, latestGame, players, currentUserId, games } = data
+
+  const team1 = latestGame?.team_1_members ?? []
+  const teamA = latestGame?.team_a_members ?? []
+
+  const getPlayer = (id: number) =>
+    players.find((p: any) => p.id === id)
+
+  const isAuction = latestGame?.status === 'auction pending'
+  const isInProgress = latestGame?.status === 'in progress'
+  const isFinished = latestGame?.status === 'finished'
 
   /* ---------------- Render ---------------- */
-
   return (
     <>
       {latestGame && (
@@ -131,16 +94,21 @@ export default function MatchPage() {
           matchId={matchId}
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
-          matchWinnerUsername={players.find((p: any) => p.id === match.winner_id)?.username}
+          matchWinnerUsername={
+            players.find((p: any) => p.id === match.winner_id)?.username
+          }
         />
       )}
 
-      {latestGame?.status === 'finished' && (
+      {isFinished && (
         <WinnerBanner
-          winnerName={players.find((p: any) => p.id === match.winner_id)?.username}
+          winnerName={
+            players.find((p: any) => p.id === match.winner_id)?.username
+          }
         />
       )}
 
+      {/* Teams */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <TeamCard
           name="Team 1"
@@ -158,6 +126,7 @@ export default function MatchPage() {
         />
       </div>
 
+      {/* Phase Controls */}
       {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
 
       {isAuction && (
@@ -165,39 +134,48 @@ export default function MatchPage() {
           latestGame={latestGame}
           players={players}
           currentUserId={currentUserId}
-          gamesPlayed={gamesPlayed}
-          offers={latestGame?.offers || []}
+          gamesPlayed={games.length}
+          offers={latestGame.offers ?? []}
           onRefreshMatch={fetchMatchData}
         />
       )}
 
       {/* ---------------- Game History ---------------- */}
-
       <section className="mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center">
+          Game History
+        </h2>
 
-        {[...history].reverse().map((game) => {
-          const isExpanded = expandedGameId === game.gameNumber;
-          const acceptedOffer = game.offers?.find((o: any) => o.status === 'accepted');
-          const isLatest = game.gameNumber === data.latestGame?.gameNumber;
+        {[...games].reverse().map((game: any) => {
+          const isExpanded = expandedGameId === game.gameNumber
+          const acceptedOffer = game.offers?.find(
+            (o: any) => o.status === 'accepted'
+          )
 
           return (
             <div
               key={game.gameNumber}
-              ref={isLatest ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : null}
-              className={`mb-4 p-4 border rounded-lg shadow cursor-pointer transition-all ${
-                isLatest ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300 bg-white'
-              }`}
-              onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
+              className="mb-4 p-4 border rounded-lg shadow cursor-pointer bg-white"
+              onClick={() =>
+                setExpandedGameId(
+                  isExpanded ? null : game.gameNumber
+                )
+              }
             >
               <h3 className="text-xl font-semibold flex justify-between">
-                <span>Game #{game.gameNumber} – {game.status}</span>
-                <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
+                <span>
+                  Game #{game.gameNumber} – {game.status}
+                </span>
+                <span className="text-sm">
+                  {isExpanded ? 'Hide' : 'Show'} details
+                </span>
               </h3>
 
               {!isExpanded && acceptedOffer && (
                 <p className="mt-2 text-sm font-medium">
-                  {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
+                  {acceptedOffer.fromUsername} traded{' '}
+                  {acceptedOffer.targetUsername} for{' '}
+                  {acceptedOffer.offerAmount}
                   <Image
                     src="/Gold_symbol.webp"
                     alt="Gold"
@@ -209,18 +187,20 @@ export default function MatchPage() {
               )}
 
               {isExpanded && (
-                <div className="mt-2">
-                  <strong>Winner:</strong> {game.winningTeam || 'N/A'}
+                <div className="mt-2 text-sm">
+                  <strong>Winner:</strong> {game.winningTeam ?? 'N/A'}
                   <br />
-                  <strong>Team A:</strong> {game.teamAMembers.join(', ')}
+                  <strong>Team A:</strong>{' '}
+                  {game.teamAMembers.join(', ')}
                   <br />
-                  <strong>Team 1:</strong> {game.team1Members.join(', ')}
+                  <strong>Team 1:</strong>{' '}
+                  {game.team1Members.join(', ')}
                 </div>
               )}
             </div>
-          );
+          )
         })}
       </section>
     </>
-  );
+  )
 }
