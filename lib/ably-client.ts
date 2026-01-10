@@ -1,13 +1,15 @@
 // lib/ably-client.ts
-'use client'
+import Ably from 'ably';
 
-import Ably from 'ably'
+let ablyClient: Ably.Realtime | null = null;
 
-const ablyClient: Ably.Realtime | null =
-  typeof window !== 'undefined'
-    ? new Ably.Realtime({
-        authUrl: '/api/ably/token', // always client-side
-      })
-    : null
+export function getAblyClient() {
+  if (typeof window === 'undefined') return null; // don't create on server
 
-export default ablyClient
+  if (!ablyClient) {
+    ablyClient = new Ably.Realtime({
+      authUrl: '/api/ably/token', // or dynamic getAuthUrl()
+    });
+  }
+  return ablyClient;
+}
