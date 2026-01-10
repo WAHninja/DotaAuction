@@ -4,10 +4,7 @@ import db from '@/lib/db'
 import { getSession } from '@/app/session'
 import ablyServerClient from '@/lib/ably-server'
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<Response> {
+export async function POST(req: NextRequest, context) {
   try {
     /* ---------------- Parse input ---------------- */
     const body = await req.json()
@@ -18,7 +15,7 @@ export async function POST(
       return new Response(JSON.stringify({ message: 'Invalid input data.' }), { status: 400 })
     }
 
-    const gameId = Number(params.id)
+    const gameId = Number(context.params.id)
     if (isNaN(gameId)) {
       return new Response(JSON.stringify({ message: 'Invalid game ID.' }), { status: 400 })
     }
@@ -103,16 +100,10 @@ export async function POST(
     const offer = inserted[0]
 
     /* ================= REALTIME EVENTS ================= */
-
-    // 🔔 Auction-specific update
     await ablyServerClient.channels
       .get(`match-${matchId}-offers`)
-      .publish('new-offer', {
-        gameId,
-        offer,
-      })
+      .publish('new-offer', { gameId, offer })
 
-    // 🔔 Match-level update (guarantees refresh)
     await ablyServerClient.channels
       .get(`match-${matchId}`)
       .publish('game-updated', { gameId })
@@ -120,10 +111,7 @@ export async function POST(
     /* ---------------- Response ---------------- */
     return new Response(
       JSON.stringify({ message: 'Offer submitted.', offer }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
     console.error('Error submitting offer:', err)
