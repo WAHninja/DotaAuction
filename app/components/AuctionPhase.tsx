@@ -3,10 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 
-/* =========================
-   Types
-========================= */
-
 type Player = {
   id: number
   username: string
@@ -37,10 +33,6 @@ type AuctionPhaseProps = {
   onRefreshMatch?: () => void
 }
 
-/* =========================
-   Component
-========================= */
-
 export default function AuctionPhase({
   latestGame,
   players,
@@ -49,8 +41,6 @@ export default function AuctionPhase({
   offers,
   onRefreshMatch,
 }: AuctionPhaseProps) {
-  /* ---------------- Local UI State ---------------- */
-
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null)
   const [offerAmount, setOfferAmount] = useState<number | ''>('')
   const [submitting, setSubmitting] = useState(false)
@@ -59,15 +49,9 @@ export default function AuctionPhase({
   const [showReveal, setShowReveal] = useState(false)
 
   const hasRevealedRef = useRef(false)
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  /* ---------------- Game Context ---------------- */
-
-  const {
-    id: gameId,
-    team_1_members,
-    team_a_members,
-    winning_team,
-  } = latestGame
+  const { id: gameId, team_1_members, team_a_members, winning_team } = latestGame
 
   const winningTeamMembers = useMemo(() => {
     if (winning_team === 'team_1') return team_1_members
@@ -80,8 +64,6 @@ export default function AuctionPhase({
   const isWinner = winningTeamMembers.includes(currentUserId)
   const isLoser = !isWinner
 
-  /* ---------------- Offer Rules ---------------- */
-
   const minOfferAmount = 250 + gamesPlayed * 200
   const maxOfferAmount = 2000 + gamesPlayed * 500
 
@@ -91,8 +73,6 @@ export default function AuctionPhase({
   const offerCandidates = winningTeamMembers.filter(
     (id) => id !== currentUserId
   )
-
-  /* ---------------- Offer State ---------------- */
 
   const alreadySubmittedOffer = offers.some(
     (o) => o.from_player_id === currentUserId
@@ -111,7 +91,6 @@ export default function AuctionPhase({
   const isWaitingForOffers = isLoser && offers.length === 0
 
   /* ---------------- Reveal Animation ---------------- */
-
   useEffect(() => {
     hasRevealedRef.current = false
   }, [gameId])
@@ -121,16 +100,31 @@ export default function AuctionPhase({
       hasRevealedRef.current = true
       setShowReveal(true)
 
-      const timer = setTimeout(() => {
-        setShowReveal(false)
-      }, 2000)
-
+      const timer = setTimeout(() => setShowReveal(false), 2000)
       return () => clearTimeout(timer)
     }
   }, [allOffersSubmitted])
 
-  /* ---------------- Submit Offer ---------------- */
+  /* ---------------- Auto-transition when offer is accepted ---------------- */
+  useEffect(() => {
+    if (acceptedOffer && onRefreshMatch) {
+      // Give a short delay for the reveal animation
+      refreshTimeoutRef.current = setTimeout(() => {
+        onRefreshMatch()
+        // Reset local state for next game
+        setSelectedPlayerId(null)
+        setOfferAmount('')
+        setMessage('')
+        setShowReveal(false)
+      }, 2000)
+    }
 
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current)
+    }
+  }, [acceptedOffer, onRefreshMatch])
+
+  /* ---------------- Submit Offer ---------------- */
   const handleSubmitOffer = async () => {
     if (alreadySubmittedOffer || selectedPlayerId === null) return
 
@@ -172,7 +166,6 @@ export default function AuctionPhase({
   }
 
   /* ---------------- Accept Offer ---------------- */
-
   const handleAcceptOffer = async (offerId: number) => {
     if (acceptedOffer) return
 
@@ -201,10 +194,8 @@ export default function AuctionPhase({
   /* =========================
      Render
   ========================= */
-
   return (
     <div className="bg-slate-800/70 p-6 rounded-3xl border border-slate-700 shadow-2xl mt-6">
-
       <h3 className="text-3xl font-extrabold mb-6 text-center text-yellow-400">
         🏛 Auction House
       </h3>
@@ -218,7 +209,6 @@ export default function AuctionPhase({
       {/* ---------------- Winner Submission ---------------- */}
       {isWinner && !alreadySubmittedOffer && (
         <div className="max-w-md mx-auto mb-10">
-
           <p className="text-center text-yellow-300 font-semibold mb-4">
             Make Your Offer
           </p>
@@ -278,13 +268,15 @@ export default function AuctionPhase({
               className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg"
             >
               <div className="mb-2 text-sm text-gray-400">
-                From: <span className="text-yellow-300 font-bold">
+                From:{' '}
+                <span className="text-yellow-300 font-bold">
                   {getPlayerName(offer.from_player_id)}
                 </span>
               </div>
 
               <div className="mb-4 text-sm text-gray-400">
-                For: <span className="text-yellow-300 font-bold">
+                For:{' '}
+                <span className="text-yellow-300 font-bold">
                   {getPlayerName(offer.target_player_id)}
                 </span>
               </div>
@@ -293,7 +285,12 @@ export default function AuctionPhase({
                 {allOffersSubmitted ? (
                   <span className="text-yellow-300 font-bold text-lg flex justify-center gap-1">
                     {offer.offer_amount}
-                    <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} />
+                    <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={18}
+                      height={18}
+                    />
                   </span>
                 ) : (
                   <span className="text-gray-500 text-sm">
