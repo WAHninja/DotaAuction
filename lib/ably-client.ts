@@ -1,22 +1,20 @@
 // lib/ably-client.ts
+'use client';
+
 import { Realtime } from 'ably';
 
 let ablyClient: Realtime | null = null;
 
-/**
- * Returns a singleton Ably Realtime client.
- * Only initializes in the browser.
- */
-export function getAblyClient(): Realtime | null {
-  if (typeof window === 'undefined') return null; // Never run on server
+export function getAblyClient(): Realtime {
+  if (typeof window === 'undefined') {
+    throw new Error('❌ getAblyClient() called on server');
+  }
 
   if (!ablyClient) {
-    if (!process.env.NEXT_PUBLIC_ABLY_PUBLIC_KEY) {
-      console.error('⚠️ Ably key not set in NEXT_PUBLIC_ABLY_PUBLIC_KEY');
-      return null;
-    }
-    ablyClient = new Realtime({ key: process.env.NEXT_PUBLIC_ABLY_PUBLIC_KEY });
-    console.log('✅ Ably client initialized');
+    ablyClient = new Realtime({
+      key: process.env.NEXT_PUBLIC_ABLY_PUBLIC_KEY!,
+    });
+    console.log('✅ Ably client initialized (browser)');
   }
 
   return ablyClient;
