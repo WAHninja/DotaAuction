@@ -11,11 +11,11 @@ export function getAblyClient(): Realtime | null {
   if (typeof window === 'undefined') return null; // Never run on server
 
   if (!ablyClient) {
-    if (!process.env.NEXT_PUBLIC_ABLY_KEY) {
-      console.error('⚠️ Ably key not set in NEXT_PUBLIC_ABLY_KEY');
+    if (!process.env.NEXT_PUBLIC_ABLY_PUBLIC_KEY) {
+      console.error('⚠️ Ably key not set in NEXT_PUBLIC_ABLY_PUBLIC_KEY');
       return null;
     }
-    ablyClient = new Realtime({ key: process.env.NEXT_PUBLIC_ABLY_KEY });
+    ablyClient = new Realtime({ key: process.env.NEXT_PUBLIC_ABLY_PUBLIC_KEY });
     console.log('✅ Ably client initialized');
   }
 
