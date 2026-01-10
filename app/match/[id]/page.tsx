@@ -30,17 +30,21 @@ export default function MatchPage() {
 
   /* ---------------- Fetch Match ---------------- */
   const fetchMatchData = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
-      if (!res.ok) throw new Error('Failed to fetch match')
-      const json = await res.json()
-      setData(json)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [matchId])
+  try {
+    const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch match');
+
+    const json = await res.json();
+    console.log('Fetched match data:', json); // <-- log here
+    setData(json);
+  } catch (err: any) {
+    console.error('Error fetching match:', err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}, [matchId]);
+
 
   /* ---------------- Initial Load ---------------- */
   useEffect(() => {
