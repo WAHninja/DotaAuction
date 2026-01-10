@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import ablyClient from '@/lib/ably-client';
+import { getAblyClient } from '@/lib/ably-client'
 
 export function useAuctionListener(
   matchId: string,
