@@ -48,11 +48,15 @@ export async function GET(req: NextRequest) {
     const games = gamesRes.rows;
     const latestGame = games.at(-1) || null;
 
+    // ---------------- Updated Offers Fetch ----------------
     let offers = [];
-    if (latestGame?.status === 'auction pending') {
+    if (latestGame) {
       const offersRes = await db.query(
-        `SELECT * FROM Offers WHERE game_id = $1`,
-        [latestGame.game_id]
+        `SELECT id, from_player_id, target_player_id, offer_amount, status
+         FROM Offers
+         WHERE game_id = $1
+         ORDER BY created_at ASC`,
+        [latestGame.id]
       );
       offers = offersRes.rows;
     }
