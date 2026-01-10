@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 
+/* =========================
+   Types
+========================= */
+
 type Player = {
   id: number
   username: string
@@ -33,6 +37,10 @@ type AuctionPhaseProps = {
   onRefreshMatch?: () => void
 }
 
+/* =========================
+   Component
+========================= */
+
 export default function AuctionPhase({
   latestGame,
   players,
@@ -41,6 +49,7 @@ export default function AuctionPhase({
   offers,
   onRefreshMatch,
 }: AuctionPhaseProps) {
+  /* ---------------- Local UI State ---------------- */
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null)
   const [offerAmount, setOfferAmount] = useState<number | ''>('')
   const [submitting, setSubmitting] = useState(false)
@@ -51,7 +60,15 @@ export default function AuctionPhase({
   const hasRevealedRef = useRef(false)
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const { id: gameId, team_1_members, team_a_members, winning_team } = latestGame
+  /* ---------------- Game Context ---------------- */
+  const {
+    id: gameId,
+    team_1_members,
+    team_a_members,
+    winning_team,
+  } = latestGame
+
+  if (!winning_team) return null
 
   const winningTeamMembers = useMemo(() => {
     if (winning_team === 'team_1') return team_1_members
@@ -59,34 +76,34 @@ export default function AuctionPhase({
     return []
   }, [winning_team, team_1_members, team_a_members])
 
-  if (!winning_team) return null
-
   const isWinner = winningTeamMembers.includes(currentUserId)
   const isLoser = !isWinner
 
+  /* ---------------- Offer Rules ---------------- */
   const minOfferAmount = 250 + gamesPlayed * 200
   const maxOfferAmount = 2000 + gamesPlayed * 500
 
   const getPlayerName = (id: number) =>
     players.find((p) => p.id === id)?.username ?? 'Unknown'
 
-  const offerCandidates = winningTeamMembers.filter(
-    (id) => id !== currentUserId
-  )
+  const offerCandidates = winningTeamMembers.filter(id => id !== currentUserId)
 
+  /* ---------------- Offer State ---------------- */
   const alreadySubmittedOffer = offers.some(
     (o) => o.from_player_id === currentUserId
   )
 
   const acceptedOffer = offers.find((o) => o.status === 'accepted')
 
-  const submittedOfferCount = offers.filter((o) =>
+  const submittedOfferCount = offers.filter(o =>
     winningTeamMembers.includes(o.from_player_id)
   ).length
 
-  const allOffersSubmitted =
+  const allWinningTeamSubmitted =
     winningTeamMembers.length > 0 &&
     submittedOfferCount === winningTeamMembers.length
+
+  const showWinnerSubmission = isWinner && !alreadySubmittedOffer && !allWinningTeamSubmitted
 
   const isWaitingForOffers = isLoser && offers.length === 0
 
@@ -96,22 +113,20 @@ export default function AuctionPhase({
   }, [gameId])
 
   useEffect(() => {
-    if (allOffersSubmitted && !hasRevealedRef.current) {
+    if (allWinningTeamSubmitted && !hasRevealedRef.current) {
       hasRevealedRef.current = true
       setShowReveal(true)
 
       const timer = setTimeout(() => setShowReveal(false), 2000)
       return () => clearTimeout(timer)
     }
-  }, [allOffersSubmitted])
+  }, [allWinningTeamSubmitted])
 
-  /* ---------------- Auto-transition when offer is accepted ---------------- */
+  /* ---------------- Auto Refresh After Accepted Offer ---------------- */
   useEffect(() => {
     if (acceptedOffer && onRefreshMatch) {
-      // Give a short delay for the reveal animation
       refreshTimeoutRef.current = setTimeout(() => {
         onRefreshMatch()
-        // Reset local state for next game
         setSelectedPlayerId(null)
         setOfferAmount('')
         setMessage('')
@@ -128,27 +143,17 @@ export default function AuctionPhase({
   const handleSubmitOffer = async () => {
     if (alreadySubmittedOffer || selectedPlayerId === null) return
 
-    if (
-      offerAmount === '' ||
-      offerAmount < minOfferAmount ||
-      offerAmount > maxOfferAmount
-    ) {
-      alert(
-        `Offer must be between ${minOfferAmount} and ${maxOfferAmount}`
-      )
+    if (offerAmount === '' || offerAmount < minOfferAmount || offerAmount > maxOfferAmount) {
+      alert(`Offer must be between ${minOfferAmount} and ${maxOfferAmount}`)
       return
     }
 
     setSubmitting(true)
-
     try {
       const res = await fetch(`/api/game/${gameId}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target_player_id: selectedPlayerId,
-          offer_amount: offerAmount,
-        }),
+        body: JSON.stringify({ target_player_id: selectedPlayerId, offer_amount: offerAmount }),
       })
 
       const data = await res.json()
@@ -207,12 +212,11 @@ export default function AuctionPhase({
       )}
 
       {/* ---------------- Winner Submission ---------------- */}
-      {isWinner && !alreadySubmittedOffer && (
+      {showWinnerSubmission && (
         <div className="max-w-md mx-auto mb-10">
           <p className="text-center text-yellow-300 font-semibold mb-4">
             Make Your Offer
           </p>
-
           <select
             value={selectedPlayerId ?? ''}
             onChange={(e) => setSelectedPlayerId(Number(e.target.value))}
@@ -258,7 +262,7 @@ export default function AuctionPhase({
           const canAccept =
             isLoser &&
             offer.status === 'pending' &&
-            allOffersSubmitted &&
+            allWinningTeamSubmitted &&
             !acceptedOffer &&
             !accepting
 
@@ -268,37 +272,21 @@ export default function AuctionPhase({
               className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg"
             >
               <div className="mb-2 text-sm text-gray-400">
-                From:{' '}
-                <span className="text-yellow-300 font-bold">
-                  {getPlayerName(offer.from_player_id)}
-                </span>
+                From: <span className="text-yellow-300 font-bold">{getPlayerName(offer.from_player_id)}</span>
               </div>
-
               <div className="mb-4 text-sm text-gray-400">
-                For:{' '}
-                <span className="text-yellow-300 font-bold">
-                  {getPlayerName(offer.target_player_id)}
-                </span>
+                For: <span className="text-yellow-300 font-bold">{getPlayerName(offer.target_player_id)}</span>
               </div>
-
               <div className="text-center mb-4">
-                {allOffersSubmitted ? (
+                {allWinningTeamSubmitted ? (
                   <span className="text-yellow-300 font-bold text-lg flex justify-center gap-1">
                     {offer.offer_amount}
-                    <Image
-                      src="/Gold_symbol.webp"
-                      alt="Gold"
-                      width={18}
-                      height={18}
-                    />
+                    <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} />
                   </span>
                 ) : (
-                  <span className="text-gray-500 text-sm">
-                    Waiting for all offers…
-                  </span>
+                  <span className="text-gray-500 text-sm">Waiting for all offers…</span>
                 )}
               </div>
-
               {canAccept && (
                 <button
                   onClick={() => handleAcceptOffer(offer.id)}
@@ -307,13 +295,10 @@ export default function AuctionPhase({
                   Accept Offer
                 </button>
               )}
-
               {offer.status !== 'pending' && (
                 <div
                   className={`mt-3 text-center font-bold ${
-                    offer.status === 'accepted'
-                      ? 'text-green-400'
-                      : 'text-red-400'
+                    offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'
                   }`}
                 >
                   {offer.status.toUpperCase()}
