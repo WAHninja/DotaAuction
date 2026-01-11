@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Image from 'next/image'
 
 import { UserContext } from '@/app/context/UserContext'
 import MatchHeader from '@/app/components/MatchHeader'
@@ -10,6 +9,7 @@ import TeamCard from '@/app/components/TeamCard'
 import WinnerBanner from '@/app/components/WinnerBanner'
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
 import AuctionPhase from '@/app/components/AuctionPhase'
+import GameHistoryTimeline from '@/app/components/GameHistoryTimeline'
 import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
 
 export default function MatchPage() {
@@ -21,7 +21,6 @@ export default function MatchPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [expandedGameId, setExpandedGameId] = useState<number | null>(null)
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
@@ -57,7 +56,6 @@ export default function MatchPage() {
     { fetchMatchData, setData }
   )
 
-
   /* ---------------- Guards ---------------- */
   if (user === undefined)
     return <div className="p-6 text-center text-gray-300">Loading user...</div>
@@ -76,7 +74,6 @@ export default function MatchPage() {
 
   /* ---------------- Derived State ---------------- */
   const { match, players, currentUserId, games } = data
-  // ✅ latestGame is always the last in the games array
   const latestGame = games?.[games.length - 1] ?? null
 
   const team1 = latestGame?.team_1_members ?? []
@@ -97,17 +94,13 @@ export default function MatchPage() {
           matchId={matchId}
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
-          matchWinnerUsername={
-            players.find((p: any) => p.id === match.winner_id)?.username
-          }
+          matchWinnerUsername={players.find((p: any) => p.id === match.winner_id)?.username}
         />
       )}
 
       {match?.winner_id && (
         <WinnerBanner
-          winnerName={
-            players.find((p: any) => p.id === match.winner_id)?.username
-          }
+          winnerName={players.find((p: any) => p.id === match.winner_id)?.username}
         />
       )}
 
@@ -147,59 +140,28 @@ export default function MatchPage() {
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
-        {[...games].reverse().map((game: any) => {
-          const isExpanded = expandedGameId === game.id
-          const acceptedOffer = game.offers?.find(
-            (o: any) => o.status === 'accepted'
-          )
-
-          return (
-            <div
-              key={game.id}
-              className={`mb-4 p-4 border rounded-lg shadow cursor-pointer ${
-                game.id === latestGame?.id
-                  ? 'border-yellow-400 bg-yellow-50'
-                  : 'border-gray-300 bg-white'
-              }`}
-              onClick={() =>
-                setExpandedGameId(isExpanded ? null : game.id)
-              }
-            >
-              <h3 className="text-xl font-semibold flex justify-between">
-                <span>
-                  Game #{game.id} – {game.status}
-                </span>
-                <span className="text-sm">
-                  {isExpanded ? 'Hide' : 'Show'} details
-                </span>
-              </h3>
-
-              {!isExpanded && acceptedOffer && (
-                <p className="mt-2 text-sm font-medium">
-                  {acceptedOffer.fromUsername} traded{' '}
-                  {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
-                  <Image
-                    src="/Gold_symbol.webp"
-                    alt="Gold"
-                    width={16}
-                    height={16}
-                    className="inline-block ml-1"
-                  />
-                </p>
-              )}
-
-              {isExpanded && (
-                <div className="mt-2 text-sm">
-                  <strong>Winner:</strong> {game.winning_team ?? 'N/A'}
-                  <br />
-                  <strong>Team A:</strong> {game.team_a_members.join(', ')}
-                  <br />
-                  <strong>Team 1:</strong> {game.team_1_members.join(', ')}
-                </div>
-              )}
-            </div>
-          )
-        })}
+        <GameHistoryTimeline
+          games={games
+            .slice()
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            .map((g: any) => ({
+              gameId: g.id,
+              createdAt: g.created_at,
+              teamAMembers: g.team_a_members.map(getPlayer).map((p: any) => p.username),
+              team1Members: g.team_1_members.map(getPlayer).map((p: any) => p.username),
+              winningTeam: g.winning_team, // 'team_a' | 'team_1' | null
+              offers: (data.offers ?? [])
+                .filter((o: any) => o.game_id === g.id)
+                .map((o: any) => ({
+                  id: o.id,
+                  from_username: o.fromUsername,
+                  target_username: o.targetUsername,
+                  offer_amount: o.offerAmount,
+                  status: o.status
+                })),
+              playerStats: g.player_stats ?? []
+            }))}
+        />
       </section>
     </>
   )
