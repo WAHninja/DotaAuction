@@ -44,47 +44,47 @@ export async function GET(req: NextRequest) {
       [matchId]
     )
     const games = gamesRes.rows
-    const latestGame = games.at(-1) || null
 
-    const gameIds = games.map(g => g.id)
+    /* ---------------- Player Stats ---------------- */
+    const gamesWithStats = await Promise.all(
+      games.map(async (game) => {
+        const statsRes = await db.query(
+          `SELECT id, player_id, gold_change, reason, team_id
+           FROM GamePlayerStats
+           WHERE game_id = $1`,
+          [game.id]
+        )
+
+        return {
+          ...game,
+          playerStats: statsRes.rows, // safe even if empty
+        }
+      })
+    )
+
+    const latestGame = gamesWithStats.at(-1) || null
+
+    /* ---------------- Offers (ONLY during auction) ---------------- */
     let offers: any[] = []
-    let playerStats: any[] = []
 
-    if (gameIds.length > 0) {
-      /* ---------------- Offers for all games ---------------- */
+    if (latestGame?.status === 'auction pending') {
       const offersRes = await db.query(
-        `SELECT id, from_player_id, target_player_id, offer_amount, status, game_id
+        `SELECT id, from_player_id, target_player_id, offer_amount, status
          FROM Offers
-         WHERE game_id = ANY($1::int[])
+         WHERE game_id = $1
          ORDER BY created_at ASC`,
-        [gameIds]
+        [latestGame.id]
       )
       offers = offersRes.rows
-
-      /* ---------------- Player stats for all games ---------------- */
-      const statsRes = await db.query(
-        `SELECT id, player_id, gold_change, reason, team_id, game_id
-         FROM PlayerStats
-         WHERE game_id = ANY($1::int[])
-         ORDER BY id ASC`,
-        [gameIds]
-      )
-      playerStats = statsRes.rows
     }
-
-    /* ---------------- Attach offers and stats to each game ---------------- */
-    const gamesWithDetails = games.map(game => ({
-      ...game,
-      offers: offers.filter(o => o.game_id === game.id),
-      playerStats: playerStats.filter(s => s.game_id === game.id),
-    }))
 
     /* ---------------- Response ---------------- */
     return NextResponse.json({
       match,
       players,
-      games: gamesWithDetails,
+      games: gamesWithStats, // now each game includes playerStats
       latestGame,
+      offers,
       currentUserId,
     })
   } catch (error) {
