@@ -26,6 +26,7 @@ type Game = {
   winningTeam: 'team_a' | 'team_1' | null
   playerStats: PlayerStat[]
   offers: Offer[]
+  gameNumber?: number // ✅ Add optional logical number
 }
 
 type GameHistoryTimelineProps = {
@@ -33,12 +34,19 @@ type GameHistoryTimelineProps = {
 }
 
 export default function GameHistoryTimeline({ games }: GameHistoryTimelineProps) {
-  // Sort games newest first
-  const sortedGames = games.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  // Assign logical game numbers oldest → newest
+  const gamesWithNumbers = games
+    .slice()
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) // oldest first
+    .map((game, index) => ({
+      ...game,
+      gameNumber: index + 1
+    }))
+    .reverse() // now newest first, for timeline display
 
   return (
     <section className="space-y-4">
-      {sortedGames.map((game, index) => (
+      {gamesWithNumbers.map((game, index) => (
         <GameHistoryCard
           key={game.id}
           game={game}
