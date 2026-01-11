@@ -53,9 +53,10 @@ export default function MatchPage() {
   /* ---------------- Realtime Listener ---------------- */
   useRealtimeMatchListener(
     matchId,
-    data?.games?.[data.games.length - 1]?.id ?? null,
-    { fetchMatchData }
+    data?.latestGame?.id ?? data?.games?.[data.games.length - 1]?.id ?? null,
+    { fetchMatchData, setData }
   )
+
 
   /* ---------------- Guards ---------------- */
   if (user === undefined)
