@@ -79,9 +79,9 @@ export default function MatchPage() {
 
   const getPlayer = (id: number) => players.find((p: any) => p.id === id)
 
-  // ✅ IMPORTANT: correct status strings
-  const isAuction = latestGame?.status === 'auction_pending'
-  const isInProgress = latestGame?.status === 'in_progress'
+  /* ✅ FIXED STATUS CHECKS (MATCH DB EXACTLY) */
+  const isAuction = latestGame?.status === 'auction pending'
+  const isInProgress = latestGame?.status === 'in progress'
   const isFinished = latestGame?.status === 'finished'
 
   /* ---------------- Render ---------------- */
@@ -98,7 +98,7 @@ export default function MatchPage() {
         />
       )}
 
-      {isFinished && (
+      {match?.winner_id && (
         <WinnerBanner
           winnerName={
             players.find((p: any) => p.id === match.winner_id)?.username
@@ -125,7 +125,9 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
+      {isInProgress && (
+        <SelectGameWinnerForm gameId={latestGame.id} />
+      )}
 
       {isAuction && (
         <AuctionPhase
@@ -143,26 +145,26 @@ export default function MatchPage() {
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
         {[...games].reverse().map((game: any) => {
-          const isExpanded = expandedGameId === game.gameNumber
+          const isExpanded = expandedGameId === game.id
           const acceptedOffer = game.offers?.find(
             (o: any) => o.status === 'accepted'
           )
 
           return (
             <div
-              key={game.gameNumber}
+              key={game.id}
               className={`mb-4 p-4 border rounded-lg shadow cursor-pointer ${
-                game.gameNumber === latestGame?.gameNumber
+                game.id === latestGame?.id
                   ? 'border-yellow-400 bg-yellow-50'
                   : 'border-gray-300 bg-white'
               }`}
               onClick={() =>
-                setExpandedGameId(isExpanded ? null : game.gameNumber)
+                setExpandedGameId(isExpanded ? null : game.id)
               }
             >
               <h3 className="text-xl font-semibold flex justify-between">
                 <span>
-                  Game #{game.gameNumber} – {game.status}
+                  Game #{game.id} – {game.status}
                 </span>
                 <span className="text-sm">
                   {isExpanded ? 'Hide' : 'Show'} details
@@ -185,11 +187,11 @@ export default function MatchPage() {
 
               {isExpanded && (
                 <div className="mt-2 text-sm">
-                  <strong>Winner:</strong> {game.winningTeam ?? 'N/A'}
+                  <strong>Winner:</strong> {game.winning_team ?? 'N/A'}
                   <br />
-                  <strong>Team A:</strong> {game.teamAMembers.join(', ')}
+                  <strong>Team A:</strong> {game.team_a_members.join(', ')}
                   <br />
-                  <strong>Team 1:</strong> {game.team1Members.join(', ')}
+                  <strong>Team 1:</strong> {game.team_1_members.join(', ')}
                 </div>
               )}
             </div>
