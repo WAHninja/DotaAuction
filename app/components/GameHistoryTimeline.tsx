@@ -23,11 +23,12 @@ export default function GameHistoryTimeline({ games }: Props) {
       {/* Vertical timeline line */}
       <div className="absolute left-3 top-0 bottom-0 w-1 bg-gray-700 rounded" />
 
-      {games.map((game) => (
+      {games.map((game, index) => (
         <div key={game.gameId} className="relative flex group">
           {/* Timeline marker */}
           <div className="absolute -left-5 top-4 w-4 h-4 rounded-full border-2 border-gray-400 bg-[#111] group-hover:bg-yellow-400 transition-colors" />
 
+          {/* Game card */}
           <GameHistoryCard
             gameId={game.gameId}
             createdAt={game.createdAt}
@@ -36,10 +37,13 @@ export default function GameHistoryTimeline({ games }: Props) {
             winningTeam={game.winningTeam}
             offers={game.offers}
             playerStats={game.playerStats}
-            highlight={game.highlight} // pass highlight to style latest game
+            highlight={game.highlight}
           />
         </div>
       ))}
+
+      {/* Optional: small spacing at the bottom */}
+      <div className="h-4" />
     </div>
   )
 }
