@@ -3,12 +3,13 @@ import { getAblyClient } from '@/lib/ably-client';
 
 type Callbacks = {
   fetchMatchData: () => Promise<void> | void;
+  setData?: React.Dispatch<React.SetStateAction<any>>; // optional, for immediate updates
 };
 
 export function useRealtimeMatchListener(
   matchId: string,
   latestGameId: number | null,
-  { fetchMatchData }: Callbacks
+  { fetchMatchData, setData }: Callbacks
 ) {
   const ablyClientRef = useRef<ReturnType<typeof getAblyClient> | null>(null);
 
@@ -27,8 +28,30 @@ export function useRealtimeMatchListener(
 
     const channel = ablyClientRef.current.channels.get(`match-${matchId}`);
 
-    const onGameCreated = async (data?: any) => {
-      console.log('📡 game-created event → refetching', data);
+    const onGameCreated = async (eventData?: any) => {
+      console.log('📡 game-created event received', eventData);
+
+      // Immediately update latestGame in state if setData is provided
+      if (eventData?.gameId && setData) {
+        setData((prev: any) => {
+          if (!prev) return prev;
+          const existingGames = prev.games || [];
+          // Avoid duplicates
+          if (existingGames.find((g: any) => g.id === eventData.gameId)) return prev;
+          const newGame = {
+            id: eventData.gameId,
+            status: 'in progress',
+            team_a_members: [],
+            team_1_members: [],
+          };
+          return {
+            ...prev,
+            games: [...existingGames, newGame],
+            latestGame: newGame,
+          };
+        });
+      }
+
       await fetchMatchData();
     };
 
@@ -60,7 +83,7 @@ export function useRealtimeMatchListener(
       channel.unsubscribe('game-finished', onGameFinished);
       channel.unsubscribe('new-game', onNewGame);
     };
-  }, [matchId, fetchMatchData]);
+  }, [matchId, fetchMatchData, setData]);
 
   // ---------------- Auction events ----------------
   useEffect(() => {
@@ -77,6 +100,27 @@ export function useRealtimeMatchListener(
 
     const onOfferAccepted = async (data?: any) => {
       console.log('📡 offer-accepted event → refetching', data);
+
+      // Immediately add new game if available in event
+      if (data?.gameId && setData) {
+        setData((prev: any) => {
+          if (!prev) return prev;
+          const existingGames = prev.games || [];
+          if (existingGames.find((g: any) => g.id === data.gameId)) return prev;
+          const newGame = {
+            id: data.gameId,
+            status: 'in progress',
+            team_a_members: [],
+            team_1_members: [],
+          };
+          return {
+            ...prev,
+            games: [...existingGames, newGame],
+            latestGame: newGame,
+          };
+        });
+      }
+
       await fetchMatchData();
     };
 
@@ -88,5 +132,5 @@ export function useRealtimeMatchListener(
       channel.unsubscribe('new-offer', onNewOffer);
       channel.unsubscribe('offer-accepted', onOfferAccepted);
     };
-  }, [matchId, latestGameId, fetchMatchData]);
+  }, [matchId, latestGameId, fetchMatchData, setData]);
 }
