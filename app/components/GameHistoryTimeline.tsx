@@ -1,66 +1,51 @@
-import { useState } from 'react'
+'use client'
+
 import GameHistoryCard from './GameHistoryCard'
 
-type TimelineGame = {
-  gameId: number
+type PlayerStat = {
+  id: number
+  username: string
+  goldChange: number
+  reason: 'win_reward' | 'offer_gain' | 'loss_penalty'
+  teamId: 'team_1' | 'team_a'
+}
+
+type Offer = {
+  id: number
+  fromUsername: string
+  targetUsername: string
+  offerAmount: number
+  status: 'pending' | 'accepted' | 'rejected'
+}
+
+type Game = {
+  id: number
   createdAt: string
   teamAMembers: string[]
   team1Members: string[]
   winningTeam: 'team_a' | 'team_1' | null
-  offers: any[]
-  playerStats: any[]
-  highlight?: boolean
+  playerStats: PlayerStat[]
+  offers: Offer[]
 }
 
-type Props = {
-  games: TimelineGame[]
+type GameHistoryTimelineProps = {
+  games: Game[]
 }
 
-export default function GameHistoryTimeline({ games }: Props) {
-  if (!Array.isArray(games)) return null
-
-  // By default, latest game (first in array) is expanded
-  const [expandedGameId, setExpandedGameId] = useState<number | null>(
-    games[0]?.gameId ?? null
-  )
-
-  const toggleGame = (id: number) => {
-    setExpandedGameId((prev) => (prev === id ? null : id))
-  }
+export default function GameHistoryTimeline({ games }: GameHistoryTimelineProps) {
+  // Sort games newest first
+  const sortedGames = games.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return (
-    <div className="relative pl-8 space-y-8">
-      {/* Vertical timeline line */}
-      <div className="absolute left-3 top-0 bottom-0 w-1 bg-gray-700 rounded" />
-
-      {games.map((game) => {
-        const isExpanded = expandedGameId === game.gameId
-        return (
-          <div key={game.gameId} className="relative flex group">
-            {/* Timeline marker */}
-            <div className="absolute -left-5 top-4 w-4 h-4 rounded-full border-2 border-gray-400 bg-[#111] group-hover:bg-yellow-400 transition-colors" />
-
-            {/* Game card */}
-            <div
-              className="w-full cursor-pointer"
-              onClick={() => toggleGame(game.gameId)}
-            >
-              <GameHistoryCard
-                gameId={game.gameId}
-                createdAt={game.createdAt}
-                teamAMembers={game.teamAMembers}
-                team1Members={game.team1Members}
-                winningTeam={game.winningTeam}
-                offers={game.offers}
-                playerStats={game.playerStats}
-                highlight={game.highlight}
-                defaultExpanded={game.highlight} // highlight/latest game expanded by default
-              />
-            </div>
-          </div>
-        )
-      })}
-      <div className="h-4" />
-    </div>
+    <section className="space-y-4">
+      {sortedGames.map((game, index) => (
+        <GameHistoryCard
+          key={game.id}
+          game={game}
+          highlight={index === 0} // highlight latest game
+          defaultExpanded={index === 0} // expand latest game by default
+        />
+      ))}
+    </section>
   )
 }
