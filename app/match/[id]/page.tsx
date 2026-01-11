@@ -143,28 +143,29 @@ export default function MatchPage() {
           games={games
             .slice()
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .map((g: any) => ({
-              gameId: g.id,
-              createdAt: g.created_at,
-              teamAMembers: g.team_a_members.map(getPlayer).map((p: any) => p.username),
-              team1Members: g.team_1_members.map(getPlayer).map((p: any) => p.username),
-              winningTeam: g.winning_team, // 'team_a' | 'team_1' | null
-              offers: (data.offers ?? []).filter((o: any) => o.game_id === g.id).map((o: any) => ({
-                id: o.id,
-                from_username: o.fromUsername,
-                target_username: o.targetUsername,
-                offer_amount: o.offerAmount,
-                status: o.status
-              })),
-              playerStats: g.player_stats?.map((s: any) => ({
-                id: s.id,
-                playerId: s.player_id,
-                username: players.find((p: any) => p.id === s.player_id)?.username ?? `Player#${s.player_id}`,
-                goldChange: s.gold_change,
-                reason: s.reason
-              })) ?? [],
-              highlight: index === 0
-            }))}
+            .map((g: any, index: number) => ({
+  gameId: g.id,
+  createdAt: g.created_at,
+  teamAMembers: g.team_a_members.map(getPlayer).map((p: any) => p.username),
+  team1Members: g.team_1_members.map(getPlayer).map((p: any) => p.username),
+  winningTeam: g.winning_team,
+  offers: (data.offers ?? []).filter((o: any) => o.game_id === g.id).map((o: any) => ({
+    id: o.id,
+    from_username: o.fromUsername,
+    target_username: o.targetUsername,
+    offer_amount: o.offerAmount,
+    status: o.status
+  })),
+  playerStats: g.player_stats?.map((s: any) => ({
+    id: s.id,
+    playerId: s.player_id,
+    username: players.find((p: any) => p.id === s.player_id)?.username ?? `Player#${s.player_id}`,
+    goldChange: s.gold_change,
+    reason: s.reason
+  })) ?? [],
+  highlight: index === 0 // ✅ latest game at top is highlighted
+}))
+
         />
       </section>
     </>
