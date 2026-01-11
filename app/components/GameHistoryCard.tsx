@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Trophy, Coins } from 'lucide-react'
 
@@ -142,6 +143,7 @@ export default function GameHistoryCard({
   playerStats,
   highlight = false
 }: GameHistoryCardProps) {
+  const [expanded, setExpanded] = useState(false)
   const date = new Date(createdAt).toLocaleString(undefined, {
     dateStyle: 'short',
     timeStyle: 'short'
@@ -159,7 +161,7 @@ export default function GameHistoryCard({
       transition={{ duration: 0.3 }}
     >
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2">
         <h2 className="text-xl font-bold text-yellow-400">Game #{gameId}</h2>
         <span className="text-sm text-gray-400">{date}</span>
       </div>
@@ -178,8 +180,18 @@ export default function GameHistoryCard({
         </div>
       )}
 
-      {/* Offers & Gold */}
+      {/* Toggle button */}
       {(offers.length > 0 || playerStats.length > 0) && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mb-4 text-sm text-blue-400 hover:underline"
+        >
+          {expanded ? 'Hide Details' : 'Show Details'}
+        </button>
+      )}
+
+      {/* Offers & Gold */}
+      {expanded && (offers.length > 0 || playerStats.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {offers.length > 0 && <OfferList offers={offers} />}
           {playerStats.length > 0 && <GoldChangeList playerStats={playerStats} />}
