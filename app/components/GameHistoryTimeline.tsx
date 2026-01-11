@@ -54,7 +54,7 @@ export default function GameHistoryTimeline({ games }: Props) {
                 offers={game.offers}
                 playerStats={game.playerStats}
                 highlight={game.highlight}
-                isExpanded={isExpanded}
+                defaultExpanded={game.highlight} // highlight/latest game expanded by default
               />
             </div>
           </div>
