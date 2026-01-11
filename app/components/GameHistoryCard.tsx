@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Trophy, Coins } from 'lucide-react'
 
@@ -28,6 +29,7 @@ type GameHistoryCardProps = {
   offers: Offer[]
   playerStats: PlayerStat[]
   highlight?: boolean
+  defaultExpanded?: boolean
 }
 
 /* ---------------- Subcomponents ---------------- */
@@ -89,16 +91,23 @@ const GoldChangeList = ({ playerStats }: { playerStats: PlayerStat[] }) => (
 )
 
 /* ---------------- Main Component ---------------- */
-export default function GameHistoryCard({ gameId, createdAt, teamAMembers, team1Members, winningTeam, offers, playerStats, highlight }: GameHistoryCardProps) {
+export default function GameHistoryCard({ gameId, createdAt, teamAMembers, team1Members, winningTeam, offers, playerStats, highlight, defaultExpanded = false }: GameHistoryCardProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const date = new Date(createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+
+  // Collapsed summary
+  const totalGoldChange = playerStats.reduce((sum, s) => sum + s.goldChange, 0)
+  const acceptedOffersCount = offers.filter(o => o.status === 'accepted').length
+
   return (
     <motion.div
-      className={`bg-[#1b1b1b] border rounded-2xl p-4 shadow-md mb-6 transition-all ${
+      className={`bg-[#1b1b1b] border rounded-2xl p-4 shadow-md mb-4 transition-all cursor-pointer ${
         highlight ? 'border-yellow-400 bg-yellow-50' : 'border-gray-700'
       }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      onClick={() => setIsExpanded(prev => !prev)}
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
@@ -106,26 +115,40 @@ export default function GameHistoryCard({ gameId, createdAt, teamAMembers, team1
         <span className="text-sm text-gray-400">{date}</span>
       </div>
 
-      {/* Teams */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
-        <TeamList members={teamAMembers} isWinner={winningTeam === 'team_a'} teamName="Team A" color="text-blue-400" />
-        <TeamList members={team1Members} isWinner={winningTeam === 'team_1'} teamName="Team 1" color="text-red-400" />
-      </div>
-
-      {/* Winner */}
-      {winningTeam && (
-        <div className="flex items-center gap-2 text-green-400 font-semibold mb-4">
-          <Trophy className="w-4 h-4" />
-          Winner: {winningTeam === 'team_a' ? 'Team A' : 'Team 1'}
+      {/* Collapsed summary */}
+      {!isExpanded && (
+        <div className="text-gray-400 italic mb-2 text-sm flex justify-between">
+          <span>{winningTeam ? `Winner: ${winningTeam === 'team_a' ? 'Team A' : 'Team 1'}` : 'No winner yet'}</span>
+          <span>{acceptedOffersCount > 0 ? `${acceptedOffersCount} accepted offer${acceptedOffersCount > 1 ? 's' : ''}` : 'No accepted offers'}</span>
+          <span>Total Gold Change: {totalGoldChange >= 0 ? '+' : ''}{totalGoldChange}</span>
         </div>
       )}
 
-      {/* Offers + Gold Changes Side by Side */}
-      {(offers.length > 0 || playerStats.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {offers.length > 0 && <OfferList offers={offers} />}
-          {playerStats.length > 0 && <GoldChangeList playerStats={playerStats} />}
-        </div>
+      {/* Expanded content */}
+      {isExpanded && (
+        <>
+          {/* Teams */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+            <TeamList members={teamAMembers} isWinner={winningTeam === 'team_a'} teamName="Team A" color="text-blue-400" />
+            <TeamList members={team1Members} isWinner={winningTeam === 'team_1'} teamName="Team 1" color="text-red-400" />
+          </div>
+
+          {/* Winner */}
+          {winningTeam && (
+            <div className="flex items-center gap-2 text-green-400 font-semibold mb-4">
+              <Trophy className="w-4 h-4" />
+              Winner: {winningTeam === 'team_a' ? 'Team A' : 'Team 1'}
+            </div>
+          )}
+
+          {/* Offers + Gold Changes */}
+          {(offers.length > 0 || playerStats.length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {offers.length > 0 && <OfferList offers={offers} />}
+              {playerStats.length > 0 && <GoldChangeList playerStats={playerStats} />}
+            </div>
+          )}
+        </>
       )}
     </motion.div>
   )
