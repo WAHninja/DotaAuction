@@ -22,6 +22,7 @@ type Offer = {
 type GameHistoryCardProps = {
   game: {
     id: number
+    gameNumber?: number // ✅ optional logical number
     createdAt: string
     teamAMembers: string[]
     team1Members: string[]
@@ -43,6 +44,8 @@ export default function GameHistoryCard({
   // Find accepted offer if it exists
   const acceptedOffer = game.offers.find(o => o.status === 'accepted')
 
+  const displayGameNumber = game.gameNumber ?? game.id // ✅ use logical number
+
   return (
     <div
       className={`mb-4 p-4 border rounded-lg shadow cursor-pointer ${highlight ? 'border-yellow-400' : 'border-gray-300'}`}
@@ -50,7 +53,7 @@ export default function GameHistoryCard({
     >
       <h3 className="text-xl font-semibold flex justify-between items-center">
         <span>
-          Game #{game.id} – {game.winningTeam ?? 'Pending'}
+          Game #{displayGameNumber} – {game.winningTeam ?? 'Pending'}
         </span>
         <button className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</button>
       </h3>
