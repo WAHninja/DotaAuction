@@ -157,41 +157,43 @@ export default function MatchPage() {
       )}
 
       {/* ---------------- Game History ---------------- */}
-      <section className="mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+<section className="mt-12">
+  <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
-        <GameHistory
-          games={games
-            .slice()
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .map((g: any, index: number) => ({
-              gameId: g.id,
-              gameNumber: index + 1,
-              createdAt: g.created_at,
-              teamAMembers: g.team_a_members.map(getPlayer).map(p => p.username),
-              team1Members: g.team_1_members.map(getPlayer).map(p => p.username),
-              winningTeam: g.winning_team,
-              offers: offers
-                .filter(o => o.game_id === g.id)
-                .map(o => ({
-                  id: o.id,
-                  fromUsername: o.fromUsername,
-                  targetUsername: o.targetUsername,
-                  offerAmount: o.offerAmount,
-                  status: o.status
-                })),
-              playerStats: g.player_stats?.map((s: any) => ({
-                id: s.id,
-                username: getPlayer(s.player_id).username,
-                goldChange: s.gold_change,
-                reason: s.reason,
-                teamId: s.team_id === 'team_1' ? 'team_1' : 'team_a'
-              })) ?? [],
-              highlight: index === 0,
-              defaultExpanded: index === 0
-            }))}
-        />
-      </section>
+  <GameHistory
+    games={games
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((g: any, index: number) => ({
+        gameId: g.id,
+        gameNumber: index + 1,
+        createdAt: g.created_at,
+        teamAMembers: g.team_a_members.map(getPlayer).map(p => p.username),
+        team1Members: g.team_1_members.map(getPlayer).map(p => p.username),
+        winningTeam: g.winning_team,
+        offers: offers
+          .filter((o: any) => o.game_id === g.id)
+          .map((o: any) => ({
+            id: o.id,
+            fromUsername: getPlayer(o.from_player_id).username,
+            targetUsername: getPlayer(o.target_player_id).username,
+            offerAmount: o.offer_amount,
+            status: o.status
+          })),
+        playerStats: (g.playerStats ?? []).map((s: any) => ({
+          id: s.id,
+          username: getPlayer(s.player_id).username,
+          goldChange: s.gold_change,
+          reason: s.reason,
+          teamId: s.team_id === 'team_1' ? 'team1' : 'teamA'
+        })),
+        highlight: index === 0,
+        defaultExpanded: index === 0
+      }))
+    }
+  />
+</section>
+
     </>
   )
 }
