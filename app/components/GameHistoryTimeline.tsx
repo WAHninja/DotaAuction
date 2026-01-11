@@ -20,13 +20,14 @@ type Offer = {
 
 type Game = {
   id: number
+  gameNumber?: number
+  status: string // ✅ Required by GameHistoryCard
   createdAt: string
   teamAMembers: string[]
   team1Members: string[]
   winningTeam: 'team_a' | 'team_1' | null
   playerStats: PlayerStat[]
   offers: Offer[]
-  gameNumber?: number // ✅ Add optional logical number
 }
 
 type GameHistoryTimelineProps = {
@@ -34,26 +35,30 @@ type GameHistoryTimelineProps = {
 }
 
 export default function GameHistoryTimeline({ games }: GameHistoryTimelineProps) {
-  // Assign logical game numbers oldest → newest
-  const gamesWithNumbers = games
+  // Sort games newest first
+  const sortedGames = games
     .slice()
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) // oldest first
-    .map((game, index) => ({
-      ...game,
-      gameNumber: index + 1
-    }))
-    .reverse() // now newest first, for timeline display
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return (
     <section className="space-y-4">
-      {gamesWithNumbers.map((game, index) => (
-        <GameHistoryCard
-          key={game.id}
-          game={game}
-          highlight={index === 0} // highlight latest game
-          defaultExpanded={index === 0} // expand latest game by default
-        />
-      ))}
+      {sortedGames.map((g, index) => {
+        // Inject status and gameNumber for historical games
+        const game = {
+          ...g,
+          gameNumber: g.gameNumber ?? index + 1, // logical number if missing
+          status: g.status ?? 'finished', // default if missing
+        }
+
+        return (
+          <GameHistoryCard
+            key={game.id}
+            game={game}
+            highlight={index === 0} // highlight latest game
+            defaultExpanded={index === 0} // expand latest game by default
+          />
+        )
+      })}
     </section>
   )
 }
