@@ -131,12 +131,9 @@ export default function MatchPage() {
       {latestGame && (
         <MatchHeader
           matchId={matchId}
-          latestGame={latestGame}
-          matchWinnerId={match.winner_id}
-          matchWinnerUsername={
-            players.find((p) => p.id === match.winner_id)?.username ??
-            `Player#${match.winner_id}`
-          }
+          gameNumber={games.length}
+          status={latestGame.status}
+          winningTeam={latestGame.winning_team}
         />
       )}
 
