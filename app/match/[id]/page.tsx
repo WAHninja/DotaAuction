@@ -51,9 +51,11 @@ export default function MatchPage() {
   }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  useRealtimeMatchListener(matchId, data?.latestGame?.id ?? null, {
-    fetchMatchData,
-  })
+  useRealtimeMatchListener(
+    matchId,
+    data?.games?.[data.games.length - 1]?.id ?? null,
+    { fetchMatchData }
+  )
 
   /* ---------------- Guards ---------------- */
   if (user === undefined)
@@ -72,14 +74,16 @@ export default function MatchPage() {
     return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
-  const { match, latestGame, players, currentUserId, games } = data
+  const { match, players, currentUserId, games } = data
+  // ✅ latestGame is always the last in the games array
+  const latestGame = games?.[games.length - 1] ?? null
 
   const team1 = latestGame?.team_1_members ?? []
   const teamA = latestGame?.team_a_members ?? []
 
   const getPlayer = (id: number) => players.find((p: any) => p.id === id)
 
-  /* ✅ FIXED STATUS CHECKS (MATCH DB EXACTLY) */
+  /* ---------------- Status Flags ---------------- */
   const isAuction = latestGame?.status === 'auction pending'
   const isInProgress = latestGame?.status === 'in progress'
   const isFinished = latestGame?.status === 'finished'
@@ -125,9 +129,7 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && (
-        <SelectGameWinnerForm gameId={latestGame.id} />
-      )}
+      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
 
       {isAuction && (
         <AuctionPhase
