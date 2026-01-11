@@ -114,10 +114,9 @@ export async function POST(req: NextRequest, context: any) {
 
     try {
       // Notify frontend about new game so it shows "select winner"
-      await ably.channels.get(`match-${game.match_id}`).publish('new-game', {
-        newGame,
-        nextStep: 'select-winner',
-      });
+      await ably.channels.get(`match-${game.match_id}`).publish('game-created', {
+      gameId: newGame.id,
+    });
     } catch (err) {
       console.error('Ably publish failed (new-game):', err);
     }
