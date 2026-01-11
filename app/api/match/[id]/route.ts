@@ -43,31 +43,48 @@ export async function GET(req: NextRequest) {
       `SELECT * FROM Games WHERE match_id = $1 ORDER BY id ASC`,
       [matchId]
     )
-
     const games = gamesRes.rows
     const latestGame = games.at(-1) || null
 
-    /* ---------------- Offers (ONLY during auction) ---------------- */
+    const gameIds = games.map(g => g.id)
     let offers: any[] = []
+    let playerStats: any[] = []
 
-    if (latestGame?.status === 'auction pending') {
+    if (gameIds.length > 0) {
+      /* ---------------- Offers for all games ---------------- */
       const offersRes = await db.query(
-        `SELECT id, from_player_id, target_player_id, offer_amount, status
+        `SELECT id, from_player_id, target_player_id, offer_amount, status, game_id
          FROM Offers
-         WHERE game_id = $1
+         WHERE game_id = ANY($1::int[])
          ORDER BY created_at ASC`,
-        [latestGame.id]
+        [gameIds]
       )
       offers = offersRes.rows
+
+      /* ---------------- Player stats for all games ---------------- */
+      const statsRes = await db.query(
+        `SELECT id, player_id, gold_change, reason, team_id, game_id
+         FROM PlayerStats
+         WHERE game_id = ANY($1::int[])
+         ORDER BY id ASC`,
+        [gameIds]
+      )
+      playerStats = statsRes.rows
     }
+
+    /* ---------------- Attach offers and stats to each game ---------------- */
+    const gamesWithDetails = games.map(game => ({
+      ...game,
+      offers: offers.filter(o => o.game_id === game.id),
+      playerStats: playerStats.filter(s => s.game_id === game.id),
+    }))
 
     /* ---------------- Response ---------------- */
     return NextResponse.json({
       match,
       players,
-      games,
+      games: gamesWithDetails,
       latestGame,
-      offers,
       currentUserId,
     })
   } catch (error) {
