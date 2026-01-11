@@ -34,6 +34,15 @@ type AuctionOffer = {
   status: 'pending' | 'accepted' | 'rejected'
 }
 
+type PlayerStat = {
+  id: number
+  playerId: number
+  username: string
+  goldChange: number
+  reason: 'win_reward' | 'offer_gain' | 'loss_penalty'
+  teamId: 'team_1' | 'team_a'
+}
+
 export default function MatchPage() {
   const { id } = useParams()
   const matchId = Array.isArray(id) ? id[0] : id
@@ -174,26 +183,34 @@ export default function MatchPage() {
             .slice()
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .map((g: any, index: number) => ({
-              gameId: g.id,
-              createdAt: g.created_at,
-              teamAMembers: g.team_a_members.map(getPlayer).map((p: any) => p.username),
-              team1Members: g.team_1_members.map(getPlayer).map((p: any) => p.username),
-              winningTeam: g.winning_team,
-              offers: (data.offers ?? []).filter((o: any) => o.game_id === g.id).map((o: any) => ({
-                id: o.id,
-                from_username: o.fromUsername,
-                target_username: o.targetUsername,
-                offer_amount: o.offerAmount,
-                status: o.status
-              })),
-              playerStats: g.player_stats?.map((s: any) => ({
-                id: s.id,
-                playerId: s.player_id,
-                username: players.find((p: any) => p.id === s.player_id)?.username ?? `Player#${s.player_id}`,
-                goldChange: s.gold_change,
-                reason: s.reason
-              })) ?? [],
-              highlight: index === 0 // ✅ latest game at top is highlighted
+              game: {
+                id: g.id,
+                createdAt: g.created_at,
+                teamAMembers: g.team_a_members.map(getPlayer).map((p: any) => p.username),
+                team1Members: g.team_1_members.map(getPlayer).map((p: any) => p.username),
+                winningTeam: g.winning_team,
+                offers: (data.offers ?? []).filter((o: any) => o.game_id === g.id).map((o: any) => ({
+                  id: o.id,
+                  fromUsername: o.fromUsername,
+                  targetUsername: o.targetUsername,
+                  offerAmount: o.offerAmount,
+                  status: o.status
+                })),
+                playerStats: g.player_stats
+                  ?.sort((a: any, b: any) => {
+                    const order = ['win_reward', 'offer_gain', 'loss_penalty']
+                    return order.indexOf(a.reason) - order.indexOf(b.reason)
+                  })
+                  .map((s: any): PlayerStat => ({
+                    id: s.id,
+                    playerId: s.player_id,
+                    username: players.find((p: any) => p.id === s.player_id)?.username ?? `Player#${s.player_id}`,
+                    goldChange: s.gold_change,
+                    reason: s.reason,
+                    teamId: s.team_id
+                  })) ?? []
+              },
+              highlight: index === 0
             }))
           }
         />
