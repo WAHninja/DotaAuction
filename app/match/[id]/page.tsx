@@ -22,7 +22,6 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null)
-  const [nextStep, setNextStep] = useState<'select-winner' | 'auction' | null>(null)
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
@@ -36,10 +35,10 @@ export default function MatchPage() {
       if (!res.ok) throw new Error('Failed to fetch match')
 
       const json = await res.json()
-      console.log('Fetched match data:', json)
+      console.log('📥 Match data refreshed:', json)
       setData(json)
     } catch (err: any) {
-      console.error('Error fetching match:', err)
+      console.error('❌ Error fetching match:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -54,7 +53,6 @@ export default function MatchPage() {
   /* ---------------- Realtime Listener ---------------- */
   useRealtimeMatchListener(matchId, data?.latestGame?.id ?? null, {
     fetchMatchData,
-    setNextStep, // <-- pass setter to hook for UI step control
   })
 
   /* ---------------- Guards ---------------- */
@@ -81,15 +79,10 @@ export default function MatchPage() {
 
   const getPlayer = (id: number) => players.find((p: any) => p.id === id)
 
-  const isAuction = latestGame?.status === 'auction pending'
-  const isInProgress = latestGame?.status === 'in progress'
+  // ✅ IMPORTANT: correct status strings
+  const isAuction = latestGame?.status === 'auction_pending'
+  const isInProgress = latestGame?.status === 'in_progress'
   const isFinished = latestGame?.status === 'finished'
-
-  /* ---------------- Auto-advance helpers ---------------- */
-  // Determine which phase to show: auction or winner form
-  const showWinnerForm =
-    (isInProgress && !isAuction) || nextStep === 'select-winner'
-  const showAuctionPhase = isAuction && nextStep !== 'select-winner'
 
   /* ---------------- Render ---------------- */
   return (
@@ -113,7 +106,7 @@ export default function MatchPage() {
         />
       )}
 
-      {/* Teams */}
+      {/* ---------------- Teams ---------------- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <TeamCard
           name="Team 1"
@@ -132,8 +125,9 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {showWinnerForm && <SelectGameWinnerForm gameId={latestGame.id} />}
-      {showAuctionPhase && (
+      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
+
+      {isAuction && (
         <AuctionPhase
           latestGame={latestGame}
           players={players}
@@ -147,6 +141,7 @@ export default function MatchPage() {
       {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+
         {[...games].reverse().map((game: any) => {
           const isExpanded = expandedGameId === game.gameNumber
           const acceptedOffer = game.offers?.find(
@@ -169,13 +164,15 @@ export default function MatchPage() {
                 <span>
                   Game #{game.gameNumber} – {game.status}
                 </span>
-                <span className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</span>
+                <span className="text-sm">
+                  {isExpanded ? 'Hide' : 'Show'} details
+                </span>
               </h3>
 
               {!isExpanded && acceptedOffer && (
                 <p className="mt-2 text-sm font-medium">
-                  {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
-                  {acceptedOffer.offerAmount}
+                  {acceptedOffer.fromUsername} traded{' '}
+                  {acceptedOffer.targetUsername} for {acceptedOffer.offerAmount}
                   <Image
                     src="/Gold_symbol.webp"
                     alt="Gold"
