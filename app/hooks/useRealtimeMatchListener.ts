@@ -27,18 +27,38 @@ export function useRealtimeMatchListener(
 
     const channel = ablyClientRef.current.channels.get(`match-${matchId}`);
 
-    const refresh = (data?: any) => {
-      console.log('📡 Match event → refetching', data);
-      Promise.resolve(fetchMatchData()).catch(console.error);
+    const onGameCreated = async (data?: any) => {
+      console.log('📡 game-created event → refetching', data);
+      await fetchMatchData();
     };
 
-    channel.subscribe('game-created', refresh);
-    channel.subscribe('game-winner-selected', refresh);
-    channel.subscribe('game-finished', refresh);
-    channel.subscribe('new-game', refresh);
+    const onGameWinnerSelected = async (data?: any) => {
+      console.log('📡 game-winner-selected event → refetching', data);
+      await fetchMatchData();
+    };
 
+    const onGameFinished = async (data?: any) => {
+      console.log('📡 game-finished event → refetching', data);
+      await fetchMatchData();
+    };
+
+    const onNewGame = async (data?: any) => {
+      console.log('📡 new-game event → refetching', data);
+      await fetchMatchData();
+    };
+
+    // Subscribe
+    channel.subscribe('game-created', onGameCreated);
+    channel.subscribe('game-winner-selected', onGameWinnerSelected);
+    channel.subscribe('game-finished', onGameFinished);
+    channel.subscribe('new-game', onNewGame);
+
+    // Cleanup: unsubscribe specific events
     return () => {
-      channel.unsubscribe();
+      channel.unsubscribe('game-created', onGameCreated);
+      channel.unsubscribe('game-winner-selected', onGameWinnerSelected);
+      channel.unsubscribe('game-finished', onGameFinished);
+      channel.unsubscribe('new-game', onNewGame);
     };
   }, [matchId, fetchMatchData]);
 
@@ -50,16 +70,23 @@ export function useRealtimeMatchListener(
       `match-${matchId}-offers`
     );
 
-    const refresh = (data?: any) => {
-      console.log('📡 Auction event → refetching', data);
-      Promise.resolve(fetchMatchData()).catch(console.error);
+    const onNewOffer = async (data?: any) => {
+      console.log('📡 new-offer event → refetching', data);
+      await fetchMatchData();
     };
 
-    channel.subscribe('new-offer', refresh);
-    channel.subscribe('offer-accepted', refresh);
+    const onOfferAccepted = async (data?: any) => {
+      console.log('📡 offer-accepted event → refetching', data);
+      await fetchMatchData();
+    };
 
+    channel.subscribe('new-offer', onNewOffer);
+    channel.subscribe('offer-accepted', onOfferAccepted);
+
+    // Cleanup: unsubscribe specific events
     return () => {
-      channel.unsubscribe();
+      channel.unsubscribe('new-offer', onNewOffer);
+      channel.unsubscribe('offer-accepted', onOfferAccepted);
     };
   }, [matchId, latestGameId, fetchMatchData]);
 }
