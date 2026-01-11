@@ -9,7 +9,7 @@ import TeamCard from '@/app/components/TeamCard'
 import WinnerBanner from '@/app/components/WinnerBanner'
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
 import AuctionPhase from '@/app/components/AuctionPhase'
-import GameHistoryTimeline from '@/app/components/GameHistoryTimeline'
+import GameHistory from '@/app/components/GameHistory'
 import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
 
 type Player = {
@@ -73,33 +73,20 @@ export default function MatchPage() {
 
   /* ---------------- Realtime Listener ---------------- */
   const latestGameId =
-    data?.latestGame?.id ??
-    (data?.games?.length ? data.games[data.games.length - 1].id : null)
+    data?.latestGame?.id ?? (data?.games?.length ? data.games[data.games.length - 1].id : null)
 
   useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData })
 
   /* ---------------- Guards ---------------- */
-  if (user === undefined)
-    return <div className="p-6 text-center text-gray-300">Loading user...</div>
-
-  if (!user)
-    return <div className="p-6 text-center text-gray-300">Redirecting...</div>
-
-  if (loading)
-    return <div className="p-6 text-center text-gray-300">Loading match...</div>
-
-  if (error)
-    return <div className="p-6 text-center text-red-500">{error}</div>
-
-  if (!data)
-    return <div className="p-6 text-center text-gray-300">Match not found</div>
+  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user...</div>
+  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>
+  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>
+  if (error) return <div className="p-6 text-center text-red-500">{error}</div>
+  if (!data) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
   const { match, players = [], currentUserId, games = [], offers = [] } = data
-
-  const latestGame =
-    data.latestGame ?? (games.length ? games[games.length - 1] : null)
-
+  const latestGame = data.latestGame ?? (games.length ? games[games.length - 1] : null)
   const gamesPlayed = games.length
 
   const team1 = latestGame?.team_1_members ?? []
@@ -129,8 +116,7 @@ export default function MatchPage() {
       {match?.winner_id && (
         <WinnerBanner
           winnerName={
-            players.find((p) => p.id === match.winner_id)?.username ??
-            `Player#${match.winner_id}`
+            players.find((p) => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`
           }
         />
       )}
@@ -166,10 +152,8 @@ export default function MatchPage() {
             .filter((o: ApiOffer) => o.game_id === latestGame.id)
             .map((o: ApiOffer): AuctionOffer => ({
               id: o.id,
-              from_player_id:
-                players.find((p) => p.username === o.fromUsername)?.id ?? 0,
-              target_player_id:
-                players.find((p) => p.username === o.targetUsername)?.id ?? 0,
+              from_player_id: players.find((p) => p.username === o.fromUsername)?.id ?? 0,
+              target_player_id: players.find((p) => p.username === o.targetUsername)?.id ?? 0,
               offer_amount: o.offerAmount,
               status: o.status
             }))}
@@ -178,43 +162,41 @@ export default function MatchPage() {
       )}
 
       {/* ---------------- Game History ---------------- */}
-<section className="mt-12">
-  <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
+      <section className="mt-12">
+        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
-  <GameHistory
-    games={games
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
-      )
-      .map((g: any, index: number) => ({
-        gameId: g.id,
-        gameNumber: index + 1,
-        createdAt: g.created_at,
-        teamAMembers: g.team_a_members.map(getPlayer).map(p => p.username),
-        team1Members: g.team_1_members.map(getPlayer).map(p => p.username),
-        winningTeam: g.winning_team,
-        offers: offers
-          .filter((o: ApiOffer) => o.game_id === g.id)
-          .map((o: ApiOffer) => ({
-            id: o.id,
-            from_username: o.fromUsername,
-            target_username: o.targetUsername,
-            offer_amount: o.offerAmount,
-            status: o.status
-          })),
-        playerStats: g.player_stats?.map((s: any) => ({
-          id: s.id,
-          username: getPlayer(s.player_id).username,
-          goldChange: s.gold_change,
-          reason: s.reason,
-          teamId: s.team_id === 'team_1' ? 'team_1' : 'team_a'
-        })) ?? []
-      }))}
-  />
-</section>
+        <GameHistory
+          games={games
+            .slice()
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .map((g: any, index: number) => ({
+              gameId: g.id,
+              gameNumber: index + 1,
+              createdAt: g.created_at,
+              teamAMembers: g.team_a_members.map(getPlayer).map(p => p.username),
+              team1Members: g.team_1_members.map(getPlayer).map(p => p.username),
+              winningTeam: g.winning_team,
+              offers: offers
+                .filter((o: ApiOffer) => o.game_id === g.id)
+                .map((o: ApiOffer) => ({
+                  id: o.id,
+                  fromUsername: o.fromUsername,
+                  targetUsername: o.targetUsername,
+                  offerAmount: o.offerAmount,
+                  status: o.status
+                })),
+              playerStats: g.player_stats?.map((s: any) => ({
+                id: s.id,
+                username: getPlayer(s.player_id).username,
+                goldChange: s.gold_change,
+                reason: s.reason,
+                teamId: s.team_id === 'team_1' ? 'team_1' : 'team_a'
+              })) ?? [],
+              highlight: index === 0,
+              defaultExpanded: index === 0
+            }))}
+        />
+      </section>
     </>
   )
 }
