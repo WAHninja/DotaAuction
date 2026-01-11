@@ -142,7 +142,7 @@ export default function MatchPage() {
         <GameHistoryTimeline
           games={games
             .slice()
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .map((g: any) => ({
               gameId: g.id,
               createdAt: g.created_at,
@@ -163,7 +163,7 @@ export default function MatchPage() {
                 goldChange: s.gold_change,
                 reason: s.reason
               })) ?? [],
-              highlight: g.id === latestGame.id // auto-expand / highlight latest game
+              highlight: index === 0
             }))}
         />
       </section>
