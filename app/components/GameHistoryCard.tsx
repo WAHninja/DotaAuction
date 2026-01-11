@@ -6,6 +6,7 @@ import Image from 'next/image'
 type PlayerStat = {
   id: number
   username: string
+  playerId?: number
   goldChange: number
   reason: 'win_reward' | 'offer_gain' | 'loss_penalty'
   teamId: 'team_1' | 'team_a'
@@ -22,7 +23,8 @@ type Offer = {
 type GameHistoryCardProps = {
   game: {
     id: number
-    gameNumber?: number // ✅ optional logical number
+    gameNumber?: number
+    status: string
     createdAt: string
     teamAMembers: string[]
     team1Members: string[]
@@ -41,10 +43,10 @@ export default function GameHistoryCard({
 }: GameHistoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
+  const displayGameNumber = game.gameNumber ?? game.id
+
   // Find accepted offer if it exists
   const acceptedOffer = game.offers.find(o => o.status === 'accepted')
-
-  const displayGameNumber = game.gameNumber ?? game.id // ✅ use logical number
 
   return (
     <div
@@ -53,7 +55,7 @@ export default function GameHistoryCard({
     >
       <h3 className="text-xl font-semibold flex justify-between items-center">
         <span>
-          Game #{displayGameNumber} – {game.winningTeam ?? 'Pending'}
+          Game #{displayGameNumber} – {game.status}
         </span>
         <button className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</button>
       </h3>
@@ -85,32 +87,41 @@ export default function GameHistoryCard({
             <div className="mt-4">
               <h4 className="font-bold">Gold changes:</h4>
               <ul className="list-disc list-inside space-y-1">
-                {game.playerStats.map(stat => (
-                  <li key={stat.id}>
-                    <span className="font-medium">{stat.username}</span>:
-                    <span
-                      className={`ml-1 font-semibold ${
-                        stat.goldChange > 0
-                          ? 'text-green-400'
-                          : stat.goldChange < 0
-                          ? 'text-red-500'
-                          : 'text-gray-400'
-                      }`}
-                    >
-                      {stat.goldChange > 0 ? `+${stat.goldChange}` : stat.goldChange}
-                    </span>
-                    <Image
-                      src="/Gold_symbol.webp"
-                      alt="Gold"
-                      width={16}
-                      height={16}
-                      className="inline-block ml-1 align-middle"
-                    />
-                    <span className="text-sm text-gray-400 ml-2">
-                      ({stat.reason.replace('_', ' ')}, {stat.teamId})
-                    </span>
-                  </li>
-                ))}
+                {/* Win Rewards First */}
+                {game.playerStats
+                  .filter(stat => stat.reason === 'win_reward')
+                  .map(stat => (
+                    <li key={stat.id}>
+                      {stat.username || `Player#${stat.playerId}`}: 
+                      <span className="text-green-400 font-semibold ml-1">+{stat.goldChange}</span>
+                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
+                      <span className="text-sm text-gray-400 ml-2">(win reward)</span>
+                    </li>
+                  ))}
+
+                {/* Loss Penalties Next */}
+                {game.playerStats
+                  .filter(stat => stat.reason === 'loss_penalty')
+                  .map(stat => (
+                    <li key={stat.id}>
+                      {stat.username || `Player#${stat.playerId}`}: 
+                      <span className="text-red-500 font-semibold ml-1">{stat.goldChange}</span>
+                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
+                      <span className="text-sm text-gray-400 ml-2">(loss penalty)</span>
+                    </li>
+                  ))}
+
+                {/* Offer Gains (optional) */}
+                {game.playerStats
+                  .filter(stat => stat.reason === 'offer_gain')
+                  .map(stat => (
+                    <li key={stat.id}>
+                      {stat.username || `Player#${stat.playerId}`}: 
+                      <span className="text-blue-400 font-semibold ml-1">+{stat.goldChange}</span>
+                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
+                      <span className="text-sm text-gray-400 ml-2">(offer gain)</span>
+                    </li>
+                  ))}
               </ul>
             </div>
           )}
@@ -130,15 +141,7 @@ export default function GameHistoryCard({
                       height={16}
                       className="inline-block ml-1 align-middle"
                     />{' '}
-                    (<span
-                      className={`font-semibold ${
-                        offer.status === 'accepted'
-                          ? 'text-green-500'
-                          : offer.status === 'rejected'
-                          ? 'text-red-500'
-                          : 'text-gray-400'
-                      }`}
-                    >
+                    (<span className={`font-semibold ${offer.status === 'accepted' ? 'text-green-500' : offer.status === 'rejected' ? 'text-red-500' : 'text-gray-400'}`}>
                       {offer.status}
                     </span>)
                   </li>
