@@ -54,7 +54,6 @@ export default function MatchPage() {
     try {
       const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch match')
-
       const json = await res.json()
       console.log('📥 Match data refreshed:', json)
       setData(json)
@@ -74,7 +73,6 @@ export default function MatchPage() {
   /* ---------------- Realtime Listener ---------------- */
   const latestGameId =
     data?.latestGame?.id ?? (data?.games?.length ? data.games[data.games.length - 1].id : null)
-
   useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData })
 
   /* ---------------- Guards ---------------- */
@@ -94,7 +92,7 @@ export default function MatchPage() {
 
   /* ---------------- Safe Player Lookup ---------------- */
   const getPlayer = (id: number): Player =>
-    players.find((p: Player) => p.id === id) || { id, username: `Player#${id}` }
+    players.find(p => p.id === id) || { id, username: `Player#${id}` }
 
   /* ---------------- Status Flags ---------------- */
   const gameStatus = latestGame?.status ?? null
@@ -115,9 +113,7 @@ export default function MatchPage() {
 
       {match?.winner_id && (
         <WinnerBanner
-          winnerName={
-            players.find((p) => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`
-          }
+          winnerName={players.find(p => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`}
         />
       )}
 
@@ -141,7 +137,6 @@ export default function MatchPage() {
 
       {/* ---------------- Phase Controls ---------------- */}
       {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id} />}
-
       {isAuction && latestGame && (
         <AuctionPhase
           latestGame={latestGame}
@@ -149,11 +144,11 @@ export default function MatchPage() {
           currentUserId={currentUserId}
           gamesPlayed={gamesPlayed}
           offers={offers
-            .filter((o: ApiOffer) => o.game_id === latestGame.id)
-            .map((o: ApiOffer): AuctionOffer => ({
+            .filter(o => o.game_id === latestGame.id)
+            .map(o => ({
               id: o.id,
-              from_player_id: players.find((p) => p.username === o.fromUsername)?.id ?? 0,
-              target_player_id: players.find((p) => p.username === o.targetUsername)?.id ?? 0,
+              from_player_id: players.find(p => p.username === o.fromUsername)?.id ?? 0,
+              target_player_id: players.find(p => p.username === o.targetUsername)?.id ?? 0,
               offer_amount: o.offerAmount,
               status: o.status
             }))}
@@ -177,8 +172,8 @@ export default function MatchPage() {
               team1Members: g.team_1_members.map(getPlayer).map(p => p.username),
               winningTeam: g.winning_team,
               offers: offers
-                .filter((o: ApiOffer) => o.game_id === g.id)
-                .map((o: ApiOffer) => ({
+                .filter(o => o.game_id === g.id)
+                .map(o => ({
                   id: o.id,
                   fromUsername: o.fromUsername,
                   targetUsername: o.targetUsername,
