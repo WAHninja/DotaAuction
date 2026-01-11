@@ -72,11 +72,13 @@ export default function MatchPage() {
   }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  useRealtimeMatchListener(
-    matchId,
-    data?.latestGame?.id ?? data?.games?.[data.games.length - 1]?.id ?? null,
-    { fetchMatchData, setData }
-  )
+  const latestGameId =
+    data?.latestGame?.id ??
+    (data?.games?.length ? data.games[data.games.length - 1].id : null)
+
+  useRealtimeMatchListener(matchId, latestGameId, {
+    fetchMatchData
+  })
 
   /* ---------------- Guards ---------------- */
   if (user === undefined)
@@ -95,19 +97,33 @@ export default function MatchPage() {
     return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
-  const { match, players, currentUserId, games } = data
-  const latestGame = games?.[games.length - 1] ?? null
+  const {
+    match,
+    players = [],
+    currentUserId,
+    games = [],
+    offers = []
+  } = data
+
+  const latestGame =
+    data.latestGame ?? (games.length ? games[games.length - 1] : null)
+
+  const gamesPlayed = games.length
 
   const team1 = latestGame?.team_1_members ?? []
   const teamA = latestGame?.team_a_members ?? []
 
   /* ---------------- Safe Player Lookup ---------------- */
-  const getPlayer = (id: number) =>
-    players.find((p: Player) => p.id === id) || { id, username: `Player#${id}` }
+  const getPlayer = (id: number): Player =>
+    players.find((p: Player) => p.id === id) || {
+      id,
+      username: `Player#${id}`
+    }
 
   /* ---------------- Status Flags ---------------- */
-  const isAuction = latestGame?.status === 'auction pending'
-  const isInProgress = latestGame?.status === 'in progress'
+  const gameStatus = latestGame?.status ?? null
+  const isInProgress = gameStatus === 'in progress'
+  const isAuction = gameStatus === 'auction pending'
 
   /* ---------------- Render ---------------- */
   return (
@@ -118,7 +134,8 @@ export default function MatchPage() {
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
           matchWinnerUsername={
-            players.find((p) => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`
+            players.find((p) => p.id === match.winner_id)?.username ??
+            `Player#${match.winner_id}`
           }
         />
       )}
@@ -126,7 +143,8 @@ export default function MatchPage() {
       {match?.winner_id && (
         <WinnerBanner
           winnerName={
-            players.find((p) => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`
+            players.find((p) => p.id === match.winner_id)?.username ??
+            `Player#${match.winner_id}`
           }
         />
       )}
@@ -150,23 +168,29 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && <SelectGameWinnerForm gameId={latestGame.id} />}
+      {isInProgress && latestGame && (
+        <SelectGameWinnerForm gameId={latestGame.id} />
+      )}
 
-      {isAuction && (
+      {isAuction && latestGame && (
         <AuctionPhase
           latestGame={latestGame}
           players={players}
           currentUserId={currentUserId}
-          gamesPlayed={games.length}
-          offers={(data.offers ?? [])
+          gamesPlayed={gamesPlayed}
+          offers={offers
             .filter((o: ApiOffer) => o.game_id === latestGame.id)
-            .map((o: ApiOffer): AuctionOffer => ({
-              id: o.id,
-              from_player_id: players.find((p) => p.username === o.fromUsername)?.id ?? 0,
-              target_player_id: players.find((p) => p.username === o.targetUsername)?.id ?? 0,
-              offer_amount: o.offerAmount,
-              status: o.status
-            }))}
+            .map(
+              (o: ApiOffer): AuctionOffer => ({
+                id: o.id,
+                from_player_id:
+                  players.find((p) => p.username === o.fromUsername)?.id ?? 0,
+                target_player_id:
+                  players.find((p) => p.username === o.targetUsername)?.id ?? 0,
+                offer_amount: o.offerAmount,
+                status: o.status
+              })
+            )}
           onRefreshMatch={fetchMatchData}
         />
       )}
@@ -178,30 +202,39 @@ export default function MatchPage() {
         <GameHistoryTimeline
           games={games
             .slice()
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .sort(
+              (a, b) =>
+                new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+            )
             .map((g: any, index: number) => ({
               gameId: g.id,
               createdAt: g.created_at,
-              teamAMembers: g.team_a_members.map(getPlayer).map((p: any) => p.username),
-              team1Members: g.team_1_members.map(getPlayer).map((p: any) => p.username),
+              teamAMembers: g.team_a_members
+                .map(getPlayer)
+                .map((p: Player) => p.username),
+              team1Members: g.team_1_members
+                .map(getPlayer)
+                .map((p: Player) => p.username),
               winningTeam: g.winning_team,
-              offers: (data.offers ?? [])
-                .filter((o: any) => o.game_id === g.id)
-                .map((o: any) => ({
+              offers: offers
+                .filter((o: ApiOffer) => o.game_id === g.id)
+                .map((o: ApiOffer) => ({
                   id: o.id,
                   from_username: o.fromUsername,
                   target_username: o.targetUsername,
                   offer_amount: o.offerAmount,
                   status: o.status
                 })),
-              playerStats: g.player_stats?.map((s: any) => ({
-                id: s.id,
-                playerId: s.player_id,
-                username: getPlayer(s.player_id).username,
-                goldChange: s.gold_change,
-                reason: s.reason
-              })) ?? [],
-              highlight: index === 0, // ✅ latest game at top is highlighted
+              playerStats:
+                g.player_stats?.map((s: any) => ({
+                  id: s.id,
+                  playerId: s.player_id,
+                  username: getPlayer(s.player_id).username,
+                  goldChange: s.gold_change,
+                  reason: s.reason
+                })) ?? [],
+              highlight: index === 0,
               defaultExpanded: index === 0
             }))}
         />
