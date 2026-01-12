@@ -21,11 +21,13 @@ export default function CreateMatchForm() {
       try {
         const res = await fetch('/api/players');
         const data = await res.json();
+
         const filtered = Array.isArray(data.players)
           ? data.players.filter((p: Player) =>
               !p.username.toLowerCase().startsWith('ztest')
             )
           : [];
+
         setPlayers(filtered);
       } catch (err) {
         console.error('Failed to load players:', err);
@@ -53,15 +55,29 @@ export default function CreateMatchForm() {
     setIsSubmitting(true);
 
     try {
+      /**
+       * 🔑 Reused endpoint
+       * POST /api/matches
+       * - Reuses existing ongoing match
+       * - OR creates a new one
+       */
       const res = await fetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerIds: selectedPlayerIds }),
+        body: JSON.stringify({
+          playerIds: selectedPlayerIds,
+        }),
       });
 
       const data = await res.json();
+
       if (!res.ok) {
-        setError(data.error || 'Failed to create match.');
+        setError(data?.error || 'Failed to start match.');
+        return;
+      }
+
+      if (!data?.id) {
+        setError('Invalid response from server.');
         return;
       }
 
@@ -133,7 +149,7 @@ export default function CreateMatchForm() {
           }`}
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting ? 'Creating Match…' : 'Create Match'}
+          {isSubmitting ? 'Starting Match…' : 'Create Match'}
         </button>
       </div>
     </form>
