@@ -1,80 +1,108 @@
-// app/api/match/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
 
 export async function GET(req: NextRequest) {
   try {
+    /* ---------------- Session ---------------- */
     const session = await getSession()
-    const currentUserId = session?.userId || null
+    const currentUserId = session?.userId ?? null
 
+    /* ---------------- Params ---------------- */
     const url = new URL(req.url)
     const id = url.pathname.split('/').pop()
-    const matchId = parseInt(id || '', 10)
+    const matchId = Number(id)
 
-    if (isNaN(matchId)) {
-      return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 })
+    if (!Number.isInteger(matchId)) {
+      return NextResponse.json(
+        { error: 'Invalid match ID' },
+        { status: 400 }
+      )
     }
 
     /* ---------------- Match ---------------- */
     const matchRes = await db.query(
-      `SELECT * FROM Matches WHERE id = $1`,
+      `SELECT * FROM matches WHERE id = $1`,
       [matchId]
     )
 
     if (matchRes.rowCount === 0) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Match not found' },
+        { status: 404 }
+      )
     }
 
     const match = matchRes.rows[0]
 
     /* ---------------- Players ---------------- */
     const playersRes = await db.query(
-      `SELECT u.id, u.username, mp.gold
-       FROM match_players mp
-       JOIN users u ON mp.user_id = u.id
-       WHERE mp.match_id = $1`,
+      `
+      SELECT
+        u.id,
+        u.username,
+        mp.gold
+      FROM match_players mp
+      JOIN users u ON u.id = mp.user_id
+      WHERE mp.match_id = $1
+      ORDER BY u.username ASC
+      `,
       [matchId]
     )
+
     const players = playersRes.rows
 
-    /* ---------------- Games ---------------- */
+    /* ---------------- Games + Player Stats ---------------- */
     const gamesRes = await db.query(
-      `SELECT * FROM Games WHERE match_id = $1 ORDER BY id ASC`,
+      `
+      SELECT
+        g.*,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', gps.id,
+              'player_id', gps.player_id,
+              'team_id', gps.team_id,
+              'gold_change', gps.gold_change,
+              'reason', gps.reason,
+              'created_at', gps.created_at
+            )
+          ) FILTER (WHERE gps.id IS NOT NULL),
+          '[]'
+        ) AS playerStats
+      FROM games g
+      LEFT JOIN game_player_stats gps
+        ON gps.game_id = g.id
+      WHERE g.match_id = $1
+      GROUP BY g.id
+      ORDER BY g.id ASC
+      `,
       [matchId]
     )
+
     const games = gamesRes.rows
+    const latestGame = games.at(-1) ?? null
 
-    /* ---------------- Player Stats ---------------- */
-    const gamesWithStats = await Promise.all(
-      games.map(async (game) => {
-        const statsRes = await db.query(
-          `SELECT id, player_id, gold_change, reason, team_id
-           FROM GamePlayerStats
-           WHERE game_id = $1`,
-          [game.id]
-        )
-
-        return {
-          ...game,
-          playerStats: statsRes.rows, // safe even if empty
-        }
-      })
-    )
-
-    const latestGame = gamesWithStats.at(-1) || null
-
-    /* ---------------- Offers (ONLY during auction) ---------------- */
+    /* ---------------- Offers (auction only) ---------------- */
     let offers: any[] = []
 
     if (latestGame?.status === 'auction pending') {
       const offersRes = await db.query(
-        `SELECT id, from_player_id, target_player_id, offer_amount, status
-         FROM Offers
-         WHERE game_id = $1
-         ORDER BY created_at ASC`,
+        `
+        SELECT
+          id,
+          from_player_id,
+          target_player_id,
+          offer_amount,
+          status,
+          created_at
+        FROM offers
+        WHERE game_id = $1
+        ORDER BY created_at ASC
+        `,
         [latestGame.id]
       )
+
       offers = offersRes.rows
     }
 
@@ -82,13 +110,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       match,
       players,
-      games: gamesWithStats, // now each game includes playerStats
+      games,
       latestGame,
       offers,
       currentUserId,
     })
   } catch (error) {
     console.error('API error in match/[id]:', error)
+
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
