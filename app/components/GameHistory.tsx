@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 
 type PlayerStat = {
@@ -8,7 +8,7 @@ type PlayerStat = {
   username: string
   goldChange: number
   reason: 'win_reward' | 'offer_gain' | 'loss_penalty'
-  teamId: 'team_1' | 'team_a'
+  teamId: 'team1' | 'teamA' | string
 }
 
 type Offer = {
@@ -17,6 +17,7 @@ type Offer = {
   targetUsername: string
   offerAmount: number
   status: 'pending' | 'accepted' | 'rejected'
+  gameId?: number
 }
 
 type Game = {
@@ -30,20 +31,42 @@ type Game = {
   playerStats: PlayerStat[]
   highlight?: boolean
   defaultExpanded?: boolean
+  status?: string
 }
 
 type GameHistoryProps = {
   games: Game[]
+  liveOffers?: Offer[] // live updates from parent
+  livePlayerStats?: PlayerStat[] // live updates from parent
 }
 
-export default function GameHistory({ games }: GameHistoryProps) {
+export default function GameHistory({ games, liveOffers = [], livePlayerStats = [] }: GameHistoryProps) {
   const [expandedGameId, setExpandedGameId] = useState<number | null>(
     games.find(g => g.defaultExpanded)?.gameId ?? null
   )
+  const [mergedGames, setMergedGames] = useState<Game[]>(games)
+
+  // Merge live updates into the latest game
+  useEffect(() => {
+    if (!games.length) return
+    const latestGame = games[games.length - 1]
+    if (!latestGame) return
+
+    const updatedGames = games.map(game => {
+      if (game.gameId !== latestGame.gameId) return game
+      return {
+        ...game,
+        offers: liveOffers.length ? liveOffers : game.offers,
+        playerStats: livePlayerStats.length ? livePlayerStats : game.playerStats,
+      }
+    })
+
+    setMergedGames(updatedGames)
+  }, [liveOffers, livePlayerStats, games])
 
   return (
     <div className="space-y-4">
-      {games.map(game => {
+      {mergedGames.map(game => {
         const isExpanded = expandedGameId === game.gameId
         const acceptedOffer = game.offers.find(o => o.status === 'accepted')
 
@@ -53,9 +76,7 @@ export default function GameHistory({ games }: GameHistoryProps) {
             className={`p-4 border rounded-lg shadow cursor-pointer ${
               game.highlight ? 'border-yellow-400' : 'border-gray-300'
             }`}
-            onClick={() =>
-              setExpandedGameId(isExpanded ? null : game.gameId)
-            }
+            onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}
           >
             <h3 className="text-xl font-semibold flex justify-between items-center">
               <span>
@@ -83,12 +104,12 @@ export default function GameHistory({ games }: GameHistoryProps) {
               <>
                 <div className="mt-2">
                   <strong>Winner:</strong> {game.winningTeam ?? 'N/A'}<br />
-                  <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
-                  <strong>Team 1:</strong> {game.team1Members.join(', ')}
+                  <strong>Team A:</strong> {game.teamAMembers.join(', ') || 'N/A'}<br />
+                  <strong>Team 1:</strong> {game.team1Members.join(', ') || 'N/A'}
                 </div>
 
                 {/* Player Stats / Gold Changes */}
-                {game.playerStats.length > 0 && (
+                {game.playerStats && game.playerStats.length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-bold">Gold changes:</h4>
                     <ul className="list-disc list-inside space-y-1">
@@ -114,7 +135,7 @@ export default function GameHistory({ games }: GameHistoryProps) {
                             className="inline-block ml-1 align-middle"
                           />
                           <span className="text-sm text-gray-400 ml-2">
-                            ({stat.reason.replace('_', ' ')}, {stat.teamId})
+                            ({stat.reason?.replace('_', ' ') ?? 'N/A'}, {stat.teamId ?? 'N/A'})
                           </span>
                         </li>
                       ))}
@@ -123,7 +144,7 @@ export default function GameHistory({ games }: GameHistoryProps) {
                 )}
 
                 {/* Offers */}
-                {game.offers.length > 0 && (
+                {game.offers && game.offers.length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-bold">Offers:</h4>
                     <ul className="list-disc list-inside">
