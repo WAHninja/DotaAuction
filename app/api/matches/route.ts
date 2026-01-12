@@ -7,48 +7,87 @@ export async function POST(req: NextRequest) {
     const { playerIds } = await req.json();
 
     if (!Array.isArray(playerIds) || playerIds.length < 4) {
-      console.error('Invalid playerIds:', playerIds);
-      return new Response(JSON.stringify({ error: 'At least 4 players are required' }), {
-        status: 400,
-      });
+      return new Response(
+        JSON.stringify({ error: 'At least 4 players are required' }),
+        { status: 400 }
+      );
     }
 
     const session = await getSession();
-    console.log('Session:', session);
-
     if (!session) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
+
+    // 🔑 Canonical sort for reliable comparison
+    const sortedPlayerIds = [...new Set(playerIds)].sort((a, b) => a - b);
 
     const client = await db.connect();
 
     try {
       await client.query('BEGIN');
 
-      const matchResult = await client.query(
-        'INSERT INTO matches (created_at) VALUES (NOW()) RETURNING id'
+      /**
+       * 1️⃣ Check for existing ongoing match with the same players
+       */
+      const existingMatchResult = await client.query(
+        `
+        SELECT m.id
+        FROM matches m
+        JOIN match_players mp ON mp.match_id = m.id
+        WHERE m.status = 'in progress'
+        GROUP BY m.id
+        HAVING
+          array_agg(mp.user_id ORDER BY mp.user_id) = $1::int[]
+        LIMIT 1
+        `,
+        [sortedPlayerIds]
       );
-      const matchId = matchResult.rows[0].id;
-      console.log('Created match ID:', matchId);
 
-      for (const playerId of playerIds) {
-        await client.query(
-          'INSERT INTO match_players (match_id, user_id, gold) VALUES ($1, $2, $3)',
-          [matchId, playerId, 0]
+      if (existingMatchResult.rows.length > 0) {
+        const existingMatchId = existingMatchResult.rows[0].id;
+
+        await client.query('COMMIT');
+
+        return new Response(
+          JSON.stringify({ id: existingMatchId, reused: true }),
+          { status: 200 }
         );
       }
 
-      const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+      /**
+       * 2️⃣ Create new match (your existing logic)
+       */
+      const matchResult = await client.query(
+        `INSERT INTO matches (created_at, status)
+         VALUES (NOW(), 'ongoing')
+         RETURNING id`
+      );
+
+      const matchId = matchResult.rows[0].id;
+
+      for (const playerId of sortedPlayerIds) {
+        await client.query(
+          `INSERT INTO match_players (match_id, user_id, gold)
+           VALUES ($1, $2, 0)`,
+          [matchId, playerId]
+        );
+      }
+
+      // Shuffle teams
+      const shuffled = [...sortedPlayerIds].sort(() => Math.random() - 0.5);
       const mid = Math.ceil(shuffled.length / 2);
       const team1 = shuffled.slice(0, mid);
       const teamA = shuffled.slice(mid);
-      console.log('Team 1:', team1, 'Team A:', teamA);
 
       const gameResult = await client.query(
-        `INSERT INTO games (match_id, team_1_members, team_a_members, status)
-         VALUES ($1, $2::int[], $3::int[], 'in progress') RETURNING id`,
+        `
+        INSERT INTO games (match_id, team_1_members, team_a_members, status)
+        VALUES ($1, $2::int[], $3::int[], 'in progress')
+        RETURNING id
+        `,
         [matchId, team1, teamA]
       );
+
       const gameId = gameResult.rows[0].id;
 
       await client.query(
@@ -58,11 +97,17 @@ export async function POST(req: NextRequest) {
 
       await client.query('COMMIT');
 
-      return new Response(JSON.stringify({ id: matchId }), { status: 200 });
+      return new Response(
+        JSON.stringify({ id: matchId, reused: false }),
+        { status: 200 }
+      );
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('Transaction failed:', err);
-      return new Response(JSON.stringify({ error: 'Failed to create match' }), { status: 500 });
+      return new Response(
+        JSON.stringify({ error: 'Failed to create or reuse match' }),
+        { status: 500 }
+      );
     } finally {
       client.release();
     }
