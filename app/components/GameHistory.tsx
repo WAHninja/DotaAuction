@@ -36,15 +36,11 @@ type Game = {
 
 type GameHistoryProps = {
   games: Game[]
-  liveOffers?: Offer[]
-  livePlayerStats?: PlayerStat[]
+  liveOffers?: Offer[] // live updates from parent
+  livePlayerStats?: PlayerStat[] // live updates from parent
 }
 
-export default function GameHistory({
-  games,
-  liveOffers = [],
-  livePlayerStats = []
-}: GameHistoryProps) {
+export default function GameHistory({ games, liveOffers = [], livePlayerStats = [] }: GameHistoryProps) {
   const [expandedGameId, setExpandedGameId] = useState<number | null>(
     games.find(g => g.defaultExpanded)?.gameId ?? null
   )
@@ -61,31 +57,18 @@ export default function GameHistory({
       return {
         ...game,
         offers: liveOffers.length ? liveOffers : game.offers,
-        playerStats: livePlayerStats.length ? livePlayerStats : game.playerStats
+        playerStats: livePlayerStats.length ? livePlayerStats : game.playerStats,
       }
     })
 
     setMergedGames(updatedGames)
   }, [liveOffers, livePlayerStats, games])
 
-  // Helper: Get player stats by team
-  const getTeamStats = (game: Game, team: 'team1' | 'teamA') =>
-    game.playerStats.filter(stat => stat.teamId === team)
-
-  // Helper: Calculate max gold change for scaling bars
-  const getMaxGold = (game: Game) => {
-    const allGolds = game.playerStats.map(s => Math.abs(s.goldChange))
-    return allGolds.length ? Math.max(...allGolds) : 1
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {mergedGames.map(game => {
         const isExpanded = expandedGameId === game.gameId
         const acceptedOffer = game.offers.find(o => o.status === 'accepted')
-        const maxGold = getMaxGold(game)
-        const team1Stats = getTeamStats(game, 'team1')
-        const teamAStats = getTeamStats(game, 'teamA')
 
         return (
           <div
@@ -95,7 +78,6 @@ export default function GameHistory({
             }`}
             onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}
           >
-            {/* ---------------- Header ---------------- */}
             <h3 className="text-xl font-semibold flex justify-between items-center">
               <span>
                 Game #{game.gameNumber} – {game.winningTeam ?? 'Pending'}
@@ -103,42 +85,7 @@ export default function GameHistory({
               <button className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</button>
             </h3>
 
-            {/* ---------------- Gold Timeline ---------------- */}
-            {!isExpanded && game.playerStats.length > 0 && (
-              <div className="mt-2 space-y-1">
-                <div className="text-sm font-medium">Team 1 Gold:</div>
-                <div className="flex h-4 gap-1">
-                  {team1Stats.map(stat => (
-                    <div
-                      key={stat.id}
-                      className="h-full"
-                      style={{
-                        width: `${(Math.abs(stat.goldChange) / maxGold) * 100}%`,
-                        backgroundColor: stat.goldChange > 0 ? '#22c55e' : '#ef4444'
-                      }}
-                      title={`${stat.username}: ${stat.goldChange}`}
-                    />
-                  ))}
-                </div>
-
-                <div className="text-sm font-medium mt-1">Team A Gold:</div>
-                <div className="flex h-4 gap-1">
-                  {teamAStats.map(stat => (
-                    <div
-                      key={stat.id}
-                      className="h-full"
-                      style={{
-                        width: `${(Math.abs(stat.goldChange) / maxGold) * 100}%`,
-                        backgroundColor: stat.goldChange > 0 ? '#22c55e' : '#ef4444'
-                      }}
-                      title={`${stat.username}: ${stat.goldChange}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ---------------- Accepted Offer Summary ---------------- */}
+            {/* Show accepted offer summary when not expanded */}
             {!isExpanded && acceptedOffer && (
               <p className="mt-2 text-sm font-medium">
                 {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
@@ -153,7 +100,6 @@ export default function GameHistory({
               </p>
             )}
 
-            {/* ---------------- Expanded Details ---------------- */}
             {isExpanded && (
               <>
                 <div className="mt-2">
