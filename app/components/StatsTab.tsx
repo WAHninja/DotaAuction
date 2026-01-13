@@ -17,8 +17,12 @@ type PlayerStats = {
 
   offersMade: number
   offersAccepted: number
+}
 
-  averageOfferValue: number
+type EnrichedPlayerStats = PlayerStats & {
+  gamesWinRate: number
+  offersAcceptedRate: number
+  tradedRate: number
 }
 
 type TeamCombo = {
@@ -31,7 +35,7 @@ type SortKey =
   | 'matchesPlayed'
   | 'gamesWinRate'
   | 'offersAcceptedRate'
-  | 'timesSoldRate'
+  | 'tradedRate'
 
 /* =======================
    Helpers
@@ -41,8 +45,8 @@ function pct(success: number, total: number) {
   return total > 0 ? +(success / total * 100).toFixed(1) : 0
 }
 
-function format(success: number, total: number) {
-  return `${success} / ${total} (${pct(success, total)}%)`
+function sortArrow(dir: 'asc' | 'desc') {
+  return dir === 'asc' ? '▲' : '▼'
 }
 
 /* =======================
@@ -63,17 +67,22 @@ export default function StatsTab() {
   ======================= */
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/stats')
+        if (!res.ok) throw new Error(`Network error: ${res.status}`)
+        const data = await res.json()
         setPlayers(data.players ?? [])
         setCombos(data.topWinningCombos ?? [])
-      })
-      .catch(err => {
+      } catch (err) {
         console.error(err)
         setError('Failed to load statistics')
-      })
-      .finally(() => setLoading(false))
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
   }, [])
 
   /* =======================
@@ -81,28 +90,25 @@ export default function StatsTab() {
   ======================= */
 
   const filteredPlayers = useMemo(
-    () =>
-      players.filter(
-        p => !p.username.toLowerCase().startsWith('ztest')
-      ),
+    () => players.filter(p => !p.username.toLowerCase().startsWith('ztest')),
     [players]
   )
 
-  const enrichedPlayers = useMemo(() => {
+  const enrichedPlayers: EnrichedPlayerStats[] = useMemo(() => {
     return filteredPlayers.map(p => ({
       ...p,
       gamesWinRate: pct(p.gamesWon, p.gamesPlayed),
       offersAcceptedRate: pct(p.offersAccepted, p.offersMade),
-      timesSoldRate: pct(p.timesSold, p.timesOffered),
+      tradedRate: pct(p.timesSold, p.timesOffered),
     }))
   }, [filteredPlayers])
 
   const sortedPlayers = useMemo(() => {
-    return [...enrichedPlayers].sort((a: any, b: any) => {
-      const aVal = a[sortKey]
-      const bVal = b[sortKey]
+    return [...enrichedPlayers].sort((a, b) => {
+      const aVal = (a as any)[sortKey] ?? 0
+      const bVal = (b as any)[sortKey] ?? 0
 
-      if (typeof aVal === 'string') {
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
         return sortDir === 'asc'
           ? aVal.localeCompare(bVal)
           : bVal.localeCompare(aVal)
@@ -112,10 +118,20 @@ export default function StatsTab() {
     })
   }, [enrichedPlayers, sortKey, sortDir])
 
-  const topCombos = useMemo(
-    () => combos.slice(0, 5),
-    [combos]
-  )
+  const topCombos = useMemo(() => combos.slice(0, 5), [combos])
+
+  /* =======================
+     Sorting Handler
+  ======================= */
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
 
   /* =======================
      UI States
@@ -152,12 +168,41 @@ export default function StatsTab() {
         <table className="min-w-full text-sm text-white">
           <thead className="bg-slate-800/80">
             <tr>
-              <Header label="Player" />
-              <Header label="Matches" />
-              <Header label="Game Win Rate" />
-              <Header label="Offers Accepted" />
-              <Header label="Sale Success" />
-              <Header label="Avg Offer (£)" />
+              <SortableHeader
+                label="Player"
+                sortKey="username"
+                currentSortKey={sortKey}
+                sortDir={sortDir}
+                onClick={handleSort}
+              />
+              <SortableHeader
+                label="Matches"
+                sortKey="matchesPlayed"
+                currentSortKey={sortKey}
+                sortDir={sortDir}
+                onClick={handleSort}
+              />
+              <SortableHeader
+                label="Game Win Rate (%)"
+                sortKey="gamesWinRate"
+                currentSortKey={sortKey}
+                sortDir={sortDir}
+                onClick={handleSort}
+              />
+              <SortableHeader
+                label="Offers Accepted (%)"
+                sortKey="offersAcceptedRate"
+                currentSortKey={sortKey}
+                sortDir={sortDir}
+                onClick={handleSort}
+              />
+              <SortableHeader
+                label="Traded Rate (%)"
+                sortKey="tradedRate"
+                currentSortKey={sortKey}
+                sortDir={sortDir}
+                onClick={handleSort}
+              />
             </tr>
           </thead>
 
@@ -167,29 +212,11 @@ export default function StatsTab() {
                 key={p.username}
                 className="border-b border-slate-600 hover:bg-slate-700/40"
               >
-                <td className="px-3 py-2 font-semibold">
-                  {p.username}
-                </td>
-
-                <td className="px-3 py-2 text-center">
-                  {p.matchesPlayed}
-                </td>
-
-                <td className="px-3 py-2 text-center">
-                  {format(p.gamesWon, p.gamesPlayed)}
-                </td>
-
-                <td className="px-3 py-2 text-center">
-                  {format(p.offersAccepted, p.offersMade)}
-                </td>
-
-                <td className="px-3 py-2 text-center">
-                  {format(p.timesSold, p.timesOffered)}
-                </td>
-
-                <td className="px-3 py-2 text-center text-green-300">
-                  {p.averageOfferValue.toFixed(1)}
-                </td>
+                <td className="px-3 py-2 font-semibold">{p.username}</td>
+                <td className="px-3 py-2 text-center">{p.matchesPlayed}</td>
+                <td className="px-3 py-2 text-center">{p.gamesWinRate}%</td>
+                <td className="px-3 py-2 text-center">{p.offersAcceptedRate}%</td>
+                <td className="px-3 py-2 text-center">{p.tradedRate}%</td>
               </tr>
             ))}
           </tbody>
@@ -209,21 +236,14 @@ export default function StatsTab() {
         ) : (
           <ul className="space-y-3">
             {topCombos.map((c, i) => {
-              const max = topCombos[0].wins
-              const pct = (c.wins / max) * 100
+              const maxWins = topCombos[0].wins
+              const widthPct = maxWins > 0 ? (c.wins / maxWins) * 100 : 0
 
               return (
-                <li
-                  key={c.combo}
-                  className="bg-slate-800/80 p-3 rounded"
-                >
+                <li key={c.combo} className="bg-slate-800/80 p-3 rounded">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-yellow-400 font-bold">
-                      {i + 1}.
-                    </span>
-                    <span className="truncate font-semibold">
-                      {c.combo}
-                    </span>
+                    <span className="text-yellow-400 font-bold">{i + 1}.</span>
+                    <span className="truncate font-semibold">{c.combo}</span>
                     <span className="ml-auto text-green-300 font-bold">
                       {c.wins} wins
                     </span>
@@ -232,7 +252,7 @@ export default function StatsTab() {
                   <div className="h-3 bg-slate-600 rounded">
                     <div
                       className="h-full bg-gradient-to-r from-green-500 to-lime-400 rounded"
-                      style={{ width: `${pct}%` }}
+                      style={{ width: `${widthPct}%` }}
                     />
                   </div>
                 </li>
@@ -246,13 +266,36 @@ export default function StatsTab() {
 }
 
 /* =======================
-   Sub
+   Sub Components
 ======================= */
 
-function Header({ label }: { label: string }) {
+type SortableHeaderProps = {
+  label: string
+  sortKey: SortKey
+  currentSortKey: SortKey
+  sortDir: 'asc' | 'desc'
+  onClick: (key: SortKey) => void
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  currentSortKey,
+  sortDir,
+  onClick,
+}: SortableHeaderProps) {
+  const isActive = sortKey === currentSortKey
+
   return (
-    <th className="px-3 py-2 text-left text-gray-300">
-      {label}
+    <th
+      scope="col"
+      className="px-3 py-2 text-left text-gray-300 cursor-pointer select-none"
+      onClick={() => onClick(sortKey)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        {isActive && <span className="text-gray-400 text-xs">{sortArrow(sortDir)}</span>}
+      </span>
     </th>
   )
 }
