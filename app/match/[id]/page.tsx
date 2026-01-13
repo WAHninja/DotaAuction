@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState, useCallback, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
 import { UserContext } from '@/app/context/UserContext'
@@ -23,9 +23,7 @@ export default function MatchPage() {
   const router = useRouter()
   const { user } = useContext(UserContext)
 
-  const [games, setGames] = useState<any[]>([])
-  const [latestGameOffers, setLatestGameOffers] = useState<any[]>([])
-  const [latestGameStats, setLatestGameStats] = useState<any[]>([])
+  const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,49 +33,40 @@ export default function MatchPage() {
   }, [user, router])
 
   /* ---------------- Fetch Match History ---------------- */
-  useEffect(() => {
-    if (!user) return
-    const fetchMatchHistory = async () => {
-      try {
-        const res = await fetch(`/api/match/${matchId}/history`, { cache: 'no-store' })
-        if (!res.ok) throw new Error('Failed to fetch match history')
-        const json = await res.json()
-        setGames(json.history)
-        if (json.history.length) {
-          const latest = json.history[json.history.length - 1]
-          setLatestGameOffers(latest.offers || [])
-          setLatestGameStats(latest.playerStats || [])
-        }
-      } catch (err: any) {
-        console.error('❌ Error fetching match history:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+  const fetchMatchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}/history`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('Failed to fetch match history')
+      const json = await res.json()
+      console.log('📥 Match history refreshed:', json)
+      setData(json.history)
+    } catch (err: any) {
+      console.error('❌ Error fetching match history:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
+  }, [matchId])
 
-    fetchMatchHistory()
-  }, [matchId, user])
+  /* ---------------- Initial Load ---------------- */
+  useEffect(() => {
+    if (user) fetchMatchData()
+  }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  const latestGameId = games.length ? games[games.length - 1].gameId : null
-
-  useRealtimeMatchListener(matchId, latestGameId, {
-    fetchMatchData: (update: any) => {
-      // Expecting update = { offers?: Offer[], playerStats?: PlayerStat[], ... }
-      if (update.offers) setLatestGameOffers(update.offers)
-      if (update.playerStats) setLatestGameStats(update.playerStats)
-    }
-  })
+  const latestGameId =
+    data?.length ? data[data.length - 1].gameId : null
+  useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData })
 
   /* ---------------- Guards ---------------- */
   if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user...</div>
   if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>
   if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>
-  if (!games || games.length === 0) return <div className="p-6 text-center text-gray-300">Match not found</div>
+  if (!data || data.length === 0) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
+  const games = data
   const latestGame = games[games.length - 1]
   const gamesPlayed = games.length
 
@@ -126,17 +115,17 @@ export default function MatchPage() {
       {latestGame.status === 'auction pending' && (
         <AuctionPhase
           latestGame={latestGame}
-          players={[]} // optional: pass actual players if needed
-          currentUserId={0} // optional: pass actual current user ID
+          players={[]} // adjust if needed
+          currentUserId={0} // adjust if needed
           gamesPlayed={gamesPlayed}
-          offers={latestGameOffers.map(o => ({
+          offers={latestGame.offers.map((o: any) => ({
             ...o,
             from_player_id: 0,
             target_player_id: 0,
             offer_amount: o.offerAmount,
             status: o.status
           }))}
-          onRefreshMatch={() => {}} // no need to refresh, real-time updates handled
+          onRefreshMatch={fetchMatchData}
         />
       )}
 
@@ -155,8 +144,20 @@ export default function MatchPage() {
               teamAMembers: g.teamAMembers,
               team1Members: g.team1Members,
               winningTeam: g.winningTeam,
-              offers: g.gameId === latestGameId ? latestGameOffers : g.offers,
-              playerStats: g.gameId === latestGameId ? latestGameStats : g.playerStats,
+              offers: g.offers.map((o: any) => ({
+                id: o.id,
+                fromUsername: o.fromUsername,
+                targetUsername: o.targetUsername,
+                offerAmount: o.offerAmount,
+                status: o.status
+              })),
+              playerStats: g.playerStats.map((s: any) => ({
+                id: s.id,
+                username: s.username,
+                goldChange: s.goldChange,
+                reason: s.reason,
+                teamId: s.teamId === 'team_1' ? 'team1' : 'teamA'
+              })),
               highlight: index === 0,
               defaultExpanded: index === 0
             }))}
