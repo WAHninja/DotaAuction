@@ -44,67 +44,73 @@ export async function GET() {
     }
 
     /* =========================
-       3️⃣ Games / Combos
-    ========================= */
+   3️⃣ Games / Combos
+========================= */
 
-    const gamesResult = await db.query(
-      `
-      SELECT
-        id,
-        team_1_members,
-        team_a_members,
-        winning_team,
-        finished_at
-      FROM games
-      WHERE status = 'finished'
-      `
-    )
+const gamesResult = await db.query(
+  `
+  SELECT
+    id,
+    team_1_members,
+    team_a_members,
+    winning_team,
+    created_at
+  FROM games
+  WHERE status = 'finished'
+  `
+)
 
-    /**
-     * comboKey => { wins, lastPlayedAt }
-     */
-    const comboMap = new Map<string, { wins: number; lastPlayedAt: string }>()
+/**
+ * comboKey => { wins, lastPlayedAt }
+ */
+const comboMap = new Map<
+  string,
+  { wins: number; lastPlayedAt: string }
+>()
 
-    for (const game of gamesResult.rows) {
-      const team1 = game.team_1_members || []
-      const teamA = game.team_a_members || []
+for (const game of gamesResult.rows) {
+  const team1 = game.team_1_members || []
+  const teamA = game.team_a_members || []
 
-      const winningTeam =
-        game.winning_team === 'team_1' ? team1 : teamA
+  const winningTeam =
+    game.winning_team === 'team_1' ? team1 : teamA
 
-      // Normalize combo (ORDER INDEPENDENT)
-      const comboKey = winningTeam
-        .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
-        .sort((a: string, b: string) => a.localeCompare(b))
-        .join(' + ')
+  // ✅ Normalize combo name (order-independent)
+  const comboKey = winningTeam
+    .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
+    .sort((a: string, b: string) => a.localeCompare(b))
+    .join(' + ')
 
-      const existing = comboMap.get(comboKey)
+  const playedAt = new Date(game.created_at).toISOString()
 
-      if (existing) {
-        existing.wins += 1
-        if (game.finished_at > existing.lastPlayedAt) {
-          existing.lastPlayedAt = game.finished_at
-        }
-      } else {
-        comboMap.set(comboKey, {
-          wins: 1,
-          lastPlayedAt: game.finished_at,
-        })
-      }
+  const existing = comboMap.get(comboKey)
 
-      // Games played / won per player
-      const allPlayers = new Set<number>([...team1, ...teamA])
-
-      for (const playerId of allPlayers) {
-        const stats = playersMap.get(playerId)
-        if (!stats) continue
-
-        stats.gamesPlayed += 1
-        if (winningTeam.includes(playerId)) {
-          stats.gamesWon += 1
-        }
-      }
+  if (existing) {
+    existing.wins += 1
+    if (playedAt > existing.lastPlayedAt) {
+      existing.lastPlayedAt = playedAt
     }
+  } else {
+    comboMap.set(comboKey, {
+      wins: 1,
+      lastPlayedAt: playedAt,
+    })
+  }
+
+  // Games played / won per player
+  const allPlayers = new Set<number>([...team1, ...teamA])
+
+  for (const playerId of allPlayers) {
+    const stats = playersMap.get(playerId)
+    if (!stats) continue
+
+    stats.gamesPlayed += 1
+    if (winningTeam.includes(playerId)) {
+      stats.gamesWon += 1
+    }
+  }
+}
+
 
     /* =========================
        4️⃣ Offers
