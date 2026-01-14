@@ -27,9 +27,6 @@ export async function GET() {
 
         offersMade: 0,
         offersAccepted: 0,
-
-        totalOfferValueAsTarget: 0,
-        offerCountAsTarget: 0,
       })
     }
 
@@ -43,13 +40,11 @@ export async function GET() {
 
     for (const row of matchPlayersResult.rows) {
       const stats = playersMap.get(row.user_id)
-      if (stats) {
-        stats.matchesPlayed.add(row.match_id)
-      }
+      if (stats) stats.matchesPlayed.add(row.match_id)
     }
 
     /* =========================
-       3️⃣ Games played / won
+       3️⃣ Games / Combos
     ========================= */
 
     const gamesResult = await db.query(
@@ -58,13 +53,17 @@ export async function GET() {
         id,
         team_1_members,
         team_a_members,
-        winning_team
+        winning_team,
+        finished_at
       FROM games
       WHERE status = 'finished'
       `
     )
 
-    const teamComboWins = new Map<string, number>()
+    /**
+     * comboKey => { wins, lastPlayedAt }
+     */
+    const comboMap = new Map<string, { wins: number; lastPlayedAt: string }>()
 
     for (const game of gamesResult.rows) {
       const team1 = game.team_1_members || []
@@ -73,18 +72,27 @@ export async function GET() {
       const winningTeam =
         game.winning_team === 'team_1' ? team1 : teamA
 
-      // Winning team combo
+      // Normalize combo (ORDER INDEPENDENT)
       const comboKey = winningTeam
         .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
-        .sort()
+        .sort((a: string, b: string) => a.localeCompare(b))
         .join(' + ')
 
-      teamComboWins.set(
-        comboKey,
-        (teamComboWins.get(comboKey) || 0) + 1
-      )
+      const existing = comboMap.get(comboKey)
 
-      // Games played / won
+      if (existing) {
+        existing.wins += 1
+        if (game.finished_at > existing.lastPlayedAt) {
+          existing.lastPlayedAt = game.finished_at
+        }
+      } else {
+        comboMap.set(comboKey, {
+          wins: 1,
+          lastPlayedAt: game.finished_at,
+        })
+      }
+
+      // Games played / won per player
       const allPlayers = new Set<number>([...team1, ...teamA])
 
       for (const playerId of allPlayers) {
@@ -92,7 +100,6 @@ export async function GET() {
         if (!stats) continue
 
         stats.gamesPlayed += 1
-
         if (winningTeam.includes(playerId)) {
           stats.gamesWon += 1
         }
@@ -108,7 +115,6 @@ export async function GET() {
       SELECT
         from_player_id,
         target_player_id,
-        offer_amount,
         status
       FROM offers
       `
@@ -131,9 +137,6 @@ export async function GET() {
         const targetStats = playersMap.get(offer.target_player_id)
         if (targetStats) {
           targetStats.timesOffered += 1
-          targetStats.totalOfferValueAsTarget += offer.offer_amount || 0
-          targetStats.offerCountAsTarget += 1
-
           if (offer.status === 'accepted') {
             targetStats.timesSold += 1
           }
@@ -157,17 +160,15 @@ export async function GET() {
 
       offersMade: p.offersMade,
       offersAccepted: p.offersAccepted,
-
-      averageOfferValue:
-        p.offerCountAsTarget > 0
-          ? +(p.totalOfferValueAsTarget / p.offerCountAsTarget).toFixed(1)
-          : 0,
     }))
 
-    const topWinningCombos = Array.from(teamComboWins.entries())
-      .map(([combo, wins]) => ({ combo, wins }))
-      .sort((a, b) => b.wins - a.wins)
-      .slice(0, 10)
+    const topWinningCombos = Array.from(comboMap.entries()).map(
+      ([combo, data]) => ({
+        combo,
+        wins: data.wins,
+        lastPlayedAt: data.lastPlayedAt,
+      })
+    )
 
     return NextResponse.json({
       players,
