@@ -21,9 +21,9 @@ export default function MatchPage() {
   const { user } = useContext(UserContext)
 
   const [data, setData] = useState<any>(null)
+  const [auctionGame, setAuctionGame] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [auctionGame, setAuctionGame] = useState<any>(null) // Added
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
@@ -45,13 +45,15 @@ export default function MatchPage() {
       const games = historyJson.history ?? []
       const latestGame = games[games.length - 1] ?? null
 
+      console.log('[MATCH_FETCH] matchJson:', matchJson)
+      console.log('[MATCH_FETCH] latestGame:', latestGame)
+
       setData({
         ...matchJson,
         games,
-        latestGame
+        latestGame,
       })
 
-      // Also set AuctionPhase state immediately
       if (latestGame) {
         setAuctionGame({
           ...latestGame,
@@ -79,7 +81,7 @@ export default function MatchPage() {
   const latestGameId = auctionGame?.id ?? null
   useRealtimeMatchListener(matchId ?? '', latestGameId, {
     fetchMatchData: () => fetchMatchData(true),
-    setData
+    setData,
   })
 
   /* ---------------- Guards ---------------- */
@@ -91,7 +93,7 @@ export default function MatchPage() {
 
   /* ---------------- Derived State ---------------- */
   const { match, players = [], currentUserId, games = [] } = data
-  const latestGame = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
+  const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
   const gamesPlayed = games.length
 
   const getPlayer = (idOrUsername: number | string): Player => {
@@ -101,22 +103,26 @@ export default function MatchPage() {
     return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
   }
 
-  const team1 = latestGame?.team_1_members ?? []
-  const teamA = latestGame?.team_a_members ?? []
+  const team1 = latest?.team_1_members ?? []
+  const teamA = latest?.team_a_members ?? []
 
-  const gameStatus = latestGame?.status ?? null
+  const gameStatus = latest?.status ?? null
   const isInProgress = gameStatus === 'in progress'
   const isAuction = gameStatus === 'auction pending'
+
+  console.log('[MATCH_RENDER] latestGame:', latest)
+  console.log('[MATCH_RENDER] isAuction:', isAuction)
+  console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
 
   /* ---------------- Render ---------------- */
   return (
     <>
-      {latestGame && (
+      {latest && (
         <MatchHeader
           matchId={matchId!}
           gameNumber={gamesPlayed}
-          status={latestGame.status}
-          winningTeam={latestGame.winning_team ?? latestGame.winningTeam}
+          status={latest.status}
+          winningTeam={latest.winning_team ?? latest.winningTeam}
         />
       )}
 
@@ -145,15 +151,15 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id} />}
+      {isInProgress && latest && <SelectGameWinnerForm gameId={latest.id} />}
 
-      {isAuction && latestGame && (
+      {isAuction && latest && (
         <AuctionPhase
-          latestGame={latestGame}
+          latestGame={latest}
           players={players}
           currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
-          offers={latestGame.offers ?? []}
+          offers={latest.offers ?? []}
         />
       )}
 
