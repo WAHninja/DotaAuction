@@ -33,8 +33,10 @@ export async function publishMatchEvent(
  */
 export function getMatchChannels(matchId: number) {
   const ably = getAblyServer();
+
   return {
-    main: ably.channels.get(`match-${matchId}`),
-    offers: ably.channels.get(`match-${matchId}-offers`),
+    match: ably.channels.get(`match-${matchId}`),
+    game: ably.channels.get(`match-${matchId}:game`),
+    offers: ably.channels.get(`match-${matchId}:offers`),
   };
 }
