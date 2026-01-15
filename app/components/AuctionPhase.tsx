@@ -52,9 +52,10 @@ export default function AuctionPhase({
     return null
 
   /* ---------------- Derived State ---------------- */
-  const winningTeamMembers = useMemo(() => {
-    return winning_team === 'team_1' ? team_1_members : team_a_members
-  }, [winning_team, team_1_members, team_a_members])
+  const winningTeamMembers = useMemo(
+    () => (winning_team === 'team_1' ? team_1_members : team_a_members),
+    [winning_team, team_1_members, team_a_members]
+  )
 
   const isWinner = winningTeamMembers.includes(currentUserId)
   const isLoser = !isWinner
@@ -66,13 +67,25 @@ export default function AuctionPhase({
     players.find((p) => p.id === id)?.username ?? 'Unknown'
 
   const offerCandidates = winningTeamMembers.filter((id) => id !== currentUserId)
-  const alreadySubmittedOffer = safeOffers.some((o) => o.from_player_id === currentUserId)
-  const acceptedOffer = safeOffers.find((o) => o.status === 'accepted')
 
-  const submittedOfferCount = safeOffers.filter((o) =>
-    winningTeamMembers.includes(o.from_player_id)
-  ).length
-  const allOffersSubmitted = winningTeamMembers.length > 0 && submittedOfferCount === winningTeamMembers.length
+  const alreadySubmittedOffer = useMemo(
+    () => safeOffers.some((o) => o.from_player_id === currentUserId),
+    [safeOffers, currentUserId]
+  )
+
+  const acceptedOffer = useMemo(
+    () => safeOffers.find((o) => o.status === 'accepted'),
+    [safeOffers]
+  )
+
+  const submittedOfferCount = useMemo(
+    () => safeOffers.filter((o) => winningTeamMembers.includes(o.from_player_id)).length,
+    [safeOffers, winningTeamMembers]
+  )
+
+  const allOffersSubmitted =
+    winningTeamMembers.length > 0 && submittedOfferCount === winningTeamMembers.length
+
   const isWaitingForOffers = isLoser && !allOffersSubmitted
 
   /* ---------------- Reveal Animation ---------------- */
@@ -95,19 +108,20 @@ export default function AuctionPhase({
     const offersChannel = ably.channels.get(`match-${gameId}-offers`)
 
     const handleNewOffer = (data: any) => {
-      if (data?.offer) {
-        setSafeOffers((prev) => [...prev, data.offer])
-      }
+      if (!data?.offer) return
+      setSafeOffers((prev) => {
+        if (prev.find((o) => o.id === data.offer.id)) return prev
+        return [...prev, data.offer]
+      })
     }
 
     const handleOfferAccepted = (data: any) => {
-      if (data?.offerId) {
-        setSafeOffers((prev) =>
-          prev.map((o) =>
-            o.id === data.offerId ? { ...o, status: 'accepted' } : o
-          )
+      if (!data?.offerId) return
+      setSafeOffers((prev) =>
+        prev.map((o) =>
+          o.id === data.offerId ? { ...o, status: 'accepted' } : o
         )
-      }
+      )
     }
 
     offersChannel.subscribe('new-offer', handleNewOffer)
@@ -140,7 +154,6 @@ export default function AuctionPhase({
       setSelectedPlayerId(null)
       setOfferAmount('')
       setMessage('✅ Offer submitted')
-      // ✅ No need to call onRefreshMatch; Ably will update state
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer')
     } finally {
@@ -162,7 +175,6 @@ export default function AuctionPhase({
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
       setMessage('✅ Offer accepted')
-      // ✅ Ably will update offer status automatically
     } catch (err: any) {
       setMessage(err.message || 'Failed to accept offer')
     } finally {
@@ -189,7 +201,9 @@ export default function AuctionPhase({
 
           <select
             value={selectedPlayerId ?? ''}
-            onChange={(e) => setSelectedPlayerId(Number(e.target.value))}
+            onChange={(e) =>
+              setSelectedPlayerId(e.target.value === '' ? null : Number(e.target.value))
+            }
             className="w-full mb-3 px-4 py-2 rounded text-black"
           >
             <option value="">Select Player</option>
@@ -203,7 +217,9 @@ export default function AuctionPhase({
           <input
             type="number"
             value={offerAmount}
-            onChange={(e) => setOfferAmount(Number(e.target.value))}
+            onChange={(e) =>
+              setOfferAmount(e.target.value === '' ? '' : Number(e.target.value))
+            }
             min={minOfferAmount}
             max={maxOfferAmount}
             placeholder={`${minOfferAmount} - ${maxOfferAmount}`}
@@ -229,7 +245,11 @@ export default function AuctionPhase({
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {safeOffers.map((offer) => {
           const canAccept =
-            isLoser && allOffersSubmitted && !acceptedOffer && offer.status === 'pending' && !accepting
+            isLoser &&
+            allOffersSubmitted &&
+            !acceptedOffer &&
+            offer.status === 'pending' &&
+            !accepting
 
           return (
             <div key={offer.id} className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg">
@@ -262,7 +282,11 @@ export default function AuctionPhase({
               )}
 
               {offer.status !== 'pending' && (
-                <div className={`mt-3 text-center font-bold ${offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
+                <div
+                  className={`mt-3 text-center font-bold ${
+                    offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'
+                  }`}
+                >
                   {offer.status.toUpperCase()}
                 </div>
               )}
