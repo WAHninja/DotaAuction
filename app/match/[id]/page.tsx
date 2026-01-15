@@ -93,46 +93,46 @@ export default function MatchPage() {
   if (!data) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
-const { match, players = [], games = [] } = data
-const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
-const gamesPlayed = games.length
+  const { match, players = [], games = [] } = data
+  const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
+  const gamesPlayed = games.length
 
-// 🔑 Logged-in user
-const currentUserIdResolved = user?.id ?? 0
+  // 🔑 Logged-in user
+  const currentUserIdResolved = user?.id ?? 0
 
-const getPlayer = (idOrUsername: number | string): Player => {
-  if (typeof idOrUsername === 'number') {
-    return players.find(p => p.id === idOrUsername) ?? { id: idOrUsername, username: `Player#${idOrUsername}` }
+  const getPlayer = (idOrUsername: number | string): Player => {
+    if (typeof idOrUsername === 'number') {
+      return players.find(p => p.id === idOrUsername) ?? { id: idOrUsername, username: `Player#${idOrUsername}` }
+    }
+    return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
   }
-  return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
-}
 
-// Ensure numeric arrays for AuctionPhase
-const team1 = latest?.team_1_members?.map(Number) ?? []
-const teamA = latest?.team_a_members?.map(Number) ?? []
+  // Ensure numeric arrays for AuctionPhase
+  const team1 = latest?.team_1_members?.map(Number) ?? []
+  const teamA = latest?.team_a_members?.map(Number) ?? []
 
-const gameStatus = latest?.status ?? null
-const isInProgress = gameStatus === 'in progress'
-const isAuction = gameStatus === 'auction pending'
+  const gameStatus = latest?.status ?? null
+  const isInProgress = gameStatus === 'in progress'
+  const isAuction = gameStatus === 'auction pending'
 
-// 🔑 Correct winner/loser logic
-const winningTeamMembers = latest?.winning_team
-  ? latest.winning_team === 'team_1'
-    ? team1
-    : teamA
-  : []
+  // 🔑 Correct winner/loser logic
+  const winningTeamMembers = latest?.winning_team
+    ? latest.winning_team === 'team_1'
+      ? team1
+      : teamA
+    : []
 
-const isWinner = winningTeamMembers.length > 0 && winningTeamMembers.includes(currentUserIdResolved)
-const isLoser = winningTeamMembers.length > 0 && !isWinner
+  const isWinner = winningTeamMembers.length > 0 && winningTeamMembers.includes(currentUserIdResolved)
+  const isLoser = winningTeamMembers.length > 0 && !isWinner
 
-// 🔎 Debug logs
-console.log('[MATCH_RENDER] latestGame:', latest)
-console.log('[MATCH_RENDER] isAuction:', isAuction)
-console.log('[MATCH_RENDER] currentUserId:', currentUserIdResolved)
-console.log('[MATCH_RENDER] team1:', team1, 'teamA:', teamA)
-console.log('[MATCH_RENDER] winningTeamMembers:', winningTeamMembers)
-console.log('[MATCH_RENDER] isWinner:', isWinner, 'isLoser:', isLoser)
-console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
+  // 🔎 Debug logs
+  console.log('[MATCH_RENDER] latestGame:', latest)
+  console.log('[MATCH_RENDER] isAuction:', isAuction)
+  console.log('[MATCH_RENDER] currentUserId:', currentUserIdResolved)
+  console.log('[MATCH_RENDER] team1:', team1, 'teamA:', teamA)
+  console.log('[MATCH_RENDER] winningTeamMembers:', winningTeamMembers)
+  console.log('[MATCH_RENDER] isWinner:', isWinner, 'isLoser:', isLoser)
+  console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
 
   /* ---------------- Render ---------------- */
   return (
@@ -174,20 +174,13 @@ console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
       {isInProgress && latest && <SelectGameWinnerForm gameId={latest.id} />}
 
       {isAuction && latest && (
-        <>
-  <AuctionPhase
-    latestGame={{ ...latest, team_1_members: team1, team_a_members: teamA }}
-    players={players}
-    currentUserId={currentUserIdResolved}
-    gamesPlayed={gamesPlayed}
-    offers={latest.offers ?? []}
-  />
-  <div className="text-white p-4 border border-red-500">
-    Debug: AuctionPhase should be above
-  </div>
-</>
-
-
+        <AuctionPhase
+          latestGame={{ ...latest, team_1_members: team1, team_a_members: teamA }}
+          players={players}
+          currentUserId={currentUserIdResolved}
+          gamesPlayed={gamesPlayed}
+          offers={latest.offers ?? []}
+        />
       )}
 
       {/* ---------------- Game History ---------------- */}
