@@ -90,19 +90,13 @@ export default function MatchPage() {
 
   /* ---------------- Normalize latestGame for AuctionPhase ---------------- */
   const auctionGame = latestGame
-    ? {
-        ...latestGame,
-        team_1_members: latestGame.team_1_members ?? latestGame.team1Members ?? [],
-        team_a_members: latestGame.team_a_members ?? latestGame.teamAMembers ?? [],
-        offers: latestGame.offers?.map((o: any) => ({
-          id: o.id,
-          from_player_id: o.from_player_id ?? players.find(p => p.username === o.fromUsername)?.id ?? 0,
-          target_player_id: o.target_player_id ?? players.find(p => p.username === o.targetUsername)?.id ?? 0,
-          offer_amount: o.offer_amount ?? o.offerAmount,
-          status: o.status
-        })) ?? []
-      }
-    : null
+  ? {
+      ...latestGame,
+      team_1_members: latestGame.team_1_members ?? [],
+      team_a_members: latestGame.team_a_members ?? [],
+      offers: latestGame.offers ?? [],
+    }
+  : null
 
   const team1 = auctionGame?.team_1_members ?? []
   const teamA = auctionGame?.team_a_members ?? []
