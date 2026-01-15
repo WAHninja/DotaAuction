@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 
 type Player = { id: number; username: string }
+
 type Offer = {
   id: number
   from_player_id: number
@@ -11,6 +12,7 @@ type Offer = {
   offer_amount: number
   status: 'pending' | 'accepted' | 'rejected'
 }
+
 type Game = {
   id: number
   team_1_members: number[]
@@ -21,21 +23,25 @@ type Game = {
 
 type AuctionPhaseProps = {
   latestGame: Game
-  players: Player[]
+  players?: Player[]
   currentUserId: number
   gamesPlayed: number
-  offers: Offer[]
+  offers?: Offer[]
   onRefreshMatch?: () => void
 }
 
 export default function AuctionPhase({
   latestGame,
-  players,
+  players = [],
   currentUserId,
   gamesPlayed,
-  offers,
+  offers = [],
   onRefreshMatch,
 }: AuctionPhaseProps) {
+  /* ---------------- Normalised safe data ---------------- */
+  const safePlayers = Array.isArray(players) ? players : []
+  const safeOffers = Array.isArray(offers) ? offers : []
+
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null)
   const [offerAmount, setOfferAmount] = useState<number | ''>('')
   const [submitting, setSubmitting] = useState(false)
@@ -45,15 +51,23 @@ export default function AuctionPhase({
 
   const hasRevealedRef = useRef(false)
 
-  const { id: gameId, team_1_members, team_a_members, winning_team } = latestGame
+  const {
+    id: gameId,
+    team_1_members,
+    team_a_members,
+    winning_team,
+  } = latestGame
 
+  /* ---------------- Guards ---------------- */
+  if (!winning_team) return null
+  if (!Array.isArray(team_1_members) || !Array.isArray(team_a_members)) return null
+
+  /* ---------------- Derived State ---------------- */
   const winningTeamMembers = useMemo(() => {
     if (winning_team === 'team_1') return team_1_members
     if (winning_team === 'team_a') return team_a_members
     return []
   }, [winning_team, team_1_members, team_a_members])
-
-  if (!winning_team) return null
 
   const isWinner = winningTeamMembers.includes(currentUserId)
   const isLoser = !isWinner
@@ -61,20 +75,35 @@ export default function AuctionPhase({
   const minOfferAmount = 250 + gamesPlayed * 200
   const maxOfferAmount = 2000 + gamesPlayed * 500
 
-  const getPlayerName = (id: number) => players.find((p) => p.id === id)?.username ?? 'Unknown'
+  const getPlayerName = (id: number) =>
+    safePlayers.find((p) => p.id === id)?.username ?? 'Unknown'
 
-  const offerCandidates = winningTeamMembers.filter((id) => id !== currentUserId)
+  const offerCandidates = winningTeamMembers.filter(
+    (id) => id !== currentUserId
+  )
 
-  const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId)
-  const acceptedOffer = offers.find((o) => o.status === 'accepted')
+  const alreadySubmittedOffer = safeOffers.some(
+    (o) => o.from_player_id === currentUserId
+  )
 
-  const submittedOfferCount = offers.filter((o) => winningTeamMembers.includes(o.from_player_id)).length
-  const allOffersSubmitted = winningTeamMembers.length > 0 && submittedOfferCount === winningTeamMembers.length
+  const acceptedOffer = safeOffers.find(
+    (o) => o.status === 'accepted'
+  )
+
+  const submittedOfferCount = safeOffers.filter((o) =>
+    winningTeamMembers.includes(o.from_player_id)
+  ).length
+
+  const allOffersSubmitted =
+    winningTeamMembers.length > 0 &&
+    submittedOfferCount === winningTeamMembers.length
 
   const isWaitingForOffers = isLoser && !allOffersSubmitted
 
   /* ---------------- Reveal Animation ---------------- */
-  useEffect(() => { hasRevealedRef.current = false }, [gameId])
+  useEffect(() => {
+    hasRevealedRef.current = false
+  }, [gameId])
 
   useEffect(() => {
     if (allOffersSubmitted && !hasRevealedRef.current) {
@@ -89,7 +118,11 @@ export default function AuctionPhase({
   const handleSubmitOffer = async () => {
     if (alreadySubmittedOffer || selectedPlayerId === null) return
 
-    if (offerAmount === '' || offerAmount < minOfferAmount || offerAmount > maxOfferAmount) {
+    if (
+      offerAmount === '' ||
+      offerAmount < minOfferAmount ||
+      offerAmount > maxOfferAmount
+    ) {
       alert(`Offer must be between ${minOfferAmount} and ${maxOfferAmount}`)
       return
     }
@@ -99,10 +132,15 @@ export default function AuctionPhase({
       const res = await fetch(`/api/game/${gameId}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_player_id: selectedPlayerId, offer_amount: offerAmount }),
+        body: JSON.stringify({
+          target_player_id: selectedPlayerId,
+          offer_amount: offerAmount,
+        }),
       })
+
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
+
       setSelectedPlayerId(null)
       setOfferAmount('')
       setMessage('✅ Offer submitted')
@@ -126,10 +164,12 @@ export default function AuctionPhase({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
       })
+
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
+
       setMessage('✅ Offer accepted')
-      onRefreshMatch?.() // <--- automatically moves game to next phase
+      onRefreshMatch?.()
     } catch (err: any) {
       setMessage(err.message || 'Failed to accept offer')
     } finally {
@@ -137,26 +177,26 @@ export default function AuctionPhase({
     }
   }
 
-  useEffect(() => {
-  // Automatically refresh when all offers are submitted (reveal phase) or offer is accepted (move to next game)
-    if (allOffersSubmitted || acceptedOffer) {
-      onRefreshMatch?.()
-    }
-  }, [allOffersSubmitted, acceptedOffer, onRefreshMatch])
-
   /* ========================= Render ========================= */
   return (
     <div className="bg-slate-800/70 p-6 rounded-3xl border border-slate-700 shadow-2xl mt-6">
-      <h3 className="text-3xl font-extrabold mb-6 text-center text-yellow-400">🏛 Auction House</h3>
+      <h3 className="text-3xl font-extrabold mb-6 text-center text-yellow-400">
+        🏛 Auction House
+      </h3>
 
       {showReveal && (
-        <div className="text-center mb-6 text-green-400 font-bold animate-pulse">💰 Offers Revealed!</div>
+        <div className="text-center mb-6 text-green-400 font-bold animate-pulse">
+          💰 Offers Revealed!
+        </div>
       )}
 
       {/* ---------------- Winner Submission ---------------- */}
       {isWinner && !alreadySubmittedOffer && (
         <div className="max-w-md mx-auto mb-10">
-          <p className="text-center text-yellow-300 font-semibold mb-4">Make Your Offer</p>
+          <p className="text-center text-yellow-300 font-semibold mb-4">
+            Make Your Offer
+          </p>
+
           <select
             value={selectedPlayerId ?? ''}
             onChange={(e) => setSelectedPlayerId(Number(e.target.value))}
@@ -164,9 +204,12 @@ export default function AuctionPhase({
           >
             <option value="">Select Player</option>
             {offerCandidates.map((id) => (
-              <option key={id} value={id}>{getPlayerName(id)}</option>
+              <option key={id} value={id}>
+                {getPlayerName(id)}
+              </option>
             ))}
           </select>
+
           <input
             type="number"
             value={offerAmount}
@@ -176,6 +219,7 @@ export default function AuctionPhase({
             placeholder={`${minOfferAmount} - ${maxOfferAmount}`}
             className="w-full mb-4 px-4 py-2 rounded text-black"
           />
+
           <button
             onClick={handleSubmitOffer}
             disabled={submitting}
@@ -187,31 +231,58 @@ export default function AuctionPhase({
       )}
 
       {isWaitingForOffers && (
-        <p className="text-center text-gray-300">Waiting for the winning team to submit offers…</p>
+        <p className="text-center text-gray-300">
+          Waiting for the winning team to submit offers…
+        </p>
       )}
 
       {/* ---------------- Offers ---------------- */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {offers.map((offer) => {
-          const canAccept = isLoser && allOffersSubmitted && !acceptedOffer && offer.status === 'pending' && !accepting
+        {safeOffers.map((offer) => {
+          const canAccept =
+            isLoser &&
+            allOffersSubmitted &&
+            !acceptedOffer &&
+            offer.status === 'pending' &&
+            !accepting
+
           return (
-            <div key={offer.id} className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg">
+            <div
+              key={offer.id}
+              className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg"
+            >
               <div className="mb-2 text-sm text-gray-400">
-                From: <span className="text-yellow-300 font-bold">{getPlayerName(offer.from_player_id)}</span>
+                From:{' '}
+                <span className="text-yellow-300 font-bold">
+                  {getPlayerName(offer.from_player_id)}
+                </span>
               </div>
+
               <div className="mb-4 text-sm text-gray-400">
-                For: <span className="text-yellow-300 font-bold">{getPlayerName(offer.target_player_id)}</span>
+                For:{' '}
+                <span className="text-yellow-300 font-bold">
+                  {getPlayerName(offer.target_player_id)}
+                </span>
               </div>
+
               <div className="text-center mb-4">
                 {allOffersSubmitted ? (
                   <span className="text-yellow-300 font-bold text-lg flex justify-center gap-1">
                     {offer.offer_amount}
-                    <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} />
+                    <Image
+                      src="/Gold_symbol.webp"
+                      alt="Gold"
+                      width={18}
+                      height={18}
+                    />
                   </span>
                 ) : (
-                  <span className="text-gray-500 text-sm">Waiting for all offers…</span>
+                  <span className="text-gray-500 text-sm">
+                    Waiting for all offers…
+                  </span>
                 )}
               </div>
+
               {canAccept && (
                 <button
                   onClick={() => handleAcceptOffer(offer.id)}
@@ -220,8 +291,15 @@ export default function AuctionPhase({
                   Accept Offer
                 </button>
               )}
+
               {offer.status !== 'pending' && (
-                <div className={`mt-3 text-center font-bold ${offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
+                <div
+                  className={`mt-3 text-center font-bold ${
+                    offer.status === 'accepted'
+                      ? 'text-green-400'
+                      : 'text-red-400'
+                  }`}
+                >
                   {offer.status.toUpperCase()}
                 </div>
               )}
@@ -231,7 +309,9 @@ export default function AuctionPhase({
       </div>
 
       {message && (
-        <p className="mt-6 text-center text-yellow-300 font-semibold">{message}</p>
+        <p className="mt-6 text-center text-yellow-300 font-semibold">
+          {message}
+        </p>
       )}
     </div>
   )
