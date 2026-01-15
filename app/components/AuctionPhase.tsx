@@ -18,7 +18,7 @@ type Game = {
   id: number
   team_1_members: number[]
   team_a_members: number[]
-  winning_team: 'team_1' | 'team_a' | null
+  winning_team: string | null
   status: string
   offers?: Offer[]
 }
@@ -38,9 +38,8 @@ export default function AuctionPhase({
   gamesPlayed,
   offers = [],
 }: AuctionPhaseProps) {
-  // 🟢 Ensure offers are numbers and safe
   const [safeOffers, setSafeOffers] = useState<Offer[]>(
-    offers.map(o => ({
+    offers.map((o) => ({
       ...o,
       from_player_id: Number(o.from_player_id),
       target_player_id: Number(o.target_player_id),
@@ -63,17 +62,18 @@ export default function AuctionPhase({
     winning_team,
   } = latestGame
 
-  if (!winning_team || !Array.isArray(rawTeam1) || !Array.isArray(rawTeamA)) return null
+  if (!Array.isArray(rawTeam1) || !Array.isArray(rawTeamA)) return null
 
-  // 🟢 Normalize team member IDs as numbers
   const team_1_members = rawTeam1.map(Number)
   const team_a_members = rawTeamA.map(Number)
 
   /* ---------------- Derived State ---------------- */
-  const winningTeamMembers = useMemo(
-    () => (winning_team === 'team_1' ? team_1_members : team_a_members),
-    [winning_team, team_1_members, team_a_members]
-  )
+  const winningTeamMembers = useMemo(() => {
+    const normalized = (winning_team ?? '').toLowerCase()
+    if (normalized === 'team_1' || normalized === 'team1') return team_1_members
+    if (normalized === 'team_a' || normalized === 'teama') return team_a_members
+    return []
+  }, [winning_team, team_1_members, team_a_members])
 
   const isWinner = winningTeamMembers.includes(Number(currentUserId))
   const isLoser = !isWinner
@@ -207,6 +207,13 @@ export default function AuctionPhase({
       setAccepting(false)
     }
   }
+
+  /* ---------------- Debug ---------------- */
+  useEffect(() => {
+    console.log('winning_team raw:', winning_team)
+    console.log('winningTeamMembers:', winningTeamMembers)
+    console.log('currentUserId:', currentUserId, 'isWinner:', isWinner, 'isLoser:', isLoser)
+  }, [winning_team, winningTeamMembers, currentUserId, isWinner, isLoser])
 
   /* ========================= Render ========================= */
   return (
