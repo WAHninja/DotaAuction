@@ -20,6 +20,7 @@ type Game = {
   team_a_members: number[]
   winning_team: 'team_1' | 'team_a' | null
   status: string
+  offers?: Offer[]
 }
 
 type AuctionPhaseProps = {
@@ -37,7 +38,15 @@ export default function AuctionPhase({
   gamesPlayed,
   offers = [],
 }: AuctionPhaseProps) {
-  const [safeOffers, setSafeOffers] = useState<Offer[]>(offers)
+  // 🟢 Ensure offers are numbers and safe
+  const [safeOffers, setSafeOffers] = useState<Offer[]>(
+    offers.map(o => ({
+      ...o,
+      from_player_id: Number(o.from_player_id),
+      target_player_id: Number(o.target_player_id),
+      offer_amount: Number(o.offer_amount),
+    }))
+  )
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null)
   const [offerAmount, setOfferAmount] = useState<number | ''>('')
   const [submitting, setSubmitting] = useState(false)
@@ -46,10 +55,19 @@ export default function AuctionPhase({
   const [showReveal, setShowReveal] = useState(false)
 
   const hasRevealedRef = useRef(false)
-  const { id: gameId, team_1_members, team_a_members, winning_team } = latestGame
 
-  if (!winning_team || !Array.isArray(team_1_members) || !Array.isArray(team_a_members))
-    return null
+  const {
+    id: gameId,
+    team_1_members: rawTeam1,
+    team_a_members: rawTeamA,
+    winning_team,
+  } = latestGame
+
+  if (!winning_team || !Array.isArray(rawTeam1) || !Array.isArray(rawTeamA)) return null
+
+  // 🟢 Normalize team member IDs as numbers
+  const team_1_members = rawTeam1.map(Number)
+  const team_a_members = rawTeamA.map(Number)
 
   /* ---------------- Derived State ---------------- */
   const winningTeamMembers = useMemo(
@@ -57,19 +75,19 @@ export default function AuctionPhase({
     [winning_team, team_1_members, team_a_members]
   )
 
-  const isWinner = winningTeamMembers.includes(currentUserId)
+  const isWinner = winningTeamMembers.includes(Number(currentUserId))
   const isLoser = !isWinner
 
   const minOfferAmount = 250 + gamesPlayed * 200
   const maxOfferAmount = 2000 + gamesPlayed * 500
 
   const getPlayerName = (id: number) =>
-    players.find((p) => p.id === id)?.username ?? 'Unknown'
+    players.find((p) => Number(p.id) === id)?.username ?? `Player#${id}`
 
-  const offerCandidates = winningTeamMembers.filter((id) => id !== currentUserId)
+  const offerCandidates = winningTeamMembers.filter((id) => id !== Number(currentUserId))
 
   const alreadySubmittedOffer = useMemo(
-    () => safeOffers.some((o) => o.from_player_id === currentUserId),
+    () => safeOffers.some((o) => Number(o.from_player_id) === Number(currentUserId)),
     [safeOffers, currentUserId]
   )
 
@@ -79,7 +97,7 @@ export default function AuctionPhase({
   )
 
   const submittedOfferCount = useMemo(
-    () => safeOffers.filter((o) => winningTeamMembers.includes(o.from_player_id)).length,
+    () => safeOffers.filter((o) => winningTeamMembers.includes(Number(o.from_player_id))).length,
     [safeOffers, winningTeamMembers]
   )
 
@@ -111,7 +129,15 @@ export default function AuctionPhase({
       if (!data?.offer) return
       setSafeOffers((prev) => {
         if (prev.find((o) => o.id === data.offer.id)) return prev
-        return [...prev, data.offer]
+        return [
+          ...prev,
+          {
+            ...data.offer,
+            from_player_id: Number(data.offer.from_player_id),
+            target_player_id: Number(data.offer.target_player_id),
+            offer_amount: Number(data.offer.offer_amount),
+          },
+        ]
       })
     }
 
