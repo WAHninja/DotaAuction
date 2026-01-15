@@ -64,7 +64,10 @@ export default function MatchPage() {
 
   /* ---------------- Realtime Listener ---------------- */
   const latestGameId = data?.latestGame?.id ?? null
-  useRealtimeMatchListener(matchId ?? '', latestGameId, { fetchMatchData: () => fetchMatchData(true), setData })
+  useRealtimeMatchListener(matchId ?? '', latestGameId, {
+    fetchMatchData: () => fetchMatchData(true),
+    setData
+  })
 
   /* ---------------- Guards ---------------- */
   if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user…</div>
@@ -86,18 +89,20 @@ export default function MatchPage() {
   }
 
   /* ---------------- Normalize latestGame for AuctionPhase ---------------- */
-  const auctionGame = latestGame && {
-    ...latestGame,
-    team_1_members: latestGame.team_1_members ?? latestGame.team1Members ?? [],
-    team_a_members: latestGame.team_a_members ?? latestGame.teamAMembers ?? [],
-    offers: latestGame.offers?.map((o: any) => ({
-      id: o.id,
-      from_player_id: o.from_player_id ?? players.find(p => p.username === o.fromUsername)?.id ?? 0,
-      target_player_id: o.target_player_id ?? players.find(p => p.username === o.targetUsername)?.id ?? 0,
-      offer_amount: o.offer_amount ?? o.offerAmount,
-      status: o.status
-    })) ?? []
-  }
+  const auctionGame = latestGame
+    ? {
+        ...latestGame,
+        team_1_members: latestGame.team_1_members ?? latestGame.team1Members ?? [],
+        team_a_members: latestGame.team_a_members ?? latestGame.teamAMembers ?? [],
+        offers: latestGame.offers?.map((o: any) => ({
+          id: o.id,
+          from_player_id: o.from_player_id ?? players.find(p => p.username === o.fromUsername)?.id ?? 0,
+          target_player_id: o.target_player_id ?? players.find(p => p.username === o.targetUsername)?.id ?? 0,
+          offer_amount: o.offer_amount ?? o.offerAmount,
+          status: o.status
+        })) ?? []
+      }
+    : null
 
   const team1 = auctionGame?.team_1_members ?? []
   const teamA = auctionGame?.team_a_members ?? []
@@ -111,7 +116,7 @@ export default function MatchPage() {
     <>
       {latestGame && (
         <MatchHeader
-          matchId={matchId}
+          matchId={matchId!}
           gameNumber={gamesPlayed}
           status={latestGame.status}
           winningTeam={latestGame.winning_team ?? latestGame.winningTeam}
@@ -158,8 +163,7 @@ export default function MatchPage() {
       {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
-
-        <GameHistory matchId={matchId} initialGames={games} />
+        <GameHistory matchId={matchId!} initialGames={games} />
       </section>
     </>
   )
