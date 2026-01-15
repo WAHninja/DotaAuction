@@ -30,48 +30,54 @@ export default function MatchPage() {
   }, [user, router])
 
   /* ---------------- Fetch Match + History ---------------- */
-  const fetchMatchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const resMatch = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
-      if (!resMatch.ok) throw new Error('Failed to fetch match')
-      const matchJson = await resMatch.json()
+  const fetchMatchData = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true)
+      try {
+        const resMatch = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
+        if (!resMatch.ok) throw new Error('Failed to fetch match')
+        const matchJson = await resMatch.json()
 
-      const resHistory = await fetch(`/api/match/${matchId}/history`, { cache: 'no-store' })
-      if (!resHistory.ok) throw new Error('Failed to fetch match history')
-      const historyJson = await resHistory.json()
+        const resHistory = await fetch(`/api/match/${matchId}/history`, { cache: 'no-store' })
+        if (!resHistory.ok) throw new Error('Failed to fetch match history')
+        const historyJson = await resHistory.json()
 
-      const games = historyJson.history ?? []
-      const mergedData = {
-        ...matchJson,
-        games,
-        latestGame: games[games.length - 1] ?? null
+        const games = historyJson.history ?? []
+
+        setData({
+          ...matchJson,
+          games,
+          latestGame: games[games.length - 1] ?? null
+        })
+
+        setError(null)
+      } catch (err: any) {
+        console.error('❌ Error fetching match or history:', err)
+        setError(err.message)
+      } finally {
+        if (!silent) setLoading(false)
       }
-
-      console.log('📥 Match data & history refreshed:', mergedData)
-      setData(mergedData)
-      setError(null)
-    } catch (err: any) {
-      console.error('❌ Error fetching match or history:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [matchId])
+    },
+    [matchId]
+  )
 
   /* ---------------- Initial Load ---------------- */
   useEffect(() => {
-    if (user) fetchMatchData()
-  }, [user, fetchMatchData])
+    if (user && matchId) fetchMatchData()
+  }, [user, matchId, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
   const latestGameId = data?.latestGame?.id ?? null
-  useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData, setData })
+
+  useRealtimeMatchListener(matchId ?? '', latestGameId, {
+    fetchMatchData: () => fetchMatchData(true),
+    setData
+  })
 
   /* ---------------- Guards ---------------- */
-  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user...</div>
-  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting...</div>
-  if (loading) return <div className="p-6 text-center text-gray-300">Loading match...</div>
+  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user…</div>
+  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting…</div>
+  if (loading) return <div className="p-6 text-center text-gray-300">Loading match…</div>
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>
   if (!data) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
@@ -82,10 +88,14 @@ export default function MatchPage() {
 
   const getPlayer = (idOrUsername: number | string): Player => {
     if (typeof idOrUsername === 'number') {
-      return players.find(p => p.id === idOrUsername) || { id: idOrUsername, username: `Player#${idOrUsername}` }
-    } else {
-      return players.find(p => p.username === idOrUsername) || { id: 0, username: idOrUsername }
+      return (
+        players.find(p => p.id === idOrUsername) ?? {
+          id: idOrUsername,
+          username: `Player#${idOrUsername}`
+        }
+      )
     }
+    return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
   }
 
   /* ---------------- Normalize latestGame for AuctionPhase ---------------- */
@@ -93,13 +103,20 @@ export default function MatchPage() {
     ...latestGame,
     team_1_members: latestGame.team_1_members ?? latestGame.team1Members ?? [],
     team_a_members: latestGame.team_a_members ?? latestGame.teamAMembers ?? [],
-    offers: latestGame.offers?.map((o: any) => ({
-      id: o.id,
-      from_player_id: o.from_player_id ?? players.find(p => p.username === o.fromUsername)?.id ?? 0,
-      target_player_id: o.target_player_id ?? players.find(p => p.username === o.targetUsername)?.id ?? 0,
-      offer_amount: o.offer_amount ?? o.offerAmount,
-      status: o.status
-    })) ?? []
+    offers:
+      latestGame.offers?.map((o: any) => ({
+        id: o.id,
+        from_player_id:
+          o.from_player_id ??
+          players.find(p => p.username === o.fromUsername)?.id ??
+          0,
+        target_player_id:
+          o.target_player_id ??
+          players.find(p => p.username === o.targetUsername)?.id ??
+          0,
+        offer_amount: o.offer_amount ?? o.offerAmount,
+        status: o.status
+      })) ?? []
   }
 
   const team1 = auctionGame?.team_1_members ?? []
@@ -123,7 +140,10 @@ export default function MatchPage() {
 
       {match?.winner_id && (
         <WinnerBanner
-          winnerName={players.find(p => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`}
+          winnerName={
+            players.find(p => p.id === match.winner_id)?.username ??
+            `Player#${match.winner_id}`
+          }
         />
       )}
 
@@ -155,7 +175,6 @@ export default function MatchPage() {
           currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
           offers={auctionGame.offers}
-          onRefreshMatch={fetchMatchData}
         />
       )}
 
@@ -166,18 +185,27 @@ export default function MatchPage() {
         <GameHistory
           games={games
             .slice()
-            .sort((a, b) => new Date(b.created_at ?? b.createdAt).getTime() - new Date(a.created_at ?? a.createdAt).getTime())
+            .sort(
+              (a, b) =>
+                new Date(b.created_at ?? b.createdAt).getTime() -
+                new Date(a.created_at ?? a.createdAt).getTime()
+            )
             .map((g: any, index: number) => ({
               gameId: g.id ?? g.gameId,
               gameNumber: index + 1,
               createdAt: g.created_at ?? g.createdAt,
-              teamAMembers: (g.team_a_members ?? g.teamAMembers ?? []).map(getPlayer).map(p => p.username),
-              team1Members: (g.team_1_members ?? g.team1Members ?? []).map(getPlayer).map(p => p.username),
+              teamAMembers: (g.team_a_members ?? g.teamAMembers ?? [])
+                .map(getPlayer)
+                .map(p => p.username),
+              team1Members: (g.team_1_members ?? g.team1Members ?? [])
+                .map(getPlayer)
+                .map(p => p.username),
               winningTeam: g.winning_team ?? g.winningTeam,
               offers: (g.offers ?? []).map((o: any) => ({
                 id: o.id,
                 fromUsername: o.fromUsername ?? getPlayer(o.from_player_id).username,
-                targetUsername: o.targetUsername ?? getPlayer(o.target_player_id).username,
+                targetUsername:
+                  o.targetUsername ?? getPlayer(o.target_player_id).username,
                 offerAmount: o.offer_amount ?? o.offerAmount,
                 status: o.status
               })),
@@ -186,7 +214,10 @@ export default function MatchPage() {
                 username: s.username ?? getPlayer(s.player_id).username,
                 goldChange: s.gold_change ?? s.goldChange,
                 reason: s.reason,
-                teamId: s.team_id === 'team_1' || s.teamId === 'team1' ? 'team1' : 'teamA'
+                teamId:
+                  s.team_id === 'team_1' || s.teamId === 'team1'
+                    ? 'team1'
+                    : 'teamA'
               })),
               highlight: index === 0,
               defaultExpanded: index === 0
