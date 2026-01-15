@@ -28,7 +28,7 @@ export default function MatchPage() {
     if (user === null) router.push('/')
   }, [user, router])
 
-  /* ---------------- Fetch + NORMALIZE ---------------- */
+  /* ---------------- Fetch + Normalize ---------------- */
   const fetchMatch = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
@@ -91,12 +91,16 @@ export default function MatchPage() {
   if (!match || games.length === 0)
     return <div className="p-6 text-center text-gray-300">Match not found</div>
 
-  /* ---------------- Derived ---------------- */
+  /* ---------------- Derived State ---------------- */
   const latestGame = games[games.length - 1]
   const gamesPlayed = games.length
 
-  const team1 = latestGame.team1Members ?? []
-  const teamA = latestGame.teamAMembers ?? []
+  // ---------------- Map player IDs → full player objects ----------------
+  const getPlayerById = (id: number) =>
+    match.players?.find((p: any) => p.id === id) ?? { id, username: 'Unknown' }
+
+  const team1Players = latestGame.team1Members.map(getPlayerById)
+  const teamAPlayers = latestGame.teamAMembers.map(getPlayerById)
 
   /* ---------------- Render ---------------- */
   return (
@@ -112,14 +116,12 @@ export default function MatchPage() {
         <WinnerBanner winnerName={latestGame.matchWinner} />
       )}
 
+      {/* ---------------- Teams ---------------- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <TeamCard
           name="Team 1"
           logo="/Team1.png"
-          players={team1.map((username: string, idx: number) => ({
-            id: idx,
-            username
-          }))}
+          players={team1Players}
           teamId="team1"
           color="from-lime-900/40 to-lime-800/40"
         />
@@ -127,15 +129,13 @@ export default function MatchPage() {
         <TeamCard
           name="Team A"
           logo="/TeamA.png"
-          players={teamA.map((username: string, idx: number) => ({
-            id: idx,
-            username
-          }))}
+          players={teamAPlayers}
           teamId="teamA"
           color="from-red-900/40 to-red-800/40"
         />
       </div>
 
+      {/* ---------------- Phase Controls ---------------- */}
       {latestGame.status === 'in progress' && (
         <SelectGameWinnerForm gameId={latestGame.gameId} />
       )}
@@ -143,7 +143,7 @@ export default function MatchPage() {
       {latestGame.status === 'auction pending' && (
         <AuctionPhase
           latestGame={latestGame}
-          players={latestGame.players}
+          players={match.players} // full list of all players
           currentUserId={user.id}
           gamesPlayed={gamesPlayed}
           offers={latestGame.offers}
@@ -151,6 +151,7 @@ export default function MatchPage() {
         />
       )}
 
+      {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
@@ -165,8 +166,8 @@ export default function MatchPage() {
               gameId: g.gameId,
               gameNumber: index + 1,
               createdAt: g.createdAt,
-              teamAMembers: g.teamAMembers,
-              team1Members: g.team1Members,
+              teamAMembers: g.teamAMembers.map(getPlayerById),
+              team1Members: g.team1Members.map(getPlayerById),
               winningTeam: g.winningTeam,
               offers: g.offers,
               playerStats: g.playerStats,
