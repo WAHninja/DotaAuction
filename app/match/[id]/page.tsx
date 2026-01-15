@@ -2,174 +2,126 @@
 
 import { useEffect, useState, useCallback, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-
 import { UserContext } from '@/app/context/UserContext'
-import MatchHeader from '@/app/components/MatchHeader'
-import TeamCard from '@/app/components/TeamCard'
-import WinnerBanner from '@/app/components/WinnerBanner'
-import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
-import AuctionPhase from '@/app/components/AuctionPhase'
-import GameHistory from '@/app/components/GameHistory'
-import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
 
 type Player = { id: number; username: string }
+type Offer = {
+  id: number
+  from_player_id: number
+  target_player_id: number
+  offer_amount: number
+  status: 'pending' | 'accepted' | 'rejected'
+}
 
-export default function MatchPage() {
+export default function MatchPageDebug() {
   const { id } = useParams()
   const matchId = Array.isArray(id) ? id[0] : id
   const router = useRouter()
   const { user } = useContext(UserContext)
 
   const [data, setData] = useState<any>(null)
-  const [auctionGame, setAuctionGame] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  /* ---------------- Protect Route ---------------- */
-  useEffect(() => {
-    if (user === null) router.push('/')
-  }, [user, router])
-
-  /* ---------------- Fetch Match + History ---------------- */
-  const fetchMatchData = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true)
+  const fetchMatchData = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
     try {
-      const resMatch = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
-      if (!resMatch.ok) throw new Error('Failed to fetch match')
-      const matchJson = await resMatch.json()
+      const [matchRes, historyRes] = await Promise.all([
+        fetch(`/api/match/${matchId}`, { cache: 'no-store' }),
+        fetch(`/api/match/${matchId}/history`, { cache: 'no-store' }),
+      ])
 
-      const resHistory = await fetch(`/api/match/${matchId}/history`, { cache: 'no-store' })
-      if (!resHistory.ok) throw new Error('Failed to fetch match history')
-      const historyJson = await resHistory.json()
+      if (!matchRes.ok) throw new Error('Failed to fetch match')
+      if (!historyRes.ok) throw new Error('Failed to fetch match history')
 
-      const games = historyJson.history ?? []
-      const latestGame = games[games.length - 1] ?? null
+      const matchJson = await matchRes.json()
+      const historyJson = await historyRes.json()
 
       setData({
         ...matchJson,
-        games,
-        latestGame,
+        games: historyJson.history ?? [],
+        latestGame: historyJson.history?.[historyJson.history.length - 1] ?? null,
       })
-
-      // Prepare auction game state
-      if (latestGame) {
-        setAuctionGame({
-          ...latestGame,
-          team_1_members: latestGame.team_1_members?.map(Number) ?? [],
-          team_a_members: latestGame.team_a_members?.map(Number) ?? [],
-          offers: latestGame.offers ?? [],
-        })
-      }
-
       setError(null)
     } catch (err: any) {
       console.error('❌ Error fetching match or history:', err)
       setError(err.message)
     } finally {
-      if (!silent) setLoading(false)
+      setLoading(false)
     }
-  }, [matchId])
+  }, [matchId, user])
 
-  /* ---------------- Initial Load ---------------- */
   useEffect(() => {
     if (user && matchId) fetchMatchData()
   }, [user, matchId, fetchMatchData])
 
-  /* ---------------- Realtime Listener ---------------- */
-  const latestGameId = auctionGame?.id ?? null
-  useRealtimeMatchListener(matchId ?? '', latestGameId, {
-    fetchMatchData: () => fetchMatchData(true),
-    setData,
-  })
+  useEffect(() => {
+    if (!data) return
 
-  /* ---------------- Guards ---------------- */
-  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user…</div>
-  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting…</div>
-  if (loading) return <div className="p-6 text-center text-gray-300">Loading match…</div>
-  if (error) return <div className="p-6 text-center text-red-500">{error}</div>
-  if (!data) return <div className="p-6 text-center text-gray-300">Match not found</div>
+    console.groupCollapsed('🟢 Match Page Debug Logs')
 
-  /* ---------------- Derived State ---------------- */
-  const { match, players = [], games = [] } = data
-  const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
-  const gamesPlayed = games.length
+    const { match, players = [], games = [], latestGame } = data
+    console.log('Current user:', user)
+    console.log('Match object:', match)
+    console.log('Players array:', players)
+    console.log('Games array:', games)
+    console.log('Latest game:', latestGame)
+    console.log('Offers in latest game:', latestGame?.offers ?? [])
 
-  // Logged-in user ID
-  const currentUserIdResolved = user?.id ?? 0
+    if (latestGame) {
+      const team1 = latestGame.team_1_members?.map(Number) ?? []
+      const teamA = latestGame.team_a_members?.map(Number) ?? []
+      const currentUserId = user?.id ?? 0
 
-  const getPlayer = (idOrUsername: number | string): Player => {
-    if (typeof idOrUsername === 'number') {
-      return players.find(p => p.id === idOrUsername) ?? { id: idOrUsername, username: `Player#${idOrUsername}` }
+      console.log('Team 1 members:', team1)
+      console.log('Team A members:', teamA)
+      console.log('Winning team:', latestGame.winning_team)
+
+      const winningTeamMembers =
+        latestGame.winning_team === 'team_1'
+          ? team1
+          : latestGame.winning_team === 'team_a'
+          ? teamA
+          : []
+
+      const isWinner = winningTeamMembers.includes(currentUserId)
+      const isLoser = !isWinner && winningTeamMembers.length > 0
+
+      // Auction logic derived state
+      const offerCandidates = winningTeamMembers.filter((id) => id !== currentUserId)
+      const alreadySubmittedOffer = (latestGame.offers ?? []).some(
+        (o: Offer) => o.from_player_id === currentUserId
+      )
+      const submittedOfferCount = (latestGame.offers ?? []).filter((o: Offer) =>
+        winningTeamMembers.includes(o.from_player_id)
+      ).length
+      const allOffersSubmitted =
+        winningTeamMembers.length > 0 && submittedOfferCount === winningTeamMembers.length
+      const isWaitingForOffers = isLoser && !allOffersSubmitted
+
+      console.log('Winning team members:', winningTeamMembers)
+      console.log('Is current user winner?', isWinner)
+      console.log('Is current user loser?', isLoser)
+      console.log('Offer candidates (winning team minus self):', offerCandidates)
+      console.log('Has current user already submitted an offer?', alreadySubmittedOffer)
+      console.log('Submitted offer count:', submittedOfferCount)
+      console.log('All offers submitted?', allOffersSubmitted)
+      console.log('Is waiting for offers message shown?', isWaitingForOffers)
     }
-    return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
-  }
 
-  // Ensure numeric arrays for AuctionPhase
-  const team1 = latest?.team_1_members?.map(Number) ?? []
-  const teamA = latest?.team_a_members?.map(Number) ?? []
+    console.groupEnd()
+  }, [data, user])
 
-  const gameStatus = latest?.status ?? null
-  const isInProgress = gameStatus === 'in progress'
-  const isAuction = gameStatus === 'auction pending'
+  if (!user) return <div className="p-6 text-gray-300">Loading user…</div>
+  if (loading) return <div className="p-6 text-gray-300">Loading match data…</div>
+  if (error) return <div className="p-6 text-red-500">{error}</div>
+  if (!data) return <div className="p-6 text-gray-300">No data found</div>
 
-  /* ---------------- Render ---------------- */
   return (
-    <>
-      {latest && (
-        <MatchHeader
-          matchId={matchId!}
-          gameNumber={gamesPlayed}
-          status={latest.status}
-          winningTeam={latest.winning_team ?? undefined}
-        />
-      )}
-
-      {match?.winner_id && (
-        <WinnerBanner
-          winnerName={players.find(p => p.id === match.winner_id)?.username ?? `Player#${match.winner_id}`}
-        />
-      )}
-
-      {/* ---------------- Teams ---------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <TeamCard
-          name="Team 1"
-          logo="/Team1.png"
-          players={team1.map(getPlayer)}
-          teamId="team1"
-          color="from-lime-900/40 to-lime-800/40"
-        />
-        <TeamCard
-          name="Team A"
-          logo="/TeamA.png"
-          players={teamA.map(getPlayer)}
-          teamId="teamA"
-          color="from-red-900/40 to-red-800/40"
-        />
-      </div>
-
-      {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && latest && <SelectGameWinnerForm gameId={latest.id} />}
-
-      {isAuction && latest && (
-        <AuctionPhase
-          latestGame={{
-            ...latest,
-            team_1_members: team1,
-            team_a_members: teamA,
-          }}
-          players={players}
-          currentUserId={currentUserIdResolved}
-          gamesPlayed={gamesPlayed}
-          offers={latest.offers ?? []}
-        />
-      )}
-
-      {/* ---------------- Game History ---------------- */}
-      <section className="mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
-        <GameHistory matchId={matchId!} initialGames={games} />
-      </section>
-    </>
+    <div className="p-6 text-gray-100">
+      <h1 className="text-2xl font-bold mb-4">Match Page Debug</h1>
+      <p>All debug information is being logged to the console.</p>
+    </div>
   )
 }
