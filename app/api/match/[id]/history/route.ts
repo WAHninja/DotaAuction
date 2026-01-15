@@ -124,11 +124,9 @@ export async function GET(req: NextRequest) {
       matchId: game.match_id,
       createdAt: game.created_at,
       status: game.status,
-      winningTeam: game.winning_team,
-      // IDs for AuctionPhase logic
+      winning_team: game.winning_team, // <-- snake_case here for frontend
       team_1_members: game.team_1_members,
       team_a_members: game.team_a_members,
-      // Usernames for display
       team1Usernames: game.team_1_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
       teamAUsernames: game.team_a_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
       offers: offersByGame.get(game.game_id) || [],
