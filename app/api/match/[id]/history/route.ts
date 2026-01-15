@@ -76,11 +76,11 @@ export async function GET(req: NextRequest) {
       offersByGame.get(gameId)!.push({
         id: offer.id,
         gameId: offer.game_id,
-        fromPlayerId: offer.from_player_id,
-        targetPlayerId: offer.target_player_id,
-        offerAmount: offer.offer_amount,
+        from_player_id: offer.from_player_id,
+        target_player_id: offer.target_player_id,
+        offer_amount: offer.offer_amount,
         status: offer.status,
-        createdAt: offer.created_at,
+        created_at: offer.created_at,
         fromUsername: offer.from_username,
         targetUsername: offer.target_username,
       })
@@ -97,9 +97,9 @@ export async function GET(req: NextRequest) {
         gps.gold_change,
         gps.reason
       FROM game_player_stats gps
-    JOIN users u ON gps.player_id = u.id
-    WHERE gps.game_id = ANY($1)
-    ORDER BY gps.game_id, gps.id
+      JOIN users u ON gps.player_id = u.id
+      WHERE gps.game_id = ANY($1)
+      ORDER BY gps.game_id, gps.id
       `,
       [gameIds]
     )
@@ -116,17 +116,21 @@ export async function GET(req: NextRequest) {
         reason: row.reason,
       })
     }
-    
+
     // Final combined result
     const history = games.map((game: any, index: number) => ({
-      gameNumber: index + 1, // 👈 Add dynamic game number
+      gameNumber: index + 1,
       gameId: game.game_id,
       matchId: game.match_id,
       createdAt: game.created_at,
       status: game.status,
       winningTeam: game.winning_team,
-      teamAMembers: game.team_a_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
-      team1Members: game.team_1_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
+      // IDs for AuctionPhase logic
+      team_1_members: game.team_1_members,
+      team_a_members: game.team_a_members,
+      // Usernames for display
+      team1Usernames: game.team_1_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
+      teamAUsernames: game.team_a_members.map((id: number) => playerIdToUsername[id] || `Player#${id}`),
       offers: offersByGame.get(game.game_id) || [],
       playerStats: statsByGame.get(game.game_id) || [],
     }))
