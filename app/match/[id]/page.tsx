@@ -32,6 +32,23 @@ export default function MatchPage() {
     if (user === null) router.push('/')
   }, [user, router])
 
+  /* ---------------- Fetch Match ---------------- */
+  const fetchMatchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('Failed to fetch match')
+      const json = await res.json()
+      console.log('📥 Match data refreshed:', json)
+      setData(json)
+    } catch (err: any) {
+      console.error('❌ Error fetching match:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [matchId])
+
+  
   /* ---------------- Fetch Match History ---------------- */
   const fetchMatchData = useCallback(async () => {
     try {
