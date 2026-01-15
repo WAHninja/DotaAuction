@@ -46,8 +46,8 @@ export async function POST(req: NextRequest, context: any) {
     const losingTeamId: TeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
     const losingMembers: number[] = game[`${losingTeamId}_members`];
 
-    // ✅ Correct Ably channels
-    const { main: matchChannel } = getMatchChannels(game.match_id);
+    // ✅ Correct Ably channel (match-level)
+    const { match: matchChannel } = getMatchChannels(game.match_id);
 
     // ---------------- Single winner shortcut ----------------
     if (winningMembers.length === 1) {
