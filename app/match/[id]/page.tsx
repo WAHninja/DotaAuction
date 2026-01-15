@@ -54,11 +54,12 @@ export default function MatchPage() {
         latestGame,
       })
 
+      // 🚀 Set AuctionPhase state using numeric IDs
       if (latestGame) {
         setAuctionGame({
           ...latestGame,
-          team_1_members: latestGame.team_1_members ?? [],
-          team_a_members: latestGame.team_a_members ?? [],
+          team_1_members: latestGame.team_1_members?.map(Number) ?? [],
+          team_a_members: latestGame.team_a_members?.map(Number) ?? [],
           offers: latestGame.offers ?? [],
         })
       }
@@ -93,6 +94,8 @@ export default function MatchPage() {
 
   /* ---------------- Derived State ---------------- */
   const { match, players = [], currentUserId, games = [] } = data
+
+  // Use auctionGame if available for immediate render
   const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
   const gamesPlayed = games.length
 
@@ -103,15 +106,19 @@ export default function MatchPage() {
     return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
   }
 
-  const team1 = latest?.team_1_members ?? []
-  const teamA = latest?.team_a_members ?? []
+  // Ensure team member arrays contain numbers for AuctionPhase logic
+  const team1 = latest?.team_1_members?.map(Number) ?? []
+  const teamA = latest?.team_a_members?.map(Number) ?? []
 
   const gameStatus = latest?.status ?? null
   const isInProgress = gameStatus === 'in progress'
   const isAuction = gameStatus === 'auction pending'
 
+  // 🔎 Debug logs
   console.log('[MATCH_RENDER] latestGame:', latest)
   console.log('[MATCH_RENDER] isAuction:', isAuction)
+  console.log('[MATCH_RENDER] currentUserId:', currentUserId)
+  console.log('[MATCH_RENDER] team1:', team1, 'teamA:', teamA)
   console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
 
   /* ---------------- Render ---------------- */
@@ -155,9 +162,13 @@ export default function MatchPage() {
 
       {isAuction && latest && (
         <AuctionPhase
-          latestGame={latest}
+          latestGame={{
+            ...latest,
+            team_1_members: team1,
+            team_a_members: teamA,
+          }}
           players={players}
-          currentUserId={currentUserId ?? 0}
+          currentUserId={Number(currentUserId ?? 0)}
           gamesPlayed={gamesPlayed}
           offers={latest.offers ?? []}
         />
