@@ -163,16 +163,20 @@ export default function MatchPage() {
 
       {isAuction && latest && (
         <AuctionPhase
-          latestGame={{
-            ...latest,
-            team_1_members: team1,
-            team_a_members: teamA,
-          }}
-          players={players}
-          currentUserId={currentUserIdResolved} // ✅ Corrected
-          gamesPlayed={gamesPlayed}
-          offers={latest.offers ?? []}
-        />
+  latestGame={{
+    ...latest,
+    team_1_members: team1,
+    team_a_members: teamA,
+  }}
+  players={players}
+  currentUserId={currentUserIdResolved}
+  gamesPlayed={gamesPlayed}
+  offers={latest.offers ?? []}
+/>
+<div className="text-white p-4 border border-red-500">
+  Debug: AuctionPhase should be above
+</div>
+
       )}
 
       {/* ---------------- Game History ---------------- */}
