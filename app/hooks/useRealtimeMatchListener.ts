@@ -3,7 +3,7 @@ import { getAblyClient } from '@/lib/ably-client';
 
 type Callbacks = {
   fetchMatchData: () => Promise<void> | void;
-  setData?: React.Dispatch<React.SetStateAction<any>>; // optional, for immediate updates
+  setData?: React.Dispatch<React.SetStateAction<any>>; // optional, for immediate fine-grained updates
 };
 
 export function useRealtimeMatchListener(
@@ -28,46 +28,65 @@ export function useRealtimeMatchListener(
 
     const channel = ablyClientRef.current.channels.get(`match-${matchId}`);
 
-    const onGameCreated = async (eventData?: any) => {
-      console.log('📡 game-created event received', eventData);
+    const onGameCreated = (eventData?: any) => {
+      console.log('📡 game-created event', eventData);
 
-      // Immediately update latestGame in state if setData is provided
-      if (eventData?.gameId && setData) {
+      if (eventData?.game && setData) {
         setData((prev: any) => {
           if (!prev) return prev;
           const existingGames = prev.games || [];
-          // Avoid duplicates
-          if (existingGames.find((g: any) => g.id === eventData.gameId)) return prev;
-          const newGame = {
-            id: eventData.gameId,
-            status: 'in progress',
-            team_a_members: [],
-            team_1_members: [],
-          };
+          if (existingGames.find((g: any) => g.id === eventData.game.id)) return prev;
+
           return {
             ...prev,
-            games: [...existingGames, newGame],
-            latestGame: newGame,
+            games: [...existingGames, eventData.game],
+            latestGame: eventData.game,
           };
         });
+      } else {
+        fetchMatchData();
       }
-
-      await fetchMatchData();
     };
 
-    const onGameWinnerSelected = async (data?: any) => {
-      console.log('📡 game-winner-selected event → refetching', data);
-      await fetchMatchData();
+    const onGameWinnerSelected = (eventData?: any) => {
+      console.log('📡 game-winner-selected event', eventData);
+
+      if (eventData?.gameId && setData) {
+        setData((prev: any) => {
+          if (!prev) return prev;
+          const updatedGames = prev.games.map((g: any) =>
+            g.id === eventData.gameId ? { ...g, winning_team: eventData.winningTeam } : g
+          );
+          return { ...prev, games: updatedGames };
+        });
+      } else {
+        fetchMatchData();
+      }
     };
 
-    const onGameFinished = async (data?: any) => {
-      console.log('📡 game-finished event → refetching', data);
-      await fetchMatchData();
+    const onGameFinished = (eventData?: any) => {
+      console.log('📡 game-finished event', eventData);
+      fetchMatchData();
     };
 
-    const onNewGame = async (data?: any) => {
-      console.log('📡 new-game event → refetching', data);
-      await fetchMatchData();
+    const onNewGame = (eventData?: any) => {
+      console.log('📡 new-game event', eventData);
+
+      if (eventData?.game && setData) {
+        setData((prev: any) => {
+          if (!prev) return prev;
+          const existingGames = prev.games || [];
+          if (existingGames.find((g: any) => g.id === eventData.game.id)) return prev;
+
+          return {
+            ...prev,
+            games: [...existingGames, eventData.game],
+            latestGame: eventData.game,
+          };
+        });
+      } else {
+        fetchMatchData();
+      }
     };
 
     // Subscribe
@@ -76,7 +95,6 @@ export function useRealtimeMatchListener(
     channel.subscribe('game-finished', onGameFinished);
     channel.subscribe('new-game', onNewGame);
 
-    // Cleanup: unsubscribe specific events
     return () => {
       channel.unsubscribe('game-created', onGameCreated);
       channel.unsubscribe('game-winner-selected', onGameWinnerSelected);
@@ -85,49 +103,64 @@ export function useRealtimeMatchListener(
     };
   }, [matchId, fetchMatchData, setData]);
 
-  // ---------------- Auction events ----------------
+  // ---------------- Auction-level events ----------------
   useEffect(() => {
     if (!latestGameId || !matchId || !ablyClientRef.current) return;
 
-    const channel = ablyClientRef.current.channels.get(
-      `match-${matchId}-offers`
-    );
+    const channel = ablyClientRef.current.channels.get(`match-${matchId}-offers`);
 
-    const onNewOffer = async (data?: any) => {
-      console.log('📡 new-offer event → refetching', data);
-      await fetchMatchData();
-    };
+    const onNewOffer = (data?: any) => {
+      console.log('📡 new-offer event', data);
 
-    const onOfferAccepted = async (data?: any) => {
-      console.log('📡 offer-accepted event → refetching', data);
-
-      // Immediately add new game if available in event
-      if (data?.gameId && setData) {
+      if (data?.offer && setData) {
         setData((prev: any) => {
           if (!prev) return prev;
-          const existingGames = prev.games || [];
-          if (existingGames.find((g: any) => g.id === data.gameId)) return prev;
-          const newGame = {
-            id: data.gameId,
-            status: 'in progress',
-            team_a_members: [],
-            team_1_members: [],
-          };
+          const updatedOffers = [...(prev.latestGame?.offers || []), data.offer];
           return {
             ...prev,
-            games: [...existingGames, newGame],
-            latestGame: newGame,
+            latestGame: {
+              ...prev.latestGame,
+              offers: updatedOffers,
+            },
           };
         });
+      } else {
+        fetchMatchData();
       }
+    };
 
-      await fetchMatchData();
+    const onOfferAccepted = (data?: any) => {
+      console.log('📡 offer-accepted event', data);
+
+      if (data?.offer && setData) {
+        setData((prev: any) => {
+          if (!prev) return prev;
+          const updatedOffers = (prev.latestGame?.offers || []).map((o: any) =>
+            o.id === data.offer.id ? { ...o, status: 'accepted' } : o
+          );
+
+          let updatedGames = prev.games;
+          if (data.newGame && !prev.games.find((g: any) => g.id === data.newGame.id)) {
+            updatedGames = [...prev.games, data.newGame];
+          }
+
+          return {
+            ...prev,
+            latestGame: {
+              ...prev.latestGame,
+              offers: updatedOffers,
+            },
+            games: updatedGames,
+          };
+        });
+      } else {
+        fetchMatchData();
+      }
     };
 
     channel.subscribe('new-offer', onNewOffer);
     channel.subscribe('offer-accepted', onOfferAccepted);
 
-    // Cleanup: unsubscribe specific events
     return () => {
       channel.unsubscribe('new-offer', onNewOffer);
       channel.unsubscribe('offer-accepted', onOfferAccepted);
