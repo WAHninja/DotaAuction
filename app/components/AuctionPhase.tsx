@@ -76,7 +76,7 @@ export default function AuctionPhase({
   }, [winning_team, team_1_members, team_a_members])
 
   const isWinner = winningTeamMembers.includes(Number(currentUserId))
-  const isLoser = !isWinner
+  const isLoser = winning_team && !isWinner
 
   const minOfferAmount = 250 + gamesPlayed * 200
   const maxOfferAmount = 2000 + gamesPlayed * 500
@@ -208,13 +208,6 @@ export default function AuctionPhase({
     }
   }
 
-  /* ---------------- Debug ---------------- */
-  useEffect(() => {
-    console.log('winning_team raw:', winning_team)
-    console.log('winningTeamMembers:', winningTeamMembers)
-    console.log('currentUserId:', currentUserId, 'isWinner:', isWinner, 'isLoser:', isLoser)
-  }, [winning_team, winningTeamMembers, currentUserId, isWinner, isLoser])
-
   /* ========================= Render ========================= */
   return (
     <div className="bg-slate-800/70 p-6 rounded-3xl border border-slate-700 shadow-2xl mt-6">
@@ -228,6 +221,7 @@ export default function AuctionPhase({
         </div>
       )}
 
+      {/* ---------------- Winner Offer Form ---------------- */}
       {isWinner && !alreadySubmittedOffer && (
         <div className="max-w-md mx-auto mb-10">
           <p className="text-center text-yellow-300 font-semibold mb-4">Make Your Offer</p>
@@ -269,13 +263,15 @@ export default function AuctionPhase({
         </div>
       )}
 
+      {/* ---------------- Waiting Message for Losers ---------------- */}
       {isWaitingForOffers && (
         <p className="text-center text-gray-300">
           Waiting for the winning team to submit offers…
         </p>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* ---------------- Offers Grid ---------------- */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
         {safeOffers.map((offer) => {
           const canAccept =
             isLoser &&
