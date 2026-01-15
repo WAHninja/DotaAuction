@@ -45,16 +45,13 @@ export default function MatchPage() {
       const games = historyJson.history ?? []
       const latestGame = games[games.length - 1] ?? null
 
-      console.log('[MATCH_FETCH] matchJson:', matchJson)
-      console.log('[MATCH_FETCH] latestGame:', latestGame)
-
       setData({
         ...matchJson,
         games,
         latestGame,
       })
 
-      // Set AuctionPhase state using numeric IDs
+      // Prepare auction game state
       if (latestGame) {
         setAuctionGame({
           ...latestGame,
@@ -97,7 +94,7 @@ export default function MatchPage() {
   const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
   const gamesPlayed = games.length
 
-  // 🔑 Logged-in user
+  // Logged-in user ID
   const currentUserIdResolved = user?.id ?? 0
 
   const getPlayer = (idOrUsername: number | string): Player => {
@@ -115,25 +112,6 @@ export default function MatchPage() {
   const isInProgress = gameStatus === 'in progress'
   const isAuction = gameStatus === 'auction pending'
 
-  // 🔑 Correct winner/loser logic
-  const winningTeamMembers = latest?.winning_team
-    ? latest.winning_team === 'team_1'
-      ? team1
-      : teamA
-    : []
-
-  const isWinner = winningTeamMembers.length > 0 && winningTeamMembers.includes(currentUserIdResolved)
-  const isLoser = winningTeamMembers.length > 0 && !isWinner
-
-  // 🔎 Debug logs
-  console.log('[MATCH_RENDER] latestGame:', latest)
-  console.log('[MATCH_RENDER] isAuction:', isAuction)
-  console.log('[MATCH_RENDER] currentUserId:', currentUserIdResolved)
-  console.log('[MATCH_RENDER] team1:', team1, 'teamA:', teamA)
-  console.log('[MATCH_RENDER] winningTeamMembers:', winningTeamMembers)
-  console.log('[MATCH_RENDER] isWinner:', isWinner, 'isLoser:', isLoser)
-  console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
-
   /* ---------------- Render ---------------- */
   return (
     <>
@@ -142,7 +120,7 @@ export default function MatchPage() {
           matchId={matchId!}
           gameNumber={gamesPlayed}
           status={latest.status}
-          winningTeam={latest.winning_team ?? latest.winningTeam}
+          winningTeam={latest.winning_team ?? undefined}
         />
       )}
 
@@ -175,7 +153,11 @@ export default function MatchPage() {
 
       {isAuction && latest && (
         <AuctionPhase
-          latestGame={{ ...latest, team_1_members: team1, team_a_members: teamA }}
+          latestGame={{
+            ...latest,
+            team_1_members: team1,
+            team_a_members: teamA,
+          }}
           players={players}
           currentUserId={currentUserIdResolved}
           gamesPlayed={gamesPlayed}
