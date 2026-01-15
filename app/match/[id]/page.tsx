@@ -12,10 +12,7 @@ import AuctionPhase from '@/app/components/AuctionPhase'
 import GameHistory from '@/app/components/GameHistory'
 import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
 
-type Player = {
-  id: number
-  username: string
-}
+type Player = { id: number; username: string }
 
 export default function MatchPage() {
   const { id } = useParams()
@@ -44,10 +41,11 @@ export default function MatchPage() {
       if (!resHistory.ok) throw new Error('Failed to fetch match history')
       const historyJson = await resHistory.json()
 
+      const games = historyJson.history ?? []
       const mergedData = {
         ...matchJson,
-        games: historyJson.history,
-        latestGame: historyJson.history[historyJson.history.length - 1] ?? null
+        games,
+        latestGame: games[games.length - 1] ?? null
       }
 
       console.log('📥 Match data & history refreshed:', mergedData)
@@ -67,10 +65,7 @@ export default function MatchPage() {
   }, [user, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  const latestGameId =
-    data?.latestGame?.id ?? (data?.games?.length ? data.games[data.games.length - 1].id : null)
-  
-  // Pass setData to enable fine-grained real-time updates
+  const latestGameId = data?.latestGame?.id ?? null
   useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData, setData })
 
   /* ---------------- Guards ---------------- */
@@ -82,26 +77,8 @@ export default function MatchPage() {
 
   /* ---------------- Derived State ---------------- */
   const { match, players = [], currentUserId, games = [] } = data
-  const latestGame = data.latestGame ?? (games.length ? games[games.length - 1] : null)
+  const latestGame = data.latestGame ?? games[games.length - 1] ?? null
   const gamesPlayed = games.length
-
-  // Normalize latestGame for AuctionPhase
-  const auctionGame = latestGame && {
-    id: latestGame.id ?? latestGame.gameId,
-    team_1_members: (latestGame.team_1_members ?? []).length
-      ? latestGame.team_1_members
-      : (latestGame.team1Members ?? []).map((u: string) => players.find(p => p.username === u)?.id ?? 0),
-    team_a_members: (latestGame.team_a_members ?? []).length
-      ? latestGame.team_a_members
-      : (latestGame.teamAMembers ?? []).map((u: string) => players.find(p => p.username === u)?.id ?? 0),
-    winning_team: latestGame.winning_team ?? latestGame.winningTeam, // 'team_1' | 'team_a'
-    status: latestGame.status,
-    offers: latestGame.offers ?? []
-  }
-
-  // Support old/new team arrays for team display
-  const team1 = latestGame?.team_1_members ?? latestGame?.team1Members ?? []
-  const teamA = latestGame?.team_a_members ?? latestGame?.teamAMembers ?? []
 
   const getPlayer = (idOrUsername: number | string): Player => {
     if (typeof idOrUsername === 'number') {
@@ -111,7 +88,23 @@ export default function MatchPage() {
     }
   }
 
-  /* ---------------- Status Flags ---------------- */
+  /* ---------------- Normalize latestGame for AuctionPhase ---------------- */
+  const auctionGame = latestGame && {
+    ...latestGame,
+    team_1_members: latestGame.team_1_members ?? latestGame.team1Members ?? [],
+    team_a_members: latestGame.team_a_members ?? latestGame.teamAMembers ?? [],
+    offers: latestGame.offers?.map((o: any) => ({
+      id: o.id,
+      from_player_id: o.from_player_id ?? players.find(p => p.username === o.fromUsername)?.id ?? 0,
+      target_player_id: o.target_player_id ?? players.find(p => p.username === o.targetUsername)?.id ?? 0,
+      offer_amount: o.offer_amount ?? o.offerAmount,
+      status: o.status
+    })) ?? []
+  }
+
+  const team1 = auctionGame?.team_1_members ?? []
+  const teamA = auctionGame?.team_a_members ?? []
+
   const gameStatus = latestGame?.status ?? null
   const isInProgress = gameStatus === 'in progress'
   const isAuction = gameStatus === 'auction pending'
@@ -153,7 +146,7 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id ?? latestGame.gameId} />}
+      {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id} />}
 
       {isAuction && auctionGame && (
         <AuctionPhase
@@ -161,13 +154,7 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
-          offers={auctionGame.offers.map((o: any) => ({
-            id: o.id,
-            from_player_id: players.find(p => p.username === o.fromUsername)?.id ?? 0,
-            target_player_id: players.find(p => p.username === o.targetUsername)?.id ?? 0,
-            offer_amount: o.offerAmount ?? o.offer_amount,
-            status: o.status
-          }))}
+          offers={auctionGame.offers}
           onRefreshMatch={fetchMatchData}
         />
       )}
