@@ -23,6 +23,7 @@ export default function MatchPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [auctionGame, setAuctionGame] = useState<any>(null) // Added
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
@@ -42,12 +43,24 @@ export default function MatchPage() {
       const historyJson = await resHistory.json()
 
       const games = historyJson.history ?? []
+      const latestGame = games[games.length - 1] ?? null
 
       setData({
         ...matchJson,
         games,
-        latestGame: games[games.length - 1] ?? null
+        latestGame
       })
+
+      // Also set AuctionPhase state immediately
+      if (latestGame) {
+        setAuctionGame({
+          ...latestGame,
+          team_1_members: latestGame.team_1_members ?? [],
+          team_a_members: latestGame.team_a_members ?? [],
+          offers: latestGame.offers ?? [],
+        })
+      }
+
       setError(null)
     } catch (err: any) {
       console.error('❌ Error fetching match or history:', err)
@@ -63,7 +76,7 @@ export default function MatchPage() {
   }, [user, matchId, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  const latestGameId = data?.latestGame?.id ?? null
+  const latestGameId = auctionGame?.id ?? null
   useRealtimeMatchListener(matchId ?? '', latestGameId, {
     fetchMatchData: () => fetchMatchData(true),
     setData
@@ -78,7 +91,7 @@ export default function MatchPage() {
 
   /* ---------------- Derived State ---------------- */
   const { match, players = [], currentUserId, games = [] } = data
-  const latestGame = data.latestGame ?? games[games.length - 1] ?? null
+  const latestGame = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
   const gamesPlayed = games.length
 
   const getPlayer = (idOrUsername: number | string): Player => {
@@ -88,18 +101,8 @@ export default function MatchPage() {
     return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
   }
 
-  /* ---------------- Normalize latestGame for AuctionPhase ---------------- */
-  const auctionGame = latestGame
-  ? {
-      ...latestGame,
-      team_1_members: latestGame.team_1_members ?? [],
-      team_a_members: latestGame.team_a_members ?? [],
-      offers: latestGame.offers ?? [],
-    }
-  : null
-
-  const team1 = auctionGame?.team_1_members ?? []
-  const teamA = auctionGame?.team_a_members ?? []
+  const team1 = latestGame?.team_1_members ?? []
+  const teamA = latestGame?.team_a_members ?? []
 
   const gameStatus = latestGame?.status ?? null
   const isInProgress = gameStatus === 'in progress'
@@ -144,13 +147,13 @@ export default function MatchPage() {
       {/* ---------------- Phase Controls ---------------- */}
       {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id} />}
 
-      {isAuction && auctionGame && (
+      {isAuction && latestGame && (
         <AuctionPhase
-          latestGame={auctionGame}
+          latestGame={latestGame}
           players={players}
           currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
-          offers={auctionGame.offers}
+          offers={latestGame.offers ?? []}
         />
       )}
 
