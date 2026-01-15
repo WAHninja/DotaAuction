@@ -36,17 +36,14 @@ export default function MatchPage() {
   const fetchMatchData = useCallback(async () => {
     setLoading(true)
     try {
-      // Fetch main match data
       const resMatch = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
       if (!resMatch.ok) throw new Error('Failed to fetch match')
       const matchJson = await resMatch.json()
 
-      // Fetch pre-formatted match history
       const resHistory = await fetch(`/api/match/${matchId}/history`, { cache: 'no-store' })
       if (!resHistory.ok) throw new Error('Failed to fetch match history')
       const historyJson = await resHistory.json()
 
-      // Merge history into main data
       const mergedData = {
         ...matchJson,
         games: historyJson.history,
@@ -72,7 +69,9 @@ export default function MatchPage() {
   /* ---------------- Realtime Listener ---------------- */
   const latestGameId =
     data?.latestGame?.id ?? (data?.games?.length ? data.games[data.games.length - 1].id : null)
-  useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData })
+  
+  // Pass setData to enable fine-grained real-time updates
+  useRealtimeMatchListener(matchId, latestGameId, { fetchMatchData, setData })
 
   /* ---------------- Guards ---------------- */
   if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user...</div>
