@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
+import { getAblyClient } from '@/lib/ably-client'
 
 type Player = { id: number; username: string }
 
@@ -27,7 +28,6 @@ type AuctionPhaseProps = {
   currentUserId: number
   gamesPlayed: number
   offers?: Offer[]
-  onRefreshMatch?: () => void
 }
 
 export default function AuctionPhase({
@@ -36,12 +36,8 @@ export default function AuctionPhase({
   currentUserId,
   gamesPlayed,
   offers = [],
-  onRefreshMatch,
 }: AuctionPhaseProps) {
-  /* ---------------- Normalised safe data ---------------- */
-  const safePlayers = Array.isArray(players) ? players : []
-  const safeOffers = Array.isArray(offers) ? offers : []
-
+  const [safeOffers, setSafeOffers] = useState<Offer[]>(offers)
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null)
   const [offerAmount, setOfferAmount] = useState<number | ''>('')
   const [submitting, setSubmitting] = useState(false)
@@ -50,23 +46,14 @@ export default function AuctionPhase({
   const [showReveal, setShowReveal] = useState(false)
 
   const hasRevealedRef = useRef(false)
+  const { id: gameId, team_1_members, team_a_members, winning_team } = latestGame
 
-  const {
-    id: gameId,
-    team_1_members,
-    team_a_members,
-    winning_team,
-  } = latestGame
-
-  /* ---------------- Guards ---------------- */
-  if (!winning_team) return null
-  if (!Array.isArray(team_1_members) || !Array.isArray(team_a_members)) return null
+  if (!winning_team || !Array.isArray(team_1_members) || !Array.isArray(team_a_members))
+    return null
 
   /* ---------------- Derived State ---------------- */
   const winningTeamMembers = useMemo(() => {
-    if (winning_team === 'team_1') return team_1_members
-    if (winning_team === 'team_a') return team_a_members
-    return []
+    return winning_team === 'team_1' ? team_1_members : team_a_members
   }, [winning_team, team_1_members, team_a_members])
 
   const isWinner = winningTeamMembers.includes(currentUserId)
@@ -76,28 +63,16 @@ export default function AuctionPhase({
   const maxOfferAmount = 2000 + gamesPlayed * 500
 
   const getPlayerName = (id: number) =>
-    safePlayers.find((p) => p.id === id)?.username ?? 'Unknown'
+    players.find((p) => p.id === id)?.username ?? 'Unknown'
 
-  const offerCandidates = winningTeamMembers.filter(
-    (id) => id !== currentUserId
-  )
-
-  const alreadySubmittedOffer = safeOffers.some(
-    (o) => o.from_player_id === currentUserId
-  )
-
-  const acceptedOffer = safeOffers.find(
-    (o) => o.status === 'accepted'
-  )
+  const offerCandidates = winningTeamMembers.filter((id) => id !== currentUserId)
+  const alreadySubmittedOffer = safeOffers.some((o) => o.from_player_id === currentUserId)
+  const acceptedOffer = safeOffers.find((o) => o.status === 'accepted')
 
   const submittedOfferCount = safeOffers.filter((o) =>
     winningTeamMembers.includes(o.from_player_id)
   ).length
-
-  const allOffersSubmitted =
-    winningTeamMembers.length > 0 &&
-    submittedOfferCount === winningTeamMembers.length
-
+  const allOffersSubmitted = winningTeamMembers.length > 0 && submittedOfferCount === winningTeamMembers.length
   const isWaitingForOffers = isLoser && !allOffersSubmitted
 
   /* ---------------- Reveal Animation ---------------- */
@@ -114,15 +89,40 @@ export default function AuctionPhase({
     }
   }, [allOffersSubmitted])
 
+  /* ---------------- Ably Real-time Updates ---------------- */
+  useEffect(() => {
+    const ably = getAblyClient()
+    const offersChannel = ably.channels.get(`match-${gameId}-offers`)
+
+    const handleNewOffer = (data: any) => {
+      if (data?.offer) {
+        setSafeOffers((prev) => [...prev, data.offer])
+      }
+    }
+
+    const handleOfferAccepted = (data: any) => {
+      if (data?.offerId) {
+        setSafeOffers((prev) =>
+          prev.map((o) =>
+            o.id === data.offerId ? { ...o, status: 'accepted' } : o
+          )
+        )
+      }
+    }
+
+    offersChannel.subscribe('new-offer', handleNewOffer)
+    offersChannel.subscribe('offer-accepted', handleOfferAccepted)
+
+    return () => {
+      offersChannel.unsubscribe('new-offer', handleNewOffer)
+      offersChannel.unsubscribe('offer-accepted', handleOfferAccepted)
+    }
+  }, [gameId])
+
   /* ---------------- Submit Offer ---------------- */
   const handleSubmitOffer = async () => {
     if (alreadySubmittedOffer || selectedPlayerId === null) return
-
-    if (
-      offerAmount === '' ||
-      offerAmount < minOfferAmount ||
-      offerAmount > maxOfferAmount
-    ) {
+    if (offerAmount === '' || offerAmount < minOfferAmount || offerAmount > maxOfferAmount) {
       alert(`Offer must be between ${minOfferAmount} and ${maxOfferAmount}`)
       return
     }
@@ -132,19 +132,15 @@ export default function AuctionPhase({
       const res = await fetch(`/api/game/${gameId}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target_player_id: selectedPlayerId,
-          offer_amount: offerAmount,
-        }),
+        body: JSON.stringify({ target_player_id: selectedPlayerId, offer_amount: offerAmount }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
 
       setSelectedPlayerId(null)
       setOfferAmount('')
       setMessage('✅ Offer submitted')
-      onRefreshMatch?.()
+      // ✅ No need to call onRefreshMatch; Ably will update state
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer')
     } finally {
@@ -155,7 +151,6 @@ export default function AuctionPhase({
   /* ---------------- Accept Offer ---------------- */
   const handleAcceptOffer = async (offerId: number) => {
     if (acceptedOffer) return
-
     setAccepting(true)
     setMessage('')
     try {
@@ -164,12 +159,10 @@ export default function AuctionPhase({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
-
       setMessage('✅ Offer accepted')
-      onRefreshMatch?.()
+      // ✅ Ably will update offer status automatically
     } catch (err: any) {
       setMessage(err.message || 'Failed to accept offer')
     } finally {
@@ -190,12 +183,9 @@ export default function AuctionPhase({
         </div>
       )}
 
-      {/* ---------------- Winner Submission ---------------- */}
       {isWinner && !alreadySubmittedOffer && (
         <div className="max-w-md mx-auto mb-10">
-          <p className="text-center text-yellow-300 font-semibold mb-4">
-            Make Your Offer
-          </p>
+          <p className="text-center text-yellow-300 font-semibold mb-4">Make Your Offer</p>
 
           <select
             value={selectedPlayerId ?? ''}
@@ -236,50 +226,29 @@ export default function AuctionPhase({
         </p>
       )}
 
-      {/* ---------------- Offers ---------------- */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {safeOffers.map((offer) => {
           const canAccept =
-            isLoser &&
-            allOffersSubmitted &&
-            !acceptedOffer &&
-            offer.status === 'pending' &&
-            !accepting
+            isLoser && allOffersSubmitted && !acceptedOffer && offer.status === 'pending' && !accepting
 
           return (
-            <div
-              key={offer.id}
-              className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg"
-            >
+            <div key={offer.id} className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg">
               <div className="mb-2 text-sm text-gray-400">
-                From:{' '}
-                <span className="text-yellow-300 font-bold">
-                  {getPlayerName(offer.from_player_id)}
-                </span>
+                From: <span className="text-yellow-300 font-bold">{getPlayerName(offer.from_player_id)}</span>
               </div>
 
               <div className="mb-4 text-sm text-gray-400">
-                For:{' '}
-                <span className="text-yellow-300 font-bold">
-                  {getPlayerName(offer.target_player_id)}
-                </span>
+                For: <span className="text-yellow-300 font-bold">{getPlayerName(offer.target_player_id)}</span>
               </div>
 
               <div className="text-center mb-4">
                 {allOffersSubmitted ? (
                   <span className="text-yellow-300 font-bold text-lg flex justify-center gap-1">
                     {offer.offer_amount}
-                    <Image
-                      src="/Gold_symbol.webp"
-                      alt="Gold"
-                      width={18}
-                      height={18}
-                    />
+                    <Image src="/Gold_symbol.webp" alt="Gold" width={18} height={18} />
                   </span>
                 ) : (
-                  <span className="text-gray-500 text-sm">
-                    Waiting for all offers…
-                  </span>
+                  <span className="text-gray-500 text-sm">Waiting for all offers…</span>
                 )}
               </div>
 
@@ -293,13 +262,7 @@ export default function AuctionPhase({
               )}
 
               {offer.status !== 'pending' && (
-                <div
-                  className={`mt-3 text-center font-bold ${
-                    offer.status === 'accepted'
-                      ? 'text-green-400'
-                      : 'text-red-400'
-                  }`}
-                >
+                <div className={`mt-3 text-center font-bold ${offer.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
                   {offer.status.toUpperCase()}
                 </div>
               )}
@@ -308,11 +271,7 @@ export default function AuctionPhase({
         })}
       </div>
 
-      {message && (
-        <p className="mt-6 text-center text-yellow-300 font-semibold">
-          {message}
-        </p>
-      )}
+      {message && <p className="mt-6 text-center text-yellow-300 font-semibold">{message}</p>}
     </div>
   )
 }
