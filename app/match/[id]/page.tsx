@@ -54,7 +54,7 @@ export default function MatchPage() {
         latestGame,
       })
 
-      // 🚀 Set AuctionPhase state using numeric IDs
+      // Set AuctionPhase state using numeric IDs
       if (latestGame) {
         setAuctionGame({
           ...latestGame,
@@ -93,11 +93,12 @@ export default function MatchPage() {
   if (!data) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
-  const { match, players = [], currentUserId, games = [] } = data
-
-  // Use auctionGame if available for immediate render
+  const { match, players = [], games = [] } = data
   const latest = auctionGame ?? data.latestGame ?? games[games.length - 1] ?? null
   const gamesPlayed = games.length
+
+  // 🔑 Use logged-in user for currentUserId
+  const currentUserIdResolved = user?.id ?? 0
 
   const getPlayer = (idOrUsername: number | string): Player => {
     if (typeof idOrUsername === 'number') {
@@ -106,7 +107,7 @@ export default function MatchPage() {
     return players.find(p => p.username === idOrUsername) ?? { id: 0, username: idOrUsername }
   }
 
-  // Ensure team member arrays contain numbers for AuctionPhase logic
+  // Ensure numeric arrays for AuctionPhase
   const team1 = latest?.team_1_members?.map(Number) ?? []
   const teamA = latest?.team_a_members?.map(Number) ?? []
 
@@ -117,7 +118,7 @@ export default function MatchPage() {
   // 🔎 Debug logs
   console.log('[MATCH_RENDER] latestGame:', latest)
   console.log('[MATCH_RENDER] isAuction:', isAuction)
-  console.log('[MATCH_RENDER] currentUserId:', currentUserId)
+  console.log('[MATCH_RENDER] currentUserId:', currentUserIdResolved)
   console.log('[MATCH_RENDER] team1:', team1, 'teamA:', teamA)
   console.log('[MATCH_RENDER] auctionGame.offers:', latest?.offers)
 
@@ -168,7 +169,7 @@ export default function MatchPage() {
             team_a_members: teamA,
           }}
           players={players}
-          currentUserId={Number(currentUserId ?? 0)}
+          currentUserId={currentUserIdResolved} // ✅ Corrected
           gamesPlayed={gamesPlayed}
           offers={latest.offers ?? []}
         />
