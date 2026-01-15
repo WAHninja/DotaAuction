@@ -28,17 +28,32 @@ export default function MatchPage() {
     if (user === null) router.push('/')
   }, [user, router])
 
-  /* ---------------- Fetch Match (source of truth) ---------------- */
+  /* ---------------- Fetch + NORMALIZE ---------------- */
   const fetchMatch = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${matchId}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch match')
-      const json = await res.json()
 
+      const json = await res.json()
       console.log('📥 Match refreshed:', json)
 
-      setMatch(json)
-      setGames(json.games ?? [])
+      const normalizedGames =
+        (json.games ?? []).map((g: any) => ({
+          gameId: g.id,
+          matchId: g.match_id,
+          status: g.status,
+          createdAt: g.created_at,
+          team1Members: g.team_1_members ?? [],
+          teamAMembers: g.team_a_members ?? [],
+          winningTeam: g.winning_team,
+          offers: g.offers ?? [],
+          players: g.players ?? [],
+          playerStats: g.player_stats ?? [],
+          matchWinner: g.match_winner
+        })) ?? []
+
+      setMatch(json.match ?? json)
+      setGames(normalizedGames)
     } catch (err: any) {
       console.error('❌ Error fetching match:', err)
       setError(err.message)
@@ -53,9 +68,8 @@ export default function MatchPage() {
     fetchMatch()
   }, [user, fetchMatch])
 
-  /* ---------------- Realtime Listener ---------------- */
-  const latestGameId =
-    games.length ? games[games.length - 1].gameId : null
+  /* ---------------- Realtime ---------------- */
+  const latestGameId = games.length ? games[games.length - 1].gameId : null
 
   useRealtimeMatchListener(matchId, latestGameId, {
     fetchMatchData: fetchMatch
@@ -77,7 +91,7 @@ export default function MatchPage() {
   if (!match || games.length === 0)
     return <div className="p-6 text-center text-gray-300">Match not found</div>
 
-  /* ---------------- Derived State ---------------- */
+  /* ---------------- Derived ---------------- */
   const latestGame = games[games.length - 1]
   const gamesPlayed = games.length
 
@@ -98,7 +112,6 @@ export default function MatchPage() {
         <WinnerBanner winnerName={latestGame.matchWinner} />
       )}
 
-      {/* ---------------- Teams ---------------- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <TeamCard
           name="Team 1"
@@ -123,7 +136,6 @@ export default function MatchPage() {
         />
       </div>
 
-      {/* ---------------- Phase Controls ---------------- */}
       {latestGame.status === 'in progress' && (
         <SelectGameWinnerForm gameId={latestGame.gameId} />
       )}
@@ -131,7 +143,7 @@ export default function MatchPage() {
       {latestGame.status === 'auction pending' && (
         <AuctionPhase
           latestGame={latestGame}
-          players={latestGame.players ?? []}
+          players={latestGame.players}
           currentUserId={user.id}
           gamesPlayed={gamesPlayed}
           offers={latestGame.offers}
@@ -139,21 +151,19 @@ export default function MatchPage() {
         />
       )}
 
-      {/* ---------------- Game History ---------------- */}
       <section className="mt-12">
         <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
 
         <GameHistory
-          games={games
-            .slice()
+          games={[...games]
             .sort(
               (a, b) =>
                 new Date(b.createdAt).getTime() -
                 new Date(a.createdAt).getTime()
             )
-            .map((g: any, index: number) => ({
+            .map((g, index) => ({
               gameId: g.gameId,
-              gameNumber: g.gameNumber,
+              gameNumber: index + 1,
               createdAt: g.createdAt,
               teamAMembers: g.teamAMembers,
               team1Members: g.team1Members,
