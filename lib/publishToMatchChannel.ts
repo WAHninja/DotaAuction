@@ -1,5 +1,5 @@
 // lib/publishToMatchChannel.ts (SERVER ONLY)
-import ablyServerClient from '@/lib/ably-server'; // server-only import
+import { getAblyServer } from '@/lib/ably-server'; // server-only import
 
 /**
  * Publish data to a match-specific Ably channel.
@@ -12,6 +12,7 @@ export async function publishToMatchChannel(
   event: string,
   data: any
 ) {
+  const ablyServerClient = getAblyServer(); // initialize / reuse the server client
   const channel = ablyServerClient.channels.get(`match-${matchId}-offers`);
   await channel.publish(event, data);
 }
