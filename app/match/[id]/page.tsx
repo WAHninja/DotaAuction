@@ -86,11 +86,24 @@ export default function MatchPage() {
   const latestGame = data.latestGame ?? (games.length ? games[games.length - 1] : null)
   const gamesPlayed = games.length
 
-  // Support both ID arrays (old) and username arrays (new)
+  // Normalize latestGame for AuctionPhase
+  const auctionGame = latestGame && {
+    id: latestGame.id ?? latestGame.gameId,
+    team_1_members: (latestGame.team_1_members ?? []).length
+      ? latestGame.team_1_members
+      : (latestGame.team1Members ?? []).map((u: string) => players.find(p => p.username === u)?.id ?? 0),
+    team_a_members: (latestGame.team_a_members ?? []).length
+      ? latestGame.team_a_members
+      : (latestGame.teamAMembers ?? []).map((u: string) => players.find(p => p.username === u)?.id ?? 0),
+    winning_team: latestGame.winning_team ?? latestGame.winningTeam, // 'team_1' | 'team_a'
+    status: latestGame.status,
+    offers: latestGame.offers ?? []
+  }
+
+  // Support old/new team arrays for team display
   const team1 = latestGame?.team_1_members ?? latestGame?.team1Members ?? []
   const teamA = latestGame?.team_a_members ?? latestGame?.teamAMembers ?? []
 
-  /* ---------------- Safe Player Lookup ---------------- */
   const getPlayer = (idOrUsername: number | string): Player => {
     if (typeof idOrUsername === 'number') {
       return players.find(p => p.id === idOrUsername) || { id: idOrUsername, username: `Player#${idOrUsername}` }
@@ -142,19 +155,20 @@ export default function MatchPage() {
 
       {/* ---------------- Phase Controls ---------------- */}
       {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id ?? latestGame.gameId} />}
-      {isAuction && latestGame && (
+
+      {isAuction && auctionGame && (
         <AuctionPhase
-          latestGame={latestGame}
+          latestGame={auctionGame}
           players={players}
           currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
-          offers={latestGame.offers?.map((o: any) => ({
+          offers={auctionGame.offers.map((o: any) => ({
             id: o.id,
             from_player_id: players.find(p => p.username === o.fromUsername)?.id ?? 0,
             target_player_id: players.find(p => p.username === o.targetUsername)?.id ?? 0,
             offer_amount: o.offerAmount ?? o.offer_amount,
             status: o.status
-          })) ?? []}
+          }))}
           onRefreshMatch={fetchMatchData}
         />
       )}
