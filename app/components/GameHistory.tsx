@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { getAblyClient } from '@/lib/ably-client'
 
 type PlayerStat = {
   id: number
@@ -35,150 +36,150 @@ type Game = {
 }
 
 type GameHistoryProps = {
-  games: Game[]
-  liveOffers?: Offer[] // live updates from parent
-  livePlayerStats?: PlayerStat[] // live updates from parent
+  matchId: string
+  initialGames: Game[]
 }
 
-export default function GameHistory({ games, liveOffers = [], livePlayerStats = [] }: GameHistoryProps) {
+export default function GameHistory({ matchId, initialGames }: GameHistoryProps) {
   const [expandedGameId, setExpandedGameId] = useState<number | null>(
-    games.find(g => g.defaultExpanded)?.gameId ?? null
+    initialGames.find(g => g.defaultExpanded)?.gameId ?? null
   )
-  const [mergedGames, setMergedGames] = useState<Game[]>(games)
+  const [mergedGames, setMergedGames] = useState<Game[]>(initialGames)
 
-  // Merge live updates into the latest game
+  /* ---------------- Real-time updates via Ably ---------------- */
   useEffect(() => {
-    if (!games.length) return
-    const latestGame = games[games.length - 1]
-    if (!latestGame) return
+    const ably = getAblyClient()
+    const matchChannel = ably.channels.get(`match-${matchId}`)
 
-    const updatedGames = games.map(game => {
-      if (game.gameId !== latestGame.gameId) return game
-      return {
-        ...game,
-        offers: liveOffers.length ? liveOffers : game.offers,
-        playerStats: livePlayerStats.length ? livePlayerStats : game.playerStats,
-      }
-    })
+    const handleNewGame = (data: any) => {
+      if (!data?.game) return
+      setMergedGames(prev => {
+        // Avoid duplicating the same game
+        if (prev.find(g => g.gameId === data.game.gameId)) return prev
+        return [...prev, data.game]
+      })
+    }
 
-    setMergedGames(updatedGames)
-  }, [liveOffers, livePlayerStats, games])
+    matchChannel.subscribe('game-winner-selected', handleNewGame)
+
+    return () => matchChannel.unsubscribe('game-winner-selected', handleNewGame)
+  }, [matchId])
 
   return (
     <div className="space-y-4">
-      {mergedGames.map(game => {
-        const isExpanded = expandedGameId === game.gameId
-        const acceptedOffer = game.offers.find(o => o.status === 'accepted')
+      {mergedGames
+        .slice()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map(game => {
+          const isExpanded = expandedGameId === game.gameId
+          const acceptedOffer = game.offers.find(o => o.status === 'accepted')
 
-        return (
-          <div
-            key={game.gameId}
-            className={`p-4 border rounded-lg shadow cursor-pointer ${
-              game.highlight ? 'border-yellow-400' : 'border-gray-300'
-            }`}
-            onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}
-          >
-            <h3 className="text-xl font-semibold flex justify-between items-center">
-              <span>
-                Game #{game.gameNumber} – {game.winningTeam ?? 'Pending'}
-              </span>
-              <button className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</button>
-            </h3>
+          return (
+            <div
+              key={game.gameId}
+              className={`p-4 border rounded-lg shadow cursor-pointer ${
+                game.highlight ? 'border-yellow-400' : 'border-gray-300'
+              }`}
+              onClick={() => setExpandedGameId(isExpanded ? null : game.gameId)}
+            >
+              <h3 className="text-xl font-semibold flex justify-between items-center">
+                <span>
+                  Game #{game.gameNumber} – {game.winningTeam ?? 'Pending'}
+                </span>
+                <button className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</button>
+              </h3>
 
-            {/* Show accepted offer summary when not expanded */}
-            {!isExpanded && acceptedOffer && (
-              <p className="mt-2 text-sm font-medium">
-                {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
-                {acceptedOffer.offerAmount}
-                <Image
-                  src="/Gold_symbol.webp"
-                  alt="Gold"
-                  width={16}
-                  height={16}
-                  className="inline-block ml-1 align-middle"
-                />
-              </p>
-            )}
+              {!isExpanded && acceptedOffer && (
+                <p className="mt-2 text-sm font-medium">
+                  {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
+                  {acceptedOffer.offerAmount}
+                  <Image
+                    src="/Gold_symbol.webp"
+                    alt="Gold"
+                    width={16}
+                    height={16}
+                    className="inline-block ml-1 align-middle"
+                  />
+                </p>
+              )}
 
-            {isExpanded && (
-              <>
-                <div className="mt-2">
-                  <strong>Winner:</strong> {game.winningTeam ?? 'N/A'}<br />
-                  <strong>Team A:</strong> {game.teamAMembers.join(', ') || 'N/A'}<br />
-                  <strong>Team 1:</strong> {game.team1Members.join(', ') || 'N/A'}
-                </div>
-
-                {/* Player Stats / Gold Changes */}
-                {game.playerStats && game.playerStats.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-bold">Gold changes:</h4>
-                    <ul className="list-disc list-inside space-y-1">
-                      {game.playerStats.map(stat => (
-                        <li key={stat.id}>
-                          <span className="font-medium">{stat.username}</span>:
-                          <span
-                            className={`ml-1 font-semibold ${
-                              stat.goldChange > 0
-                                ? 'text-green-400'
-                                : stat.goldChange < 0
-                                ? 'text-red-500'
-                                : 'text-gray-400'
-                            }`}
-                          >
-                            {stat.goldChange > 0 ? `+${stat.goldChange}` : stat.goldChange}
-                          </span>
-                          <Image
-                            src="/Gold_symbol.webp"
-                            alt="Gold"
-                            width={16}
-                            height={16}
-                            className="inline-block ml-1 align-middle"
-                          />
-                          <span className="text-sm text-gray-400 ml-2">
-                            ({stat.reason?.replace('_', ' ') ?? 'N/A'}, {stat.teamId ?? 'N/A'})
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+              {isExpanded && (
+                <>
+                  <div className="mt-2">
+                    <strong>Winner:</strong> {game.winningTeam ?? 'N/A'}<br />
+                    <strong>Team A:</strong> {game.teamAMembers.join(', ') || 'N/A'}<br />
+                    <strong>Team 1:</strong> {game.team1Members.join(', ') || 'N/A'}
                   </div>
-                )}
 
-                {/* Offers */}
-                {game.offers && game.offers.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-bold">Offers:</h4>
-                    <ul className="list-disc list-inside">
-                      {game.offers.map(offer => (
-                        <li key={offer.id}>
-                          {offer.fromUsername} offered {offer.targetUsername} for {offer.offerAmount}
-                          <Image
-                            src="/Gold_symbol.webp"
-                            alt="Gold"
-                            width={16}
-                            height={16}
-                            className="inline-block ml-1 align-middle"
-                          />{' '}
-                          (<span
-                            className={`font-semibold ${
-                              offer.status === 'accepted'
-                                ? 'text-green-500'
-                                : offer.status === 'rejected'
-                                ? 'text-red-500'
-                                : 'text-gray-400'
-                            }`}
-                          >
-                            {offer.status}
-                          </span>)
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )
-      })}
+                  {game.playerStats.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-bold">Gold changes:</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {game.playerStats.map(stat => (
+                          <li key={stat.id}>
+                            <span className="font-medium">{stat.username}</span>:
+                            <span
+                              className={`ml-1 font-semibold ${
+                                stat.goldChange > 0
+                                  ? 'text-green-400'
+                                  : stat.goldChange < 0
+                                  ? 'text-red-500'
+                                  : 'text-gray-400'
+                              }`}
+                            >
+                              {stat.goldChange > 0 ? `+${stat.goldChange}` : stat.goldChange}
+                            </span>
+                            <Image
+                              src="/Gold_symbol.webp"
+                              alt="Gold"
+                              width={16}
+                              height={16}
+                              className="inline-block ml-1 align-middle"
+                            />
+                            <span className="text-sm text-gray-400 ml-2">
+                              ({stat.reason?.replace('_', ' ') ?? 'N/A'}, {stat.teamId ?? 'N/A'})
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {game.offers.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-bold">Offers:</h4>
+                      <ul className="list-disc list-inside">
+                        {game.offers.map(offer => (
+                          <li key={offer.id}>
+                            {offer.fromUsername} offered {offer.targetUsername} for {offer.offerAmount}
+                            <Image
+                              src="/Gold_symbol.webp"
+                              alt="Gold"
+                              width={16}
+                              height={16}
+                              className="inline-block ml-1 align-middle"
+                            />{' '}
+                            (<span
+                              className={`font-semibold ${
+                                offer.status === 'accepted'
+                                  ? 'text-green-500'
+                                  : offer.status === 'rejected'
+                                  ? 'text-red-500'
+                                  : 'text-gray-400'
+                              }`}
+                            >
+                              {offer.status}
+                            </span>)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })}
     </div>
   )
 }
