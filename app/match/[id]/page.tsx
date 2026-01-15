@@ -162,20 +162,19 @@ export default function MatchPage() {
       {isInProgress && latest && <SelectGameWinnerForm gameId={latest.id} />}
 
       {isAuction && latest && (
-        <AuctionPhase
-  latestGame={{
-    ...latest,
-    team_1_members: team1,
-    team_a_members: teamA,
-  }}
-  players={players}
-  currentUserId={currentUserIdResolved}
-  gamesPlayed={gamesPlayed}
-  offers={latest.offers ?? []}
-/>
-<div className="text-white p-4 border border-red-500">
-  Debug: AuctionPhase should be above
-</div>
+        <>
+  <AuctionPhase
+    latestGame={{ ...latest, team_1_members: team1, team_a_members: teamA }}
+    players={players}
+    currentUserId={currentUserIdResolved}
+    gamesPlayed={gamesPlayed}
+    offers={latest.offers ?? []}
+  />
+  <div className="text-white p-4 border border-red-500">
+    Debug: AuctionPhase should be above
+  </div>
+</>
+
 
       )}
 
