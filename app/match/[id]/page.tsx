@@ -82,7 +82,7 @@ export default function MatchPage() {
   if (!data) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Derived State ---------------- */
-  const { match, players = [], currentUserId, games = [], offers = [] } = data
+  const { match, players = [], currentUserId, games = [] } = data
   const latestGame = data.latestGame ?? (games.length ? games[games.length - 1] : null)
   const gamesPlayed = games.length
 
@@ -148,15 +148,13 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
-          offers={offers
-            .filter(o => o.game_id === latestGame.id)
-            .map(o => ({
-              id: o.id,
-              from_player_id: players.find(p => p.username === o.fromUsername)?.id ?? 0,
-              target_player_id: players.find(p => p.username === o.targetUsername)?.id ?? 0,
-              offer_amount: o.offerAmount,
-              status: o.status
-            }))}
+          offers={latestGame.offers?.map((o: any) => ({
+            id: o.id,
+            from_player_id: players.find(p => p.username === o.fromUsername)?.id ?? 0,
+            target_player_id: players.find(p => p.username === o.targetUsername)?.id ?? 0,
+            offer_amount: o.offerAmount ?? o.offer_amount,
+            status: o.status
+          })) ?? []}
           onRefreshMatch={fetchMatchData}
         />
       )}
