@@ -86,12 +86,18 @@ export default function MatchPage() {
   const latestGame = data.latestGame ?? (games.length ? games[games.length - 1] : null)
   const gamesPlayed = games.length
 
-  const team1 = latestGame?.team_1_members ?? []
-  const teamA = latestGame?.team_a_members ?? []
+  // Support both ID arrays (old) and username arrays (new)
+  const team1 = latestGame?.team_1_members ?? latestGame?.team1Members ?? []
+  const teamA = latestGame?.team_a_members ?? latestGame?.teamAMembers ?? []
 
   /* ---------------- Safe Player Lookup ---------------- */
-  const getPlayer = (id: number): Player =>
-    players.find(p => p.id === id) || { id, username: `Player#${id}` }
+  const getPlayer = (idOrUsername: number | string): Player => {
+    if (typeof idOrUsername === 'number') {
+      return players.find(p => p.id === idOrUsername) || { id: idOrUsername, username: `Player#${idOrUsername}` }
+    } else {
+      return players.find(p => p.username === idOrUsername) || { id: 0, username: idOrUsername }
+    }
+  }
 
   /* ---------------- Status Flags ---------------- */
   const gameStatus = latestGame?.status ?? null
@@ -106,7 +112,7 @@ export default function MatchPage() {
           matchId={matchId}
           gameNumber={gamesPlayed}
           status={latestGame.status}
-          winningTeam={latestGame.winning_team}
+          winningTeam={latestGame.winning_team ?? latestGame.winningTeam}
         />
       )}
 
@@ -135,12 +141,12 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id} />}
+      {isInProgress && latestGame && <SelectGameWinnerForm gameId={latestGame.id ?? latestGame.gameId} />}
       {isAuction && latestGame && (
         <AuctionPhase
           latestGame={latestGame}
           players={players}
-          currentUserId={currentUserId}
+          currentUserId={currentUserId ?? 0}
           gamesPlayed={gamesPlayed}
           offers={offers
             .filter(o => o.game_id === latestGame.id)
@@ -162,29 +168,27 @@ export default function MatchPage() {
         <GameHistory
           games={games
             .slice()
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .sort((a, b) => new Date(b.created_at ?? b.createdAt).getTime() - new Date(a.created_at ?? a.createdAt).getTime())
             .map((g: any, index: number) => ({
-              gameId: g.id,
+              gameId: g.id ?? g.gameId,
               gameNumber: index + 1,
-              createdAt: g.created_at,
-              teamAMembers: g.team_a_members.map(getPlayer).map(p => p.username),
-              team1Members: g.team_1_members.map(getPlayer).map(p => p.username),
-              winningTeam: g.winning_team,
-              offers: offers
-                .filter((o: any) => o.game_id === g.id)
-                .map((o: any) => ({
-                  id: o.id,
-                  fromUsername: getPlayer(o.from_player_id).username,
-                  targetUsername: getPlayer(o.target_player_id).username,
-                  offerAmount: o.offer_amount,
-                  status: o.status
-                })),
+              createdAt: g.created_at ?? g.createdAt,
+              teamAMembers: (g.team_a_members ?? g.teamAMembers ?? []).map(getPlayer).map(p => p.username),
+              team1Members: (g.team_1_members ?? g.team1Members ?? []).map(getPlayer).map(p => p.username),
+              winningTeam: g.winning_team ?? g.winningTeam,
+              offers: (g.offers ?? []).map((o: any) => ({
+                id: o.id,
+                fromUsername: o.fromUsername ?? getPlayer(o.from_player_id).username,
+                targetUsername: o.targetUsername ?? getPlayer(o.target_player_id).username,
+                offerAmount: o.offer_amount ?? o.offerAmount,
+                status: o.status
+              })),
               playerStats: (g.playerStats ?? []).map((s: any) => ({
                 id: s.id,
-                username: getPlayer(s.player_id).username,
-                goldChange: s.gold_change,
+                username: s.username ?? getPlayer(s.player_id).username,
+                goldChange: s.gold_change ?? s.goldChange,
                 reason: s.reason,
-                teamId: s.team_id === 'team_1' ? 'team1' : 'teamA'
+                teamId: s.team_id === 'team_1' || s.teamId === 'team1' ? 'team1' : 'teamA'
               })),
               highlight: index === 0,
               defaultExpanded: index === 0
