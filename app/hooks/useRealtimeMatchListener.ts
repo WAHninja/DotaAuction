@@ -3,7 +3,7 @@ import { getAblyClient } from '@/lib/ably-client';
 
 type Callbacks = {
   fetchMatchData: () => Promise<void> | void;
-  setData?: React.Dispatch<React.SetStateAction<any>>; // optional, for immediate fine-grained updates
+  setData?: React.Dispatch<React.SetStateAction<any>>; // optional, fine-grained updates
 };
 
 export function useRealtimeMatchListener(
@@ -13,10 +13,13 @@ export function useRealtimeMatchListener(
 ) {
   const ablyClientRef = useRef<ReturnType<typeof getAblyClient> | null>(null);
 
-  // ---------------- Initialize Ably client ----------------
+  // ---------------- Initialize Ably client once ----------------
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!ablyClientRef.current) ablyClientRef.current = getAblyClient();
+    if (!ablyClientRef.current) {
+      ablyClientRef.current = getAblyClient();
+      console.log('✅ Ably client initialized');
+    }
   }, []);
 
   // ---------------- Match-level events ----------------
@@ -24,36 +27,15 @@ export function useRealtimeMatchListener(
     if (!matchId || !ablyClientRef.current) return;
     const channel = ablyClientRef.current.channels.get(`match-${matchId}`);
 
-    const onGameCreated = (data?: any) => {
-      if (data?.game && setData) {
-        setData((prev: any) => {
-          if (!prev) return prev;
-          const exists = prev.games?.find((g: any) => g.id === data.game.id)
-          if (exists) return prev;
-          return { ...prev, games: [...(prev.games || []), data.game], latestGame: data.game };
-        });
-      } else fetchMatchData();
+    const onGameUpdated = (data?: any) => {
+      console.log('📡 game-updated event', data);
+      fetchMatchData();
     };
 
-    const onGameWinnerSelected = (data?: any) => {
-      if (data?.gameId && setData) {
-        setData((prev: any) => ({
-          ...prev,
-          games: prev.games.map((g: any) =>
-            g.id === data.gameId ? { ...g, winning_team: data.winningTeam } : g
-          ),
-        }));
-      } else fetchMatchData();
-    };
+    channel.subscribe('game-updated', onGameUpdated);
 
-    channel.subscribe('game-created', onGameCreated);
-    channel.subscribe('game-winner-selected', onGameWinnerSelected);
-
-    return () => {
-      channel.unsubscribe('game-created', onGameCreated);
-      channel.unsubscribe('game-winner-selected', onGameWinnerSelected);
-    };
-  }, [matchId, fetchMatchData, setData]);
+    return () => channel.unsubscribe('game-updated', onGameUpdated);
+  }, [matchId, fetchMatchData]);
 
   // ---------------- Auction-level events ----------------
   useEffect(() => {
@@ -61,42 +43,27 @@ export function useRealtimeMatchListener(
     const channel = ablyClientRef.current.channels.get(`match-${matchId}-offers`);
 
     const onNewOffer = (data?: any) => {
+      console.log('📡 new-offer event', data);
+
       if (data?.offer && setData) {
         setData((prev: any) => {
           if (!prev) return prev;
           const updatedOffers = [...(prev.latestGame?.offers || []), data.offer];
-          return { ...prev, latestGame: { ...prev.latestGame, offers: updatedOffers } };
+          return {
+            ...prev,
+            latestGame: {
+              ...prev.latestGame,
+              offers: updatedOffers,
+            },
+          };
         });
-      } else fetchMatchData();
-    };
-
-    const onOfferAccepted = (data?: any) => {
-      if (data?.offer && setData) {
-        setData((prev: any) => {
-          if (!prev) return prev;
-
-          // Update offers status
-          const updatedOffers = (prev.latestGame?.offers || []).map((o: any) =>
-            o.id === data.offer.id ? { ...o, status: 'accepted' } : o
-          );
-
-          // Add new game if present
-          let updatedGames = prev.games;
-          if (data.newGame && !prev.games.find((g: any) => g.id === data.newGame.id)) {
-            updatedGames = [...prev.games, data.newGame];
-          }
-
-          return { ...prev, latestGame: { ...prev.latestGame, offers: updatedOffers }, games: updatedGames };
-        });
-      } else fetchMatchData();
+      } else {
+        fetchMatchData();
+      }
     };
 
     channel.subscribe('new-offer', onNewOffer);
-    channel.subscribe('offer-accepted', onOfferAccepted);
 
-    return () => {
-      channel.unsubscribe('new-offer', onNewOffer);
-      channel.unsubscribe('offer-accepted', onOfferAccepted);
-    };
+    return () => channel.unsubscribe('new-offer', onNewOffer);
   }, [matchId, latestGameId, fetchMatchData, setData]);
 }
