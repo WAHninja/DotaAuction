@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
 import { getAblyClient } from '@/lib/ably-client';
 
