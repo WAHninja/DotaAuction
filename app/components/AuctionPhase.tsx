@@ -122,43 +122,41 @@ export default function AuctionPhase({
   }, [allOffersSubmitted])
 
   /* ---------------- Ably Real-time Updates ---------------- */
-  useEffect(() => {
-    const ably = getAblyClient()
-    const offersChannel = ably.channels.get(`match-${gameId}-offers`)
+useEffect(() => {
+  const ably = getAblyClient();
+  const offersChannel = ably.channels.get(`match-${gameId}-offers`);
 
-    const handleNewOffer = (data: any) => {
-      if (!data?.offer) return
-      setSafeOffers((prev) => {
-        if (prev.find((o) => o.id === data.offer.id)) return prev
-        return [
-          ...prev,
-          {
-            ...data.offer,
-            from_player_id: Number(data.offer.from_player_id),
-            target_player_id: Number(data.offer.target_player_id),
-            offer_amount: Number(data.offer.offer_amount),
-          },
-        ]
-      })
-    }
+  const handleNewOffer = (data: any) => {
+    if (!data?.offers || !Array.isArray(data.offers)) return;
 
-    const handleOfferAccepted = (data: any) => {
-      if (!data?.offerId) return
-      setSafeOffers((prev) =>
-        prev.map((o) =>
-          o.id === data.offerId ? { ...o, status: 'accepted' } : o
-        )
+    // Replace entire safeOffers with server state
+    setSafeOffers(
+      data.offers.map((o: any) => ({
+        ...o,
+        from_player_id: Number(o.from_player_id),
+        target_player_id: Number(o.target_player_id),
+        offer_amount: Number(o.offer_amount),
+      }))
+    );
+  };
+
+  const handleOfferAccepted = (data: any) => {
+    if (!data?.offerId) return;
+    setSafeOffers((prev) =>
+      prev.map((o) =>
+        o.id === data.offerId ? { ...o, status: 'accepted' } : o
       )
-    }
+    );
+  };
 
-    offersChannel.subscribe('new-offer', handleNewOffer)
-    offersChannel.subscribe('offer-accepted', handleOfferAccepted)
+  offersChannel.subscribe('new-offer', handleNewOffer);
+  offersChannel.subscribe('offer-accepted', handleOfferAccepted);
 
-    return () => {
-      offersChannel.unsubscribe('new-offer', handleNewOffer)
-      offersChannel.unsubscribe('offer-accepted', handleOfferAccepted)
-    }
-  }, [gameId])
+  return () => {
+    offersChannel.unsubscribe('new-offer', handleNewOffer);
+    offersChannel.unsubscribe('offer-accepted', handleOfferAccepted);
+  };
+}, [gameId]);
 
   /* ---------------- Submit Offer ---------------- */
   const handleSubmitOffer = async () => {
