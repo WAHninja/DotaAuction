@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getAblyClient } from '@/lib/ably-client';
 
 type Callbacks = {
@@ -13,16 +13,25 @@ export function useRealtimeMatchListener(
   latestGameId: number | null,
   { fetchMatchData, setData }: Callbacks
 ) {
-  const ablyRef = useRef<any>(null); // initialize null
+  const ablyRef = useRef<any>(null);
+  const [mounted, setMounted] = useState(false);
 
+  // ---------------- Mount Guard ----------------
   useEffect(() => {
-    if (typeof window === 'undefined') return; // SSR guard
-    ablyRef.current = getAblyClient();
+    setMounted(true);
   }, []);
+
+  // ---------------- Initialize Ably ----------------
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return;
+    if (!ablyRef.current) {
+      ablyRef.current = getAblyClient();
+    }
+  }, [mounted]);
 
   // ---------------- Match lifecycle ----------------
   useEffect(() => {
-    if (!matchId || !ablyRef.current) return;
+    if (!mounted || !matchId || !ablyRef.current) return;
 
     const channel = ablyRef.current.channels.get(`match-${matchId}`);
     const handler = (msg: any) => {
@@ -42,18 +51,19 @@ export function useRealtimeMatchListener(
       channel.unsubscribe('game-updated', handler);
       channel.unsubscribe('game-winner-selected', handler);
     };
-  }, [matchId, fetchMatchData, setData]);
+  }, [mounted, matchId, fetchMatchData, setData]);
 
   // ---------------- Offers / auction ----------------
   useEffect(() => {
-    if (!matchId || !latestGameId || !ablyRef.current) return;
+    if (!mounted || !matchId || !latestGameId || !ablyRef.current) return;
 
     const channel = ablyRef.current.channels.get(`match-${matchId}-offers`);
     const handler = (msg: any) => {
       console.log('📡 offer event', msg.name, msg.data);
 
       if (setData && msg.data) {
-        const newOffers = msg.data.offers ?? (msg.data.offer ? [msg.data.offer] : []);
+        const newOffers =
+          msg.data.offers ?? (msg.data.offer ? [msg.data.offer] : []);
         setData((prev: any) => {
           if (!prev?.latestGame) return prev;
           const existingOffers = prev.latestGame.offers ?? [];
@@ -80,5 +90,5 @@ export function useRealtimeMatchListener(
       channel.unsubscribe('new-offer', handler);
       channel.unsubscribe('offer-accepted', handler);
     };
-  }, [matchId, latestGameId, fetchMatchData, setData]);
+  }, [mounted, matchId, latestGameId, fetchMatchData, setData]);
 }
