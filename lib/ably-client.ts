@@ -17,7 +17,6 @@ export function getAblyClient(): Realtime {
     ablyClient = new Realtime({
       key: process.env.NEXT_PUBLIC_ABLY_PUBLIC_KEY!,
     });
-    console.log('✅ Ably client initialized (browser)');
   }
 
   return ablyClient;
