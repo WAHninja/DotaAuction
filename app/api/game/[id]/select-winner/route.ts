@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
-import { getMatchChannels } from '@/lib/ably';
+import { getMatchChannels } from '@/lib/ably-server';
 
 type TeamId = 'team_1' | 'team_a';
 
@@ -19,10 +19,11 @@ export async function POST(req: NextRequest, context: any) {
       return new Response(JSON.stringify({ error: 'Invalid winningTeamId' }), { status: 400 });
     }
 
+    // ---------------- Begin transaction ----------------
     await client.query('BEGIN');
     transactionStarted = true;
 
-    // ---------------- Load game ----------------
+    // ---------------- Load & lock game ----------------
     const { rows: gameRows } = await client.query(
       'SELECT * FROM games WHERE id = $1 FOR UPDATE',
       [gameId]
@@ -44,10 +45,6 @@ export async function POST(req: NextRequest, context: any) {
 
     const winningMembers: number[] = game[`${winningTeamId}_members`];
     const losingTeamId: TeamId = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
-    const losingMembers: number[] = game[`${losingTeamId}_members`];
-
-    // ✅ Correct Ably channel (match-level)
-    const { match: matchChannel } = getMatchChannels(game.match_id);
 
     // ---------------- Single winner shortcut ----------------
     if (winningMembers.length === 1) {
@@ -66,11 +63,10 @@ export async function POST(req: NextRequest, context: any) {
       await client.query('COMMIT');
       transactionStarted = false;
 
-      // 🔔 Publish AFTER commit
-      await matchChannel.publish('game-winner-selected', {
+      const { game: gameChannel } = getMatchChannels(game.match_id);
+
+      await gameChannel.publish('game-winner-selected', {
         gameId,
-        winningTeamId,
-        status: 'finished',
       });
 
       return new Response(
@@ -80,16 +76,15 @@ export async function POST(req: NextRequest, context: any) {
     }
 
     // ---------------- Gold calculations ----------------
+    const losingMembers: number[] = game[`${losingTeamId}_members`];
+
     const { rows: losingGoldRes } = await client.query(
       'SELECT user_id, gold FROM match_players WHERE match_id = $1 AND user_id = ANY($2)',
       [game.match_id, losingMembers]
     );
 
-    const losingGoldMap = new Map<number, number>();
     let bonusPool = 0;
-
     for (const row of losingGoldRes) {
-      losingGoldMap.set(row.user_id, row.gold);
       bonusPool += Math.floor(row.gold * 0.5);
     }
 
@@ -118,7 +113,9 @@ export async function POST(req: NextRequest, context: any) {
 
     // Penalise losers
     for (const playerId of losingMembers) {
-      const penalty = Math.floor((losingGoldMap.get(playerId) ?? 0) * 0.5);
+      const penalty = Math.floor(
+        (losingGoldRes.find(r => r.user_id === playerId)?.gold ?? 0) * 0.5
+      );
 
       await client.query(
         'UPDATE match_players SET gold = gold - $1 WHERE match_id = $2 AND user_id = $3',
@@ -135,13 +132,11 @@ export async function POST(req: NextRequest, context: any) {
     await client.query('COMMIT');
     transactionStarted = false;
 
-    // 🔔 Publish AFTER commit
-    await matchChannel.publish('game-winner-selected', {
+    // ---------------- Realtime signal ----------------
+    const { game: gameChannel } = getMatchChannels(game.match_id);
+
+    await gameChannel.publish('game-winner-selected', {
       gameId,
-      winningTeamId,
-      status: 'auction pending',
-      winningMembers,
-      losingMembers,
     });
 
     return new Response(
