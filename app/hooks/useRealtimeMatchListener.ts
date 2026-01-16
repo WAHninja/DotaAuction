@@ -67,21 +67,36 @@ export function useRealtimeMatchListener(
     const onNewOffer = (msg: any) => {
       console.log('📡 new-offer', msg.data);
 
-      if (msg.data?.offer && setData) {
-        setData((prev: any) => {
-          if (!prev) return prev;
+      if (!msg.data) return;
 
-          return {
-            ...prev,
-            latestGame: {
-              ...prev.latestGame,
-              offers: [...(prev.latestGame?.offers ?? []), msg.data.offer],
-            },
-          };
-        });
-      } else {
+      // If server sends full offers array
+      const newOffers = msg.data.offers ?? (msg.data.offer ? [msg.data.offer] : []);
+      if (!setData) {
         fetchMatchData();
+        return;
       }
+
+      setData((prev: any) => {
+        if (!prev?.latestGame) return prev;
+
+        // Merge offers, prevent duplicates by ID
+        const existingOffers = prev.latestGame.offers ?? [];
+        const merged = [...existingOffers];
+
+        for (const offer of newOffers) {
+          if (!merged.find((o: any) => o.id === offer.id)) {
+            merged.push(offer);
+          }
+        }
+
+        return {
+          ...prev,
+          latestGame: {
+            ...prev.latestGame,
+            offers: merged,
+          },
+        };
+      });
     };
 
     const onOfferAccepted = (msg: any) => {
