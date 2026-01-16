@@ -3,7 +3,7 @@ import { getAblyClient } from '@/lib/ably-client';
 
 type Callbacks = {
   fetchMatchData: () => Promise<void> | void;
-  setData?: React.Dispatch<React.SetStateAction<any>>; // optional
+  setData?: React.Dispatch<React.SetStateAction<any>>;
 };
 
 export function useRealtimeMatchListener(
@@ -11,24 +11,23 @@ export function useRealtimeMatchListener(
   latestGameId: number | null,
   { fetchMatchData, setData }: Callbacks
 ) {
-  const ablyRef = useRef(getAblyClient());
+  const ablyRef = useRef<any>(null); // initialize null
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return; // SSR guard
+    ablyRef.current = getAblyClient();
+  }, []);
 
   // ---------------- Match lifecycle ----------------
   useEffect(() => {
-    if (!matchId) return;
-    const client = ablyRef.current;
-    const channel = client.channels.get(`match-${matchId}`);
+    if (!matchId || !ablyRef.current) return;
 
+    const channel = ablyRef.current.channels.get(`match-${matchId}`);
     const handler = (msg: any) => {
       console.log('📡 match event', msg.name, msg.data);
       fetchMatchData();
-
-      // Optional: if server sends updated match data, merge it
       if (setData && msg.data) {
-        setData((prev: any) => ({
-          ...prev,
-          ...msg.data,
-        }));
+        setData((prev: any) => ({ ...prev, ...msg.data }));
       }
     };
 
@@ -45,15 +44,13 @@ export function useRealtimeMatchListener(
 
   // ---------------- Offers / auction ----------------
   useEffect(() => {
-    if (!matchId || !latestGameId) return;
-    const client = ablyRef.current;
-    const channel = client.channels.get(`match-${matchId}-offers`);
+    if (!matchId || !latestGameId || !ablyRef.current) return;
 
+    const channel = ablyRef.current.channels.get(`match-${matchId}-offers`);
     const handler = (msg: any) => {
       console.log('📡 offer event', msg.name, msg.data);
 
       if (setData && msg.data) {
-        // Merge or replace offers
         const newOffers = msg.data.offers ?? (msg.data.offer ? [msg.data.offer] : []);
         setData((prev: any) => {
           if (!prev?.latestGame) return prev;
@@ -66,10 +63,7 @@ export function useRealtimeMatchListener(
 
           return {
             ...prev,
-            latestGame: {
-              ...prev.latestGame,
-              offers: merged,
-            },
+            latestGame: { ...prev.latestGame, offers: merged },
           };
         });
       } else {
