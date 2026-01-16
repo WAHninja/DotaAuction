@@ -51,9 +51,10 @@ export default function MatchPage() {
         latestGame,
       })
 
-      // Prepare auction game state
+      // Prepare auction game state with explicit gameId
       if (latestGame) {
         setAuctionGame({
+          gameId: latestGame.gameId ?? latestGame.id, // Ensure gameId exists
           ...latestGame,
           team_1_members: latestGame.team_1_members?.map(Number) ?? [],
           team_a_members: latestGame.team_a_members?.map(Number) ?? [],
@@ -76,7 +77,7 @@ export default function MatchPage() {
   }, [user, matchId, fetchMatchData])
 
   /* ---------------- Realtime Listener ---------------- */
-  const latestGameId = auctionGame?.id ?? null
+  const latestGameId = auctionGame?.gameId ?? null
   useRealtimeMatchListener(matchId ?? '', latestGameId, {
     fetchMatchData: () => fetchMatchData(true),
     setData,
@@ -149,12 +150,13 @@ export default function MatchPage() {
       </div>
 
       {/* ---------------- Phase Controls ---------------- */}
-      {isInProgress && latest && <SelectGameWinnerForm gameId={latest.id} />}
+      {isInProgress && latest && <SelectGameWinnerForm gameId={latest.gameId ?? latest.id} />}
 
       {isAuction && latest && (
         <AuctionPhase
           latestGame={{
             ...latest,
+            gameId: latest.gameId ?? latest.id,
             team_1_members: team1,
             team_a_members: teamA,
           }}
