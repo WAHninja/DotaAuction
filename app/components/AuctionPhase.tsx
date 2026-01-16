@@ -15,7 +15,7 @@ type Offer = {
 }
 
 type Game = {
-  id: number
+  gameId: number
   team_1_members: number[]
   team_a_members: number[]
   winning_team: string | null
@@ -38,6 +38,7 @@ export default function AuctionPhase({
   gamesPlayed,
   offers = [],
 }: AuctionPhaseProps) {
+  // Use safeOffers for state management
   const [safeOffers, setSafeOffers] = useState<Offer[]>(
     offers.map((o) => ({
       ...o,
@@ -56,7 +57,7 @@ export default function AuctionPhase({
   const hasRevealedRef = useRef(false)
 
   const {
-    id: gameId,
+    gameId,
     team_1_members: rawTeam1,
     team_a_members: rawTeamA,
     winning_team,
@@ -68,35 +69,43 @@ export default function AuctionPhase({
   const team_a_members = rawTeamA.map(Number)
 
   /* ---------------- Derived State ---------------- */
-  const userTeamMembers = team_1_members.includes(currentUserId)
-    ? team_1_members
-    : team_a_members.includes(currentUserId)
-    ? team_a_members
-    : []
+  const winningTeamMembers = useMemo(() => {
+    const normalized = (winning_team ?? '').toLowerCase()
+    if (normalized === 'team_1' || normalized === 'team1') return team_1_members
+    if (normalized === 'team_a' || normalized === 'teama') return team_a_members
+    return []
+  }, [winning_team, team_1_members, team_a_members])
 
-  const offerCandidates = userTeamMembers.filter((id) => id !== currentUserId)
-
-  const alreadySubmittedOffer = useMemo(
-    () => safeOffers.some((o) => Number(o.from_player_id) === Number(currentUserId)),
-    [safeOffers, currentUserId]
-  )
-
-  const submittedOfferCount = useMemo(
-    () => safeOffers.filter((o) => userTeamMembers.includes(Number(o.from_player_id))).length,
-    [safeOffers, userTeamMembers]
-  )
-
-  const allOffersSubmitted =
-    userTeamMembers.length > 0 && submittedOfferCount === userTeamMembers.length
-
-  const isWinner = userTeamMembers.includes(currentUserId)
+  const isWinner = winningTeamMembers.includes(currentUserId)
   const isLoser = !isWinner
 
   const minOfferAmount = 250 + gamesPlayed * 200
   const maxOfferAmount = 2000 + gamesPlayed * 500
 
   const getPlayerName = (id: number) =>
-    players.find((p) => Number(p.id) === id)?.username ?? `Player#${id}`
+    players.find((p) => p.id === id)?.username ?? `Player#${id}`
+
+  const offerCandidates = winningTeamMembers.filter((id) => id !== currentUserId)
+
+  const alreadySubmittedOffer = useMemo(
+    () => safeOffers.some((o) => o.from_player_id === currentUserId),
+    [safeOffers, currentUserId]
+  )
+
+  const acceptedOffer = useMemo(
+    () => safeOffers.find((o) => o.status === 'accepted'),
+    [safeOffers]
+  )
+
+  const submittedOfferCount = useMemo(
+    () => safeOffers.filter((o) => winningTeamMembers.includes(o.from_player_id)).length,
+    [safeOffers, winningTeamMembers]
+  )
+
+  const allOffersSubmitted =
+    winningTeamMembers.length > 0 && submittedOfferCount === winningTeamMembers.length
+
+  const isWaitingForOffers = isLoser && !allOffersSubmitted
 
   /* ---------------- Reveal Animation ---------------- */
   useEffect(() => {
@@ -136,7 +145,9 @@ export default function AuctionPhase({
     const handleOfferAccepted = (data: any) => {
       if (!data?.offerId) return
       setSafeOffers((prev) =>
-        prev.map((o) => (o.id === data.offerId ? { ...o, status: 'accepted' } : o))
+        prev.map((o) =>
+          o.id === data.offerId ? { ...o, status: 'accepted' } : o
+        )
       )
     }
 
@@ -178,11 +189,6 @@ export default function AuctionPhase({
   }
 
   /* ---------------- Accept Offer ---------------- */
-  const acceptedOffer = useMemo(
-    () => safeOffers.find((o) => o.status === 'accepted'),
-    [safeOffers]
-  )
-
   const handleAcceptOffer = async (offerId: number) => {
     if (acceptedOffer) return
     setAccepting(true)
@@ -216,16 +222,14 @@ export default function AuctionPhase({
         </div>
       )}
 
-      {/* ---------------- Winning team submits offer ---------------- */}
-      {isWinner && !alreadySubmittedOffer && offerCandidates.length > 0 && (
+      {/* Winning team members can submit an offer */}
+      {isWinner && !alreadySubmittedOffer && (
         <div className="max-w-md mx-auto mb-10">
           <p className="text-center text-yellow-300 font-semibold mb-4">Make Your Offer</p>
 
           <select
             value={selectedPlayerId ?? ''}
-            onChange={(e) =>
-              setSelectedPlayerId(e.target.value === '' ? null : Number(e.target.value))
-            }
+            onChange={(e) => setSelectedPlayerId(e.target.value === '' ? null : Number(e.target.value))}
             className="w-full mb-3 px-4 py-2 rounded text-black"
           >
             <option value="">Select Player</option>
@@ -239,9 +243,7 @@ export default function AuctionPhase({
           <input
             type="number"
             value={offerAmount}
-            onChange={(e) =>
-              setOfferAmount(e.target.value === '' ? '' : Number(e.target.value))
-            }
+            onChange={(e) => setOfferAmount(e.target.value === '' ? '' : Number(e.target.value))}
             min={minOfferAmount}
             max={maxOfferAmount}
             placeholder={`${minOfferAmount} - ${maxOfferAmount}`}
@@ -258,14 +260,14 @@ export default function AuctionPhase({
         </div>
       )}
 
-      {/* ---------------- Losing team waits ---------------- */}
-      {isLoser && !allOffersSubmitted && (
+      {/* Waiting message for losing team */}
+      {isWaitingForOffers && (
         <p className="text-center text-gray-300">
           Waiting for the winning team to submit offers…
         </p>
       )}
 
-      {/* ---------------- Offers List ---------------- */}
+      {/* Display all offers */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {safeOffers.map((offer) => {
           const canAccept =
@@ -276,22 +278,13 @@ export default function AuctionPhase({
             !accepting
 
           return (
-            <div
-              key={offer.id}
-              className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg"
-            >
+            <div key={offer.id} className="bg-gray-900 p-5 rounded-2xl border border-gray-700 shadow-lg">
               <div className="mb-2 text-sm text-gray-400">
-                From:{' '}
-                <span className="text-yellow-300 font-bold">
-                  {getPlayerName(offer.from_player_id)}
-                </span>
+                From: <span className="text-yellow-300 font-bold">{getPlayerName(offer.from_player_id)}</span>
               </div>
 
               <div className="mb-4 text-sm text-gray-400">
-                For:{' '}
-                <span className="text-yellow-300 font-bold">
-                  {getPlayerName(offer.target_player_id)}
-                </span>
+                For: <span className="text-yellow-300 font-bold">{getPlayerName(offer.target_player_id)}</span>
               </div>
 
               <div className="text-center mb-4">
