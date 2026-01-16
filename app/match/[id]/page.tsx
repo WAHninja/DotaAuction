@@ -2,15 +2,29 @@
 
 import { useEffect, useState, useCallback, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 
 import { UserContext } from '@/app/context/UserContext'
 import MatchHeader from '@/app/components/MatchHeader'
 import TeamCard from '@/app/components/TeamCard'
 import WinnerBanner from '@/app/components/WinnerBanner'
-import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
-import AuctionPhase from '@/app/components/AuctionPhase'
-import GameHistory from '@/app/components/GameHistory'
 import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
+
+// ---------------- Dynamic imports to fix React #310 ----------------
+const SelectGameWinnerForm = dynamic(
+  () => import('@/app/components/SelectGameWinnerForm'),
+  { ssr: false }
+)
+
+const AuctionPhase = dynamic(
+  () => import('@/app/components/AuctionPhase'),
+  { ssr: false }
+)
+
+const GameHistory = dynamic(
+  () => import('@/app/components/GameHistory'),
+  { ssr: false }
+)
 
 type Player = { id: number; username: string }
 
