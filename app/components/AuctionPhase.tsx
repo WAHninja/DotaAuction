@@ -297,7 +297,6 @@ export default function AuctionPhase({
                   <span className="text-gray-500 text-sm">Waiting for all offers…</span>
                 )}
               </div>
-
               {canAccept && (
                 <button
                   onClick={() => handleAcceptOffer(offer.id)}
