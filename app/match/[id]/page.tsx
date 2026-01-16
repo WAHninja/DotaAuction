@@ -2,29 +2,15 @@
 
 import { useEffect, useState, useCallback, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 
 import { UserContext } from '@/app/context/UserContext'
 import MatchHeader from '@/app/components/MatchHeader'
 import TeamCard from '@/app/components/TeamCard'
 import WinnerBanner from '@/app/components/WinnerBanner'
+import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
+import AuctionPhase from '@/app/components/AuctionPhase'
+import GameHistory from '@/app/components/GameHistory'
 import { useRealtimeMatchListener } from '@/app/hooks/useRealtimeMatchListener'
-
-// ---------------- Dynamic imports to fix React #310 ----------------
-const SelectGameWinnerForm = dynamic(
-  () => import('@/app/components/SelectGameWinnerForm'),
-  { ssr: false }
-)
-
-const AuctionPhase = dynamic(
-  () => import('@/app/components/AuctionPhase'),
-  { ssr: false }
-)
-
-const GameHistory = dynamic(
-  () => import('@/app/components/GameHistory'),
-  { ssr: false }
-)
 
 type Player = { id: number; username: string }
 
@@ -37,6 +23,9 @@ export default function MatchPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   /* ---------------- Protect Route ---------------- */
   useEffect(() => {
@@ -79,10 +68,17 @@ export default function MatchPage() {
   }, [user, matchId, fetchMatchData])
 
   /* ---------------- Derived State ---------------- */
+  if (!mounted) return null
+  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user…</div>
+  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting…</div>
+  if (loading) return <div className="p-6 text-center text-gray-300">Loading match…</div>
+  if (error) return <div className="p-6 text-center text-red-500">{error}</div>
   if (!data) return null
 
   const { match, players = [], games = [] } = data
   const latest = data.latestGame ?? games[games.length - 1] ?? null
+  if (!latest) return <div className="p-6 text-center text-gray-300">Match not found</div>
+
   const gamesPlayed = games.length
   const currentUserIdResolved = user?.id ?? 0
 
@@ -104,15 +100,8 @@ export default function MatchPage() {
   const latestGameId = latest?.gameId ?? latest?.id ?? null
   useRealtimeMatchListener(matchId ?? '', latestGameId, {
     fetchMatchData: () => fetchMatchData(true),
-    setData,
+    // setData removed from listener to avoid direct state changes during render
   })
-
-  /* ---------------- Guards ---------------- */
-  if (user === undefined) return <div className="p-6 text-center text-gray-300">Loading user…</div>
-  if (!user) return <div className="p-6 text-center text-gray-300">Redirecting…</div>
-  if (loading) return <div className="p-6 text-center text-gray-300">Loading match…</div>
-  if (error) return <div className="p-6 text-center text-red-500">{error}</div>
-  if (!latest) return <div className="p-6 text-center text-gray-300">Match not found</div>
 
   /* ---------------- Render ---------------- */
   return (
@@ -153,7 +142,7 @@ export default function MatchPage() {
         <SelectGameWinnerForm gameId={latest.gameId ?? latest.id} />
       )}
 
-      {isAuction && (
+      {isAuction && mounted && (
         <AuctionPhase
           latestGame={{
             ...latest,
@@ -164,7 +153,7 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserIdResolved}
           gamesPlayed={gamesPlayed}
-          offers={latest.offers ?? []}
+          offers={latest.offers ?? []} // always default to array
         />
       )}
 
