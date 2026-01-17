@@ -2,11 +2,9 @@
 import { NextRequest } from 'next/server';
 import { buildGameSnapshot } from '@/lib/buildGameSnapshot';
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
-  const matchId = Number(context.params.id);
+export async function GET(req: NextRequest) {
+  // Access params via req.nextUrl
+  const matchId = Number(req.nextUrl.pathname.split('/').pop());
 
   const snapshot = await buildGameSnapshot(matchId);
 
@@ -22,3 +20,4 @@ export async function GET(
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
