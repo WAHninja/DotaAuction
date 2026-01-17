@@ -33,7 +33,7 @@ export async function buildGameSnapshot(matchId: number) {
 
     // 4. Offers for the latest game
     const { rows: offersRows } = await client.query(
-      `SELECT id, from_user_id AS from_player_id, to_user_id AS target_player_id, amount AS offer_amount, status
+      `SELECT id, from_player_id, target_player_id, offer_amount, status
        FROM offers
        WHERE game_id = $1
        ORDER BY created_at ASC`,
