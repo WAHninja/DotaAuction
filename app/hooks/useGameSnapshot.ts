@@ -3,10 +3,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { getAblyClient } from '@/lib/ably-client';
 
-export function useGameSnapshot(matchId: string) {
+export function useGameSnapshot(matchId: string | null) {
   const [snapshot, setSnapshot] = useState<any>(null);
   const ablyRef = useRef<any>(null);
 
+  // ---------------- Initial API fetch ----------------
+  useEffect(() => {
+    if (!matchId) return;
+
+    fetch(`/api/match/${matchId}`)
+      .then(res => res.json())
+      .then(data => setSnapshot(data))
+      .catch(err => console.error('Failed to fetch snapshot', err));
+  }, [matchId]);
+
+  // ---------------- Ably subscription ----------------
   useEffect(() => {
     if (!matchId) return;
 
@@ -15,8 +26,8 @@ export function useGameSnapshot(matchId: string) {
 
     const handler = (msg: any) => {
       if (msg.name !== 'snapshot') return;
-      console.log('📦 snapshot received');
-      setSnapshot(msg.data); // FULL replace — critical
+      console.log('📦 snapshot received', msg.data);
+      setSnapshot(msg.data); // full replace
     };
 
     channel.subscribe('snapshot', handler);
@@ -26,5 +37,5 @@ export function useGameSnapshot(matchId: string) {
     };
   }, [matchId]);
 
-  return snapshot; // ✅ only return data, no JSX
+  return snapshot;
 }
