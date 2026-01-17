@@ -1,7 +1,11 @@
 // app/api/match/[id]/route.ts
+import { NextRequest } from 'next/server';
 import { buildGameSnapshot } from '@/lib/buildGameSnapshot';
 
-export async function GET(req: Request, context: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   const matchId = Number(context.params.id);
 
   const snapshot = await buildGameSnapshot(matchId);
