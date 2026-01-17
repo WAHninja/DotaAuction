@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Image from 'next/image'
+import { useState, useEffect, useMemo } from 'react'
+import { getMatchChannels } from '@/lib/ably-client'
 
 type Player = { id: number; username?: string }
 type Offer = {
@@ -20,6 +20,7 @@ type Game = {
 }
 
 interface Props {
+  matchId: string
   latestGame?: Game
   players?: Player[]
   currentUserId?: number
@@ -28,28 +29,25 @@ interface Props {
 }
 
 export default function PhaseControls({
-  latestGame,
+  matchId,
+  latestGame: initialGame,
   players = [],
   currentUserId = 0,
   gamesPlayed = 0,
-  offers = [],
+  offers: initialOffers = [],
 }: Props) {
-  const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(
-    null
-  )
+  const [latestGame, setLatestGame] = useState<Game | undefined>(initialGame)
+  const [offers, setOffers] = useState<Offer[]>(initialOffers)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(null)
 
-  if (!latestGame) return null
-  const { gameId, team_1_members, team_a_members, winning_team, status } =
-    latestGame
-
-  /* ------------------ Derived state ------------------ */
-  const winningTeamMembers = (winning_team ?? '').toLowerCase() === 'team_1'
-    ? team_1_members
-    : winning_team?.toLowerCase() === 'team_a'
-    ? team_a_members
-    : []
+  // ------------------ Derived state ------------------
+  const winningTeamMembers = useMemo(() => {
+    const t = latestGame?.winning_team?.toLowerCase()
+    if (!latestGame || !t) return []
+    return t === 'team_1' ? latestGame.team_1_members : latestGame.team_a_members
+  }, [latestGame])
 
   const isWinner = winningTeamMembers.includes(currentUserId)
   const isLoser = !isWinner
@@ -61,11 +59,7 @@ export default function PhaseControls({
     players.find(p => p.id === id)?.username ?? `Player#${id}`
 
   const offerCandidates = winningTeamMembers.filter(id => id !== currentUserId)
-
-  const alreadySubmittedOffer = offers.some(
-    o => o.from_player_id === currentUserId
-  )
-
+  const alreadySubmittedOffer = offers.some(o => o.from_player_id === currentUserId)
   const acceptedOffer = offers.find(o => o.status === 'accepted')
 
   const submittedOfferCount = offers.filter(o =>
@@ -78,14 +72,43 @@ export default function PhaseControls({
 
   const isWaitingForOffers = isLoser && !allOffersSubmitted
 
-  /* ------------------ Actions ------------------ */
+  // ------------------ Real-time updates ------------------
+  useEffect(() => {
+    if (!matchId) return
+    const { game: matchChannel, offers: offersChannel } = getMatchChannels(Number(matchId))
+
+    // Listen for full snapshot updates
+    const snapshotHandler = (msg: any) => {
+      if (msg.name !== 'snapshot') return
+      const data = msg.data
+      setLatestGame(data.games[data.games.length - 1])
+      setOffers(data.offers ?? [])
+    }
+
+    // Listen for new offers only (optional, more responsive)
+    const offerHandler = (msg: any) => {
+      if (msg.name !== 'new-offer') return
+      const newOffer: Offer = msg.data
+      setOffers(prev => [...prev, newOffer])
+    }
+
+    matchChannel.subscribe('snapshot', snapshotHandler)
+    offersChannel.subscribe('new-offer', offerHandler)
+
+    return () => {
+      matchChannel.unsubscribe('snapshot', snapshotHandler)
+      offersChannel.unsubscribe('new-offer', offerHandler)
+    }
+  }, [matchId])
+
+  // ------------------ Actions ------------------
   const handleSubmitWinner = async () => {
-    if (!selectedTeam) return
+    if (!selectedTeam || !latestGame) return
     setLoading(true)
     setError(null)
 
     try {
-      const res = await fetch(`/api/game/${gameId}/select-winner`, {
+      const res = await fetch(`/api/game/${latestGame.gameId}/select-winner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ winningTeamId: selectedTeam }),
@@ -105,12 +128,12 @@ export default function PhaseControls({
   }
 
   const handleSubmitOffer = async (targetPlayerId: number, amount: number) => {
-    if (alreadySubmittedOffer) return
+    if (!latestGame || alreadySubmittedOffer) return
     setLoading(true)
     setError(null)
 
     try {
-      const res = await fetch(`/api/game/${gameId}/submit-offer`, {
+      const res = await fetch(`/api/game/${latestGame.gameId}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_player_id: targetPlayerId, offer_amount: amount }),
@@ -125,12 +148,12 @@ export default function PhaseControls({
   }
 
   const handleAcceptOffer = async (offerId: number) => {
-    if (acceptedOffer) return
+    if (!latestGame || acceptedOffer) return
     setLoading(true)
     setError(null)
 
     try {
-      const res = await fetch(`/api/game/${gameId}/accept-offer`, {
+      const res = await fetch(`/api/game/${latestGame.gameId}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
@@ -144,8 +167,10 @@ export default function PhaseControls({
     }
   }
 
-  /* ------------------ Render based on phase ------------------ */
-  if (status === 'in progress') {
+  // ------------------ Render ------------------
+  if (!latestGame) return null
+
+  if (latestGame.status === 'in progress') {
     return (
       <div className="bg-slate-600 p-6 rounded-xl text-center text-white">
         <p>Game in progress. Waiting for winner selection...</p>
@@ -153,10 +178,10 @@ export default function PhaseControls({
     )
   }
 
-  if (status === 'auction pending') {
-    // Winning team submits offers, losing team accepts
+  if (latestGame.status === 'auction pending') {
     return (
       <div className="bg-slate-800/70 p-6 rounded-3xl border border-slate-700 shadow-2xl mt-6">
+        {/* Winning team submits offers */}
         {isWinner && !alreadySubmittedOffer && (
           <div>
             <h3 className="font-semibold text-lg mb-2">Submit an Offer</h3>
@@ -173,13 +198,15 @@ export default function PhaseControls({
           </div>
         )}
 
+        {/* Losing team waiting */}
         {isLoser && isWaitingForOffers && (
           <div>
             <p>Waiting for winning team to submit offers...</p>
           </div>
         )}
 
-        {isLoser && !isWaitingForOffers && acceptedOffer === undefined && (
+        {/* Losing team accepts */}
+        {isLoser && !isWaitingForOffers && !acceptedOffer && (
           <div>
             <h3 className="font-semibold text-lg mb-2">Accept an Offer</h3>
             {offers.map(o => (
