@@ -1,79 +1,67 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-
-import TeamCard from '@/app/components/TeamCard'
-import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm'
-import AuctionPhase from '@/app/components/AuctionPhase'
-import { useGameSnapshot } from '@/app/hooks/useGameSnapshot'
+import { useParams } from 'next/navigation';
+import { useGameSnapshot } from '@/app/hooks/useGameSnapshot';
+import TeamCard from '@/app/components/TeamCard';
+import PhaseControls from '@/app/components/PhaseControls';
 
 export default function MatchPage() {
-  const params = useParams()
-  const matchId = params.id
-  const snapshot = useGameSnapshot(matchId) // subscribes to Ably 'snapshot'
+  const params = useParams();
+  const matchId = Array.isArray(params.id) ? params.id[0] : params.id; // ensure string
+
+  const snapshot = useGameSnapshot(matchId);
 
   if (!snapshot) {
-    return <p className="text-center text-lg mt-20">Loading match...</p>
+    return (
+      <div className="text-center text-lg mt-20">
+        Loading match...
+      </div>
+    );
   }
 
   const {
-    gameId,
-    gameNumber,
-    phase,
+    matchId: snapshotMatchId,
+    games = [],
+    players = [],
+    teamA = [],
+    team1 = [],
     winningTeam,
-    team_1_players,
-    team_a_players,
-    allPlayers,
-    offers,
-  } = snapshot
+    offers = [],
+    currentUserId = 0, // assume comes from session / snapshot
+  } = snapshot;
 
-  const currentUserId = 1 // TODO: get from context/session
-
-  // Determine phase
-  const isSelectingWinner = !winningTeam
-  const isAuctionPhase = winningTeam && phase !== 'finished'
+  const latestGame = games[games.length - 1] ?? null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">Match #{matchId}</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <TeamCard
-          name="Team 1"
-          logo="/team1_logo.png"
-          players={team_1_players}
-          teamId="team_1"
-          color="from-blue-700 via-blue-600 to-blue-500"
-        />
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* ---------- Teams ---------- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
         <TeamCard
           name="Team A"
-          logo="/teamA_logo.png"
-          players={team_a_players}
-          teamId="team_a"
+          logo="/teamA.png"
+          players={players.filter(p => teamA.includes(p.id))}
+          teamId={1}
+          color="from-green-700 via-green-600 to-green-500"
+        />
+        <TeamCard
+          name="Team 1"
+          logo="/team1.png"
+          players={players.filter(p => team1.includes(p.id))}
+          teamId={2}
           color="from-red-700 via-red-600 to-red-500"
         />
       </div>
 
-      {isSelectingWinner && (
-        <SelectGameWinnerForm gameId={gameId} />
-      )}
-
-      {isAuctionPhase && (
-        <AuctionPhase
-          latestGame={{
-            gameId,
-            team_1_members: team_1_players.map(p => p.id),
-            team_a_members: team_a_players.map(p => p.id),
-            winning_team: winningTeam,
-            status: phase,
-          }}
-          players={allPlayers}
+      {/* ---------- Phase Controls ---------- */}
+      {latestGame && (
+        <PhaseControls
+          latestGame={latestGame}
+          players={players}
           currentUserId={currentUserId}
-          gamesPlayed={gameNumber - 1}
+          gamesPlayed={games.length}
           offers={offers}
         />
       )}
     </div>
-  )
+  );
 }
