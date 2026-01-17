@@ -10,7 +10,7 @@ interface TeamCardProps {
   name: string;
   logo?: string;
   players: Player[];
-  teamId?: string;
+  teamId?: string | number; // ✅ allow string or number
   color?: string;
 }
 
@@ -34,13 +34,18 @@ export default function TeamCard({
       <ul className="space-y-2">
         {players.map((p) => (
           <li
-            key={`${teamId}-${p.id}`}
+            key={`${teamId}-${p.id}`} // ✅ now works with number
             className="flex justify-between items-center"
           >
             <span>{p.username ?? `Player#${p.id}`}</span>
             <span className="flex items-center gap-1">
               {p.gold ?? 0}
-              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
+              <Image
+                src="/Gold_symbol.webp"
+                alt="Gold"
+                width={16}
+                height={16}
+              />
             </span>
           </li>
         ))}
