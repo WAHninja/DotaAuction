@@ -37,6 +37,7 @@ export default function MatchPage() {
       </div>
 
       <PhaseControls
+        matchId={matchId!}
         latestGame={latestGame}
         players={players}
         currentUserId={1} // TODO: replace with actual current user
