@@ -1,10 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import ablyClient from '@/lib/ably-client';
 
 export function useGameWinnerListener(
   matchId: string,
-  onGameWinnerSelected: () => void
+  onGameWinnerSelected: () => void,
 ) {
+  // Stable ref so the effect doesn't re-subscribe on every render
+  const callbackRef = useRef(onGameWinnerSelected);
+  useEffect(() => { callbackRef.current = onGameWinnerSelected; }, [onGameWinnerSelected]);
+
   useEffect(() => {
     if (!matchId || !ablyClient) return;
 
@@ -12,7 +16,7 @@ export function useGameWinnerListener(
 
     const handler = (msg: any) => {
       if (msg.name === 'game-winner-selected') {
-        onGameWinnerSelected(); // e.g. fetchMatchData + fetchGameHistory + fetchGamesPlayed
+        callbackRef.current();
       }
     };
 
@@ -21,5 +25,6 @@ export function useGameWinnerListener(
     return () => {
       channel.unsubscribe('game-winner-selected', handler);
     };
-  }, [matchId, onGameWinnerSelected]);
+  // Only re-subscribe when the match channel changes
+  }, [matchId]);
 }
