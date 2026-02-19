@@ -92,6 +92,10 @@
     Use panel for most cards, panel-raised for modals/overlays, panel-sunken for insets.
   */
   .panel {
+    /* Fully opaque — panels must read cleanly over both the CSS gradient
+       backgrounds (match/auth) and the stone texture (dashboard).
+       Semi-transparent panels look fine on flat backgrounds but create muddy
+       contrast issues when the background has texture or colour. */
     background-color: theme('colors.dota-surface');
     border: 1px solid theme('colors.dota-border');
     border-radius: theme('borderRadius.lg');
