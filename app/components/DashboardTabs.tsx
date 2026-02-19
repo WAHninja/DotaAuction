@@ -7,13 +7,7 @@ import { Loader2, CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
-type Match = {
-  id: number;
-  winner_id?: number;
-  winner_username?: string;
-  team_a_usernames?: string[];
-  team_1_usernames?: string[];
-};
+import type { DashboardMatch as Match } from '@/types';
 
 type DashboardTabsProps = {
   ongoingMatches: Match[];
