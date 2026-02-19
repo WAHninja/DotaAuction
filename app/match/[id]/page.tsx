@@ -3,6 +3,7 @@
 import { useEffect, useState, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
@@ -31,7 +32,7 @@ export default function MatchPage() {
     if (user === null) router.push('/');
   }, [user, router]);
 
-  // ---- Data fetchers (stable refs for hooks) --------------------------------
+  // ---- Data fetchers -------------------------------------------------------
   const fetchMatchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${matchId}`);
@@ -109,10 +110,56 @@ export default function MatchPage() {
   );
 
   // ---- Render guards -------------------------------------------------------
-  if (!user)        return <div className="p-6 text-center text-gray-300">Redirecting...</div>;
-  if (loading)      return <div className="p-6 text-center text-gray-300">Loading match...</div>;
-  if (error)        return <div className="p-6 text-center text-red-500">Error: {error}</div>;
-  if (!data)        return <div className="p-6 text-center text-gray-300">Match not found.</div>;
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="flex items-center gap-3 text-slate-400">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Redirecting…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="flex flex-col items-center gap-4 text-slate-300">
+          <Loader2 className="w-10 h-10 animate-spin text-yellow-400" />
+          <span className="text-lg font-semibold">Loading match…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="bg-slate-800/80 border border-red-500/40 rounded-2xl p-8 flex flex-col items-center gap-4 max-w-sm text-center">
+          <AlertCircle className="w-10 h-10 text-red-400" />
+          <p className="text-lg font-semibold text-red-300">Something went wrong</p>
+          <p className="text-sm text-slate-400">{error}</p>
+          <button
+            onClick={() => { setError(null); setLoading(true); fetchMatchData(); }}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-semibold transition"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="bg-slate-800/80 border border-slate-600 rounded-2xl p-8 flex flex-col items-center gap-3 max-w-sm text-center">
+          <p className="text-lg font-semibold text-slate-300">Match not found</p>
+          <p className="text-sm text-slate-400">This match may have been removed or the link is invalid.</p>
+        </div>
+      </div>
+    );
+  }
 
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
@@ -147,6 +194,7 @@ export default function MatchPage() {
           players={team1.map(getPlayer).filter(Boolean)}
           teamId="team1"
           color="from-lime-900/40 to-lime-800/40"
+          currentUserId={currentUserId}
         />
         <TeamCard
           name="Team A"
@@ -154,6 +202,7 @@ export default function MatchPage() {
           players={teamA.map(getPlayer).filter(Boolean)}
           teamId="teamA"
           color="from-red-900/40 to-red-800/40"
+          currentUserId={currentUserId}
         />
       </div>
 
@@ -189,17 +238,19 @@ export default function MatchPage() {
           return (
             <div
               key={game.gameNumber}
-              className="mb-4 p-4 border rounded-lg shadow cursor-pointer"
+              className="mb-4 p-4 border border-slate-700 rounded-lg shadow bg-slate-800/60 cursor-pointer hover:bg-slate-800/80 transition-colors"
               onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
             >
               <h3 className="text-xl font-semibold flex justify-between items-center">
                 <span>Game #{game.gameNumber} – {game.status}</span>
-                <button className="text-sm">{isExpanded ? 'Hide' : 'Show'} details</button>
+                <button className="text-sm text-slate-400 hover:text-white transition-colors">
+                  {isExpanded ? 'Hide' : 'Show'} details
+                </button>
               </h3>
 
               {/* Collapsed summary */}
               {!isExpanded && acceptedOffer && (
-                <p className="mt-2 text-sm font-medium">
+                <p className="mt-2 text-sm font-medium text-slate-300">
                   {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
                   {acceptedOffer.offerAmount}
                   <Image
@@ -215,16 +266,16 @@ export default function MatchPage() {
               {/* Expanded detail */}
               {isExpanded && (
                 <>
-                  <div className="mt-2">
-                    <strong>Winner:</strong> {game.winningTeam || 'N/A'}<br />
-                    <strong>Team A:</strong> {game.teamAMembers.join(', ')}<br />
-                    <strong>Team 1:</strong> {game.team1Members.join(', ')}
+                  <div className="mt-2 text-sm text-slate-300">
+                    <strong className="text-white">Winner:</strong> {game.winningTeam || 'N/A'}<br />
+                    <strong className="text-white">Team A:</strong> {game.teamAMembers.join(', ')}<br />
+                    <strong className="text-white">Team 1:</strong> {game.team1Members.join(', ')}
                   </div>
 
                   {game.playerStats.length > 0 && (
                     <div className="mt-4">
-                      <h4 className="font-bold">Gold changes:</h4>
-                      <ul className="list-disc list-inside space-y-1">
+                      <h4 className="font-bold text-white mb-2">Gold changes:</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
                         {game.playerStats
                           .filter((s: any) => s.reason === 'win_reward')
                           .map((stat: any) => (
@@ -232,21 +283,19 @@ export default function MatchPage() {
                               {stat.username ?? `Player#${stat.playerId}`}:
                               <span className="text-green-400 font-semibold ml-1">+{stat.goldChange}</span>
                               <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                              <span className="text-sm text-gray-400 ml-2">(win reward)</span>
+                              <span className="text-slate-400 ml-2">(win reward)</span>
                             </li>
                           ))}
-
                         {game.playerStats
                           .filter((s: any) => s.reason === 'loss_penalty')
                           .map((stat: any) => (
                             <li key={stat.id}>
                               {stat.username ?? `Player#${stat.playerId}`}:
-                              <span className="text-red-500 font-semibold ml-1">{stat.goldChange}</span>
+                              <span className="text-red-400 font-semibold ml-1">{stat.goldChange}</span>
                               <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                              <span className="text-sm text-gray-400 ml-2">(loss penalty)</span>
+                              <span className="text-slate-400 ml-2">(loss penalty)</span>
                             </li>
                           ))}
-
                         {game.playerStats
                           .filter((s: any) => s.reason === 'offer_accepted' || s.reason === 'offer_gain')
                           .map((stat: any) => (
@@ -254,7 +303,7 @@ export default function MatchPage() {
                               {stat.username ?? `Player#${stat.playerId}`}:
                               <span className="text-blue-400 font-semibold ml-1">+{stat.goldChange}</span>
                               <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                              <span className="text-sm text-gray-400 ml-2">(offer accepted)</span>
+                              <span className="text-slate-400 ml-2">(offer accepted)</span>
                             </li>
                           ))}
                       </ul>
@@ -263,17 +312,17 @@ export default function MatchPage() {
 
                   {game.offers.length > 0 && (
                     <div className="mt-4">
-                      <h4 className="font-bold">Offers:</h4>
-                      <ul className="list-disc list-inside">
+                      <h4 className="font-bold text-white mb-2">Offers:</h4>
+                      <ul className="list-disc list-inside text-sm space-y-1">
                         {game.offers.map((offer: any) => (
                           <li key={offer.id}>
                             {offer.fromUsername} offered {offer.targetUsername} for {offer.offerAmount}
                             <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
                             {' '}(
                             <span className={`font-semibold ${
-                              offer.status === 'accepted' ? 'text-green-500' :
-                              offer.status === 'rejected' ? 'text-red-500' :
-                              'text-gray-400'
+                              offer.status === 'accepted' ? 'text-green-400' :
+                              offer.status === 'rejected' ? 'text-red-400' :
+                              'text-slate-400'
                             }`}>
                               {offer.status}
                             </span>)
