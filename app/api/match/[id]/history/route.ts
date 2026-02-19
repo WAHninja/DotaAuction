@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
-import { parse } from 'url'
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Require authentication — history exposes gold amounts and team
     // composition which should not be readable by unauthenticated callers.
@@ -12,12 +11,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
     }
 
-    const { pathname } = parse(req.url || '', true)
-    const match = pathname?.match(/\/api\/match\/(\d+)\/history/)
-    const matchId = match?.[1]
-
-    if (!matchId) {
-      return NextResponse.json({ error: 'Match ID not found in URL' }, { status: 400 })
+    const matchId = params.id
+    if (!matchId || isNaN(Number(matchId))) {
+      return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 })
     }
 
     // Verify the caller is a participant in this match — they should not be
