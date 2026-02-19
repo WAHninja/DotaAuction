@@ -30,7 +30,7 @@ type AuctionHouseProps = {
   currentUserId: number;
   offers: Offer[];
   gamesPlayed: number;
-  onOfferSubmitted: () => void;
+  onOfferSubmitted: (offer: any) => void;
   onOfferAccepted: () => void;
 };
 
@@ -114,7 +114,7 @@ export default function AuctionHouse({
       const data = await res.json();
       if (!res.ok) { setSubmitError(data.message || 'Failed to submit offer.'); return; }
       setOfferAmount(''); setSelectedPlayer('');
-      onOfferSubmitted();
+      onOfferSubmitted(data.offer);
     } catch {
       setSubmitError('Server error submitting offer.');
     } finally {
