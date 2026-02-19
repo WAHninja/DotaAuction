@@ -12,6 +12,7 @@ import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
+import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload } from '@/types';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -19,11 +20,11 @@ export default function MatchPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);
 
-  const [data, setData] = useState<any>(null);
-  const [offers, setOffers] = useState<any[]>([]);
+  const [data, setData] = useState<MatchData | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryGame[]>([]);
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
   // ---- Protect route -------------------------------------------------------
@@ -77,18 +78,14 @@ export default function MatchPage() {
   // state directly from the event payload — eliminating N round trips during
   // the offer submission phase (one per player on the winning team).
 
-  const handleNewOffer = useCallback((offer: any) => {
+  const handleNewOffer = useCallback((offer: NewOfferPayload) => {
     // Append the new offer directly — no fetch needed. The payload already
     // contains all fields (id, from/target player ids, tier_label, status)
     // with offer_amount intentionally stripped server-side while pending.
     setOffers(prev => [...prev, offer]);
   }, []);
 
-  const handleOfferAccepted = useCallback((payload: {
-    acceptedOfferId: number;
-    acceptedAmount: number;
-    newGame: any;
-  }) => {
+  const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
     // Update offer states directly from the event rather than refetching:
     // - The accepted offer gets its real amount revealed
     // - All remaining pending offers become rejected
@@ -189,7 +186,7 @@ export default function MatchPage() {
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
-  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
+  const getPlayer = (id: number) => players.find((p) => p.id === id);
 
   const isAuction    = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
@@ -202,13 +199,13 @@ export default function MatchPage() {
           matchId={matchId}
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
-          matchWinnerUsername={players.find((p: any) => p.id === match.winner_id)?.username}
+          matchWinnerUsername={players.find((p) => p.id === match.winner_id)?.username}
         />
       )}
 
       {isFinished && match.winner_id && (
         <WinnerBanner
-          winnerName={players.find((p: any) => p.id === match.winner_id)?.username}
+          winnerName={players.find((p) => p.id === match.winner_id)?.username}
         />
       )}
 
@@ -256,7 +253,7 @@ export default function MatchPage() {
 
         {[...history].reverse().map((game) => {
           const isExpanded = expandedGameId === game.gameNumber;
-          const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
+          const acceptedOffer = game.offers.find((o) => o.status === 'accepted');
 
           return (
             <div
@@ -300,8 +297,8 @@ export default function MatchPage() {
                       <h4 className="font-bold text-white mb-2">Gold changes:</h4>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         {game.playerStats
-                          .filter((s: any) => s.reason === 'win_reward')
-                          .map((stat: any) => (
+                          .filter((s) => s.reason === 'win_reward')
+                          .map((stat) => (
                             <li key={stat.id}>
                               {stat.username ?? `Player#${stat.playerId}`}:
                               <span className="text-green-400 font-semibold ml-1">+{stat.goldChange}</span>
@@ -310,8 +307,8 @@ export default function MatchPage() {
                             </li>
                           ))}
                         {game.playerStats
-                          .filter((s: any) => s.reason === 'loss_penalty')
-                          .map((stat: any) => (
+                          .filter((s) => s.reason === 'loss_penalty')
+                          .map((stat) => (
                             <li key={stat.id}>
                               {stat.username ?? `Player#${stat.playerId}`}:
                               <span className="text-red-400 font-semibold ml-1">{stat.goldChange}</span>
@@ -320,8 +317,8 @@ export default function MatchPage() {
                             </li>
                           ))}
                         {game.playerStats
-                          .filter((s: any) => s.reason === 'offer_accepted' || s.reason === 'offer_gain')
-                          .map((stat: any) => (
+                          .filter((s) => s.reason === 'offer_accepted' || s.reason === 'offer_gain')
+                          .map((stat) => (
                             <li key={stat.id}>
                               {stat.username ?? `Player#${stat.playerId}`}:
                               <span className="text-blue-400 font-semibold ml-1">+{stat.goldChange}</span>
@@ -337,7 +334,7 @@ export default function MatchPage() {
                     <div className="mt-4">
                       <h4 className="font-bold text-white mb-2">Offers:</h4>
                       <ul className="list-disc list-inside text-sm space-y-1">
-                        {game.offers.map((offer: any) => {
+                        {game.offers.map((offer) => {
                           const isPending = offer.status === 'pending';
                           return (
                             <li key={offer.id}>
