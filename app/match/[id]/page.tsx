@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
@@ -12,6 +11,8 @@ import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
+import GameHistory from '@/app/components/GameHistory';
+import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload } from '@/types';
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -19,13 +20,11 @@ export default function MatchPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);
 
-  const [data, setData] = useState<any>(null);
-  const [offers, setOffers] = useState<any[]>([]);
+  const [data, setData] = useState<MatchData | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gamesPlayed, setGamesPlayed] = useState<number>(0);
-  const [history, setHistory] = useState<any[]>([]);
-  const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
+  const [history, setHistory] = useState<HistoryGame[]>([]);
 
   // ---- Protect route -------------------------------------------------------
   // Wait until the session check has finished before redirecting.
@@ -60,15 +59,7 @@ export default function MatchPage() {
     }
   }, []);
 
-  const fetchGamesPlayed = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const json = await res.json();
-      setGamesPlayed(json.gamesPlayed);
-    } catch (err) {
-      console.error('Failed to fetch games played', err);
-    }
-  }, [matchId]);
+  // gamesPlayed is derived from data.games.length — no separate fetch needed.
 
   const fetchGameHistory = useCallback(async () => {
     try {
@@ -81,13 +72,49 @@ export default function MatchPage() {
     }
   }, [matchId]);
 
+  // ---- Ably state updaters -------------------------------------------------
+  // Rather than refetching all offers on every Ably event, we update local
+  // state directly from the event payload — eliminating N round trips during
+  // the offer submission phase (one per player on the winning team).
+
+  const handleNewOffer = useCallback((offer: NewOfferPayload) => {
+    // Append the new offer directly — no fetch needed. The payload already
+    // contains all fields (id, from/target player ids, tier_label, status)
+    // with offer_amount intentionally stripped server-side while pending.
+    // Explicitly set offer_amount: null so the entry is a complete Offer
+    // and consistent with offers returned by the API.
+    setOffers(prev =>
+      prev.some(o => o.id === offer.id)
+        ? prev
+        : [...prev, { ...offer, offer_amount: null }]
+    );
+  }, []);
+
+  const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
+    // Update offer states directly from the event rather than refetching:
+    // - The accepted offer gets its real amount revealed
+    // - All remaining pending offers become rejected
+    setOffers(prev => prev.map(o => {
+      if (o.id === payload.acceptedOfferId) {
+        return { ...o, status: 'accepted', offer_amount: payload.acceptedAmount };
+      }
+      if (o.status === 'pending') {
+        return { ...o, status: 'rejected' };
+      }
+      return o;
+    }));
+    // Match data and history still need a fetch — gold balances changed,
+    // teams have swapped, and a new game was created server-side.
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [fetchMatchData, fetchGameHistory]);
+
   // ---- Initial load --------------------------------------------------------
+  // Run both fetches in parallel — matchData and history are independent
+  // and neither needs to wait for the other to complete.
   useEffect(() => {
     if (!user) return;
-    fetchMatchData();
-    fetchGamesPlayed();
-    fetchGameHistory();
-  }, [matchId, user, fetchMatchData, fetchGamesPlayed, fetchGameHistory]);
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [matchId, user, fetchMatchData, fetchGameHistory]);
 
   useEffect(() => {
     if (data?.latestGame?.status === 'auction pending') {
@@ -97,20 +124,16 @@ export default function MatchPage() {
 
   // ---- Real-time listeners -------------------------------------------------
   const handleWinnerSelected = useCallback(() => {
-    fetchMatchData();
-    fetchGamesPlayed();
-    fetchGameHistory();
-  }, [fetchMatchData, fetchGamesPlayed, fetchGameHistory]);
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [fetchMatchData, fetchGameHistory]);
 
   useGameWinnerListener(matchId, handleWinnerSelected);
 
   useAuctionListener(
     matchId,
     data?.latestGame?.id ?? null,
-    fetchMatchData,
-    fetchOffers,
-    fetchGameHistory,
-    fetchGamesPlayed,
+    handleNewOffer,
+    handleOfferAccepted,
   );
 
   // ---- Render guards -------------------------------------------------------
@@ -168,7 +191,7 @@ export default function MatchPage() {
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
-  const getPlayer = (id: number) => players.find((p: any) => p.id === id);
+  const getPlayer = (id: number) => players.find((p) => p.id === id);
 
   const isAuction    = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
@@ -181,13 +204,13 @@ export default function MatchPage() {
           matchId={matchId}
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
-          matchWinnerUsername={players.find((p: any) => p.id === match.winner_id)?.username}
+          matchWinnerUsername={players.find((p) => p.id === match.winner_id)?.username}
         />
       )}
 
       {isFinished && match.winner_id && (
         <WinnerBanner
-          winnerName={players.find((p: any) => p.id === match.winner_id)?.username}
+          winnerName={players.find((p) => p.id === match.winner_id)?.username}
         />
       )}
 
@@ -221,145 +244,15 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId}
           offers={offers}
-          gamesPlayed={gamesPlayed}
-          onOfferSubmitted={() => fetchOffers(latestGame.id)}
+          gamesPlayed={data.games.length}
+          onOfferSubmitted={handleNewOffer}
           onOfferAccepted={() => {
-            fetchMatchData();
-            fetchGameHistory();
-            fetchGamesPlayed();
+            Promise.all([fetchMatchData(), fetchGameHistory()]);
           }}
         />
       )}
 
-      {/* ---- Game History ------------------------------------------------- */}
-      <section className="mt-12">
-        <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
-
-        {[...history].reverse().map((game) => {
-          const isExpanded = expandedGameId === game.gameNumber;
-          const acceptedOffer = game.offers.find((o: any) => o.status === 'accepted');
-
-          return (
-            <div
-              key={game.gameNumber}
-              className="mb-4 p-4 border border-slate-700 rounded-lg shadow bg-slate-800/60 cursor-pointer hover:bg-slate-800/80 transition-colors"
-              onClick={() => setExpandedGameId(isExpanded ? null : game.gameNumber)}
-            >
-              <h3 className="text-xl font-semibold flex justify-between items-center">
-                <span>Game #{game.gameNumber} – {game.status}</span>
-                <button className="text-sm text-slate-400 hover:text-white transition-colors">
-                  {isExpanded ? 'Hide' : 'Show'} details
-                </button>
-              </h3>
-
-              {/* Collapsed summary */}
-              {!isExpanded && acceptedOffer && (
-                <p className="mt-2 text-sm font-medium text-slate-300">
-                  {acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for{' '}
-                  {acceptedOffer.offerAmount}
-                  <Image
-                    src="/Gold_symbol.webp"
-                    alt="Gold"
-                    width={16}
-                    height={16}
-                    className="inline-block ml-1 align-middle"
-                  />
-                </p>
-              )}
-
-              {/* Expanded detail */}
-              {isExpanded && (
-                <>
-                  <div className="mt-2 text-sm text-slate-300">
-                    <strong className="text-white">Winner:</strong> {game.winningTeam || 'N/A'}<br />
-                    <strong className="text-white">Team A:</strong> {game.teamAMembers.join(', ')}<br />
-                    <strong className="text-white">Team 1:</strong> {game.team1Members.join(', ')}
-                  </div>
-
-                  {game.playerStats.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-bold text-white mb-2">Gold changes:</h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm">
-                        {game.playerStats
-                          .filter((s: any) => s.reason === 'win_reward')
-                          .map((stat: any) => (
-                            <li key={stat.id}>
-                              {stat.username ?? `Player#${stat.playerId}`}:
-                              <span className="text-green-400 font-semibold ml-1">+{stat.goldChange}</span>
-                              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                              <span className="text-slate-400 ml-2">(win reward)</span>
-                            </li>
-                          ))}
-                        {game.playerStats
-                          .filter((s: any) => s.reason === 'loss_penalty')
-                          .map((stat: any) => (
-                            <li key={stat.id}>
-                              {stat.username ?? `Player#${stat.playerId}`}:
-                              <span className="text-red-400 font-semibold ml-1">{stat.goldChange}</span>
-                              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                              <span className="text-slate-400 ml-2">(loss penalty)</span>
-                            </li>
-                          ))}
-                        {game.playerStats
-                          .filter((s: any) => s.reason === 'offer_accepted' || s.reason === 'offer_gain')
-                          .map((stat: any) => (
-                            <li key={stat.id}>
-                              {stat.username ?? `Player#${stat.playerId}`}:
-                              <span className="text-blue-400 font-semibold ml-1">+{stat.goldChange}</span>
-                              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                              <span className="text-slate-400 ml-2">(offer accepted)</span>
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {game.offers.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-bold text-white mb-2">Offers:</h4>
-                      <ul className="list-disc list-inside text-sm space-y-1">
-                        {game.offers.map((offer: any) => {
-                          const isPending = offer.status === 'pending';
-                          return (
-                            <li key={offer.id}>
-                              {offer.fromUsername} offered {offer.targetUsername} for{' '}
-                              {isPending ? (
-                                // Hide exact amount while offer is still pending —
-                                // show tier label to match what players see in the auction
-                                <span className={`font-semibold px-1.5 py-0.5 rounded text-xs ${
-                                  offer.tierLabel === 'Low'    ? 'bg-blue-500/20 text-blue-300' :
-                                  offer.tierLabel === 'Medium' ? 'bg-yellow-500/20 text-yellow-300' :
-                                  offer.tierLabel === 'High'   ? 'bg-red-500/20 text-red-300' :
-                                  'text-slate-400'
-                                }`}>
-                                  {offer.tierLabel ?? '?'}
-                                </span>
-                              ) : (
-                                <>
-                                  {offer.offerAmount}
-                                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                                </>
-                              )}
-                              {' '}(
-                              <span className={`font-semibold ${
-                                offer.status === 'accepted' ? 'text-green-400' :
-                                offer.status === 'rejected' ? 'text-red-400' :
-                                'text-slate-400'
-                              }`}>
-                                {offer.status}
-                              </span>)
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          );
-        })}
-      </section>
+      <GameHistory history={history} />
     </>
   );
 }

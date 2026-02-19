@@ -1,11 +1,5 @@
 import { Gavel, Trophy, Swords } from 'lucide-react';
-
-type Game = {
-  id: number;
-  gameNumber?: number;
-  status: 'auction pending' | 'in progress' | 'finished';
-  winning_team?: 'team_1' | 'team_a';
-};
+import type { GameSummary } from '@/types';
 
 export default function MatchHeader({
   matchId,
@@ -14,7 +8,7 @@ export default function MatchHeader({
   matchWinnerUsername,
 }: {
   matchId: string;
-  latestGame: Game;
+  latestGame: GameSummary;
   matchWinnerId?: number;
   matchWinnerUsername?: string;
 }) {

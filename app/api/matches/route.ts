@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '../../../lib/db';
 import { getSession } from '@/app/session';
 
@@ -7,14 +7,12 @@ export async function POST(req: NextRequest) {
     const { playerIds } = await req.json();
 
     if (!Array.isArray(playerIds) || playerIds.length < 4) {
-      return new Response(JSON.stringify({ error: 'At least 4 players are required' }), {
-        status: 400,
-      });
+      return NextResponse.json({ error: 'At least 4 players are required' }, { status: 400 });
     }
 
     const session = await getSession();
     if (!session) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // ---- Check for an existing in-progress match with the same players -----
@@ -47,10 +45,7 @@ export async function POST(req: NextRequest) {
 
     if (existingMatchRes.rows.length > 0) {
       const existingMatchId = existingMatchRes.rows[0].id;
-      return new Response(
-        JSON.stringify({ id: existingMatchId, existing: true }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
+      return NextResponse.json({ id: existingMatchId, existing: true });
     }
 
     // ---- No existing match found — create a new one ------------------------
@@ -90,19 +85,16 @@ export async function POST(req: NextRequest) {
 
       await client.query('COMMIT');
 
-      return new Response(
-        JSON.stringify({ id: matchId, existing: false }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
+      return NextResponse.json({ id: matchId, existing: false });
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('Transaction failed:', err);
-      return new Response(JSON.stringify({ error: 'Failed to create match' }), { status: 500 });
+      return NextResponse.json({ error: 'Failed to create match' }, { status: 500 });
     } finally {
       client.release();
     }
   } catch (err) {
     console.error('Unexpected error in POST /api/matches:', err);
-    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

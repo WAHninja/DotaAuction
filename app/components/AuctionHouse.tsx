@@ -3,20 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 
-type Player = {
-  id: number;
-  username: string;
-  gold: number;
-};
-
-type Offer = {
-  id: number;
-  from_player_id: number;
-  target_player_id: number;
-  offer_amount: number;
-  tier_label: 'Low' | 'Medium' | 'High' | null;
-  status: 'pending' | 'accepted' | 'rejected';
-};
+import type { Player, Offer } from '@/types';
 
 type AuctionHouseProps = {
   matchId: string;
@@ -30,7 +17,7 @@ type AuctionHouseProps = {
   currentUserId: number;
   offers: Offer[];
   gamesPlayed: number;
-  onOfferSubmitted: () => void;
+  onOfferSubmitted: (offer: any) => void;
   onOfferAccepted: () => void;
 };
 
@@ -112,9 +99,9 @@ export default function AuctionHouse({
         body: JSON.stringify({ target_player_id: parseInt(selectedPlayer), offer_amount: parsed }),
       });
       const data = await res.json();
-      if (!res.ok) { setSubmitError(data.message || 'Failed to submit offer.'); return; }
+      if (!res.ok) { setSubmitError(data.error || 'Failed to submit offer.'); return; }
       setOfferAmount(''); setSelectedPlayer('');
-      onOfferSubmitted();
+      onOfferSubmitted(data.offer);
     } catch {
       setSubmitError('Server error submitting offer.');
     } finally {
@@ -138,7 +125,7 @@ export default function AuctionHouse({
       const data = await res.json();
       if (!res.ok && res.status !== 409) {
         setAcceptedOfferId(null);
-        setAcceptError(data.message || 'Failed to accept offer.');
+        setAcceptError(data.error || 'Failed to accept offer.');
         return;
       }
       onOfferAccepted();

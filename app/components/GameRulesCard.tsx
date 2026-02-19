@@ -200,15 +200,15 @@ export default function GameRulesCard() {
                 <div className="space-y-1 text-slate-300">
                   <div className="flex justify-between">
                     <span>Game 1</span>
-                    <span className="font-medium">250 – 2,000</span>
+                    <span className="font-medium">450 – 2,500</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Game 3</span>
-                    <span className="font-medium">650 – 3,000</span>
+                    <span className="font-medium">850 – 3,500</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Game 7</span>
-                    <span className="font-medium">1,450 – 5,000</span>
+                    <span className="font-medium">1,650 – 5,500</span>
                   </div>
                 </div>
               </div>

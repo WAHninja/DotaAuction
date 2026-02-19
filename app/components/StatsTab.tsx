@@ -8,30 +8,7 @@ import { ChevronUp, ChevronDown, ChevronsUpDown, TrendingUp, TrendingDown, Minus
    Types
 ======================= */
 
-type PlayerStats = {
-  username: string
-  gamesPlayed: number
-  gamesWon: number
-  timesOffered: number
-  timesSold: number
-  offersMade: number
-  offersAccepted: number
-  averageOfferValue: number
-  netGold: number
-}
-
-type TeamCombo = {
-  combo: string
-  wins: number
-}
-
-type SortKey =
-  | 'username'
-  | 'gamesWinRate'
-  | 'offerAcceptRate'
-  | 'averageOfferValue'
-  | 'timesSold'
-  | 'netGold'
+import type { PlayerStats, TeamCombo, SortKey } from '@/types';
 
 /* =======================
    Helpers
