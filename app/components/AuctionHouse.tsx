@@ -47,8 +47,6 @@ export default function AuctionHouse({
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [accepting, setAccepting] = useState(false);
-  // Track which offer ID was accepted so all other buttons lock immediately,
-  // regardless of whether the server response has come back yet.
   const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
@@ -68,6 +66,12 @@ export default function AuctionHouse({
   const allOffersSubmitted = myWinningTeam.every((pid) =>
     offers.some((o) => o.from_player_id === pid)
   );
+
+  // Offer counter: how many of the winning team have submitted so far
+  const offersSubmittedCount = myWinningTeam.filter((pid) =>
+    offers.some((o) => o.from_player_id === pid)
+  ).length;
+  const offersRequiredCount = myWinningTeam.length;
 
   const minOffer = 250 + gamesPlayed * 200;
   const maxOffer = 2000 + gamesPlayed * 500;
@@ -119,9 +123,6 @@ export default function AuctionHouse({
   const handleAcceptOffer = async (offerId: number) => {
     setAcceptError(null);
 
-    // Lock immediately on click — before the request even goes out.
-    // This prevents a second click or a second user from firing another accept
-    // while the first is still in-flight.
     if (accepting || acceptedOfferId !== null) return;
     setAcceptedOfferId(offerId);
     setAccepting(true);
@@ -135,8 +136,6 @@ export default function AuctionHouse({
 
       const data = await res.json();
       if (!res.ok && res.status !== 409) {
-        // 409 means another request already accepted — that's fine, just update UI.
-        // Any other error is a real failure, so unlock and surface it.
         setAcceptedOfferId(null);
         setAcceptError(data.message || 'Failed to accept offer.');
         return;
@@ -155,6 +154,33 @@ export default function AuctionHouse({
   return (
     <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
       <h3 className="text-2xl font-bold mb-4 text-center">Auction House</h3>
+
+      {/* --- Offer counter (visible to everyone) --- */}
+      <div className="flex justify-center mb-6">
+        <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-600 rounded-xl px-5 py-3">
+          <span className="text-sm text-slate-400">Offers submitted:</span>
+          <div className="flex gap-1">
+            {myWinningTeam.map((pid) => {
+              const submitted = offers.some((o) => o.from_player_id === pid);
+              return (
+                <span
+                  key={pid}
+                  className={`w-3 h-3 rounded-full transition-colors ${
+                    submitted ? 'bg-green-400' : 'bg-slate-600'
+                  }`}
+                  title={getPlayer(pid)?.username ?? `Player #${pid}`}
+                />
+              );
+            })}
+          </div>
+          <span className={`text-sm font-bold ${allOffersSubmitted ? 'text-green-400' : 'text-yellow-300'}`}>
+            {offersSubmittedCount} / {offersRequiredCount}
+          </span>
+          {allOffersSubmitted && (
+            <span className="text-xs text-green-400">— all in!</span>
+          )}
+        </div>
+      </div>
 
       {/* --- Winner: submit offer form --- */}
       {isWinner && !alreadySubmittedOffer && (
@@ -223,6 +249,13 @@ export default function AuctionHouse({
         </p>
       )}
 
+      {/* --- Loser waiting message --- */}
+      {isLoser && !allOffersSubmitted && (
+        <p className="w-full max-w-md mx-auto mb-6 text-center text-slate-300 text-sm">
+          Waiting for all offers to be submitted before you can accept…
+        </p>
+      )}
+
       {/* --- Offer cards --- */}
       <div>
         <h4 className="text-xl font-bold text-center mb-4">Current Offers</h4>
@@ -235,9 +268,6 @@ export default function AuctionHouse({
               const from = getPlayer(offer.from_player_id);
               const to = getPlayer(offer.target_player_id);
 
-              // Losers can accept only when all offers are in and none accepted yet.
-              // acceptedOfferId locks all buttons the moment any click fires,
-              // before the server even responds.
               const canAccept =
                 isLoser &&
                 offer.status === 'pending' &&
@@ -282,7 +312,7 @@ export default function AuctionHouse({
                           />
                         </span>
                       ) : (
-                        'Waiting for all offers…'
+                        <span className="text-slate-500 italic">Hidden until all submitted</span>
                       )}
                     </div>
 
