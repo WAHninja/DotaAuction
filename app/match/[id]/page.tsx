@@ -23,7 +23,6 @@ export default function MatchPage() {
   const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gamesPlayed, setGamesPlayed] = useState<number>(0);
   const [history, setHistory] = useState<any[]>([]);
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
@@ -60,15 +59,7 @@ export default function MatchPage() {
     }
   }, []);
 
-  const fetchGamesPlayed = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/games-played`);
-      const json = await res.json();
-      setGamesPlayed(json.gamesPlayed);
-    } catch (err) {
-      console.error('Failed to fetch games played', err);
-    }
-  }, [matchId]);
+  // gamesPlayed is derived from data.games.length — no separate fetch needed.
 
   const fetchGameHistory = useCallback(async () => {
     try {
@@ -82,12 +73,12 @@ export default function MatchPage() {
   }, [matchId]);
 
   // ---- Initial load --------------------------------------------------------
+  // Run both fetches in parallel — matchData and history are independent
+  // and neither needs to wait for the other to complete.
   useEffect(() => {
     if (!user) return;
-    fetchMatchData();
-    fetchGamesPlayed();
-    fetchGameHistory();
-  }, [matchId, user, fetchMatchData, fetchGamesPlayed, fetchGameHistory]);
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [matchId, user, fetchMatchData, fetchGameHistory]);
 
   useEffect(() => {
     if (data?.latestGame?.status === 'auction pending') {
@@ -97,10 +88,8 @@ export default function MatchPage() {
 
   // ---- Real-time listeners -------------------------------------------------
   const handleWinnerSelected = useCallback(() => {
-    fetchMatchData();
-    fetchGamesPlayed();
-    fetchGameHistory();
-  }, [fetchMatchData, fetchGamesPlayed, fetchGameHistory]);
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [fetchMatchData, fetchGameHistory]);
 
   useGameWinnerListener(matchId, handleWinnerSelected);
 
@@ -110,7 +99,6 @@ export default function MatchPage() {
     fetchMatchData,
     fetchOffers,
     fetchGameHistory,
-    fetchGamesPlayed,
   );
 
   // ---- Render guards -------------------------------------------------------
@@ -221,12 +209,10 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId}
           offers={offers}
-          gamesPlayed={gamesPlayed}
+          gamesPlayed={data.games.length}
           onOfferSubmitted={() => fetchOffers(latestGame.id)}
           onOfferAccepted={() => {
-            fetchMatchData();
-            fetchGameHistory();
-            fetchGamesPlayed();
+            Promise.all([fetchMatchData(), fetchGameHistory()]);
           }}
         />
       )}
