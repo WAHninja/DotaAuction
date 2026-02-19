@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import ably from '@/lib/ably-server';
@@ -57,13 +57,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const gameId = Number(params.id);
   if (isNaN(gameId)) {
-    return new Response(JSON.stringify({ message: 'Invalid game ID.' }), { status: 400 });
+    return NextResponse.json({ error: 'Invalid game ID.' }, { status: 400 });
   }
   const session = await getSession();
   const userId = session?.userId;
 
   if (!userId) {
-    return new Response(JSON.stringify({ message: 'Not authenticated.' }), { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
   try {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
 
     if (gameRows.length === 0) {
-      return new Response(JSON.stringify({ message: 'Game not found.' }), { status: 404 });
+      return NextResponse.json({ error: 'Game not found.' }, { status: 404 });
     }
 
     const game = gameRows[0];
@@ -83,10 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const winningTeamMembers = winningTeam === 'team_a' ? teamA : team1;
 
     if (!winningTeamMembers.includes(userId)) {
-      return new Response(
-        JSON.stringify({ message: 'Only winning team members can make offers.' }),
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Only winning team members can make offers.' }, { status: 403 });
     }
 
     const matchResult = await db.query(
@@ -106,12 +103,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const minOfferAmount = 250 + gamesPlayed * 200;
 
     if (offer_amount < minOfferAmount || offer_amount > maxOfferAmount) {
-      return new Response(
-        JSON.stringify({
-          message: `Offer amount must be between ${minOfferAmount} and ${maxOfferAmount}.`,
-        }),
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Offer amount must be between ${minOfferAmount} and ${maxOfferAmount}.` }, { status: 400 });
     }
 
     const existing = await db.query(
@@ -120,10 +112,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
 
     if (existing.rows.length > 0) {
-      return new Response(
-        JSON.stringify({ message: 'You have already submitted an offer.' }),
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'You have already submitted an offer.' }, { status: 400 });
     }
 
     // ---- Assign a randomised tier label ----------------------------------
@@ -152,12 +141,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         .publish('new-offer', safeOffer);
     }
 
-    return new Response(
-      JSON.stringify({ message: 'Offer submitted.', offer: safeOffer }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return NextResponse.json({ message: 'Offer submitted.', offer: safeOffer });
   } catch (err) {
     console.error('Error submitting offer:', err);
-    return new Response(JSON.stringify({ message: 'Server error.' }), { status: 500 });
+    return NextResponse.json({ error: 'Server error.' }, { status: 500 });
   }
 }
