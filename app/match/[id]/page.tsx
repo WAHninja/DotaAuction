@@ -140,9 +140,9 @@ export default function MatchPage() {
   if (!user && authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 font-barlow text-dota-text-muted">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Redirecting…</span>
+          Redirecting…
         </div>
       </div>
     );
@@ -151,9 +151,9 @@ export default function MatchPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="flex flex-col items-center gap-4 text-slate-300">
-          <Loader2 className="w-10 h-10 animate-spin text-yellow-400" />
-          <span className="text-lg font-semibold">Loading match…</span>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-dota-gold" />
+          <span className="font-cinzel text-lg font-bold text-dota-text-muted">Loading match…</span>
         </div>
       </div>
     );
@@ -162,13 +162,13 @@ export default function MatchPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="bg-slate-800/80 border border-red-500/40 rounded-2xl p-8 flex flex-col items-center gap-4 max-w-sm text-center">
-          <AlertCircle className="w-10 h-10 text-red-400" />
-          <p className="text-lg font-semibold text-red-300">Something went wrong</p>
-          <p className="text-sm text-slate-400">{error}</p>
+        <div className="panel p-8 flex flex-col items-center gap-4 max-w-sm text-center border-dota-dire/40">
+          <AlertCircle className="w-10 h-10 text-dota-dire-light" />
+          <p className="font-cinzel text-lg font-bold text-dota-text">Something went wrong</p>
+          <p className="font-barlow text-sm text-dota-text-muted">{error}</p>
           <button
             onClick={() => { setError(null); setLoading(true); fetchMatchData(); }}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-semibold transition"
+            className="btn-secondary"
           >
             Try again
           </button>
@@ -180,9 +180,9 @@ export default function MatchPage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="bg-slate-800/80 border border-slate-600 rounded-2xl p-8 flex flex-col items-center gap-3 max-w-sm text-center">
-          <p className="text-lg font-semibold text-slate-300">Match not found</p>
-          <p className="text-sm text-slate-400">This match may have been removed or the link is invalid.</p>
+        <div className="panel p-8 flex flex-col items-center gap-3 max-w-sm text-center">
+          <p className="font-cinzel text-lg font-bold text-dota-text">Match not found</p>
+          <p className="font-barlow text-sm text-dota-text-muted">This match may have been removed or the link is invalid.</p>
         </div>
       </div>
     );
@@ -220,7 +220,7 @@ export default function MatchPage() {
           logo="/Team1.png"
           players={team1.map(getPlayer).filter(Boolean)}
           teamId="team1"
-          color="from-lime-900/40 to-lime-800/40"
+          faction="radiant"
           currentUserId={currentUserId}
         />
         <TeamCard
@@ -228,7 +228,7 @@ export default function MatchPage() {
           logo="/TeamA.png"
           players={teamA.map(getPlayer).filter(Boolean)}
           teamId="teamA"
-          color="from-red-900/40 to-red-800/40"
+          faction="dire"
           currentUserId={currentUserId}
         />
       </div>
