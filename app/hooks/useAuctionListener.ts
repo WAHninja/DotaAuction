@@ -1,38 +1,37 @@
 import { useEffect, useRef } from 'react';
 import ablyClient from '@/lib/ably-client';
 
+type OfferAcceptedPayload = {
+  acceptedOfferId: number;
+  acceptedAmount: number;
+  newGame: any;
+};
+
 export function useAuctionListener(
   matchId: string,
   latestGameId: number | null,
-  fetchMatchData: () => void,
-  fetchOffers: (gameId: number) => void,
-  fetchGameHistory: () => void,
+  onNewOffer: (offer: any) => void,
+  onOfferAccepted: (payload: OfferAcceptedPayload) => void,
 ) {
-  // Keep latest versions of callbacks in refs so the effect never needs to
-  // re-run (and re-subscribe) just because a callback identity changed.
-  const fetchMatchDataRef   = useRef(fetchMatchData);
-  const fetchOffersRef      = useRef(fetchOffers);
-  const fetchGameHistoryRef = useRef(fetchGameHistory);
+  // Stable refs so the effect never re-subscribes just because a callback
+  // identity changed between renders.
+  const onNewOfferRef      = useRef(onNewOffer);
+  const onOfferAcceptedRef = useRef(onOfferAccepted);
 
-  useEffect(() => { fetchMatchDataRef.current   = fetchMatchData;  }, [fetchMatchData]);
-  useEffect(() => { fetchOffersRef.current      = fetchOffers;     }, [fetchOffers]);
-  useEffect(() => { fetchGameHistoryRef.current = fetchGameHistory; }, [fetchGameHistory]);
+  useEffect(() => { onNewOfferRef.current      = onNewOffer;      }, [onNewOffer]);
+  useEffect(() => { onOfferAcceptedRef.current = onOfferAccepted; }, [onOfferAccepted]);
 
   useEffect(() => {
     if (!matchId || !ablyClient || !latestGameId) return;
 
     const channel = ablyClient.channels.get(`match-${matchId}-offers`);
 
-    const handleNewOffer = () => {
-      fetchOffersRef.current(latestGameId);
+    const handleNewOffer = (msg: any) => {
+      onNewOfferRef.current(msg.data);
     };
 
-    const handleOfferAccepted = () => {
-      // Run both in parallel — they're independent of each other
-      Promise.all([
-        fetchMatchDataRef.current(),
-        fetchGameHistoryRef.current(),
-      ]);
+    const handleOfferAccepted = (msg: any) => {
+      onOfferAcceptedRef.current(msg.data);
     };
 
     channel.subscribe('new-offer', handleNewOffer);
@@ -42,6 +41,5 @@ export function useAuctionListener(
       channel.unsubscribe('new-offer', handleNewOffer);
       channel.unsubscribe('offer-accepted', handleOfferAccepted);
     };
-  // Only re-subscribe when the channel itself needs to change
   }, [matchId, latestGameId]);
 }
