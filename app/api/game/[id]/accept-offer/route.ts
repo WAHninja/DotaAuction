@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import ably from '@/lib/ably-server';
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const userId = session?.userId;
 
   if (!userId) {
-    return Response.json({ message: 'Not authenticated.' }, { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
   // ---- Parse body ----------------------------------------------------------
@@ -19,13 +19,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     offerId = Number(body.offerId);
     if (isNaN(offerId)) throw new Error();
   } catch {
-    return Response.json({ message: 'Invalid request body.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
   // ---- Extract game ID from route params -----------------------------------
   const gameId = Number(params.id);
   if (isNaN(gameId)) {
-    return Response.json({ message: 'Invalid game ID.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid game ID.' }, { status: 400 });
   }
 
   // ---- Acquire a single pooled connection for the transaction --------------
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (gameRows.length === 0) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Game not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Game not found.' }, { status: 404 });
     }
 
     const game = gameRows[0];
@@ -59,12 +59,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // ---- Validate game state -----------------------------------------------
     if (game.status !== 'auction pending') {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Game is not in auction phase.' }, { status: 400 });
+      return NextResponse.json({ error: 'Game is not in auction phase.' }, { status: 400 });
     }
 
     if (!game.winning_team) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Game has no winner selected yet.' }, { status: 400 });
+      return NextResponse.json({ error: 'Game has no winner selected yet.' }, { status: 400 });
     }
 
     // ---- Authorise: user must be on the losing team ------------------------
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!losingTeam.includes(userId)) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Only losing team members can accept offers.' }, { status: 403 });
+      return NextResponse.json({ error: 'Only losing team members can accept offers.' }, { status: 403 });
     }
 
     // ---- Atomically claim the offer ----------------------------------------
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (offerRows.length === 0) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Offer already accepted or not found.' }, { status: 409 });
+      return NextResponse.json({ error: 'Offer already accepted or not found.' }, { status: 409 });
     }
 
     const { from_player_id, target_player_id, offer_amount } = offerRows[0];
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!inTeamA && !inTeam1) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Target player not found in current game.' }, { status: 400 });
+      return NextResponse.json({ error: 'Target player not found in current game.' }, { status: 400 });
     }
 
     await client.query(
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // ---- Guard against empty teams -----------------------------------------
     if (newTeamA.length === 0 || newTeam1.length === 0) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Trade would result in an empty team.' }, { status: 400 });
+      return NextResponse.json({ error: 'Trade would result in an empty team.' }, { status: 400 });
     }
 
     // ---- Create the next game ----------------------------------------------
@@ -171,12 +171,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         newGame: newGameRows[0],
       });
 
-    return Response.json({ message: 'Offer accepted and new game started.' });
+    return NextResponse.json({ message: 'Offer accepted and new game started.' });
 
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[ACCEPT_OFFER_ERROR]', err);
-    return Response.json({ message: 'Server error.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error.' }, { status: 500 });
 
   } finally {
     client.release();
