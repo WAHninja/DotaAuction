@@ -47,6 +47,9 @@ export default function AuctionHouse({
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  // Track which offer ID was accepted so all other buttons lock immediately,
+  // regardless of whether the server response has come back yet.
+  const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
 
@@ -115,6 +118,12 @@ export default function AuctionHouse({
   // ---------- Accept offer --------------------------------------------------
   const handleAcceptOffer = async (offerId: number) => {
     setAcceptError(null);
+
+    // Lock immediately on click — before the request even goes out.
+    // This prevents a second click or a second user from firing another accept
+    // while the first is still in-flight.
+    if (accepting || acceptedOfferId !== null) return;
+    setAcceptedOfferId(offerId);
     setAccepting(true);
 
     try {
@@ -125,13 +134,17 @@ export default function AuctionHouse({
       });
 
       const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok && res.status !== 409) {
+        // 409 means another request already accepted — that's fine, just update UI.
+        // Any other error is a real failure, so unlock and surface it.
+        setAcceptedOfferId(null);
         setAcceptError(data.message || 'Failed to accept offer.');
         return;
       }
 
       onOfferAccepted();
     } catch {
+      setAcceptedOfferId(null);
       setAcceptError('Server error accepting offer.');
     } finally {
       setAccepting(false);
@@ -222,11 +235,13 @@ export default function AuctionHouse({
               const from = getPlayer(offer.from_player_id);
               const to = getPlayer(offer.target_player_id);
 
-              // Losers can accept only when all offers are in and none accepted yet
+              // Losers can accept only when all offers are in and none accepted yet.
+              // acceptedOfferId locks all buttons the moment any click fires,
+              // before the server even responds.
               const canAccept =
                 isLoser &&
                 offer.status === 'pending' &&
-                !alreadyAcceptedOffer &&
+                acceptedOfferId === null &&
                 allOffersSubmitted;
 
               return (
