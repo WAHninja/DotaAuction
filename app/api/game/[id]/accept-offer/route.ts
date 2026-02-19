@@ -1,9 +1,7 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import * as Ably from 'ably/promises';
-
-const ably = new Ably.Rest(process.env.ABLY_API_KEY!);
+import ably from '@/lib/ably-server';
 
 export async function POST(req: NextRequest): Promise<Response> {
   // ---- Auth ----------------------------------------------------------------
