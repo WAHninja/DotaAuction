@@ -2,168 +2,207 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react';
 import type { HistoryGame, TierLabel } from '@/types';
 
-// ---- Tier badge -----------------------------------------------------------
-const TIER_STYLES: Record<NonNullable<TierLabel>, string> = {
-  Low:    'bg-blue-500/20 text-blue-300',
-  Medium: 'bg-yellow-500/20 text-yellow-300',
-  High:   'bg-red-500/20 text-red-300',
-};
-
+// ── Tier badge — delegates to globals CSS classes ─────────────────────────────
 function TierBadge({ tier }: { tier: TierLabel | null }) {
-  if (!tier) return <span className="text-slate-400">?</span>;
+  if (!tier) return <span className="text-dota-text-dim text-xs">?</span>;
+  const cls =
+    tier === 'Low'    ? 'tier-low'    :
+    tier === 'Medium' ? 'tier-medium' :
+                        'tier-high';
+  return <span className={cls}>{tier}</span>;
+}
+
+// ── Gold icon helper ──────────────────────────────────────────────────────────
+function Gold({ amount }: { amount: number }) {
   return (
-    <span className={`font-semibold px-1.5 py-0.5 rounded text-xs ${TIER_STYLES[tier]}`}>
-      {tier}
+    <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
+      {amount}
+      <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
     </span>
   );
 }
 
-// ---- Gold icon ------------------------------------------------------------
-function Gold({ amount }: { amount: number }) {
+// ── Gold change row ───────────────────────────────────────────────────────────
+function GoldChange({ username, change, reason }: { username: string; change: number; reason: string }) {
+  const isPositive  = change > 0;
+  const colour      = isPositive ? 'text-dota-radiant-light' : 'text-dota-dire-light';
+  const reasonLabel =
+    reason === 'win_reward'                         ? 'win reward'      :
+    reason === 'loss_penalty'                       ? 'loss penalty'    :
+    reason === 'offer_accepted' || reason === 'offer_gain' ? 'offer accepted' :
+    reason;
+
   return (
-    <>
-      {amount}
-      <Image
-        src="/Gold_symbol.webp"
-        alt="Gold"
-        width={16}
-        height={16}
-        className="inline-block ml-1 align-middle"
-      />
-    </>
+    <li className="flex items-center gap-2 font-barlow text-sm">
+      <span className="text-dota-text">{username}</span>
+      <span className={`font-semibold ${colour}`}>
+        {isPositive ? '+' : ''}{change}
+      </span>
+      <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block" />
+      <span className="text-dota-text-dim text-xs">({reasonLabel})</span>
+    </li>
   );
 }
 
-// ---- Single game card -----------------------------------------------------
+// ── Individual game card ──────────────────────────────────────────────────────
 function GameCard({ game }: { game: HistoryGame }) {
   const [expanded, setExpanded] = useState(false);
-  const acceptedOffer = game.offers.find((o) => o.status === 'accepted');
+  const accepted = game.offers.find(o => o.status === 'accepted');
 
   return (
     <div
-      className="mb-4 p-4 border border-slate-700 rounded-lg shadow bg-slate-800/60 cursor-pointer hover:bg-slate-800/80 transition-colors"
-      onClick={() => setExpanded((v) => !v)}
+      className="panel cursor-pointer hover:border-dota-border-bright transition-colors"
+      onClick={() => setExpanded(v => !v)}
     >
-      <h3 className="text-xl font-semibold flex justify-between items-center">
-        <span>Game #{game.gameNumber} – {game.status}</span>
+      {/* ── Card header ────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between p-4">
+        <div className="space-y-0.5">
+          <h3 className="font-cinzel font-bold text-dota-text">
+            Game #{game.gameNumber}
+          </h3>
+
+          {/* Collapsed summary */}
+          {!expanded && accepted && (
+            <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
+              <span className="text-dota-gold font-semibold">{accepted.fromUsername}</span>
+              <span>traded</span>
+              <span className="text-dota-info font-semibold">{accepted.targetUsername}</span>
+              <span>for</span>
+              {accepted.offerAmount != null
+                ? <Gold amount={accepted.offerAmount} />
+                : <TierBadge tier={accepted.tierLabel} />
+              }
+              {accepted.tierLabel && accepted.offerAmount != null && (
+                <TierBadge tier={accepted.tierLabel} />
+              )}
+            </p>
+          )}
+        </div>
+
         <button
-          className="text-sm text-slate-400 hover:text-white transition-colors"
-          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          className="font-barlow text-xs text-dota-text-muted hover:text-dota-text flex items-center gap-1 transition-colors shrink-0 ml-4"
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
         >
-          {expanded ? 'Hide' : 'Show'} details
-        </button>
-      </h3>
-
-      {/* Collapsed summary */}
-      {!expanded && acceptedOffer && (
-        <p className="mt-2 text-sm font-medium text-slate-300 flex items-center gap-1 flex-wrap">
-          <span>{acceptedOffer.fromUsername} traded {acceptedOffer.targetUsername} for</span>
-          {acceptedOffer.offerAmount != null ? (
-            <Gold amount={acceptedOffer.offerAmount} />
+          {expanded ? (
+            <><ChevronUp className="w-4 h-4" /> Hide</>
           ) : (
-            <TierBadge tier={acceptedOffer.tierLabel} />
+            <><ChevronDown className="w-4 h-4" /> Details</>
           )}
-          {acceptedOffer.tierLabel && acceptedOffer.offerAmount != null && (
-            <TierBadge tier={acceptedOffer.tierLabel} />
-          )}
-        </p>
-      )}
+        </button>
+      </div>
 
-      {/* Expanded detail */}
+      {/* ── Expanded content ───────────────────────────────────────────────── */}
       {expanded && (
-        <>
-          <div className="mt-2 text-sm text-slate-300">
-            <strong className="text-white">Winner:</strong> {game.winningTeam || 'N/A'}<br />
-            <strong className="text-white">Team A:</strong> {game.teamAMembers.join(', ')}<br />
-            <strong className="text-white">Team 1:</strong> {game.team1Members.join(', ')}
+        <div className="border-t border-dota-border px-4 pb-4 pt-4 space-y-5" onClick={e => e.stopPropagation()}>
+
+          {/* Teams */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="team-radiant-panel p-3 rounded-lg">
+              <p className="stat-label text-dota-radiant-light mb-1.5">Team 1</p>
+              <p className="font-barlow text-sm text-dota-text">{game.team1Members.join(', ') || '—'}</p>
+            </div>
+            <div className="team-dire-panel p-3 rounded-lg">
+              <p className="stat-label text-dota-dire-light mb-1.5">Team A</p>
+              <p className="font-barlow text-sm text-dota-text">{game.teamAMembers.join(', ') || '—'}</p>
+            </div>
           </div>
 
+          {/* Winner */}
+          {game.winningTeam && (
+            <p className="font-barlow text-sm text-dota-text-muted">
+              Winner:{' '}
+              <span className="font-semibold text-dota-radiant-light">
+                {game.winningTeam === 'team_1' ? 'Team 1' : 'Team A'}
+              </span>
+            </p>
+          )}
+
+          {/* Gold changes */}
           {game.playerStats.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-bold text-white mb-2">Gold changes:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                {game.playerStats
-                  .filter((s) => s.reason === 'win_reward')
-                  .map((stat) => (
-                    <li key={stat.id}>
-                      {stat.username ?? `Player#${stat.playerId}`}:
-                      <span className="text-green-400 font-semibold ml-1">+{stat.goldChange}</span>
-                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                      <span className="text-slate-400 ml-2">(win reward)</span>
-                    </li>
-                  ))}
-                {game.playerStats
-                  .filter((s) => s.reason === 'loss_penalty')
-                  .map((stat) => (
-                    <li key={stat.id}>
-                      {stat.username ?? `Player#${stat.playerId}`}:
-                      <span className="text-red-400 font-semibold ml-1">{stat.goldChange}</span>
-                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                      <span className="text-slate-400 ml-2">(loss penalty)</span>
-                    </li>
-                  ))}
-                {game.playerStats
-                  .filter((s) => s.reason === 'offer_accepted' || s.reason === 'offer_gain')
-                  .map((stat) => (
-                    <li key={stat.id}>
-                      {stat.username ?? `Player#${stat.playerId}`}:
-                      <span className="text-blue-400 font-semibold ml-1">+{stat.goldChange}</span>
-                      <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                      <span className="text-slate-400 ml-2">(offer accepted)</span>
-                    </li>
-                  ))}
+            <div>
+              <p className="stat-label mb-2">Gold changes</p>
+              <ul className="space-y-1.5">
+                {['win_reward', 'loss_penalty', 'offer_accepted', 'offer_gain']
+                  .flatMap(reason =>
+                    game.playerStats
+                      .filter(s => s.reason === reason)
+                      .map(stat => (
+                        <GoldChange
+                          key={stat.id}
+                          username={stat.username ?? `Player #${stat.playerId}`}
+                          change={stat.goldChange}
+                          reason={stat.reason}
+                        />
+                      ))
+                  )
+                }
               </ul>
             </div>
           )}
 
+          {/* Offers */}
           {game.offers.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-bold text-white mb-2">Offers:</h4>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                {game.offers.map((offer) => (
-                  <li key={offer.id}>
-                    {offer.fromUsername} offered {offer.targetUsername} for{' '}
-                    {offer.offerAmount != null ? (
-                      <>
-                        <Gold amount={offer.offerAmount} />
-                        {offer.tierLabel && (
-                          <> (<TierBadge tier={offer.tierLabel} />)</>
-                        )}
-                      </>
-                    ) : (
-                      <TierBadge tier={offer.tierLabel} />
-                    )}
-                    {' '}(
-                    <span className={`font-semibold ${
-                      offer.status === 'accepted' ? 'text-green-400' :
-                      offer.status === 'rejected' ? 'text-red-400' :
-                      'text-slate-400'
-                    }`}>
-                      {offer.status}
-                    </span>)
-                  </li>
-                ))}
+            <div>
+              <p className="stat-label mb-2">Offers</p>
+              <ul className="space-y-2">
+                {game.offers.map(offer => {
+                  const isAccepted = offer.status === 'accepted';
+                  const isRejected = offer.status === 'rejected';
+                  return (
+                    <li key={offer.id} className="font-barlow text-sm flex items-center gap-2 flex-wrap">
+                      {isAccepted
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-dota-radiant-light shrink-0" />
+                        : isRejected
+                        ? <XCircle className="w-3.5 h-3.5 text-dota-dire-light shrink-0" />
+                        : <span className="w-3.5 h-3.5 shrink-0" />
+                      }
+                      <span className="text-dota-gold font-semibold">{offer.fromUsername}</span>
+                      <span className="text-dota-text-muted">offered</span>
+                      <span className="text-dota-info font-semibold">{offer.targetUsername}</span>
+                      <span className="text-dota-text-muted">for</span>
+                      {offer.offerAmount != null ? (
+                        <><Gold amount={offer.offerAmount} />{offer.tierLabel && <TierBadge tier={offer.tierLabel} />}</>
+                      ) : (
+                        <TierBadge tier={offer.tierLabel} />
+                      )}
+                      <span className={`text-xs font-semibold uppercase ${
+                        isAccepted ? 'text-dota-radiant-light' :
+                        isRejected ? 'text-dota-dire-light'    :
+                                     'text-dota-text-dim'
+                      }`}>
+                        {offer.status}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-// ---- Public component -----------------------------------------------------
+// ── Public component ──────────────────────────────────────────────────────────
 export default function GameHistory({ history }: { history: HistoryGame[] }) {
   if (history.length === 0) return null;
 
   return (
-    <section className="mt-12">
-      <h2 className="text-3xl font-bold mb-6 text-center">Game History</h2>
-      {[...history].reverse().map((game) => (
-        <GameCard key={game.gameNumber} game={game} />
-      ))}
+    <section className="mt-12 space-y-4">
+      <div className="text-center space-y-2">
+        <h2 className="font-cinzel text-3xl font-bold text-dota-gold">Game History</h2>
+        <div className="divider-gold w-48 mx-auto" />
+      </div>
+
+      <div className="space-y-3">
+        {[...history].reverse().map(game => (
+          <GameCard key={game.gameNumber} game={game} />
+        ))}
+      </div>
     </section>
   );
 }
