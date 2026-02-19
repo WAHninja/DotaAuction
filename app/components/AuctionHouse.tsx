@@ -3,20 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 
-type Player = {
-  id: number;
-  username: string;
-  gold: number;
-};
-
-type Offer = {
-  id: number;
-  from_player_id: number;
-  target_player_id: number;
-  offer_amount: number;
-  tier_label: 'Low' | 'Medium' | 'High' | null;
-  status: 'pending' | 'accepted' | 'rejected';
-};
+import type { Player, Offer } from '@/types';
 
 type AuctionHouseProps = {
   matchId: string;
