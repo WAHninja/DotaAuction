@@ -318,20 +318,39 @@ export default function MatchPage() {
                     <div className="mt-4">
                       <h4 className="font-bold text-white mb-2">Offers:</h4>
                       <ul className="list-disc list-inside text-sm space-y-1">
-                        {game.offers.map((offer: any) => (
-                          <li key={offer.id}>
-                            {offer.fromUsername} offered {offer.targetUsername} for {offer.offerAmount}
-                            <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-                            {' '}(
-                            <span className={`font-semibold ${
-                              offer.status === 'accepted' ? 'text-green-400' :
-                              offer.status === 'rejected' ? 'text-red-400' :
-                              'text-slate-400'
-                            }`}>
-                              {offer.status}
-                            </span>)
-                          </li>
-                        ))}
+                        {game.offers.map((offer: any) => {
+                          const isPending = offer.status === 'pending';
+                          return (
+                            <li key={offer.id}>
+                              {offer.fromUsername} offered {offer.targetUsername} for{' '}
+                              {isPending ? (
+                                // Hide exact amount while offer is still pending —
+                                // show tier label to match what players see in the auction
+                                <span className={`font-semibold px-1.5 py-0.5 rounded text-xs ${
+                                  offer.tierLabel === 'Low'    ? 'bg-blue-500/20 text-blue-300' :
+                                  offer.tierLabel === 'Medium' ? 'bg-yellow-500/20 text-yellow-300' :
+                                  offer.tierLabel === 'High'   ? 'bg-red-500/20 text-red-300' :
+                                  'text-slate-400'
+                                }`}>
+                                  {offer.tierLabel ?? '?'}
+                                </span>
+                              ) : (
+                                <>
+                                  {offer.offerAmount}
+                                  <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
+                                </>
+                              )}
+                              {' '}(
+                              <span className={`font-semibold ${
+                                offer.status === 'accepted' ? 'text-green-400' :
+                                offer.status === 'rejected' ? 'text-red-400' :
+                                'text-slate-400'
+                              }`}>
+                                {offer.status}
+                              </span>)
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}
