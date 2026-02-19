@@ -13,7 +13,7 @@ function safeParseArray(value: any): number[] {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getSession();
 
@@ -25,10 +25,7 @@ export async function GET(req: NextRequest) {
 
     const currentUserId = session.userId;
 
-    const url = new URL(req.url);
-    const id = url.pathname.split('/').pop();
-    const matchId = parseInt(id || '');
-
+    const matchId = Number(params.id);
     if (isNaN(matchId)) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
     }
