@@ -39,7 +39,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     await client.query('BEGIN');
 
-    // ---- Fetch game --------------------------------------------------------
+    // ---- Lock game row for the duration of the transaction -----------------
+    // FOR UPDATE prevents concurrent transactions from reading the same game
+    // row simultaneously and both proceeding past the status check.
     const { rows: gameRows } = await client.query<{
       id: number;
       match_id: number;
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       winning_team: 'team_a' | 'team_1' | null;
       status: string;
     }>(
-      'SELECT id, match_id, team_a_members, team_1_members, winning_team, status FROM games WHERE id = $1',
+      'SELECT id, match_id, team_a_members, team_1_members, winning_team, status FROM games WHERE id = $1 FOR UPDATE',
       [gameId]
     );
 
@@ -79,20 +81,26 @@ export async function POST(req: NextRequest): Promise<Response> {
       return Response.json({ message: 'Only losing team members can accept offers.' }, { status: 403 });
     }
 
-    // ---- Fetch the offer ---------------------------------------------------
+    // ---- Atomically claim the offer ----------------------------------------
+    // UPDATE ... WHERE status = 'pending' RETURNING is a single atomic operation.
+    // If two requests race here, only one will get rows back — the other gets
+    // zero rows and is rejected cleanly, even at READ COMMITTED isolation.
     const { rows: offerRows } = await client.query<{
       id: number;
       from_player_id: number;
       target_player_id: number;
       offer_amount: number;
     }>(
-      'SELECT id, from_player_id, target_player_id, offer_amount FROM offers WHERE id = $1 AND game_id = $2 AND status = $3',
-      [offerId, gameId, 'pending']
+      `UPDATE offers
+       SET status = 'accepted'
+       WHERE id = $1 AND game_id = $2 AND status = 'pending'
+       RETURNING id, from_player_id, target_player_id, offer_amount`,
+      [offerId, gameId]
     );
 
     if (offerRows.length === 0) {
       await client.query('ROLLBACK');
-      return Response.json({ message: 'Offer not found or already resolved.' }, { status: 404 });
+      return Response.json({ message: 'Offer already accepted or not found.' }, { status: 409 });
     }
 
     const { from_player_id, target_player_id, offer_amount } = offerRows[0];
@@ -105,12 +113,6 @@ export async function POST(req: NextRequest): Promise<Response> {
       await client.query('ROLLBACK');
       return Response.json({ message: 'Target player not found in current game.' }, { status: 400 });
     }
-
-    // ---- Resolve offers ----------------------------------------------------
-    await client.query(
-      'UPDATE offers SET status = $1 WHERE id = $2',
-      ['accepted', offerId]
-    );
 
     await client.query(
       'UPDATE offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
