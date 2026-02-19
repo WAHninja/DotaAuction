@@ -69,21 +69,21 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
   const MatchTeams = ({ team_a_usernames, team_1_usernames }: { team_a_usernames?: string[], team_1_usernames?: string[] }) => (
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {team_a_usernames && (
+      {team_1_usernames && (
         <div className="bg-lime-900/30 p-2 sm:p-3 rounded-lg border border-lime-700/40">
-          <p className="text-xs font-semibold text-lime-300 mb-1 sm:mb-2">Team A</p>
+          <p className="text-xs font-semibold text-lime-300 mb-1 sm:mb-2">Team 1</p>
           <div className="flex flex-wrap gap-2">
-            {team_a_usernames.map(u => (
+            {team_1_usernames.map(u => (
               <span key={u} className="bg-lime-700/80 text-white text-xs px-2 py-1 rounded-full">{u}</span>
             ))}
           </div>
         </div>
       )}
-      {team_1_usernames && (
+      {team_a_usernames && (
         <div className="bg-red-900/30 p-2 sm:p-3 rounded-lg border border-red-700/40">
-          <p className="text-xs font-semibold text-red-300 mb-1 sm:mb-2">Team 1</p>
+          <p className="text-xs font-semibold text-red-300 mb-1 sm:mb-2">Team A</p>
           <div className="flex flex-wrap gap-2">
-            {team_1_usernames.map(u => (
+            {team_a_usernames.map(u => (
               <span key={u} className="bg-red-700/80 text-white text-xs px-2 py-1 rounded-full">{u}</span>
             ))}
           </div>
