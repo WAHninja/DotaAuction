@@ -82,7 +82,9 @@ export default function MatchPage() {
     // Append the new offer directly — no fetch needed. The payload already
     // contains all fields (id, from/target player ids, tier_label, status)
     // with offer_amount intentionally stripped server-side while pending.
-    setOffers(prev => [...prev, offer]);
+    // Explicitly set offer_amount: null so the entry is a complete Offer
+    // and consistent with offers returned by the API.
+    setOffers(prev => [...prev, { ...offer, offer_amount: null }]);
   }, []);
 
   const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
