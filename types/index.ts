@@ -36,7 +36,7 @@ export type Offer = {
   game_id: number;
   from_player_id: number;
   target_player_id: number;
-  offer_amount: number | null;  // null while status === 'pending'
+  offer_amount?: number | null;  // null while status === 'pending', absent in Ably payloads
   tier_label: TierLabel | null;
   status: OfferStatus;
   created_at?: string;
