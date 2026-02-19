@@ -1,6 +1,21 @@
 import Image from 'next/image';
 
-export default function TeamCard({ name, logo, players, teamId, color }) {
+type Player = {
+  id: number;
+  username: string;
+  gold: number;
+};
+
+type TeamCardProps = {
+  name: string;
+  logo: string;
+  players: Player[];
+  teamId: string;
+  color?: string;
+  currentUserId?: number;
+};
+
+export default function TeamCard({ name, logo, players, teamId, color, currentUserId }: TeamCardProps) {
   const gradient = color || 'from-green-700 via-green-600 to-green-600';
 
   return (
@@ -10,15 +25,33 @@ export default function TeamCard({ name, logo, players, teamId, color }) {
         <h2 className="text-2xl font-semibold ml-4 mt-10">{name}</h2>
       </div>
       <ul className="space-y-2">
-        {players.map((p) => (
-          <li key={`${teamId}-${p.id}`} className="flex justify-between items-center">
-            <span>{p.username || 'Unknown'}</span>
-            <span className="flex items-center gap-1">
-              {p.gold ?? 0}
-              <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
-            </span>
-          </li>
-        ))}
+        {players.map((p) => {
+          const isYou = currentUserId !== undefined && p.id === currentUserId;
+
+          return (
+            <li
+              key={`${teamId}-${p.id}`}
+              className={`flex justify-between items-center rounded-lg px-2 py-1 transition-colors ${
+                isYou
+                  ? 'bg-yellow-400/15 border border-yellow-400/40'
+                  : ''
+              }`}
+            >
+              <span className={`flex items-center gap-2 ${isYou ? 'text-yellow-300 font-bold' : ''}`}>
+                {p.username || 'Unknown'}
+                {isYou && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 px-1.5 py-0.5 rounded-full">
+                    You
+                  </span>
+                )}
+              </span>
+              <span className="flex items-center gap-1">
+                {p.gold ?? 0}
+                <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} />
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
