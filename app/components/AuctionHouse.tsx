@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import type { Player, Offer } from '@/types';
 
 type AuctionHouseProps = {
@@ -21,25 +21,24 @@ type AuctionHouseProps = {
   onOfferAccepted: () => void;
 };
 
-/* -----------------------------------------------------------------------
-   Tier badge
------------------------------------------------------------------------ */
-
-const TIER_STYLES: Record<string, string> = {
-  Low:    'bg-blue-500/20 text-blue-300 border-blue-500/40',
-  Medium: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
-  High:   'bg-red-500/20 text-red-300 border-red-500/40',
-}
-
+// ── Tier badge — delegates to globals CSS classes ────────────────────────────
 function TierBadge({ label }: { label: 'Low' | 'Medium' | 'High' }) {
-  return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold border ${TIER_STYLES[label]}`}>
-      {label}
-    </span>
-  )
+  const cls =
+    label === 'Low'    ? 'tier-low'    :
+    label === 'Medium' ? 'tier-medium' :
+                         'tier-high';
+  return <span className={cls}>{label}</span>;
 }
 
-/* ----------------------------------------------------------------------- */
+// ── Gold amount display ───────────────────────────────────────────────────────
+function GoldAmount({ amount }: { amount: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
+      {amount}
+      <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} />
+    </span>
+  );
+}
 
 export default function AuctionHouse({
   latestGame,
@@ -50,50 +49,42 @@ export default function AuctionHouse({
   onOfferSubmitted,
   onOfferAccepted,
 }: AuctionHouseProps) {
-  const [offerAmount, setOfferAmount] = useState('');
-  const [selectedPlayer, setSelectedPlayer] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [accepting, setAccepting] = useState(false);
-  const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [offerAmount, setOfferAmount]           = useState('');
+  const [selectedPlayer, setSelectedPlayer]     = useState('');
+  const [submitting, setSubmitting]             = useState(false);
+  const [accepting, setAccepting]               = useState(false);
+  const [acceptedOfferId, setAcceptedOfferId]   = useState<number | null>(null);
+  const [submitError, setSubmitError]           = useState<string | null>(null);
+  const [acceptError, setAcceptError]           = useState<string | null>(null);
 
   const { winning_team: winningTeam, team_1_members: team1, team_a_members: teamA } = latestGame;
 
-  const isWinner = winningTeam === 'team_1'
-    ? team1.includes(currentUserId)
-    : teamA.includes(currentUserId);
-  const isLoser = !isWinner;
+  const isWinner   = winningTeam === 'team_1' ? team1.includes(currentUserId) : teamA.includes(currentUserId);
+  const isLoser    = !isWinner;
+  const myWinTeam  = winningTeam === 'team_1' ? team1 : teamA;
+  const candidates = myWinTeam.filter(id => id !== currentUserId);
 
-  const myWinningTeam = winningTeam === 'team_1' ? team1 : teamA;
-  const offerCandidates = myWinningTeam.filter((id) => id !== currentUserId);
-
-  const alreadySubmittedOffer = offers.some((o) => o.from_player_id === currentUserId);
-  const allOffersSubmitted = myWinningTeam.every((pid) =>
-    offers.some((o) => o.from_player_id === pid)
-  );
-  const offersSubmittedCount = myWinningTeam.filter((pid) =>
-    offers.some((o) => o.from_player_id === pid)
-  ).length;
+  const alreadySubmitted    = offers.some(o => o.from_player_id === currentUserId);
+  const submittedCount      = myWinTeam.filter(pid => offers.some(o => o.from_player_id === pid)).length;
+  const allSubmitted        = myWinTeam.every(pid => offers.some(o => o.from_player_id === pid));
+  const hasPending          = offers.some(o => o.status === 'pending');
 
   const minOffer = 250 + gamesPlayed * 200;
   const maxOffer = 2000 + gamesPlayed * 500;
 
-  const getPlayer = (id: number) => players.find((p) => p.id === id);
+  const getPlayer = (id: number) => players.find(p => p.id === id);
 
-  // ---------- Submit --------------------------------------------------
+  // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmitOffer = async () => {
     setSubmitError(null);
     const parsed = parseInt(offerAmount, 10);
-
-    if (!selectedPlayer) { setSubmitError('Please select a player.'); return; }
+    if (!selectedPlayer)                              { setSubmitError('Please select a player.'); return; }
     if (isNaN(parsed) || parsed < minOffer || parsed > maxOffer) {
-      setSubmitError(`Amount must be between ${minOffer} and ${maxOffer}.`); return;
+      setSubmitError(`Amount must be between ${minOffer.toLocaleString()} and ${maxOffer.toLocaleString()}.`); return;
     }
-
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/game/${latestGame.id}/submit-offer`, {
+      const res  = await fetch(`/api/game/${latestGame.id}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_player_id: parseInt(selectedPlayer), offer_amount: parsed }),
@@ -109,15 +100,14 @@ export default function AuctionHouse({
     }
   };
 
-  // ---------- Accept --------------------------------------------------
+  // ── Accept ──────────────────────────────────────────────────────────────────
   const handleAcceptOffer = async (offerId: number) => {
     setAcceptError(null);
     if (accepting || acceptedOfferId !== null) return;
     setAcceptedOfferId(offerId);
     setAccepting(true);
-
     try {
-      const res = await fetch(`/api/game/${latestGame.id}/accept-offer`, {
+      const res  = await fetch(`/api/game/${latestGame.id}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
@@ -137,190 +127,208 @@ export default function AuctionHouse({
     }
   };
 
-  const hasPendingOffers = offers.some(o => o.status === 'pending');
-
-  // ---------- Render --------------------------------------------------
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg mb-8">
-      <h3 className="text-2xl font-bold mb-4 text-center">Auction House</h3>
+    <div className="panel p-6 mb-8 space-y-6">
 
-      {/* Offer counter */}
-      <div className="flex justify-center mb-6">
-        <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-600 rounded-xl px-5 py-3">
-          <span className="text-sm text-slate-400">Offers submitted:</span>
-          <div className="flex gap-1">
-            {myWinningTeam.map((pid) => (
+      {/* ── Title ──────────────────────────────────────────────────────────── */}
+      <div className="text-center space-y-1">
+        <h3 className="font-cinzel text-2xl font-bold text-dota-gold">Auction House</h3>
+        <div className="divider-gold w-40 mx-auto" />
+      </div>
+
+      {/* ── Offer counter ──────────────────────────────────────────────────── */}
+      <div className="flex justify-center">
+        <div className="panel-sunken flex items-center gap-4 px-5 py-3 rounded-lg">
+          <span className="stat-label">Offers in</span>
+          <div className="flex gap-1.5">
+            {myWinTeam.map(pid => (
               <span
                 key={pid}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  offers.some((o) => o.from_player_id === pid) ? 'bg-green-400' : 'bg-slate-600'
-                }`}
                 title={getPlayer(pid)?.username ?? `Player #${pid}`}
+                className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                  offers.some(o => o.from_player_id === pid)
+                    ? 'bg-dota-radiant'
+                    : 'bg-dota-border'
+                }`}
               />
             ))}
           </div>
-          <span className={`text-sm font-bold ${allOffersSubmitted ? 'text-green-400' : 'text-yellow-300'}`}>
-            {offersSubmittedCount} / {myWinningTeam.length}
+          <span className={`font-barlow font-bold text-sm tabular-nums ${
+            allSubmitted ? 'text-dota-radiant-light' : 'text-dota-gold'
+          }`}>
+            {submittedCount} / {myWinTeam.length}
           </span>
-          {allOffersSubmitted && <span className="text-xs text-green-400">— all in!</span>}
+          {allSubmitted && (
+            <span className="flex items-center gap-1 text-dota-radiant-light text-xs font-barlow font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5" /> All in!
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Winner: submit form */}
-      {isWinner && !alreadySubmittedOffer && (
-        <div className="w-full max-w-md mx-auto mb-6">
-          <p className="font-semibold mb-2 text-center">Make an Offer:</p>
-          <p className="text-sm text-gray-300 text-center mb-1">
-            Amount must be between{' '}
-            <span className="font-semibold text-white">{minOffer}</span> and{' '}
-            <span className="font-semibold text-white">{maxOffer}</span>
-            <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
-          </p>
-          <p className="text-xs text-slate-400 text-center mb-4">
-            Everyone sees only a <span className="text-white font-medium">Low / Medium / High</span> label —
-            not the exact amount — until an offer is accepted.
-          </p>
+      {/* ── Winner: submit form ─────────────────────────────────────────────── */}
+      {isWinner && !alreadySubmitted && (
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="text-center space-y-1">
+            <p className="font-barlow font-semibold text-dota-text">Make an Offer</p>
+            <p className="font-barlow text-sm text-dota-text-muted flex items-center justify-center gap-1">
+              Amount must be between{' '}
+              <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
+              {' '}and{' '}
+              <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
+              <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+            </p>
+            <p className="font-barlow text-xs text-dota-text-dim">
+              Others see only a tier label until an offer is accepted
+            </p>
+          </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3">
             <select
               value={selectedPlayer}
-              onChange={(e) => setSelectedPlayer(e.target.value)}
-              className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
+              onChange={e => setSelectedPlayer(e.target.value)}
+              className="input flex-1"
             >
-              <option value="">Select Player</option>
-              {offerCandidates.map((pid) => {
-                const player = getPlayer(pid);
-                return <option key={pid} value={pid}>{player?.username ?? `Player #${pid}`}</option>;
+              <option value="">Select player to offer…</option>
+              {candidates.map(pid => {
+                const p = getPlayer(pid);
+                return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
               })}
             </select>
 
             <input
               type="number"
               value={offerAmount}
-              onChange={(e) => setOfferAmount(e.target.value)}
+              onChange={e => setOfferAmount(e.target.value)}
               placeholder={`${minOffer}–${maxOffer}`}
               min={minOffer}
               max={maxOffer}
-              className="px-3 py-2 rounded-lg text-black w-full max-w-xs"
+              className="input flex-1"
             />
           </div>
 
-          {submitError && <p className="mt-2 text-sm text-red-400 text-center">{submitError}</p>}
+          {submitError && (
+            <p className="font-barlow text-sm text-dota-dire-light text-center">{submitError}</p>
+          )}
 
-          <div className="mt-4 flex justify-center">
+          <div className="flex justify-center">
             <button
               onClick={handleSubmitOffer}
               disabled={submitting}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full max-w-xs disabled:opacity-50"
+              className="btn-primary min-w-[160px]"
             >
-              {submitting ? 'Submitting...' : 'Submit Offer'}
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting ? 'Submitting…' : 'Submit Offer'}
             </button>
           </div>
         </div>
       )}
 
-      {isWinner && alreadySubmittedOffer && (
-        <p className="w-full max-w-md mx-auto mb-6 text-center text-yellow-300 font-semibold">
-          ✅ You've already submitted your offer.
+      {/* ── Winner: already submitted ───────────────────────────────────────── */}
+      {isWinner && alreadySubmitted && (
+        <p className="text-center font-barlow text-sm font-semibold text-dota-radiant-light flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4" /> Your offer is in.
         </p>
       )}
 
-      {isLoser && !allOffersSubmitted && (
-        <p className="w-full max-w-md mx-auto mb-6 text-center text-slate-300 text-sm">
-          Waiting for all offers to be submitted before you can accept…
+      {/* ── Loser: waiting message ──────────────────────────────────────────── */}
+      {isLoser && !allSubmitted && (
+        <p className="text-center font-barlow text-sm text-dota-text-muted">
+          Waiting for all offers before you can accept…
         </p>
       )}
 
-      {/* Offer cards */}
+      {/* ── Offer cards ────────────────────────────────────────────────────── */}
       <div>
-        <h4 className="text-xl font-bold text-center mb-2">Current Offers</h4>
+        <h4 className="font-cinzel text-lg font-bold text-center text-dota-text mb-1">Current Offers</h4>
 
-        {allOffersSubmitted && hasPendingOffers && (
-          <p className="text-center text-slate-400 text-xs mb-4">
-            Exact amounts are hidden. Choose based on the player and tier — the amount is revealed after an offer is accepted.
+        {allSubmitted && hasPending && (
+          <p className="text-center font-barlow text-xs text-dota-text-dim mb-4">
+            Exact amounts are hidden until an offer is accepted.
           </p>
         )}
 
         {offers.length === 0 ? (
-          <p className="text-center text-gray-400">No offers submitted yet.</p>
+          <p className="text-center font-barlow text-dota-text-dim py-4">No offers submitted yet.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {offers.map((offer) => {
-              const from = getPlayer(offer.from_player_id);
-              const to = getPlayer(offer.target_player_id);
+            {offers.map(offer => {
+              const from       = getPlayer(offer.from_player_id);
+              const to         = getPlayer(offer.target_player_id);
               const isAccepted = offer.status === 'accepted';
               const isRejected = offer.status === 'rejected';
-              const isPending = offer.status === 'pending';
+              const isPending  = offer.status === 'pending';
 
-              const canAccept =
-                isLoser && isPending && acceptedOfferId === null && allOffersSubmitted;
-
-              // Nobody sees exact amounts while an offer is pending —
-              // winners included. The amount is revealed once resolved.
-              const showExactAmount = !isPending;
+              const canAccept  = isLoser && isPending && acceptedOfferId === null && allSubmitted;
+              const showAmount = !isPending;
 
               return (
                 <div
                   key={offer.id}
-                  className={`bg-gray-800 p-4 rounded-2xl shadow-lg border flex flex-col justify-between h-full transition-colors ${
-                    isAccepted ? 'border-green-500' :
-                    isRejected ? 'border-red-800 opacity-60' :
-                    'border-gray-700'
+                  className={`panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${
+                    isAccepted ? 'border-dota-radiant shadow-radiant' :
+                    isRejected ? 'opacity-50'                          :
+                                 'border-dota-border'
                   }`}
                 >
-                  <div className="flex flex-col gap-2 mb-4">
+                  {/* Offer details */}
+                  <div className="space-y-2">
 
-                    {/* Seller */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-sm w-12">From</span>
-                      <span className="font-semibold text-yellow-300">
-                        {from?.username ?? `Player #${offer.from_player_id}`}
-                      </span>
-                    </div>
+                    {/* Status strip — shown once resolved */}
+                    {!isPending && (
+                      <div className={isAccepted ? 'badge-radiant self-start' : 'badge-dire self-start'}>
+                        {isAccepted ? <CheckCircle2 className="w-3 h-3" /> : null}
+                        {offer.status}
+                      </div>
+                    )}
 
-                    {/* Player being sold */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-sm w-12">Selling</span>
-                      <span className="font-semibold text-blue-300">
-                        {to?.username ?? `Player #${offer.target_player_id}`}
-                      </span>
-                    </div>
-
-                    {/* Amount or tier */}
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-gray-400 text-sm w-12">Offer</span>
-                      {!allOffersSubmitted && isLoser ? (
-                        <span className="text-slate-500 italic text-xs">Hidden until all offers are in…</span>
-                      ) : showExactAmount ? (
-                        <span className="font-bold text-white flex items-center gap-1">
-                          {offer.offer_amount}
-                          <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} />
+                    {/* From → To */}
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="stat-label w-10">From</span>
+                        <span className="font-barlow font-semibold text-dota-gold">
+                          {from?.username ?? `Player #${offer.from_player_id}`}
                         </span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="stat-label w-10">Selling</span>
+                        <span className="font-barlow font-semibold text-dota-info">
+                          {to?.username ?? `Player #${offer.target_player_id}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Amount / tier */}
+                    <div className="flex items-center gap-2">
+                      <span className="stat-label w-10">Offer</span>
+                      {!allSubmitted && isLoser ? (
+                        <span className="font-barlow text-xs text-dota-text-dim italic">
+                          Hidden until all offers are in…
+                        </span>
+                      ) : showAmount ? (
+                        offer.offer_amount != null
+                          ? <GoldAmount amount={offer.offer_amount} />
+                          : <span className="text-dota-text-dim text-xs">—</span>
                       ) : (
-                        // Loser viewing a pending offer — show tier label only
                         offer.tier_label
                           ? <TierBadge label={offer.tier_label} />
-                          : <span className="text-slate-500 italic text-xs">—</span>
+                          : <span className="text-dota-text-dim text-xs">—</span>
                       )}
                     </div>
-
-                    {/* Resolved status */}
-                    {!isPending && (
-                      <span className={`text-xs font-semibold uppercase mt-1 ${
-                        isAccepted ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {offer.status}
-                      </span>
-                    )}
                   </div>
 
+                  {/* Accept button */}
                   {canAccept && (
                     <button
                       onClick={() => handleAcceptOffer(offer.id)}
                       disabled={accepting}
-                      className="mt-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                      className="btn-primary w-full mt-auto"
                     >
-                      {accepting ? 'Accepting...' : 'Accept Offer'}
+                      {accepting && acceptedOfferId === offer.id
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Accepting…</>
+                        : 'Accept Offer'
+                      }
                     </button>
                   )}
                 </div>
@@ -330,20 +338,20 @@ export default function AuctionHouse({
         )}
 
         {acceptError && (
-          <p className="mt-3 text-sm text-red-400 text-center">{acceptError}</p>
+          <p className="mt-3 font-barlow text-sm text-dota-dire-light text-center">{acceptError}</p>
         )}
       </div>
 
-      {/* Tier legend — shown to everyone once all offers are in and pending */}
-      {allOffersSubmitted && hasPendingOffers && (
-        <div className="mt-6 flex justify-center">
-          <div className="bg-slate-800/60 border border-slate-700 rounded-xl px-5 py-3 flex flex-wrap items-center justify-center gap-4">
-            <span className="text-xs text-slate-400">Tiers:</span>
+      {/* ── Tier legend ─────────────────────────────────────────────────────── */}
+      {allSubmitted && hasPending && (
+        <div className="flex justify-center">
+          <div className="panel-sunken flex flex-wrap items-center justify-center gap-4 px-5 py-3 rounded-lg">
+            <span className="stat-label">Tiers</span>
             {(['Low', 'Medium', 'High'] as const).map(tier => (
               <TierBadge key={tier} label={tier} />
             ))}
-            <span className="text-xs text-slate-500">
-              Ranges overlap — the same tier can cover different amounts
+            <span className="font-barlow text-xs text-dota-text-dim">
+              Ranges overlap — same tier can cover different amounts
             </span>
           </div>
         </div>
