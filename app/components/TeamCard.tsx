@@ -1,10 +1,5 @@
 import Image from 'next/image';
-
-type Player = {
-  id: number;
-  username: string;
-  gold: number;
-};
+import type { Player } from '@/types';
 
 type TeamCardProps = {
   name: string;
@@ -39,7 +34,11 @@ export default function TeamCard({ name, logo, players, teamId, color, currentUs
             >
               <span className={`flex items-center gap-2 ${isYou ? 'text-yellow-300 font-bold' : ''}`}>
                 {p.username || 'Unknown'}
-                {isYou}
+                {isYou && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 px-1.5 py-0.5 rounded-full">
+                    You
+                  </span>
+                )}
               </span>
               <span className="flex items-center gap-1">
                 {p.gold ?? 0}
