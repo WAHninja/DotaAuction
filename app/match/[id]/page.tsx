@@ -28,9 +28,13 @@ export default function MatchPage() {
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
   // ---- Protect route -------------------------------------------------------
+  // Wait until the session check has finished before redirecting.
+  // Without the loading guard, user is null on every first render (including
+  // a hard refresh) and the page redirects before auth has a chance to resolve.
+  const { loading: authLoading } = useContext(UserContext);
   useEffect(() => {
-    if (user === null) router.push('/');
-  }, [user, router]);
+    if (!authLoading && user === null) router.push('/');
+  }, [authLoading, user, router]);
 
   // ---- Data fetchers -------------------------------------------------------
   const fetchMatchData = useCallback(async () => {
@@ -110,7 +114,7 @@ export default function MatchPage() {
   );
 
   // ---- Render guards -------------------------------------------------------
-  if (!user) {
+  if (!user && authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <div className="flex items-center gap-3 text-slate-400">
