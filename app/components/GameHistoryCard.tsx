@@ -4,7 +4,21 @@ import { motion } from 'framer-motion'
 import { Trophy, Coins } from 'lucide-react'
 
 /* ----------------------- Types ----------------------- */
-import type { HistoryPlayerStat as PlayerStat, HistoryOffer as Offer } from '@/types';
+type PlayerStat = {
+  id?: number
+  playerId: number
+  username: string
+  goldChange: number
+  reason: 'win_reward' | 'loss_penalty' | 'offer_accepted' | 'offer_gain' | string
+}
+
+type Offer = {
+  id: number
+  from_username: string
+  target_username: string
+  offer_amount: number
+  status: 'pending' | 'accepted' | 'rejected'
+}
 
 type GameHistoryCardProps = {
   gameId: number
