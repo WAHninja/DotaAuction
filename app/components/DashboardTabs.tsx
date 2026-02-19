@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Loader2, CheckCircle, PlayCircle } from 'lucide-react';
+import { Loader2, CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
@@ -33,7 +33,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   useEffect(() => {
     ongoingMatches.forEach(match => {
       if (gamesPlayedMap[match.id] !== undefined) return;
-
       fetch(`/api/match/${match.id}/games-played`)
         .then(res => res.json())
         .then(data => {
@@ -81,9 +80,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           <p className="text-xs font-semibold text-lime-300 mb-1 sm:mb-2">Team A</p>
           <div className="flex flex-wrap gap-2">
             {team_a_usernames.map(u => (
-              <span key={u} className="bg-lime-700/80 text-white text-xs px-2 py-1 rounded-full">
-                {u}
-              </span>
+              <span key={u} className="bg-lime-700/80 text-white text-xs px-2 py-1 rounded-full">{u}</span>
             ))}
           </div>
         </div>
@@ -93,9 +90,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           <p className="text-xs font-semibold text-red-300 mb-1 sm:mb-2">Team 1</p>
           <div className="flex flex-wrap gap-2">
             {team_1_usernames.map(u => (
-              <span key={u} className="bg-red-700/80 text-white text-xs px-2 py-1 rounded-full">
-                {u}
-              </span>
+              <span key={u} className="bg-red-700/80 text-white text-xs px-2 py-1 rounded-full">{u}</span>
             ))}
           </div>
         </div>
@@ -155,24 +150,48 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
     );
   };
 
+  const EmptyState = ({ type }: { type: 'ongoing' | 'completed' }) => (
+    <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-slate-400">
+      {type === 'ongoing' ? (
+        <>
+          <Swords className="w-12 h-12 mb-4 opacity-30" />
+          <p className="text-lg font-semibold mb-1">No ongoing matches</p>
+          <p className="text-sm">Select your players above to start a new match.</p>
+        </>
+      ) : (
+        <>
+          <Trophy className="w-12 h-12 mb-4 opacity-30" />
+          <p className="text-lg font-semibold mb-1">No completed matches yet</p>
+          <p className="text-sm">Finished matches will appear here.</p>
+        </>
+      )}
+    </div>
+  );
+
   const MatchGrid = ({ matches, visible, type }: { matches: Match[]; visible: number; type: 'ongoing' | 'completed' }) => {
     const isCompleted = type === 'completed';
     const loading = type === 'ongoing' ? loadingOngoing : loadingCompleted;
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {matches.slice(0, visible).map(match => (
-          <MatchCard key={match.id} match={match} isCompleted={isCompleted} />
-        ))}
-        {visible < matches.length && (
-          <div className="col-span-full flex justify-center mt-2 sm:mt-4">
-            <button
-              onClick={() => loadMore(type)}
-              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
-            >
-              {loading ? 'Loading…' : 'Load More'}
-            </button>
-          </div>
+        {matches.length === 0 ? (
+          <EmptyState type={type} />
+        ) : (
+          <>
+            {matches.slice(0, visible).map(match => (
+              <MatchCard key={match.id} match={match} isCompleted={isCompleted} />
+            ))}
+            {visible < matches.length && (
+              <div className="col-span-full flex justify-center mt-2 sm:mt-4">
+                <button
+                  onClick={() => loadMore(type)}
+                  className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
+                >
+                  {loading ? 'Loading…' : 'Load More'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     );
@@ -180,7 +199,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
       <div className="flex justify-center gap-4 mb-2">
         {(['ongoing', 'completed', 'stats'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
