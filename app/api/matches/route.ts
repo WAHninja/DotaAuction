@@ -7,19 +7,53 @@ export async function POST(req: NextRequest) {
     const { playerIds } = await req.json();
 
     if (!Array.isArray(playerIds) || playerIds.length < 4) {
-      console.error('Invalid playerIds:', playerIds);
       return new Response(JSON.stringify({ error: 'At least 4 players are required' }), {
         status: 400,
       });
     }
 
     const session = await getSession();
-    console.log('Session:', session);
-
     if (!session) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
+    // ---- Check for an existing in-progress match with the same players -----
+    // We look for a match that:
+    //   1. Has no winner yet (still in progress)
+    //   2. Has exactly the same set of players — same count, all IDs match
+    //
+    // The ANY($1) + COUNT trick works as follows:
+    //   - Inner query 1: counts how many of the selected playerIds are in the match
+    //   - Inner query 2: counts total participants in the match
+    // Both must equal the number of submitted playerIds for an exact set match.
+    const existingMatchRes = await db.query(
+      `SELECT m.id
+       FROM matches m
+       WHERE m.winner_id IS NULL
+         AND (
+           SELECT COUNT(*)
+           FROM match_players mp
+           WHERE mp.match_id = m.id
+             AND mp.user_id = ANY($1::int[])
+         ) = $2
+         AND (
+           SELECT COUNT(*)
+           FROM match_players mp
+           WHERE mp.match_id = m.id
+         ) = $2
+       LIMIT 1`,
+      [playerIds, playerIds.length]
+    );
+
+    if (existingMatchRes.rows.length > 0) {
+      const existingMatchId = existingMatchRes.rows[0].id;
+      return new Response(
+        JSON.stringify({ id: existingMatchId, existing: true }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ---- No existing match found — create a new one ------------------------
     const client = await db.connect();
 
     try {
@@ -29,7 +63,6 @@ export async function POST(req: NextRequest) {
         'INSERT INTO matches (created_at) VALUES (NOW()) RETURNING id'
       );
       const matchId = matchResult.rows[0].id;
-      console.log('Created match ID:', matchId);
 
       for (const playerId of playerIds) {
         await client.query(
@@ -42,7 +75,6 @@ export async function POST(req: NextRequest) {
       const mid = Math.ceil(shuffled.length / 2);
       const team1 = shuffled.slice(0, mid);
       const teamA = shuffled.slice(mid);
-      console.log('Team 1:', team1, 'Team A:', teamA);
 
       const gameResult = await client.query(
         `INSERT INTO games (match_id, team_1_members, team_a_members, status)
@@ -58,7 +90,10 @@ export async function POST(req: NextRequest) {
 
       await client.query('COMMIT');
 
-      return new Response(JSON.stringify({ id: matchId }), { status: 200 });
+      return new Response(
+        JSON.stringify({ id: matchId, existing: false }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('Transaction failed:', err);
