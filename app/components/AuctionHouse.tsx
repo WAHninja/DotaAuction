@@ -99,7 +99,7 @@ export default function AuctionHouse({
         body: JSON.stringify({ target_player_id: parseInt(selectedPlayer), offer_amount: parsed }),
       });
       const data = await res.json();
-      if (!res.ok) { setSubmitError(data.message || 'Failed to submit offer.'); return; }
+      if (!res.ok) { setSubmitError(data.error || 'Failed to submit offer.'); return; }
       setOfferAmount(''); setSelectedPlayer('');
       onOfferSubmitted(data.offer);
     } catch {
@@ -125,7 +125,7 @@ export default function AuctionHouse({
       const data = await res.json();
       if (!res.ok && res.status !== 409) {
         setAcceptedOfferId(null);
-        setAcceptError(data.message || 'Failed to accept offer.');
+        setAcceptError(data.error || 'Failed to accept offer.');
         return;
       }
       onOfferAccepted();
