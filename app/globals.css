@@ -1,49 +1,380 @@
-/* styles/globals.css */
+/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* =============================================================================
+   BASE — default element styles
+   Applied globally. Scoped overrides should live in the component.
+   ============================================================================= */
+
 @layer base {
+
+  /* ── Document ─────────────────────────────────────────────────────────────── */
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
   body {
-    @apply bg-gray-950 text-gray-200 font-sans;
+    /* Deep cool-black base — matches Dota 2 client background */
+    background-color: theme('colors.dota-base');
+    color: theme('colors.dota-text');
+    @apply font-barlow;
   }
 
+  /* ── Typography hierarchy ─────────────────────────────────────────────────── */
+  /* Cinzel for display headings — evokes the Dota title card / fantasy-epic feel */
   h1, h2, h3 {
-    @apply font-cinzel;
+    @apply font-cinzel tracking-wide;
+    color: theme('colors.dota-text');
   }
 
+  /* Barlow Condensed for sub-headings — readable, compact, UI-native */
+  h4, h5, h6 {
+    @apply font-barlow font-semibold tracking-wide uppercase;
+    color: theme('colors.dota-text-muted');
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Links ────────────────────────────────────────────────────────────────── */
   a {
-    @apply text-yellow-400 hover:text-yellow-300 transition;
+    color: theme('colors.dota-gold');
+    @apply transition-colors duration-150;
+  }
+  a:hover {
+    color: theme('colors.dota-gold-light');
   }
 
-  button, input[type="submit"] {
-    @apply bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-4 py-2 rounded shadow transition disabled:bg-gray-600 disabled:cursor-not-allowed;
-  }
-
+  /* ── Form elements ────────────────────────────────────────────────────────── */
+  /*
+    Remove the global button reset from the old system — it was overriding
+    component-level styles and causing inconsistency. Buttons are now styled
+    entirely at the component level using the .btn-* utilities below.
+  */
   input[type="checkbox"] {
-    @apply accent-yellow-500;
+    accent-color: theme('colors.dota-gold');
   }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: theme('colors.dota-base');
+  }
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.dota-border');
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.dota-border-bright');
+  }
+
 }
 
-/* Extra utilities */
+/* =============================================================================
+   COMPONENTS — reusable utility classes
+   Build the design vocabulary here so components don't drift.
+   ============================================================================= */
+
+@layer components {
+
+  /* ── Panels ───────────────────────────────────────────────────────────────── */
+  /*
+    Three panel levels matching Dota's layered UI depth.
+    Use panel for most cards, panel-raised for modals/overlays, panel-sunken for insets.
+  */
+  .panel {
+    background-color: theme('colors.dota-surface');
+    border: 1px solid theme('colors.dota-border');
+    border-radius: theme('borderRadius.lg');
+    box-shadow: theme('boxShadow.panel');
+  }
+
+  .panel-raised {
+    background-color: theme('colors.dota-raised');
+    border: 1px solid theme('colors.dota-border-bright');
+    border-radius: theme('borderRadius.lg');
+    box-shadow: theme('boxShadow.raised');
+  }
+
+  .panel-sunken {
+    background-color: theme('colors.dota-deep');
+    border: 1px solid theme('colors.dota-border');
+    border-radius: theme('borderRadius.md');
+    box-shadow: theme('boxShadow.inset');
+  }
+
+  /* ── Buttons ──────────────────────────────────────────────────────────────── */
+  /*
+    Primary: gold — main CTAs (Submit Offer, Create Match, Submit Winner)
+    Secondary: surface — secondary actions (View, cancel)
+    Danger: dire red — destructive actions
+    Ghost: transparent with border — low-emphasis actions
+  */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply font-barlow font-semibold tracking-wide;
+    @apply px-5 py-2.5 rounded-md;
+    @apply transition-all duration-150;
+    @apply disabled:opacity-40 disabled:cursor-not-allowed;
+    letter-spacing: 0.06em;
+  }
+
+  .btn-primary {
+    @apply btn;
+    background-color: theme('colors.dota-gold');
+    color: #0d1117;
+    border: 1px solid theme('colors.dota-gold-dark');
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: theme('colors.dota-gold-light');
+    box-shadow: theme('boxShadow.gold');
+  }
+  .btn-primary:active:not(:disabled) {
+    background-color: theme('colors.dota-gold-dark');
+  }
+
+  .btn-secondary {
+    @apply btn;
+    background-color: theme('colors.dota-overlay');
+    color: theme('colors.dota-text');
+    border: 1px solid theme('colors.dota-border-bright');
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: theme('colors.dota-raised');
+    border-color: theme('colors.dota-gold-dark');
+  }
+
+  .btn-danger {
+    @apply btn;
+    background-color: theme('colors.dota-dire');
+    color: theme('colors.dota-text');
+    border: 1px solid theme('colors.dota-dire-border');
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: theme('colors.dota-dire-light');
+    box-shadow: theme('boxShadow.dire');
+  }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    color: theme('colors.dota-text-muted');
+    border: 1px solid theme('colors.dota-border');
+  }
+  .btn-ghost:hover:not(:disabled) {
+    color: theme('colors.dota-text');
+    border-color: theme('colors.dota-border-bright');
+  }
+
+  .btn-radiant {
+    @apply btn;
+    background-color: theme('colors.dota-radiant');
+    color: theme('colors.dota-text');
+    border: 1px solid theme('colors.dota-radiant-border');
+  }
+  .btn-radiant:hover:not(:disabled) {
+    background-color: theme('colors.dota-radiant-light');
+    box-shadow: theme('boxShadow.radiant');
+  }
+
+  /* ── Inputs ───────────────────────────────────────────────────────────────── */
+  .input {
+    @apply w-full font-barlow;
+    background-color: theme('colors.dota-deep');
+    color: theme('colors.dota-text');
+    border: 1px solid theme('colors.dota-border');
+    border-radius: theme('borderRadius.md');
+    @apply px-4 py-2.5;
+    @apply transition-all duration-150;
+    @apply outline-none;
+  }
+  .input::placeholder {
+    color: theme('colors.dota-text-dim');
+  }
+  .input:focus {
+    border-color: theme('colors.dota-gold-dark');
+    box-shadow: theme('boxShadow.gold');
+  }
+  .input:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  /* ── Status badges ────────────────────────────────────────────────────────── */
+  /*
+    Used for game status pills in MatchHeader and anywhere else a status needs
+    to be communicated at a glance.
+  */
+  .badge {
+    @apply inline-flex items-center gap-1.5;
+    @apply font-barlow font-semibold tracking-wide;
+    @apply px-3 py-1 rounded-sm text-sm;
+    letter-spacing: 0.06em;
+  }
+
+  .badge-gold {
+    @apply badge;
+    background-color: rgba(200, 169, 81, 0.15);
+    color: theme('colors.dota-gold');
+    border: 1px solid rgba(200, 169, 81, 0.35);
+  }
+
+  .badge-radiant {
+    @apply badge;
+    background-color: rgba(74, 155, 60, 0.15);
+    color: theme('colors.dota-radiant-light');
+    border: 1px solid rgba(74, 155, 60, 0.35);
+  }
+
+  .badge-dire {
+    @apply badge;
+    background-color: rgba(192, 57, 43, 0.15);
+    color: theme('colors.dota-dire-light');
+    border: 1px solid rgba(192, 57, 43, 0.35);
+  }
+
+  .badge-info {
+    @apply badge;
+    background-color: rgba(77, 123, 181, 0.15);
+    color: #7aaad4;
+    border: 1px solid rgba(77, 123, 181, 0.35);
+  }
+
+  /* ── Offer tier badges ────────────────────────────────────────────────────── */
+  /*
+    Distinct from team/status badges. These are the Low/Medium/High labels
+    shown in AuctionHouse and GameHistory. Slightly larger, pill-shaped.
+  */
+  .tier-badge {
+    @apply inline-flex items-center;
+    @apply font-barlow font-bold;
+    @apply px-3 py-0.5 rounded text-sm;
+    letter-spacing: 0.05em;
+  }
+
+  .tier-low {
+    @apply tier-badge;
+    background-color: rgba(77, 123, 181, 0.2);
+    color: #7aaad4;
+    border: 1px solid rgba(77, 123, 181, 0.4);
+  }
+
+  .tier-medium {
+    @apply tier-badge;
+    background-color: rgba(200, 169, 81, 0.2);
+    color: theme('colors.dota-gold-light');
+    border: 1px solid rgba(200, 169, 81, 0.4);
+  }
+
+  .tier-high {
+    @apply tier-badge;
+    background-color: rgba(192, 57, 43, 0.2);
+    color: theme('colors.dota-dire-light');
+    border: 1px solid rgba(192, 57, 43, 0.4);
+  }
+
+  /* ── Dividers ─────────────────────────────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      theme('colors.dota-border-bright') 30%,
+      theme('colors.dota-border-bright') 70%,
+      transparent
+    );
+  }
+
+  /* Gold divider — for section headings on dark backgrounds */
+  .divider-gold {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(200, 169, 81, 0.5) 30%,
+      rgba(200, 169, 81, 0.5) 70%,
+      transparent
+    );
+  }
+
+  /* ── Team card backgrounds ────────────────────────────────────────────────── */
+  /*
+    Named so team identity is clear in JSX without needing to remember hex values.
+  */
+  .team-radiant-panel {
+    background: linear-gradient(135deg, theme('colors.dota-radiant-subtle') 0%, theme('colors.dota-surface') 100%);
+    border: 1px solid theme('colors.dota-radiant-border');
+  }
+
+  .team-dire-panel {
+    background: linear-gradient(135deg, theme('colors.dota-dire-subtle') 0%, theme('colors.dota-surface') 100%);
+    border: 1px solid theme('colors.dota-dire-border');
+  }
+
+  /* ── Section heading style ────────────────────────────────────────────────── */
+  .section-heading {
+    @apply font-cinzel text-3xl font-bold text-center;
+    color: theme('colors.dota-gold');
+    text-shadow: 0 0 20px rgba(200, 169, 81, 0.2);
+  }
+
+  /* ── Stat label + value pair ──────────────────────────────────────────────── */
+  .stat-label {
+    @apply font-barlow text-xs font-semibold uppercase tracking-widest;
+    color: theme('colors.dota-text-muted');
+    letter-spacing: 0.1em;
+  }
+
+  .stat-value {
+    @apply font-barlow font-bold tabular-nums;
+    color: theme('colors.dota-text');
+  }
+
+}
+
+/* =============================================================================
+   UTILITIES — one-off helpers that don't warrant a component class
+   ============================================================================= */
+
 @layer utilities {
+
+  /* ── Animations ───────────────────────────────────────────────────────────── */
   .animate-fadeIn {
-    @apply opacity-0 animate-fade;
+    animation: fadeIn 0.4s ease-out forwards;
   }
 
-  @keyframes fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  .animate-fade {
-    animation: fade 0.5s ease-out forwards;
+  /* ── Text glow ────────────────────────────────────────────────────────────── */
+  .text-glow-gold {
+    text-shadow: 0 0 12px rgba(200, 169, 81, 0.5);
   }
-}
 
-.hide-arrow[type="number"]::-webkit-inner-spin-button,
-.hide-arrow[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+  .text-glow-radiant {
+    text-shadow: 0 0 12px rgba(74, 155, 60, 0.5);
+  }
+
+  .text-glow-dire {
+    text-shadow: 0 0 12px rgba(192, 57, 43, 0.5);
+  }
+
+  /* ── Truncation ───────────────────────────────────────────────────────────── */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
 }
