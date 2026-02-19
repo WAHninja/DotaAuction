@@ -190,7 +190,7 @@ export default function AuctionHouse({
             <Image src="/Gold_symbol.webp" alt="Gold" width={16} height={16} className="inline-block ml-1 align-middle" />
           </p>
           <p className="text-xs text-slate-400 text-center mb-4">
-            The losing team sees only a <span className="text-white font-medium">Low / Medium / High</span> label —
+            Everyone sees only a <span className="text-white font-medium">Low / Medium / High</span> label —
             not the exact amount — until an offer is accepted.
           </p>
 
@@ -248,9 +248,9 @@ export default function AuctionHouse({
       <div>
         <h4 className="text-xl font-bold text-center mb-2">Current Offers</h4>
 
-        {isLoser && allOffersSubmitted && hasPendingOffers && (
+        {allOffersSubmitted && hasPendingOffers && (
           <p className="text-center text-slate-400 text-xs mb-4">
-            Exact amounts are hidden. Choose based on the player and tier — the amount is revealed after you accept.
+            Exact amounts are hidden. Choose based on the player and tier — the amount is revealed after an offer is accepted.
           </p>
         )}
 
@@ -268,9 +268,9 @@ export default function AuctionHouse({
               const canAccept =
                 isLoser && isPending && acceptedOfferId === null && allOffersSubmitted;
 
-              // Winners always see their own exact amount.
-              // Everyone sees exact amount once the offer is resolved.
-              const showExactAmount = isWinner || !isPending;
+              // Nobody sees exact amounts while an offer is pending —
+              // winners included. The amount is revealed once resolved.
+              const showExactAmount = !isPending;
 
               return (
                 <div
@@ -308,9 +308,6 @@ export default function AuctionHouse({
                         <span className="font-bold text-white flex items-center gap-1">
                           {offer.offer_amount}
                           <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} />
-                          {isWinner && isPending && (
-                            <span className="text-xs text-slate-400 font-normal ml-1">(your offer)</span>
-                          )}
                         </span>
                       ) : (
                         // Loser viewing a pending offer — show tier label only
@@ -350,8 +347,8 @@ export default function AuctionHouse({
         )}
       </div>
 
-      {/* Tier legend — shown to losers once all offers are in and pending */}
-      {isLoser && allOffersSubmitted && hasPendingOffers && (
+      {/* Tier legend — shown to everyone once all offers are in and pending */}
+      {allOffersSubmitted && hasPendingOffers && (
         <div className="mt-6 flex justify-center">
           <div className="bg-slate-800/60 border border-slate-700 rounded-xl px-5 py-3 flex flex-wrap items-center justify-center gap-4">
             <span className="text-xs text-slate-400">Tiers:</span>
