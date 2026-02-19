@@ -7,19 +7,16 @@ export function useAuctionListener(
   fetchMatchData: () => void,
   fetchOffers: (gameId: number) => void,
   fetchGameHistory: () => void,
-  fetchGamesPlayed: () => void,
 ) {
   // Keep latest versions of callbacks in refs so the effect never needs to
   // re-run (and re-subscribe) just because a callback identity changed.
-  const fetchMatchDataRef  = useRef(fetchMatchData);
-  const fetchOffersRef     = useRef(fetchOffers);
+  const fetchMatchDataRef   = useRef(fetchMatchData);
+  const fetchOffersRef      = useRef(fetchOffers);
   const fetchGameHistoryRef = useRef(fetchGameHistory);
-  const fetchGamesPlayedRef = useRef(fetchGamesPlayed);
 
   useEffect(() => { fetchMatchDataRef.current   = fetchMatchData;  }, [fetchMatchData]);
-  useEffect(() => { fetchOffersRef.current       = fetchOffers;     }, [fetchOffers]);
-  useEffect(() => { fetchGameHistoryRef.current  = fetchGameHistory; }, [fetchGameHistory]);
-  useEffect(() => { fetchGamesPlayedRef.current  = fetchGamesPlayed; }, [fetchGamesPlayed]);
+  useEffect(() => { fetchOffersRef.current      = fetchOffers;     }, [fetchOffers]);
+  useEffect(() => { fetchGameHistoryRef.current = fetchGameHistory; }, [fetchGameHistory]);
 
   useEffect(() => {
     if (!matchId || !ablyClient || !latestGameId) return;
@@ -31,9 +28,11 @@ export function useAuctionListener(
     };
 
     const handleOfferAccepted = () => {
-      fetchMatchDataRef.current();
-      fetchGameHistoryRef.current();
-      fetchGamesPlayedRef.current();
+      // Run both in parallel — they're independent of each other
+      Promise.all([
+        fetchMatchDataRef.current(),
+        fetchGameHistoryRef.current(),
+      ]);
     };
 
     channel.subscribe('new-offer', handleNewOffer);
