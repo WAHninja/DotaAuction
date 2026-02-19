@@ -30,6 +30,8 @@ export async function GET() {
 
         totalOfferValueAsTarget: 0,
         offerCountAsTarget: 0,
+
+        netGold: 0,
       })
     }
 
@@ -73,7 +75,6 @@ export async function GET() {
       const winningTeam =
         game.winning_team === 'team_1' ? team1 : teamA
 
-      // Winning team combo
       const comboKey = winningTeam
         .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
         .sort()
@@ -84,15 +85,12 @@ export async function GET() {
         (teamComboWins.get(comboKey) || 0) + 1
       )
 
-      // Games played / won
       const allPlayers = new Set<number>([...team1, ...teamA])
 
       for (const playerId of allPlayers) {
         const stats = playersMap.get(playerId)
         if (!stats) continue
-
         stats.gamesPlayed += 1
-
         if (winningTeam.includes(playerId)) {
           stats.gamesWon += 1
         }
@@ -115,7 +113,6 @@ export async function GET() {
     )
 
     for (const offer of offersResult.rows) {
-      // Offer made
       if (offer.from_player_id != null) {
         const fromStats = playersMap.get(offer.from_player_id)
         if (fromStats) {
@@ -126,7 +123,6 @@ export async function GET() {
         }
       }
 
-      // Offer received
       if (offer.target_player_id != null) {
         const targetStats = playersMap.get(offer.target_player_id)
         if (targetStats) {
@@ -142,18 +138,40 @@ export async function GET() {
     }
 
     /* =========================
-       5️⃣ Build response
+       5️⃣ Net gold from game_player_stats
+       Sums win_reward, loss_penalty, and offer_gain
+       across all completed games per player.
+    ========================= */
+
+    const netGoldResult = await db.query(
+      `
+      SELECT
+        player_id,
+        SUM(gold_change) AS net_gold
+      FROM game_player_stats
+      GROUP BY player_id
+      `
+    )
+
+    for (const row of netGoldResult.rows) {
+      const stats = playersMap.get(row.player_id)
+      if (stats) {
+        stats.netGold = parseInt(row.net_gold, 10)
+      }
+    }
+
+    /* =========================
+       6️⃣ Build response
     ========================= */
 
     const players = Array.from(playersMap.values()).map(p => ({
       username: p.username,
 
-      matchesPlayed: p.matchesPlayed.size,
       gamesPlayed: p.gamesPlayed,
       gamesWon: p.gamesWon,
 
-      timesOffered: p.timesOffered,
       timesSold: p.timesSold,
+      timesOffered: p.timesOffered,
 
       offersMade: p.offersMade,
       offersAccepted: p.offersAccepted,
@@ -162,6 +180,8 @@ export async function GET() {
         p.offerCountAsTarget > 0
           ? +(p.totalOfferValueAsTarget / p.offerCountAsTarget).toFixed(1)
           : 0,
+
+      netGold: p.netGold,
     }))
 
     const topWinningCombos = Array.from(teamComboWins.entries())
