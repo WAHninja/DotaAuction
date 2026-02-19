@@ -78,9 +78,6 @@ export default function CreateMatchForm() {
         <h2 className="font-cinzel text-3xl font-bold text-dota-gold">
           Create Match
         </h2>
-        <p className="font-barlow text-sm text-dota-text-muted">
-          Select <span className="text-dota-text font-semibold">4 or more players</span> to start a match
-        </p>
       </div>
 
       <div className="divider-gold" />
@@ -93,6 +90,11 @@ export default function CreateMatchForm() {
       )}
 
       {/* ── Player grid ────────────────────────────────────────────────────── */}
+      <div className="text-center space-y-1">
+        <p className="font-barlow text-sm text-dota-text-muted">
+          Select <span className="text-dota-text font-semibold">4 or more players</span> to start a match
+        </p>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[55vh] overflow-y-auto pr-1">
         {players.map(player => {
           const selected = selectedPlayerIds.includes(player.id);
