@@ -3,8 +3,9 @@ import { Cinzel } from 'next/font/google';
 import BodyClassWrapper from '@/app/components/BodyClassWrapper';
 import MobileResponsiveHeader from '@/app/components/MobileResponsiveHeader';
 import UserProvider from './context/UserContext';
+import KeepAlive from '@/app/components/KeepAlive';
 
-export const dynamic = 'force-dynamic'; // <-- Important for server-side session usage
+export const dynamic = 'force-dynamic';
 
 const cinzel = Cinzel({
   subsets: ['latin'],
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <UserProvider>
           <BodyClassWrapper />
           <MobileResponsiveHeader />
+          <KeepAlive />
 
           <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-8">{children}</main>
 

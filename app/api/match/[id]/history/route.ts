@@ -1,5 +1,3 @@
-// /api/match/[id]/history/route.ts
-
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { parse } from 'url'
@@ -47,7 +45,7 @@ export async function GET(req: NextRequest) {
     const games = gameResult.rows
     const gameIds = games.map(g => g.game_id)
 
-    // Fetch offers per game
+    // Fetch offers per game — include tier_label for pending offer display
     const offersResult = await db.query(
       `
       SELECT 
@@ -56,6 +54,7 @@ export async function GET(req: NextRequest) {
         o.from_player_id,
         o.target_player_id,
         o.offer_amount,
+        o.tier_label,
         o.status,
         o.created_at,
         u_from.username AS from_username,
@@ -79,6 +78,7 @@ export async function GET(req: NextRequest) {
         fromPlayerId: offer.from_player_id,
         targetPlayerId: offer.target_player_id,
         offerAmount: offer.offer_amount,
+        tierLabel: offer.tier_label,
         status: offer.status,
         createdAt: offer.created_at,
         fromUsername: offer.from_username,
@@ -97,9 +97,9 @@ export async function GET(req: NextRequest) {
         gps.gold_change,
         gps.reason
       FROM game_player_stats gps
-    JOIN users u ON gps.player_id = u.id
-    WHERE gps.game_id = ANY($1)
-    ORDER BY gps.game_id, gps.id
+      JOIN users u ON gps.player_id = u.id
+      WHERE gps.game_id = ANY($1)
+      ORDER BY gps.game_id, gps.id
       `,
       [gameIds]
     )
@@ -116,10 +116,9 @@ export async function GET(req: NextRequest) {
         reason: row.reason,
       })
     }
-    
-    // Final combined result
+
     const history = games.map((game: any, index: number) => ({
-      gameNumber: index + 1, // 👈 Add dynamic game number
+      gameNumber: index + 1,
       gameId: game.game_id,
       matchId: game.match_id,
       createdAt: game.created_at,

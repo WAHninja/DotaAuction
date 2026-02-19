@@ -1,5 +1,3 @@
-// app/api/game/offers/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 
@@ -17,7 +15,17 @@ export async function GET(req: NextRequest) {
       `SELECT * FROM offers WHERE game_id = $1 ORDER BY created_at ASC`,
       [gameId]
     );
-    return NextResponse.json({ offers: result.rows });
+
+    // Strip offer_amount from pending offers server-side.
+    // This ensures the exact value is never transmitted to any client until
+    // the offer is resolved — it can't be discovered via DevTools or network
+    // inspection regardless of what the frontend does with the data.
+    const offers = result.rows.map((offer) => ({
+      ...offer,
+      offer_amount: offer.status === 'pending' ? null : offer.offer_amount,
+    }));
+
+    return NextResponse.json({ offers });
   } catch (err) {
     console.error('Error fetching offers:', err);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
