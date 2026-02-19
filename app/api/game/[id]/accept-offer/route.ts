@@ -127,7 +127,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     await client.query(
       `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-       VALUES ($1, $2, $3, $4, 'offer_accepted')`,
+       VALUES ($1, $2, $3, $4, 'offer_gain')`,
       [gameId, from_player_id, winningTeam, offer_amount]
     );
 
