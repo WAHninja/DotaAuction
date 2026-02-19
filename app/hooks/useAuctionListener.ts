@@ -1,20 +1,13 @@
 import { useEffect, useRef } from 'react';
 import ablyClient from '@/lib/ably-client';
-
-type OfferAcceptedPayload = {
-  acceptedOfferId: number;
-  acceptedAmount: number;
-  newGame: any;
-};
+import type { NewOfferPayload, OfferAcceptedPayload } from '@/types';
 
 export function useAuctionListener(
   matchId: string,
   latestGameId: number | null,
-  onNewOffer: (offer: any) => void,
+  onNewOffer: (offer: NewOfferPayload) => void,
   onOfferAccepted: (payload: OfferAcceptedPayload) => void,
 ) {
-  // Stable refs so the effect never re-subscribes just because a callback
-  // identity changed between renders.
   const onNewOfferRef      = useRef(onNewOffer);
   const onOfferAcceptedRef = useRef(onOfferAccepted);
 
