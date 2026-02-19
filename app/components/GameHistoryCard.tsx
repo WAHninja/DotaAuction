@@ -9,7 +9,7 @@ type PlayerStat = {
   playerId: number
   username: string
   goldChange: number
-  reason: 'win_reward' | 'loss_penalty' | 'offer_accepted' | string
+  reason: 'win_reward' | 'loss_penalty' | 'offer_accepted' | 'offer_gain' | string
 }
 
 type Offer = {
@@ -30,12 +30,23 @@ type GameHistoryCardProps = {
   playerStats: PlayerStat[]
 }
 
+/* ----------------------- Helpers ----------------------- */
+function formatReason(reason: string): string {
+  switch (reason) {
+    case 'win_reward':    return 'Win Bonus'
+    case 'loss_penalty':  return 'Loss Penalty'
+    case 'offer_accepted':
+    case 'offer_gain':    return 'Offer Accepted'  // handle both old and new strings
+    default:              return reason
+  }
+}
+
 /* ----------------------- Subcomponents ----------------------- */
 const TeamList = ({
   members,
   isWinner,
   teamName,
-  color
+  color,
 }: {
   members: string[]
   isWinner: boolean
@@ -61,7 +72,6 @@ const TeamList = ({
 )
 
 const OfferList = ({ offers }: { offers: Offer[] }) => {
-  // Sort offers: accepted first
   const sortedOffers = [...offers].sort((a, b) => {
     if (a.status === 'accepted') return -1
     if (b.status === 'accepted') return 1
@@ -92,7 +102,7 @@ const OfferList = ({ offers }: { offers: Offer[] }) => {
                   : 'text-yellow-400'
               }`}
             >
-              {offer.status === 'pending' ? '?' : offer.offer_amount}g ({offer.status})
+              {offer.status === 'pending' ? '?' : `${offer.offer_amount}g`} ({offer.status})
             </span>
           </li>
         ))}
@@ -107,18 +117,14 @@ const GoldChangeList = ({ playerStats }: { playerStats: PlayerStat[] }) => (
     <ul className="space-y-1 max-h-48 overflow-y-auto">
       {playerStats.map((stat) => (
         <li
-          key={stat.id || `${stat.playerId}-${stat.reason}`}
+          key={stat.id ?? `${stat.playerId}-${stat.reason}`}
           className="flex justify-between items-center px-2 py-1 bg-gray-900 rounded"
         >
-          <span className="text-gray-300 truncate max-w-[120px]" title={stat.username || `Player#${stat.playerId}`}>
-            {stat.username || `Player#${stat.playerId}`} –{' '}
-            {stat.reason === 'win_reward'
-              ? 'Win Bonus'
-              : stat.reason === 'loss_penalty'
-              ? 'Loss Penalty'
-              : stat.reason === 'offer_accepted'
-              ? 'Offer Accepted'
-              : stat.reason}
+          <span
+            className="text-gray-300 truncate max-w-[120px]"
+            title={stat.username ?? `Player#${stat.playerId}`}
+          >
+            {stat.username ?? `Player#${stat.playerId}`} – {formatReason(stat.reason)}
           </span>
           <span className={`font-medium ${stat.goldChange >= 0 ? 'text-green-300' : 'text-red-400'}`}>
             <Coins className="inline w-4 h-4 mr-1" />
@@ -139,11 +145,11 @@ export default function GameHistoryCard({
   team1Members,
   winningTeam,
   offers,
-  playerStats
+  playerStats,
 }: GameHistoryCardProps) {
   const date = new Date(createdAt).toLocaleString(undefined, {
     dateStyle: 'short',
-    timeStyle: 'short'
+    timeStyle: 'short',
   })
 
   return (
@@ -183,7 +189,7 @@ export default function GameHistoryCard({
         </div>
       )}
 
-      {/* Offers + Gold Changes Side by Side */}
+      {/* Offers + Gold Changes */}
       {(offers.length > 0 || playerStats.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {offers.length > 0 && <OfferList offers={offers} />}

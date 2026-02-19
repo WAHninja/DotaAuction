@@ -60,9 +60,16 @@ export default function CreateMatchForm() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         setError(data.error || 'Failed to create match.');
         return;
+      }
+
+      if (data.existing) {
+        // Let the router push happen — the banner message is brief enough
+        // that it'll flash before the navigation completes anyway.
+        setError(null);
       }
 
       router.push(`/match/${data.id}`);
@@ -133,7 +140,7 @@ export default function CreateMatchForm() {
           }`}
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting ? 'Creating Match…' : 'Create Match'}
+          {isSubmitting ? 'Checking…' : 'Create Match'}
         </button>
       </div>
     </form>
