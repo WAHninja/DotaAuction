@@ -168,6 +168,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       .get(`match-${game.match_id}-offers`)
       .publish('offer-accepted', {
         acceptedOfferId: offerId,
+        // Include the revealed amount so clients can update offer state
+        // directly without needing to refetch /api/game/offers
+        acceptedAmount: offer_amount,
         newGame: newGameRows[0],
       });
 
