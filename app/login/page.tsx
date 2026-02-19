@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -18,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // ✅ important for HTTP-only cookie
+        credentials: 'include',
         body: JSON.stringify({ username, pin }),
       });
 
@@ -27,7 +29,6 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // 🔑 HARD redirect so UserProvider re-fetches user immediately
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message);
@@ -36,72 +37,87 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-full p-4 text-white font-[Cinzel]">
-      <div className="bg-[#1e1e1e]/90 border border-[#e05228] shadow-xl rounded-2xl p-8 w-full max-w-md backdrop-blur-sm">
-        <h1 className="text-3xl font-bold text-[#e05228] mb-6 text-center drop-shadow-md">
-          Login
-        </h1>
+    <div className="flex items-center justify-center min-h-full py-12 px-4">
+      <div className="w-full max-w-sm">
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label htmlFor="username" className="block text-sm mb-1">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+        {/* ── Logo ─────────────────────────────────────────────────────────── */}
+        <div className="flex flex-col items-center mb-8 gap-3">
+          <Image src="/logo.png" alt="Defence of the Auctions" width={80} height={27} />
+          <h1 className="font-cinzel text-2xl font-bold text-dota-gold tracking-wide">
+            Sign In
+          </h1>
+          <div className="divider-gold w-32" />
+        </div>
+
+        {/* ── Card ─────────────────────────────────────────────────────────── */}
+        <div className="panel p-8">
+          <form onSubmit={handleLogin} className="space-y-5">
+
+            <div className="space-y-1.5">
+              <label htmlFor="username" className="stat-label block">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                required
+                autoComplete="username"
+                className="input"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="pin" className="stat-label block">
+                PIN
+              </label>
+              <input
+                id="pin"
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                disabled={loading}
+                pattern="\d{4,}"
+                inputMode="numeric"
+                required
+                autoComplete="current-password"
+                className="input"
+              />
+            </div>
+
+            {error && (
+              <p className="font-barlow text-sm text-dota-dire-light bg-dota-dire-subtle border border-dota-dire-border rounded px-3 py-2">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
               disabled={loading}
-              required
-              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2
-                         focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white
-                         disabled:opacity-60"
-            />
-          </div>
+              className="btn-primary w-full mt-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+        </div>
 
-          <div>
-            <label htmlFor="pin" className="block text-sm mb-1">
-              PIN (4+ digits)
-            </label>
-            <input
-              id="pin"
-              type="password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              disabled={loading}
-              pattern="\d{4,}"
-              inputMode="numeric"
-              required
-              className="w-full bg-[#2c2c2c] border border-gray-600 rounded px-4 py-2
-                         focus:outline-none focus:ring-2 focus:ring-[#e05228] text-white
-                         disabled:opacity-60"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#e05228] hover:bg-[#ff6b3a] text-white font-semibold
-                       py-2 rounded shadow-lg transition-all duration-200
-                       disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Logging in…' : 'Login'}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-400">
-          Not registered?{' '}
-          <Link href="/register" className="text-[#e05228] hover:underline">
+        {/* ── Footer link ──────────────────────────────────────────────────── */}
+        <p className="mt-5 text-center font-barlow text-sm text-dota-text-muted">
+          No account?{' '}
+          <Link href="/register" className="text-dota-gold hover:text-dota-gold-light font-semibold">
             Register here
           </Link>
         </p>
 
-        {error && (
-          <p className="mt-4 text-center text-sm text-orange-400">
-            {error}
-          </p>
-        )}
       </div>
     </div>
   );
