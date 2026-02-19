@@ -72,6 +72,40 @@ export default function MatchPage() {
     }
   }, [matchId]);
 
+  // ---- Ably state updaters -------------------------------------------------
+  // Rather than refetching all offers on every Ably event, we update local
+  // state directly from the event payload — eliminating N round trips during
+  // the offer submission phase (one per player on the winning team).
+
+  const handleNewOffer = useCallback((offer: any) => {
+    // Append the new offer directly — no fetch needed. The payload already
+    // contains all fields (id, from/target player ids, tier_label, status)
+    // with offer_amount intentionally stripped server-side while pending.
+    setOffers(prev => [...prev, offer]);
+  }, []);
+
+  const handleOfferAccepted = useCallback((payload: {
+    acceptedOfferId: number;
+    acceptedAmount: number;
+    newGame: any;
+  }) => {
+    // Update offer states directly from the event rather than refetching:
+    // - The accepted offer gets its real amount revealed
+    // - All remaining pending offers become rejected
+    setOffers(prev => prev.map(o => {
+      if (o.id === payload.acceptedOfferId) {
+        return { ...o, status: 'accepted', offer_amount: payload.acceptedAmount };
+      }
+      if (o.status === 'pending') {
+        return { ...o, status: 'rejected' };
+      }
+      return o;
+    }));
+    // Match data and history still need a fetch — gold balances changed,
+    // teams have swapped, and a new game was created server-side.
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [fetchMatchData, fetchGameHistory]);
+
   // ---- Initial load --------------------------------------------------------
   // Run both fetches in parallel — matchData and history are independent
   // and neither needs to wait for the other to complete.
@@ -96,9 +130,8 @@ export default function MatchPage() {
   useAuctionListener(
     matchId,
     data?.latestGame?.id ?? null,
-    fetchMatchData,
-    fetchOffers,
-    fetchGameHistory,
+    handleNewOffer,
+    handleOfferAccepted,
   );
 
   // ---- Render guards -------------------------------------------------------
@@ -210,7 +243,7 @@ export default function MatchPage() {
           currentUserId={currentUserId}
           offers={offers}
           gamesPlayed={data.games.length}
-          onOfferSubmitted={() => fetchOffers(latestGame.id)}
+          onOfferSubmitted={handleNewOffer}
           onOfferAccepted={() => {
             Promise.all([fetchMatchData(), fetchGameHistory()]);
           }}
