@@ -19,7 +19,8 @@ import { usePathname } from 'next/navigation';
 //   Subtle dual-faction glow, less intense than the match page — present
 //   but not competing with the content.
 
-const AUTH_BACKGROUND = `
+// ── Auth pages: centred gold glow — neutral, welcoming ──────────────────────
+const AUTH_BG_GRADIENT = `
   radial-gradient(
     ellipse 80% 60% at 50% 110%,
     rgba(200, 169, 81, 0.10) 0%,
@@ -27,7 +28,10 @@ const AUTH_BACKGROUND = `
   )
 `.trim();
 
-const MATCH_BACKGROUND = `
+// ── Match page: full Radiant/Dire faction atmosphere ────────────────────────
+// Green bleeds from bottom-left (Team 1 / Radiant side),
+// red from bottom-right (Team A / Dire side).
+const MATCH_BG_GRADIENT = `
   radial-gradient(
     ellipse 70% 55% at 0% 100%,
     rgba(74, 155, 60, 0.14) 0%,
@@ -45,36 +49,53 @@ const MATCH_BACKGROUND = `
   )
 `.trim();
 
-const DEFAULT_BACKGROUND = `
-  radial-gradient(
-    ellipse 60% 40% at 10% 100%,
-    rgba(74, 155, 60, 0.07) 0%,
-    transparent 60%
-  ),
-  radial-gradient(
-    ellipse 60% 40% at 90% 100%,
-    rgba(192, 57, 43, 0.07) 0%,
-    transparent 60%
-  )
-`.trim();
-
 export default function BodyClassWrapper() {
   const pathname = usePathname();
 
   const isAuthPage  = pathname === '/register' || pathname === '/login';
   const isMatchPage = pathname.startsWith('/match');
+  const isDashboard = !isAuthPage && !isMatchPage;
 
-  const backgroundImage = isAuthPage
-    ? AUTH_BACKGROUND
-    : isMatchPage
-    ? MATCH_BACKGROUND
-    : DEFAULT_BACKGROUND;
+  if (isMatchPage) {
+    return (
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[-1] pointer-events-none"
+        style={{ backgroundImage: MATCH_BG_GRADIENT }}
+      />
+    );
+  }
 
+  if (isAuthPage) {
+    return (
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[-1] pointer-events-none"
+        style={{ backgroundImage: AUTH_BG_GRADIENT }}
+      />
+    );
+  }
+
+  // Dashboard and all other pages — stone texture image with a very dark
+  // overlay so the texture reads as depth rather than a competing element.
+  // The Radiant/Dire glows are omitted here since the texture itself
+  // provides the material quality they were approximating with CSS.
   return (
-    <div
-      aria-hidden="true"
-      className="fixed inset-0 z-[-1] pointer-events-none"
-      style={{ backgroundImage }}
-    />
+    <>
+      {/* Stone texture base */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[-2] pointer-events-none bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/dashboard-background.jpg')" }}
+      />
+      {/* Dark overlay — brings the texture into the dota-base colour range
+          without fully hiding it. 0.55 opacity is the sweet spot: the
+          geometric lines remain subtly visible, panels still contrast cleanly. */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[-1] pointer-events-none"
+        style={{ backgroundColor: 'rgba(13, 17, 23, 0.55)' }}
+      />
+    </>
   );
 }
