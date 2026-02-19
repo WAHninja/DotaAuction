@@ -51,18 +51,14 @@ function pickTierLabel(amount: number, minOffer: number, maxOffer: number): Tier
 
 /* ----------------------------------------------------------------------- */
 
-export async function POST(req: NextRequest): Promise<Response> {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }): Promise<Response> {
   const body = await req.json();
   const { target_player_id, offer_amount } = body;
 
-  const url = new URL(req.url);
-  const id = url.pathname.split('/').at(-2);
-
-  if (!id || isNaN(Number(id))) {
+  const gameId = Number(params.id);
+  if (isNaN(gameId)) {
     return new Response(JSON.stringify({ message: 'Invalid game ID.' }), { status: 400 });
   }
-
-  const gameId = Number(id);
   const session = await getSession();
   const userId = session?.userId;
 
