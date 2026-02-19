@@ -1,16 +1,14 @@
-// app/api/match/[id]/games-played/route.ts
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const parts = url.pathname.split('/');
-  const matchId = parseInt(parts[parts.length - 2], 10); // match/[id]/games-played
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const matchId = Number(params.id);
 
   if (isNaN(matchId)) {
-    return new Response(JSON.stringify({ message: 'Invalid match ID.' }), {
-      status: 400,
-    });
+    return NextResponse.json({ message: 'Invalid match ID.' }, { status: 400 });
   }
 
   try {
@@ -21,14 +19,9 @@ export async function GET(req: NextRequest) {
 
     const gamesPlayed = parseInt(rows[0]?.count || '0', 10);
 
-    return new Response(JSON.stringify({ gamesPlayed }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ gamesPlayed });
   } catch (err) {
     console.error('Error fetching games played:', err);
-    return new Response(JSON.stringify({ message: 'Server error.' }), {
-      status: 500,
-    });
+    return NextResponse.json({ message: 'Server error.' }, { status: 500 });
   }
 }
