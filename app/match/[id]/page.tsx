@@ -84,7 +84,11 @@ export default function MatchPage() {
     // with offer_amount intentionally stripped server-side while pending.
     // Explicitly set offer_amount: null so the entry is a complete Offer
     // and consistent with offers returned by the API.
-    setOffers(prev => [...prev, { ...offer, offer_amount: null }]);
+    setOffers(prev =>
+      prev.some(o => o.id === offer.id)
+        ? prev
+        : [...prev, { ...offer, offer_amount: null }]
+    );
   }, []);
 
   const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
