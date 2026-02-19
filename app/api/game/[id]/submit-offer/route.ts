@@ -147,14 +147,19 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const savedOffer = inserted[0];
 
+    // Never expose offer_amount while the offer is pending — strip it from
+    // both the Ably event and the API response so it can't be read via
+    // network inspection by other winning team members.
+    const { offer_amount: _hidden, ...safeOffer } = savedOffer;
+
     if (matchId) {
       await ably.channels
         .get(`match-${matchId}-offers`)
-        .publish('new-offer', savedOffer);
+        .publish('new-offer', safeOffer);
     }
 
     return new Response(
-      JSON.stringify({ message: 'Offer submitted.', offer: savedOffer }),
+      JSON.stringify({ message: 'Offer submitted.', offer: safeOffer }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err) {
