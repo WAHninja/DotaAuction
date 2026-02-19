@@ -16,7 +16,14 @@ function safeParseArray(value: any): number[] {
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    const currentUserId = session?.userId || null;
+
+    // Require authentication — unauthenticated callers must not be able to
+    // read match state or offers.
+    if (!session?.userId) {
+      return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
+    }
+
+    const currentUserId = session.userId;
 
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
@@ -48,13 +55,21 @@ export async function GET(req: NextRequest) {
     const games = gamesRes.rows;
     const latestGame = games.at(-1) || null;
 
-    let offers = [];
+    let offers: any[] = [];
     if (latestGame?.status === 'auction pending') {
       const offersRes = await db.query(
         `SELECT * FROM Offers WHERE game_id = $1`,
-        [latestGame.game_id]
+        [latestGame.id]
       );
-      offers = offersRes.rows;
+
+      // Strip offer_amount from pending offers server-side so the exact value
+      // is never transmitted to any client until the offer resolves.
+      // This closes the leak where calling this endpoint directly (e.g. via
+      // DevTools) would expose every pending offer amount in plain text.
+      offers = offersRes.rows.map((offer) => ({
+        ...offer,
+        offer_amount: offer.status === 'pending' ? null : offer.offer_amount,
+      }));
     }
 
     return NextResponse.json({
@@ -63,7 +78,7 @@ export async function GET(req: NextRequest) {
       games,
       latestGame,
       offers,
-      currentUserId, // ✅ Guaranteed to be included
+      currentUserId,
     });
   } catch (error) {
     console.error('API error in match/[id]:', error);
