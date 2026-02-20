@@ -45,7 +45,7 @@ export default function MatchHeader({
       <div className="flex flex-wrap items-center justify-center gap-3">
         <span className={badgeClass}>
           {StatusIcon && <StatusIcon className="w-3.5 h-3.5" />}
-          Game #{latestGame.gameNumber ?? latestGame.id}
+          Game #{latestGame.gameNumber}
           <span className="opacity-60 mx-1">·</span>
           {statusLabel}
         </span>
