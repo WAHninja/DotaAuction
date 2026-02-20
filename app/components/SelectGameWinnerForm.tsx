@@ -68,6 +68,8 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
           alt="Radiant Creeps"
           width={220}
           height={220}
+          priority
+          sizes="220px"
           style={{ mixBlendMode: 'screen' }}
         />
       </div>
@@ -77,6 +79,8 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
           alt="Dire Creeps"
           width={220}
           height={220}
+          priority
+          sizes="220px"
           style={{ mixBlendMode: 'screen' }}
         />
       </div>
