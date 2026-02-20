@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import GoldIcon from '@/app/components/GoldIcon';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import type { Player, Offer } from '@/types';
 
@@ -35,7 +36,7 @@ function GoldAmount({ amount }: { amount: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
       {amount}
-      <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} />
+      <GoldIcon size={14} />
     </span>
   );
 }
@@ -169,18 +170,18 @@ export default function AuctionHouse({
 
       {/* ── Winner: submit form ─────────────────────────────────────────────── */}
       {isWinner && !alreadySubmitted && (
-        <div
-          className="relative rounded-lg overflow-hidden"
-          style={{
-            backgroundImage: "url('/match_predictions_bg.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center right',
-          }}
-        >
-          {/* Dark overlay — heavier on the left where the form lives,
-              fading toward the hero art on the right. The image's own
-              left side is already near-black so this just ensures legibility
-              across all screen sizes. */}
+        <div className="relative rounded-lg overflow-hidden">
+          {/* Background image — Next.js Image replaces the CSS background-image,
+              giving automatic WebP/AVIF conversion and correct cache headers.
+              Not marked priority — only renders for winning team mid-auction. */}
+          <Image
+            src="/match_predictions_bg.png"
+            alt=""
+            fill
+            quality={85}
+            className="object-cover object-right pointer-events-none select-none"
+          />
+          {/* Gradient overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
@@ -197,7 +198,7 @@ export default function AuctionHouse({
                 <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
                 {' '}–{' '}
                 <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
-                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+                <GoldIcon size={14} />
               </p>
               <p className="font-barlow text-xs text-dota-text-dim">
                 Others see only a tier label until an offer is accepted
