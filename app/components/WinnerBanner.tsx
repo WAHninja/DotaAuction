@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Trophy } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
@@ -24,19 +25,22 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
 
       <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/40 min-h-[260px]">
 
-        {/* Aegis — mix-blend-mode: screen drops the pure-black background so
-            the shield and smoke glow through at full fidelity. Sized large
-            so it fills the panel as a genuine backdrop rather than a watermark. */}
-        <img
+        {/* Aegis — Next.js Image replaces the raw <img> tag, giving:
+              • Automatic WebP/AVIF serving (PNG source → ~70% smaller on the wire)
+              • mix-blend-mode: screen drops the black background as before
+            Not marked priority — WinnerBanner only mounts after match ends,
+            so it's never above the fold on initial load. */}
+        <Image
           src="/rewards_aegis2024.png"
           alt=""
           aria-hidden="true"
-          className="absolute top-1/2 left-1/2 w-[340px] md:w-[420px] -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+          width={420}
+          height={420}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
           style={{ mixBlendMode: 'screen' }}
         />
 
-        {/* Centre vignette — adds just enough darkness directly behind the
-            text so it stays legible without dimming the shield edges. */}
+        {/* Centre vignette — keeps text legible over the bright shield centre */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
