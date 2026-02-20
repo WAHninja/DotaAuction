@@ -1,7 +1,7 @@
 'use client'
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import { ChevronUp, ChevronDown, ChevronsUpDown, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 import type { PlayerStats, TeamCombo, SortKey } from '@/types';
@@ -51,7 +51,7 @@ function GoldValue({ value }: { value: number }) {
        value < 0 ? <TrendingDown className="w-3 h-3" /> :
                    <Minus        className="w-3 h-3" />}
       {value > 0 ? '+' : ''}{formatGold(value)}
-      <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} />
+      <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} className="inline-block" />
     </span>
   );
 }
@@ -254,7 +254,7 @@ export default function StatsTab() {
                     {p.timesOffered > 0 ? (
                       <span className="inline-flex items-center justify-center gap-1 text-dota-gold font-semibold tabular-nums">
                         {p.averageOfferValue.toFixed(0)}
-                        <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} />
+                        <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} className="inline-block" />
                         <span className="text-[10px] text-dota-text-dim font-normal">×{p.timesOffered}</span>
                       </span>
                     ) : (
