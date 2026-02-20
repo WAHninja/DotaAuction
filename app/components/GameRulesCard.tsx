@@ -1,261 +1,203 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 
-export default function GameRulesCard() {
-  const [showGoldHelp, setShowGoldHelp] = useState(false);
-  const [showOfferHelp, setShowOfferHelp] = useState(false);
-
+// ── Modal — anchored near the top of the viewport ─────────────────────────────
+function Modal({ onClose, title, children }: {
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowGoldHelp(false);
-        setShowOfferHelp(false);
-      }
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
-    if (showGoldHelp || showOfferHelp) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 pt-16"
+      onClick={onClose}
+    >
+      <div
+        className="panel-raised max-w-md w-full p-6 relative overflow-y-auto max-h-[80vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-5 gap-4">
+          <h3 className="font-cinzel text-lg font-bold text-dota-gold">{title}</h3>
+          <button onClick={onClose} aria-label="Close"
+            className="shrink-0 p-1 rounded text-dota-text-muted hover:text-dota-text transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showGoldHelp, showOfferHelp]);
+// ── Help button ───────────────────────────────────────────────────────────────
+function HelpButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      aria-label={label}
+      className="shrink-0 w-4 h-4 rounded-full border border-dota-gold text-dota-gold text-[10px] font-bold
+                 inline-flex items-center justify-center hover:bg-dota-gold hover:text-dota-base transition-all"
+    >
+      ?
+    </button>
+  );
+}
+
+// ── Rule row ──────────────────────────────────────────────────────────────────
+function Rule({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2.5 font-barlow text-sm text-dota-text-muted leading-snug">
+      <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-dota-gold/50" />
+      <span>{children}</span>
+    </li>
+  );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+export default function GameRulesCard() {
+  const [showGoldHelp, setGold]   = useState(false);
+  const [showOfferHelp, setOffer] = useState(false);
 
   return (
     <>
-      <div className="p-5 bg-slate-700/60 rounded-xl border border-slate-500 shadow-md max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-yellow-400 text-center mb-4">
-          Match Rules
-        </h2>
+      <div className="panel max-w-3xl mx-auto overflow-hidden">
 
-        <ul className="list-disc pl-5 space-y-2 text-sm text-slate-200">
-          <li>
-            Matches require <strong>4 or more players</strong>.
-          </li>
+        <div className="px-5 py-3.5 border-b border-dota-border">
+          <h2 className="font-cinzel text-base font-bold text-dota-gold tracking-wide">
+            Match Rules
+          </h2>
+        </div>
 
-          <li>
-            Once a game is completed, <strong>select the winning team</strong>.
-            <ul className="list-disc pl-5 space-y-2 mt-2">
-              <li>
-                All players of the losing team lose{' '}
-                <strong>half of their current gold</strong>.
-              </li>
-              <li>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <span>
-                    All winning team members receive{' '}
-                    <strong>1000 gold</strong> plus a share of{' '}
-                    <strong>half of the losing team's total gold</strong>.
-                  </span>
-                  <button
-                    onClick={() => setShowGoldHelp(true)}
-                    className="shrink-0 w-6 h-6 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
-                    aria-label="Gold calculation help"
-                  >
-                    ?
-                  </button>
-                </div>
-              </li>
-            </ul>
-          </li>
+        <div className="px-5 py-4">
+          <ul className="space-y-2.5">
 
-          <li>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <span>
-                Each player on the winning team submits{' '}
-                <strong>a secret gold offer</strong> to sell one of their{' '}
-                <strong>own teammates</strong> to the losing team.
-              </span>
-              <button
-                onClick={() => setShowOfferHelp(true)}
-                className="shrink-0 w-6 h-6 text-xs font-bold text-yellow-400 border border-yellow-400 rounded-full flex items-center justify-center hover:bg-yellow-400 hover:text-black transition"
-                aria-label="Offer submission help"
-              >
-                ?
-              </button>
-            </div>
-          </li>
+            <Rule>
+              Requires <strong className="text-dota-text">4 or more players</strong>.
+            </Rule>
 
-          <li>
-            The losing team reviews all offers, but only sees each offer as{' '}
-            <strong>Low</strong>, <strong>Medium</strong>, or <strong>High</strong> —
-            not the exact amount.
-            <ul className="list-disc pl-5 space-y-2 mt-2">
-              <li>
-                The losing team <strong>accepts one offer</strong>. The exact
-                gold amount is revealed only after accepting.
-              </li>
-              <li>
-                The player who made the accepted offer{' '}
-                <strong>receives the gold</strong>.
-              </li>
-              <li>
-                The player who was offered is{' '}
-                <strong>moved to the losing team</strong>.
-              </li>
-            </ul>
-          </li>
+            <Rule>
+              After each game, losers lose <strong className="text-dota-dire-light">half their gold</strong>.
+              Winners each receive <strong className="text-dota-radiant-light">1,000 gold</strong> plus
+              a share of half the loser pool.{' '}
+              <HelpButton onClick={() => setGold(true)} label="Gold calculation help" />
+            </Rule>
 
-          <li>
-            The match ends when a player wins a game while{' '}
-            <strong>on a team by themselves</strong>.
-          </li>
-        </ul>
+            <Rule>
+              Each winner secretly offers to sell a teammate — naming their own price.{' '}
+              <HelpButton onClick={() => setOffer(true)} label="Offer help" />
+            </Rule>
+
+            <Rule>
+              Losers see only{' '}
+              <span className="tier-low mx-0.5">Low</span>,{' '}
+              <span className="tier-medium mx-0.5">Medium</span>, or{' '}
+              <span className="tier-high mx-0.5">High</span> — they accept one offer,
+              the seller <strong className="text-dota-gold">receives the gold</strong>,
+              and the sold player <strong className="text-dota-text">switches teams</strong>.
+            </Rule>
+
+            <Rule>
+              Match ends when a player wins <strong className="text-dota-text">alone on their team</strong>.
+            </Rule>
+
+          </ul>
+        </div>
       </div>
 
-      {/* ===== Gold Help Modal ===== */}
+      {/* ── Gold modal ───────────────────────────────────────────────────────── */}
       {showGoldHelp && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setShowGoldHelp(false)}
-        >
-          <div
-            className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold mb-4">
-              Gold Distribution Explained
-            </h3>
-
-            <div className="space-y-4 text-sm text-slate-200 leading-relaxed">
-              <p>
-                When a game ends, the winning team earns gold in{' '}
-                <strong>two steps</strong>:
-              </p>
-
-              <ul className="list-decimal pl-5 space-y-2">
-                <li>
-                  <strong>Base reward:</strong> Each winning player
-                  receives <strong>1000 gold</strong>.
-                </li>
-                <li>
-                  <strong>Shared bonus:</strong> Half of the losing
-                  team's remaining gold is split evenly among the
-                  winning team.
-                </li>
-              </ul>
-
-              <div className="bg-slate-900/60 p-3 rounded-md border border-slate-700">
-                <p className="font-semibold mb-1">Example</p>
-                <p>Losing team total gold: <strong>4000</strong></p>
-                <p>Half of total: <strong>2000</strong></p>
-                <p>Winning team size: <strong>4 players</strong></p>
-                <p className="mt-2">
-                  Each winner receives: 1000 + (2000 ÷ 4) ={' '}
-                  <strong>1500 gold</strong>
-                </p>
+        <Modal onClose={() => setGold(false)} title="Gold Distribution Explained">
+          <div className="space-y-4 font-barlow text-sm text-dota-text leading-relaxed">
+            <p>Winning team earns gold in <strong>two steps</strong>:</p>
+            <ol className="space-y-2 pl-4 list-decimal marker:text-dota-gold marker:font-bold">
+              <li>
+                <strong>Base reward:</strong>{' '}
+                <span className="text-dota-text-muted">Each winner receives <strong className="text-dota-radiant-light">1,000 gold</strong>.</span>
+              </li>
+              <li>
+                <strong>Shared bonus:</strong>{' '}
+                <span className="text-dota-text-muted">Half the losing team's gold is split evenly among winners.</span>
+              </li>
+            </ol>
+            <div className="panel-sunken p-4 space-y-1">
+              <p className="stat-label mb-2">Example</p>
+              <div className="space-y-0.5 text-dota-text-muted">
+                <p>Losing team gold: <strong className="text-dota-text">4,000</strong></p>
+                <p>Half: <strong className="text-dota-text">2,000</strong> split across <strong className="text-dota-text">4 winners</strong></p>
               </div>
+              <div className="divider mt-3 mb-2" />
+              <p className="text-dota-radiant-light font-semibold">
+                Each winner: 1,000 + 500 = <strong>1,500 gold</strong>
+              </p>
             </div>
-
-            <button
-              onClick={() => setShowGoldHelp(false)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-white text-lg"
-              aria-label="Close gold help modal"
-            >
-              ✕
-            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
-      {/* ===== Offer Help Modal ===== */}
+      {/* ── Offer modal ──────────────────────────────────────────────────────── */}
       {showOfferHelp && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setShowOfferHelp(false)}
-        >
-          <div
-            className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-6 text-white shadow-xl relative overflow-y-auto max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold mb-4">
-              Offers Explained
-            </h3>
+        <Modal onClose={() => setOffer(false)} title="Offers Explained">
+          <div className="space-y-5 font-barlow text-sm text-dota-text leading-relaxed">
 
-            <div className="space-y-5 text-sm text-slate-200 leading-relaxed">
-
-              {/* How offers work */}
-              <div>
-                <p className="font-semibold text-white mb-2">How it works</p>
-                <ul className="list-disc pl-5 space-y-2">
-                  <li>
-                    Each player on the winning team picks a teammate to
-                    sell and names a gold price. If their offer is
-                    accepted, <strong>they receive that gold</strong> and
-                    the offered player moves to the losing team.
-                  </li>
-                  <li>
-                    The gold amount must fall within the allowed range for
-                    the current game. The range increases each game —
-                    minimum goes up by 200, maximum by 500.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Range examples */}
-              <div className="bg-slate-900/60 p-3 rounded-md border border-slate-700">
-                <p className="font-semibold mb-2">Range examples</p>
-                <div className="space-y-1 text-slate-300">
-                  <div className="flex justify-between">
-                    <span>Game 1</span>
-                    <span className="font-medium">450 – 2,500</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Game 3</span>
-                    <span className="font-medium">850 – 3,500</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Game 7</span>
-                    <span className="font-medium">1,650 – 5,500</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tier visibility */}
-              <div>
-                <p className="font-semibold text-white mb-2">Hidden amounts</p>
-                <p className="mb-3">
-                  Both teams do <strong>not</strong> see exact offer
-                  amounts. Instead, each offer is shown as one of three tiers:
-                </p>
-
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-center gap-3 bg-slate-900/40 px-3 py-2 rounded-lg">
-                    <span className="px-3 py-0.5 rounded-full text-sm font-bold border bg-blue-500/20 text-blue-300 border-blue-500/40">Low</span>
-                    <span className="text-slate-300">Lower end of the range</span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-slate-900/40 px-3 py-2 rounded-lg">
-                    <span className="px-3 py-0.5 rounded-full text-sm font-bold border bg-yellow-500/20 text-yellow-300 border-yellow-500/40">Medium</span>
-                    <span className="text-slate-300">Middle of the range</span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-slate-900/40 px-3 py-2 rounded-lg">
-                    <span className="px-3 py-0.5 rounded-full text-sm font-bold border bg-red-500/20 text-red-300 border-red-500/40">High</span>
-                    <span className="text-slate-300">Upper end of the range</span>
-                  </div>
-                </div>
-
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md p-3 text-yellow-200 text-xs leading-relaxed">
-                  <strong>Important:</strong> The tier ranges overlap intentionally.
-                  An offer labelled <strong>Low</strong> might actually be worth more
-                  than one labelled <strong>Medium</strong>. You can't rank offers by
-                  tier alone — you have to weigh up the player being offered too.
-                  The exact amount is revealed once you accept.
-                </div>
-              </div>
-
+            <div>
+              <p className="stat-label mb-2">How it works</p>
+              <p className="text-dota-text-muted">
+                Each winner picks a teammate to sell and names a price. If accepted,
+                the <strong className="text-dota-gold">seller receives the gold</strong> and
+                the sold player moves to the losing team. The price must be within the
+                current game's allowed range, which increases every game.
+              </p>
             </div>
 
-            <button
-              onClick={() => setShowOfferHelp(false)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-white text-lg"
-              aria-label="Close offer help modal"
-            >
-              ✕
-            </button>
+            <div className="panel-sunken p-4">
+              <p className="stat-label mb-3">Range by game</p>
+              <div className="space-y-2">
+                {[
+                  { game: 'Game 1', range: '250 – 2,000' },
+                  { game: 'Game 3', range: '650 – 3,000' },
+                  { game: 'Game 7', range: '1,450 – 5,000' },
+                ].map(({ game, range }) => (
+                  <div key={game} className="flex justify-between">
+                    <span className="text-dota-text-muted">{game}</span>
+                    <span className="font-semibold text-dota-text tabular-nums">{range}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="stat-label mb-3">Tier visibility</p>
+              <div className="space-y-2 mb-4">
+                {[
+                  { cls: 'tier-low',    label: 'Low',    desc: 'Lower end of the range' },
+                  { cls: 'tier-medium', label: 'Medium', desc: 'Middle of the range' },
+                  { cls: 'tier-high',   label: 'High',   desc: 'Upper end of the range' },
+                ].map(({ cls, label, desc }) => (
+                  <div key={label} className="flex items-center gap-3 panel-sunken px-3 py-2 rounded">
+                    <span className={cls}>{label}</span>
+                    <span className="text-dota-text-muted text-sm">{desc}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-dota-gold/8 border border-dota-gold/25 rounded px-3 py-2.5">
+                <p className="text-dota-gold text-xs leading-relaxed">
+                  <strong>Important:</strong> Tiers overlap — a <span className="tier-low text-xs">Low</span> offer
+                  can be worth more than a <span className="tier-medium text-xs">Medium</span> one.
+                  Exact amounts are revealed only after accepting.
+                </p>
+              </div>
+            </div>
+
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );

@@ -17,22 +17,15 @@ export default function CreateMatchForm() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchPlayers = async () => {
-      try {
-        const res = await fetch('/api/players');
-        const data = await res.json();
+    fetch('/api/players')
+      .then(res => res.json())
+      .then(data => {
         const filtered = Array.isArray(data.players)
-          ? data.players.filter((p: Player) =>
-              !p.username.toLowerCase().startsWith('ztest')
-            )
+          ? data.players.filter((p: Player) => !p.username.toLowerCase().startsWith('ztest'))
           : [];
         setPlayers(filtered);
-      } catch (err) {
-        console.error('Failed to load players:', err);
-      }
-    };
-
-    fetchPlayers();
+      })
+      .catch(err => console.error('Failed to load players:', err));
   }, []);
 
   const togglePlayer = (id: number) => {
@@ -66,12 +59,6 @@ export default function CreateMatchForm() {
         return;
       }
 
-      if (data.existing) {
-        // Let the router push happen — the banner message is brief enough
-        // that it'll flash before the navigation completes anyway.
-        setError(null);
-      }
-
       router.push(`/match/${data.id}`);
     } catch (err) {
       console.error(err);
@@ -81,36 +68,43 @@ export default function CreateMatchForm() {
     }
   };
 
+  const enoughSelected = selectedPlayerIds.length >= 4;
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-5 bg-slate-700/60 rounded-xl border border-slate-500 shadow-md max-w-3xl mx-auto space-y-4"
-    >
-      <h2 className="text-3xl font-bold text-yellow-400 text-center">
-        Create Match
-      </h2>
+    <form onSubmit={handleSubmit} className="panel p-6 max-w-3xl mx-auto space-y-5">
 
-      <p className="text-sm text-slate-200 text-center">
-        Select <strong>4 or more players</strong> to start a match
-      </p>
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="text-center space-y-1">
+        <h2 className="font-cinzel text-3xl font-bold text-dota-gold">
+          Create Match
+        </h2>
+      </div>
 
+      <div className="divider-gold" />
+
+      {/* ── Error ──────────────────────────────────────────────────────────── */}
       {error && (
-        <div className="bg-red-600/20 border border-red-500 text-red-300 text-sm px-4 py-2 rounded-md">
+        <div className="font-barlow text-sm text-dota-dire-light bg-dota-dire-subtle border border-dota-dire-border rounded px-4 py-2.5">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[55vh] overflow-y-auto pr-1">
+      {/* ── Player grid ────────────────────────────────────────────────────── */}
+      <div className="text-center space-y-1">
+        <p className="font-barlow text-sm text-dota-text-muted">
+          Select <span className="text-dota-text font-semibold">4 or more players</span> to start a match
+        </p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[55vh] overflow-y-auto pr-1">
         {players.map(player => {
           const selected = selectedPlayerIds.includes(player.id);
-
           return (
             <label
               key={player.id}
-              className={`cursor-pointer px-3 py-2 rounded-lg border text-center text-sm transition ${
+              className={`cursor-pointer px-3 py-2.5 rounded border text-center font-barlow font-semibold text-sm tracking-wide transition-all select-none ${
                 selected
-                  ? 'bg-slate-800 border-yellow-400 text-yellow-300'
-                  : 'bg-slate-800/60 border-slate-600 text-slate-200 hover:border-yellow-400'
+                  ? 'bg-dota-overlay border-dota-gold text-dota-gold shadow-gold'
+                  : 'bg-dota-deep border-dota-border text-dota-text-muted hover:border-dota-border-bright hover:text-dota-text'
               }`}
             >
               <input
@@ -125,24 +119,27 @@ export default function CreateMatchForm() {
         })}
       </div>
 
-      <div className="flex flex-col items-center gap-2 pt-2">
-        <p className="text-xs text-slate-300">
-          Selected {selectedPlayerIds.length} / 4+
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col items-center gap-3 pt-1">
+        <p className="stat-label">
+          {selectedPlayerIds.length} selected
+          {!enoughSelected && (
+            <span className="text-dota-text-dim normal-case font-normal">
+              {' '}· need {4 - selectedPlayerIds.length} more
+            </span>
+          )}
         </p>
 
         <button
           type="submit"
-          disabled={selectedPlayerIds.length < 4 || isSubmitting}
-          className={`px-6 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${
-            selectedPlayerIds.length < 4 || isSubmitting
-              ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
-              : 'bg-yellow-400 hover:bg-yellow-500 text-black'
-          }`}
+          disabled={!enoughSelected || isSubmitting}
+          className="btn-primary min-w-[160px]"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting ? 'Checking…' : 'Create Match'}
+          {isSubmitting ? 'Creating…' : 'Create Match'}
         </button>
       </div>
+
     </form>
   );
 }

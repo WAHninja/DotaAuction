@@ -50,7 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       [matchId]
     );
     const games = gamesRes.rows;
-    const latestGame = games.at(-1) || null;
+    const latestGame = games.at(-1)
+      ? { ...games.at(-1)!, gameNumber: games.length }
+      : null;
 
     let offers: any[] = [];
     if (latestGame?.status === 'auction pending') {

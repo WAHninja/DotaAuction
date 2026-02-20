@@ -1,4 +1,4 @@
-import { Gavel, Trophy, Swords } from 'lucide-react';
+import { Gavel, Swords, Trophy } from 'lucide-react';
 import type { GameSummary } from '@/types';
 
 export default function MatchHeader({
@@ -12,45 +12,59 @@ export default function MatchHeader({
   matchWinnerId?: number;
   matchWinnerUsername?: string;
 }) {
-  const statusDisplay = {
-    'auction pending': 'Auction Pending',
-    'in progress': 'In Progress',
-    'finished': 'Finished',
-  };
+  const { status, winning_team } = latestGame;
 
-  const getTeamName = (teamId: 'team_1' | 'team_a') =>
-    teamId === 'team_1' ? 'Team 1' : 'Team A';
+  // Badge style per game status
+  const badgeClass =
+    status === 'auction pending' ? 'badge-gold'    :
+    status === 'in progress'     ? 'badge-info'    :
+    status === 'finished'        ? 'badge-radiant' :
+                                   'badge';
+
+  const statusLabel =
+    status === 'auction pending' ? 'Auction Pending' :
+    status === 'in progress'     ? 'In Progress'     :
+    status === 'finished'        ? 'Finished'        :
+                                   status;
+
+  const StatusIcon =
+    status === 'auction pending' ? Gavel  :
+    status === 'in progress'     ? Swords :
+                                   null;
+
+  const winningTeamName = winning_team === 'team_1' ? 'Team 1' : 'Team A';
 
   return (
-    <div className="text-center mb-8">
-      <h1 className="text-4xl font-extrabold text-yellow-400 drop-shadow-md mb-2">
+    <div className="text-center mb-8 space-y-3">
+      {/* Match title */}
+      <h1 className="font-cinzel text-4xl font-black text-dota-gold text-glow-gold">
         Match #{matchId}
       </h1>
-      <div className="flex justify-center">
-        <span
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${
-            latestGame.status === 'auction pending'
-              ? 'bg-yellow-500 text-black'
-              : latestGame.status === 'in progress'
-              ? 'bg-blue-500 text-white'
-              : latestGame.status === 'finished'
-              ? 'bg-green-500 text-white'
-              : 'bg-gray-500 text-white'
-          }`}
-        >
-          Game #{latestGame.gameNumber ?? latestGame.id}
-          {latestGame.status === 'auction pending' && <Gavel className="w-6 h-6" />}
-          {latestGame.status === 'in progress' && <Swords className="w-6 h-6" />}
 
-          <span>{statusDisplay[latestGame.status]}</span>
-
-          {latestGame.status === 'auction pending' && latestGame.winning_team && (
-            <>
-              <Trophy className="w-6 h-6 ml-2" />
-              Winning Team: {getTeamName(latestGame.winning_team)}
-            </>
-          )}
+      {/* Game status pill */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <span className={badgeClass}>
+          {StatusIcon && <StatusIcon className="w-3.5 h-3.5" />}
+          Game #{latestGame.gameNumber}
+          <span className="opacity-60 mx-1">·</span>
+          {statusLabel}
         </span>
+
+        {/* Winning team callout — shown during auction */}
+        {status === 'auction pending' && winning_team && (
+          <span className="badge-radiant">
+            <Trophy className="w-3.5 h-3.5" />
+            {winningTeamName} won
+          </span>
+        )}
+
+        {/* Match winner — shown when the whole match is done */}
+        {matchWinnerId && matchWinnerUsername && (
+          <span className="badge-gold">
+            <Trophy className="w-3.5 h-3.5" />
+            Champion: {matchWinnerUsername}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -2,29 +2,28 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { CheckCircle2 } from 'lucide-react';
 
 type SelectWinnerFormProps = {
   gameId: number;
   show: boolean;
 };
 
+const TEAMS = [
+  { id: 'team_1', label: 'Team 1', faction: 'radiant' },
+  { id: 'team_a', label: 'Team A', faction: 'dire' },
+] as const;
+
 export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps) {
   const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_a' | null>(null);
   const [loading, setLoading] = useState(false);
-  // Once a winner is successfully submitted we lock the form permanently
-  // so rapid re-clicks or a second user arriving late can't fire again.
   const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState('');
 
   if (!show) return null;
 
   const handleSubmit = async () => {
-    if (!selectedTeam) {
-      setMessage('Please select a team.');
-      return;
-    }
-
-    // Prevent double-submit on the client before the first request even returns
+    if (!selectedTeam) { setMessage('Please select a team.'); return; }
     if (loading || submitted) return;
 
     setLoading(true);
@@ -40,11 +39,9 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
       const data = await res.json();
 
       if (res.ok) {
-        // Lock the form — the real-time Ably event will update everyone's UI
         setSubmitted(true);
         setMessage('Winner submitted! Updating…');
       } else if (res.status === 409) {
-        // Another user or a double-click already submitted — treat as success
         setSubmitted(true);
         setMessage('Winner already selected.');
       } else {
@@ -61,57 +58,89 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
 
   return (
     <div className="relative my-8">
-      {/* Overflowing images */}
-      <div
-        className="hidden sm:block absolute left-10 transform -translate-y-1/2 z-20"
-        style={{ top: 'calc(50% - 5px)' }}
-      >
-        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={220} height={220} />
+
+      {/* ── Creep artwork ─────────────────────────────────────────────────── */}
+      {/* mix-blend-mode: screen knocks out the pure black background on both
+          images, leaving only the coloured creep art composited over the panel. */}
+      <div className="hidden sm:block absolute left-0 top-1/2 -translate-y-1/2 z-20 pointer-events-none select-none">
+        <Image
+          src="/radiantcreeps.png"
+          alt="Radiant Creeps"
+          width={220}
+          height={220}
+          priority
+          sizes="220px"
+          style={{ mixBlendMode: 'screen' }}
+        />
       </div>
-      <div
-        className="hidden sm:block absolute right-10 transform -translate-y-1/2 z-20"
-        style={{ top: 'calc(50% - 5px)' }}
-      >
-        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={220} height={220} />
+      <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 z-20 pointer-events-none select-none">
+        <Image
+          src="/direcreeps.PNG"
+          alt="Dire Creeps"
+          width={220}
+          height={220}
+          priority
+          sizes="220px"
+          style={{ mixBlendMode: 'screen' }}
+        />
       </div>
 
-      <div className="relative z-10 bg-slate-600 bg-opacity-40 p-6 rounded-2xl shadow-lg">
-        <h2 className="text-2xl font-cinzel text-gold mb-4 text-center">Select Winning Team</h2>
+      {/* ── Form panel ────────────────────────────────────────────────────── */}
+      <div className="relative z-10 panel p-8 max-w-md mx-auto text-center">
+        <h2 className="font-cinzel text-2xl font-bold text-dota-gold mb-6">
+          Select Winning Team
+        </h2>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
-          {(['team_1', 'team_a'] as const).map((team) => (
-            <label
-              key={team}
-              className={`flex items-center gap-2 cursor-pointer transition ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : 'text-yellow-400 hover:text-yellow-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="winner"
-                value={team}
-                disabled={isDisabled}
-                onChange={() => setSelectedTeam(team)}
-                className="accent-gold"
-              />
-              <span className="font-semibold">{team === 'team_1' ? 'Team 1' : 'Team A'}</span>
-            </label>
-          ))}
+        {/* Team selector */}
+        <div className="flex justify-center gap-6 mb-6">
+          {TEAMS.map(({ id, label, faction }) => {
+            const isSelected = selectedTeam === id;
+            const isRadiant  = faction === 'radiant';
+
+            return (
+              <label
+                key={id}
+                className={`flex items-center gap-2.5 cursor-pointer select-none rounded-lg px-5 py-3 border font-barlow font-semibold tracking-wide transition-all ${
+                  isDisabled ? 'opacity-40 cursor-not-allowed' : ''
+                } ${
+                  isSelected
+                    ? isRadiant
+                      ? 'bg-dota-radiant/15 border-dota-radiant text-dota-radiant-light shadow-radiant'
+                      : 'bg-dota-dire/15 border-dota-dire text-dota-dire-light shadow-dire'
+                    : 'bg-dota-deep border-dota-border text-dota-text-muted hover:border-dota-border-bright hover:text-dota-text'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="winner"
+                  value={id}
+                  disabled={isDisabled}
+                  onChange={() => setSelectedTeam(id)}
+                  className="hidden"
+                />
+                {label}
+              </label>
+            );
+          })}
         </div>
 
-        <div className="flex justify-center">
-          <button
-            onClick={handleSubmit}
-            disabled={isDisabled}
-            className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Submitting…' : submitted ? 'Submitted ✓' : 'Submit Winner'}
-          </button>
-        </div>
+        {/* Submit */}
+        <button
+          onClick={handleSubmit}
+          disabled={isDisabled}
+          className={submitted ? 'btn-secondary' : 'btn-primary'}
+        >
+          {submitted
+            ? <><CheckCircle2 className="w-4 h-4" /> Submitted</>
+            : loading
+            ? 'Submitting…'
+            : 'Submit Winner'}
+        </button>
 
+        {/* Feedback */}
         {message && (
-          <p className={`mt-4 text-center text-sm font-semibold ${
-            submitted ? 'text-green-400' : 'text-red-400'
+          <p className={`mt-4 font-barlow text-sm font-semibold ${
+            submitted ? 'text-dota-radiant-light' : 'text-dota-dire-light'
           }`}>
             {message}
           </p>

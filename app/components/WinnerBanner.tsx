@@ -1,12 +1,13 @@
 'use client';
 
+import Image from 'next/image';
 import { Trophy } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import Link from 'next/link';
 
 type WinnerBannerProps = {
-  winnerName: string;
+  winnerName?: string;
 };
 
 export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
@@ -14,34 +15,62 @@ export default function WinnerBanner({ winnerName }: WinnerBannerProps) {
 
   return (
     <>
-      <Confetti width={width} height={height} numberOfPieces={300} recycle={false} />
+      <Confetti
+        width={width}
+        height={height}
+        numberOfPieces={300}
+        recycle={false}
+        colors={['#c8a951', '#dfc06a', '#4a9b3c', '#c0392b', '#e8e0d0']}
+      />
 
-      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 px-6 py-10 rounded-2xl overflow-visible">
+      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/40 min-h-[260px]">
 
-        <img
+        {/* Aegis — Next.js Image replaces the raw <img> tag, giving:
+              • Automatic WebP/AVIF serving (PNG source → ~70% smaller on the wire)
+              • mix-blend-mode: screen drops the black background as before
+            Not marked priority — WinnerBanner only mounts after match ends,
+            so it's never above the fold on initial load. */}
+        <Image
           src="/rewards_aegis2024.png"
-          alt="Aegis of Champions"
-          className="absolute top-[60%] left-1/2 w-56 md:w-72 lg:w-80 -translate-x-1/2 -translate-y-1/2 opacity-90 drop-shadow-2xl animate-pulse"
+          alt=""
+          aria-hidden="true"
+          width={420}
+          height={420}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+          style={{ mixBlendMode: 'screen' }}
         />
 
-        <div className="relative z-10 text-center">
-          <div className="flex items-center justify-center gap-3 text-yellow-200 text-4xl font-black drop-shadow-md mb-2">
-            <Trophy className="w-8 h-8 text-yellow-400" />
-            <span>{winnerName}</span>
-            <Trophy className="w-8 h-8 text-yellow-400" />
+        {/* Centre vignette — keeps text legible over the bright shield centre */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse 55% 50% at 50% 50%, rgba(13,17,23,0.55) 0%, transparent 100%)',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 text-center space-y-3 py-12 px-8">
+
+          <div className="flex items-center justify-center gap-3">
+            <Trophy className="w-6 h-6 text-dota-gold" />
+            <h2 className="font-cinzel text-4xl font-black text-dota-gold text-glow-gold">
+              {winnerName ?? 'Champion'}
+            </h2>
+            <Trophy className="w-6 h-6 text-dota-gold" />
           </div>
 
-          <p className="mt-2 text-yellow-100 italic font-medium text-sm drop-shadow-sm mb-6">
+          <p className="font-barlow text-sm text-dota-text-muted italic tracking-wide">
             A champion rises. Glory is yours.
           </p>
 
-          <Link href="/dashboard">
-            <button className="mt-4 px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl shadow-lg transition-all duration-200">
+          <div className="divider-gold w-32 mx-auto" />
+
+          <Link href="/">
+            <button className="btn-ghost text-xs px-4 py-1.5 mt-1">
               Back to Dashboard
             </button>
           </Link>
         </div>
-
       </div>
     </>
   );

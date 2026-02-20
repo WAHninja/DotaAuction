@@ -2,6 +2,7 @@
 
 import { useState, useContext } from 'react';
 import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 
 export default function LogoutButton() {
@@ -11,16 +12,9 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     setLoading(true);
-
     try {
-      await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      // 🔥 Re-sync auth state after cookie is cleared
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
       await refreshUser();
-
       router.replace('/login');
     } catch (err) {
       console.error('Logout failed', err);
@@ -33,11 +27,10 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       disabled={loading}
-      className="px-4 py-2 rounded bg-red-600 hover:bg-red-700
-                 text-white font-semibold transition
-                 disabled:opacity-60 disabled:cursor-not-allowed"
+      className="btn-ghost text-sm flex items-center gap-1.5"
     >
-      {loading ? 'Logging out…' : 'Logout'}
+      <LogOut className="w-3.5 h-3.5" />
+      {loading ? 'Signing out…' : 'Sign out'}
     </button>
   );
 }
