@@ -169,54 +169,73 @@ export default function AuctionHouse({
 
       {/* ── Winner: submit form ─────────────────────────────────────────────── */}
       {isWinner && !alreadySubmitted && (
-        <div className="max-w-md mx-auto space-y-4">
-          <div className="text-center space-y-1">
-            <p className="font-barlow font-semibold text-dota-text">Make an Offer</p>
-            <p className="font-barlow text-sm text-dota-text-muted flex items-center justify-center gap-1">
-              Amount must be between{' '}
-              <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
-              {' '}and{' '}
-              <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
-              <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
-            </p>
-            <p className="font-barlow text-xs text-dota-text-dim">
-              Others see only a tier label until an offer is accepted
-            </p>
-          </div>
+        <div
+          className="relative rounded-lg overflow-hidden"
+          style={{
+            backgroundImage: "url('/match_predictions_bg.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center right',
+          }}
+        >
+          {/* Dark overlay — heavier on the left where the form lives,
+              fading toward the hero art on the right. The image's own
+              left side is already near-black so this just ensures legibility
+              across all screen sizes. */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to right, rgba(13,17,23,0.92) 0%, rgba(13,17,23,0.80) 50%, rgba(13,17,23,0.35) 100%)',
+            }}
+          />
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={selectedPlayer}
-              onChange={e => setSelectedPlayer(e.target.value)}
-              className="input flex-1"
-            >
-              <option value="">Select player to offer…</option>
-              {candidates.map(pid => {
-                const p = getPlayer(pid);
-                return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
-              })}
-            </select>
+          {/* Form — constrained to the left ~60% so it sits over the dark area */}
+          <div className="relative z-10 max-w-md py-8 px-6 space-y-4">
+            <div className="space-y-1">
+              <p className="font-cinzel font-bold text-dota-gold text-lg">Make an Offer</p>
+              <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1 flex-wrap">
+                Amount between{' '}
+                <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
+                {' '}–{' '}
+                <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
+                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+              </p>
+              <p className="font-barlow text-xs text-dota-text-dim">
+                Others see only a tier label until an offer is accepted
+              </p>
+            </div>
 
-            <input
-              type="number"
-              value={offerAmount}
-              onChange={e => setOfferAmount(e.target.value)}
-              placeholder={`${minOffer}–${maxOffer}`}
-              min={minOffer}
-              max={maxOffer}
-              className="input flex-1"
-            />
-          </div>
+            <div className="flex flex-col gap-3">
+              <select
+                value={selectedPlayer}
+                onChange={e => setSelectedPlayer(e.target.value)}
+                className="input"
+              >
+                <option value="">Select player to offer…</option>
+                {candidates.map(pid => {
+                  const p = getPlayer(pid);
+                  return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
+                })}
+              </select>
 
-          {submitError && (
-            <p className="font-barlow text-sm text-dota-dire-light text-center">{submitError}</p>
-          )}
+              <input
+                type="number"
+                value={offerAmount}
+                onChange={e => setOfferAmount(e.target.value)}
+                placeholder={`${minOffer}–${maxOffer}`}
+                min={minOffer}
+                max={maxOffer}
+                className="input"
+              />
+            </div>
 
-          <div className="flex justify-center">
+            {submitError && (
+              <p className="font-barlow text-sm text-dota-dire-light">{submitError}</p>
+            )}
+
             <button
               onClick={handleSubmitOffer}
               disabled={submitting}
-              className="btn-primary min-w-[160px]"
+              className="btn-primary"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {submitting ? 'Submitting…' : 'Submit Offer'}
