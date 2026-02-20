@@ -27,7 +27,7 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center gap-4 mb-5">
-        <Image src={logo} alt={`${name} logo`} width={64} height={64} className="object-contain" />
+        <Image src={logo} alt={`${name} logo`} width={64} height={64} className="object-contain" priority />
         <h2 className={`font-cinzel text-2xl font-bold ${nameColour}`}>{name}</h2>
       </div>
 
@@ -46,11 +46,15 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
             >
               <span className={`font-barlow font-semibold flex items-center gap-2 ${isYou ? youText : 'text-dota-text'}`}>
                 {p.username || 'Unknown'}
-                {isYou}
+                {isYou && (
+                  <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${youBadgeBg}`}>
+                    You
+                  </span>
+                )}
               </span>
               <span className="font-barlow font-bold tabular-nums text-dota-gold flex items-center gap-1">
                 {p.gold ?? 0}
-                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} />
+                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
               </span>
             </li>
           );
