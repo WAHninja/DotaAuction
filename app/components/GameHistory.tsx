@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Image from 'next/image';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 import type { HistoryGame, TierLabel } from '@/types';
 
@@ -20,7 +20,7 @@ function GoldAmount({ amount }: { amount: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
       {amount.toLocaleString()}
-      <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} />
+      <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} className="inline-block" />
     </span>
   );
 }
@@ -129,7 +129,7 @@ function LedgerZone({ game }: { game: HistoryGame }) {
                 </div>
                 <span className="font-barlow font-bold text-sm text-dota-radiant-light tabular-nums shrink-0">
                   +{s.goldChange.toLocaleString()}
-                  <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block ml-1" />
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block" />
                 </span>
               </div>
             ))
@@ -153,7 +153,7 @@ function LedgerZone({ game }: { game: HistoryGame }) {
                 </div>
                 <span className="font-barlow font-bold text-sm text-dota-dire-light tabular-nums shrink-0">
                   {s.goldChange.toLocaleString()}
-                  <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block ml-1" />
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block" />
                 </span>
               </div>
             ))
