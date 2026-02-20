@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 import type { HistoryGame, TierLabel } from '@/types';
 
-// ── Tier badge — delegates to globals CSS classes ─────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function TierBadge({ tier }: { tier: TierLabel | null }) {
   if (!tier) return <span className="text-dota-text-dim text-xs">?</span>;
   const cls =
@@ -15,39 +16,222 @@ function TierBadge({ tier }: { tier: TierLabel | null }) {
   return <span className={cls}>{tier}</span>;
 }
 
-// ── Gold icon helper ──────────────────────────────────────────────────────────
-function Gold({ amount }: { amount: number }) {
+function GoldAmount({ amount }: { amount: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
-      {amount}
-      <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+      {amount.toLocaleString()}
+      <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} />
     </span>
   );
 }
 
-// ── Gold change row ───────────────────────────────────────────────────────────
-function GoldChange({ username, change, reason }: { username: string; change: number; reason: string }) {
-  const isPositive  = change > 0;
-  const colour      = isPositive ? 'text-dota-radiant-light' : 'text-dota-dire-light';
-  const reasonLabel =
-    reason === 'win_reward'                         ? 'win reward'      :
-    reason === 'loss_penalty'                       ? 'loss penalty'    :
-    reason === 'offer_accepted' || reason === 'offer_gain' ? 'offer accepted' :
-    reason;
+// ── Zone 1: Result — team panels with winner highlight ────────────────────────
+
+function ResultZone({ game }: { game: HistoryGame }) {
+  const winner = game.winningTeam; // 'team_1' | 'team_a' | null
+
+  const TeamPanel = ({
+    faction,
+    members,
+    isWinner,
+  }: {
+    faction: 'radiant' | 'dire';
+    members: string[];
+    isWinner: boolean;
+  }) => {
+    const isRadiant   = faction === 'radiant';
+    const label       = isRadiant ? 'Team 1' : 'Team A';
+    const labelColour = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
+    const panelClass  = isRadiant ? 'team-radiant-panel' : 'team-dire-panel';
+    const winBorder   = isRadiant ? 'border-dota-radiant shadow-radiant' : 'border-dota-dire shadow-dire';
+
+    return (
+      <div className={`${panelClass} rounded-lg p-3 flex flex-col gap-2 transition-all ${isWinner ? winBorder : 'opacity-80'}`}>
+        <div className="flex items-center justify-between">
+          <p className={`stat-label ${labelColour}`}>{label}</p>
+          {isWinner && (
+            <span className={`flex items-center gap-1 font-barlow text-xs font-bold ${labelColour}`}>
+              <Trophy className="w-3 h-3" /> Winner
+            </span>
+          )}
+        </div>
+        <p className="font-barlow text-sm text-dota-text leading-snug">
+          {members.join(', ') || '—'}
+        </p>
+      </div>
+    );
+  };
 
   return (
-    <li className="flex items-center gap-2 font-barlow text-sm">
-      <span className="text-dota-text">{username}</span>
-      <span className={`font-semibold ${colour}`}>
-        {isPositive ? '+' : ''}{change}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <TeamPanel
+        faction="radiant"
+        members={game.team1Members}
+        isWinner={winner === 'team_1'}
+      />
+      <TeamPanel
+        faction="dire"
+        members={game.teamAMembers}
+        isWinner={winner === 'team_a'}
+      />
+    </div>
+  );
+}
+
+// ── Zone 2: Gold Ledger — gains vs losses two-column ─────────────────────────
+
+function LedgerZone({ game }: { game: HistoryGame }) {
+  if (game.playerStats.length === 0) return null;
+
+  // Gains = win_reward + offer_accepted + offer_gain
+  // Losses = loss_penalty
+  const gains  = game.playerStats.filter(s =>
+    s.reason === 'win_reward' || s.reason === 'offer_accepted' || s.reason === 'offer_gain'
+  );
+  const losses = game.playerStats.filter(s => s.reason === 'loss_penalty');
+
+  const ReasonTag = ({ reason }: { reason: string }) => {
+    const label =
+      reason === 'win_reward'                          ? 'win'     :
+      reason === 'loss_penalty'                        ? 'loss'    :
+      reason === 'offer_accepted' || reason === 'offer_gain' ? 'auction' :
+      reason;
+    const cls =
+      reason === 'win_reward'    ? 'text-dota-radiant-light bg-dota-radiant/10 border-dota-radiant/20'  :
+      reason === 'loss_penalty'  ? 'text-dota-dire-light bg-dota-dire/10 border-dota-dire/20'           :
+                                   'text-dota-gold bg-dota-gold/10 border-dota-gold/20';
+    return (
+      <span className={`font-barlow text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}>
+        {label}
       </span>
-      <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block" />
-      <span className="text-dota-text-dim text-xs">({reasonLabel})</span>
-    </li>
+    );
+  };
+
+  return (
+    <div>
+      <p className="stat-label mb-2.5">Gold Changes</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        {/* Gains */}
+        <div className="panel-sunken rounded-lg p-3 space-y-2">
+          <p className="font-barlow text-xs font-semibold text-dota-radiant-light uppercase tracking-widest mb-1">
+            Gains
+          </p>
+          {gains.length === 0
+            ? <p className="font-barlow text-xs text-dota-text-dim">—</p>
+            : gains.map(s => (
+              <div key={s.id} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-barlow font-semibold text-sm text-dota-text truncate">
+                    {s.username ?? `Player #${s.playerId}`}
+                  </span>
+                  <ReasonTag reason={s.reason} />
+                </div>
+                <span className="font-barlow font-bold text-sm text-dota-radiant-light tabular-nums shrink-0">
+                  +{s.goldChange.toLocaleString()}
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block ml-1" />
+                </span>
+              </div>
+            ))
+          }
+        </div>
+
+        {/* Losses */}
+        <div className="panel-sunken rounded-lg p-3 space-y-2">
+          <p className="font-barlow text-xs font-semibold text-dota-dire-light uppercase tracking-widest mb-1">
+            Losses
+          </p>
+          {losses.length === 0
+            ? <p className="font-barlow text-xs text-dota-text-dim">—</p>
+            : losses.map(s => (
+              <div key={s.id} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-barlow font-semibold text-sm text-dota-text truncate">
+                    {s.username ?? `Player #${s.playerId}`}
+                  </span>
+                  <ReasonTag reason={s.reason} />
+                </div>
+                <span className="font-barlow font-bold text-sm text-dota-dire-light tabular-nums shrink-0">
+                  {s.goldChange.toLocaleString()}
+                  <Image src="/Gold_symbol.webp" alt="Gold" width={12} height={12} className="inline-block ml-1" />
+                </span>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Zone 3: Auction Recap — offer cards in a grid ────────────────────────────
+
+function AuctionZone({ game }: { game: HistoryGame }) {
+  if (game.offers.length === 0) return null;
+
+  return (
+    <div>
+      <p className="stat-label mb-2.5">Auction</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {game.offers.map(offer => {
+          const isAccepted = offer.status === 'accepted';
+          const isRejected = offer.status === 'rejected';
+
+          return (
+            <div
+              key={offer.id}
+              className={`panel-raised rounded-lg p-3 flex flex-col gap-2 transition-all ${
+                isAccepted ? 'border-dota-radiant shadow-radiant'  :
+                isRejected ? 'opacity-45'                          :
+                             ''
+              }`}
+            >
+              {/* Status strip */}
+              <div className="flex items-center justify-between">
+                <span className={`font-barlow text-[10px] font-bold uppercase tracking-widest ${
+                  isAccepted ? 'text-dota-radiant-light' :
+                  isRejected ? 'text-dota-dire-light'    :
+                               'text-dota-text-dim'
+                }`}>
+                  {offer.status}
+                </span>
+                {offer.tierLabel && <TierBadge tier={offer.tierLabel} />}
+              </div>
+
+              <div className="divider" />
+
+              {/* Seller → Target */}
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="stat-label">From</span>
+                  <span className="font-barlow font-bold text-sm text-dota-gold">
+                    {offer.fromUsername}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="stat-label">Selling</span>
+                  <span className="font-barlow font-bold text-sm text-dota-info">
+                    {offer.targetUsername}
+                  </span>
+                </div>
+              </div>
+
+              {/* Amount */}
+              {offer.offerAmount != null && (
+                <div className="mt-auto pt-1 border-t border-dota-border">
+                  <GoldAmount amount={offer.offerAmount} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
 // ── Individual game card ──────────────────────────────────────────────────────
+
 function GameCard({ game }: { game: HistoryGame }) {
   const [expanded, setExpanded] = useState(false);
   const accepted = game.offers.find(o => o.status === 'accepted');
@@ -57,22 +241,22 @@ function GameCard({ game }: { game: HistoryGame }) {
       className="panel cursor-pointer hover:border-dota-border-bright transition-colors"
       onClick={() => setExpanded(v => !v)}
     >
-      {/* ── Card header ────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between p-4">
-        <div className="space-y-0.5">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between p-4 gap-4">
+        <div className="space-y-0.5 min-w-0">
           <h3 className="font-cinzel font-bold text-dota-text">
             Game #{game.gameNumber}
           </h3>
 
-          {/* Collapsed summary */}
+          {/* Collapsed one-liner */}
           {!expanded && accepted && (
             <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
               <span className="text-dota-gold font-semibold">{accepted.fromUsername}</span>
-              <span>traded</span>
+              <span>sold</span>
               <span className="text-dota-info font-semibold">{accepted.targetUsername}</span>
               <span>for</span>
               {accepted.offerAmount != null
-                ? <Gold amount={accepted.offerAmount} />
+                ? <GoldAmount amount={accepted.offerAmount} />
                 : <TierBadge tier={accepted.tierLabel} />
               }
               {accepted.tierLabel && accepted.offerAmount != null && (
@@ -83,104 +267,25 @@ function GameCard({ game }: { game: HistoryGame }) {
         </div>
 
         <button
-          className="font-barlow text-xs text-dota-text-muted hover:text-dota-text flex items-center gap-1 transition-colors shrink-0 ml-4"
+          className="font-barlow text-xs text-dota-text-muted hover:text-dota-text flex items-center gap-1 transition-colors shrink-0"
           onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
         >
-          {expanded ? (
-            <><ChevronUp className="w-4 h-4" /> Hide</>
-          ) : (
-            <><ChevronDown className="w-4 h-4" /> Details</>
-          )}
+          {expanded
+            ? <><ChevronUp   className="w-3.5 h-3.5" /> Hide</>
+            : <><ChevronDown className="w-3.5 h-3.5" /> Details</>
+          }
         </button>
       </div>
 
-      {/* ── Expanded content ───────────────────────────────────────────────── */}
+      {/* ── Expanded ───────────────────────────────────────────────────────── */}
       {expanded && (
-        <div className="border-t border-dota-border px-4 pb-4 pt-4 space-y-5" onClick={e => e.stopPropagation()}>
-
-          {/* Teams */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="team-radiant-panel p-3 rounded-lg">
-              <p className="stat-label text-dota-radiant-light mb-1.5">Team 1</p>
-              <p className="font-barlow text-sm text-dota-text">{game.team1Members.join(', ') || '—'}</p>
-            </div>
-            <div className="team-dire-panel p-3 rounded-lg">
-              <p className="stat-label text-dota-dire-light mb-1.5">Team A</p>
-              <p className="font-barlow text-sm text-dota-text">{game.teamAMembers.join(', ') || '—'}</p>
-            </div>
-          </div>
-
-          {/* Winner */}
-          {game.winningTeam && (
-            <p className="font-barlow text-sm text-dota-text-muted">
-              Winner:{' '}
-              <span className="font-semibold text-dota-radiant-light">
-                {game.winningTeam === 'team_1' ? 'Team 1' : 'Team A'}
-              </span>
-            </p>
-          )}
-
-          {/* Gold changes */}
-          {game.playerStats.length > 0 && (
-            <div>
-              <p className="stat-label mb-2">Gold changes</p>
-              <ul className="space-y-1.5">
-                {['win_reward', 'loss_penalty', 'offer_accepted', 'offer_gain']
-                  .flatMap(reason =>
-                    game.playerStats
-                      .filter(s => s.reason === reason)
-                      .map(stat => (
-                        <GoldChange
-                          key={stat.id}
-                          username={stat.username ?? `Player #${stat.playerId}`}
-                          change={stat.goldChange}
-                          reason={stat.reason}
-                        />
-                      ))
-                  )
-                }
-              </ul>
-            </div>
-          )}
-
-          {/* Offers */}
-          {game.offers.length > 0 && (
-            <div>
-              <p className="stat-label mb-2">Offers</p>
-              <ul className="space-y-2">
-                {game.offers.map(offer => {
-                  const isAccepted = offer.status === 'accepted';
-                  const isRejected = offer.status === 'rejected';
-                  return (
-                    <li key={offer.id} className="font-barlow text-sm flex items-center gap-2 flex-wrap">
-                      {isAccepted
-                        ? <CheckCircle2 className="w-3.5 h-3.5 text-dota-radiant-light shrink-0" />
-                        : isRejected
-                        ? <XCircle className="w-3.5 h-3.5 text-dota-dire-light shrink-0" />
-                        : <span className="w-3.5 h-3.5 shrink-0" />
-                      }
-                      <span className="text-dota-gold font-semibold">{offer.fromUsername}</span>
-                      <span className="text-dota-text-muted">offered</span>
-                      <span className="text-dota-info font-semibold">{offer.targetUsername}</span>
-                      <span className="text-dota-text-muted">for</span>
-                      {offer.offerAmount != null ? (
-                        <><Gold amount={offer.offerAmount} />{offer.tierLabel && <TierBadge tier={offer.tierLabel} />}</>
-                      ) : (
-                        <TierBadge tier={offer.tierLabel} />
-                      )}
-                      <span className={`text-xs font-semibold uppercase ${
-                        isAccepted ? 'text-dota-radiant-light' :
-                        isRejected ? 'text-dota-dire-light'    :
-                                     'text-dota-text-dim'
-                      }`}>
-                        {offer.status}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+        <div
+          className="border-t border-dota-border p-4 space-y-5"
+          onClick={e => e.stopPropagation()}
+        >
+          <ResultZone  game={game} />
+          <LedgerZone  game={game} />
+          <AuctionZone game={game} />
         </div>
       )}
     </div>
@@ -188,6 +293,7 @@ function GameCard({ game }: { game: HistoryGame }) {
 }
 
 // ── Public component ──────────────────────────────────────────────────────────
+
 export default function GameHistory({ history }: { history: HistoryGame[] }) {
   if (history.length === 0) return null;
 
