@@ -60,11 +60,25 @@ export default function SelectWinnerForm({ gameId, show }: SelectWinnerFormProps
     <div className="relative my-8">
 
       {/* ── Creep artwork ─────────────────────────────────────────────────── */}
-      <div className="hidden sm:block absolute left-6 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
-        <Image src="/radiantcreeps.png" alt="Radiant Creeps" width={200} height={200} />
+      {/* mix-blend-mode: screen knocks out the pure black background on both
+          images, leaving only the coloured creep art composited over the panel. */}
+      <div className="hidden sm:block absolute left-0 top-1/2 -translate-y-1/2 z-20 pointer-events-none select-none">
+        <Image
+          src="/radiantcreeps.png"
+          alt="Radiant Creeps"
+          width={220}
+          height={220}
+          style={{ mixBlendMode: 'screen' }}
+        />
       </div>
-      <div className="hidden sm:block absolute right-6 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
-        <Image src="/direcreeps.PNG" alt="Dire Creeps" width={200} height={200} />
+      <div className="hidden sm:block absolute right-0 top-1/2 -translate-y-1/2 z-20 pointer-events-none select-none">
+        <Image
+          src="/direcreeps.PNG"
+          alt="Dire Creeps"
+          width={220}
+          height={220}
+          style={{ mixBlendMode: 'screen' }}
+        />
       </div>
 
       {/* ── Form panel ────────────────────────────────────────────────────── */}
