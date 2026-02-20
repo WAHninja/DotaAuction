@@ -3,12 +3,13 @@ import db from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const matchId = Number(params.id);
+  const { id } = await params;
+  const matchId = Number(id);
 
   if (isNaN(matchId)) {
-    return NextResponse.json({ message: 'Invalid match ID.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid match ID.' }, { status: 400 });
   }
 
   try {
@@ -22,6 +23,6 @@ export async function GET(
     return NextResponse.json({ gamesPlayed });
   } catch (err) {
     console.error('Error fetching games played:', err);
-    return NextResponse.json({ message: 'Server error.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error.' }, { status: 500 });
   }
 }
