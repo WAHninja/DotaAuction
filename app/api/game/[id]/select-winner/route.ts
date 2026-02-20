@@ -3,7 +3,7 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import ably from '@/lib/ably-server';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // ---- Auth ----------------------------------------------------------------
   const session = await getSession();
   if (!session?.userId) {
@@ -11,7 +11,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   // ---- Parse inputs --------------------------------------------------------
-  const gameId = Number(params.id);
+  const { id } = await params;
+  const gameId = Number(id);
   if (isNaN(gameId)) {
     return NextResponse.json({ error: 'Invalid game ID.' }, { status: 400 });
   }
