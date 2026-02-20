@@ -46,11 +46,7 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
             >
               <span className={`font-barlow font-semibold flex items-center gap-2 ${isYou ? youText : 'text-dota-text'}`}>
                 {p.username || 'Unknown'}
-                {isYou && (
-                  <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${youBadgeBg}`}>
-                    You
-                  </span>
-                )}
+                {isYou}
               </span>
               <span className="font-barlow font-bold tabular-nums text-dota-gold flex items-center gap-1">
                 {p.gold ?? 0}
