@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import { X } from 'lucide-react';
 
-// ── Modal shell ───────────────────────────────────────────────────────────────
+// ── Modal — anchored near the top of the viewport ─────────────────────────────
 function Modal({ onClose, title, children }: {
   onClose: () => void;
   title: string;
@@ -17,11 +17,11 @@ function Modal({ onClose, title, children }: {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 pt-16"
       onClick={onClose}
     >
       <div
-        className="panel-raised max-w-md w-full p-6 relative overflow-y-auto max-h-[90vh]"
+        className="panel-raised max-w-md w-full p-6 relative overflow-y-auto max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-5 gap-4">
@@ -44,14 +44,14 @@ function HelpButton({ onClick, label }: { onClick: () => void; label: string }) 
       onClick={e => { e.stopPropagation(); onClick(); }}
       aria-label={label}
       className="shrink-0 w-4 h-4 rounded-full border border-dota-gold text-dota-gold text-[10px] font-bold
-                 flex items-center justify-center hover:bg-dota-gold hover:text-dota-base transition-all"
+                 inline-flex items-center justify-center hover:bg-dota-gold hover:text-dota-base transition-all"
     >
       ?
     </button>
   );
 }
 
-// ── Single rule row ───────────────────────────────────────────────────────────
+// ── Rule row ──────────────────────────────────────────────────────────────────
 function Rule({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2.5 font-barlow text-sm text-dota-text-muted leading-snug">
@@ -63,7 +63,6 @@ function Rule({ children }: { children: React.ReactNode }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function GameRulesCard() {
-  const [open, setOpen]           = useState(false);
   const [showGoldHelp, setGold]   = useState(false);
   const [showOfferHelp, setOffer] = useState(false);
 
@@ -71,62 +70,49 @@ export default function GameRulesCard() {
     <>
       <div className="panel max-w-3xl mx-auto overflow-hidden">
 
-        {/* ── Toggle header ──────────────────────────────────────────────── */}
-        <button
-          onClick={() => setOpen(v => !v)}
-          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors"
-        >
-          <span className="font-cinzel text-base font-bold text-dota-gold tracking-wide">
+        <div className="px-5 py-3.5 border-b border-dota-border">
+          <h2 className="font-cinzel text-base font-bold text-dota-gold tracking-wide">
             Match Rules
-          </span>
-          <span className="text-dota-text-muted">
-            {open
-              ? <ChevronUp   className="w-4 h-4" />
-              : <ChevronDown className="w-4 h-4" />
-            }
-          </span>
-        </button>
+          </h2>
+        </div>
 
-        {/* ── Rule list ──────────────────────────────────────────────────── */}
-        {open && (
-          <div className="border-t border-dota-border px-5 py-4">
-            <ul className="space-y-2.5">
+        <div className="px-5 py-4">
+          <ul className="space-y-2.5">
 
-              <Rule>
-                Requires <strong className="text-dota-text">4 or more players</strong>.
-              </Rule>
+            <Rule>
+              Requires <strong className="text-dota-text">4 or more players</strong>.
+            </Rule>
 
-              <Rule>
-                After each game, losers lose <strong className="text-dota-dire-light">half their gold</strong>.
-                Winners each receive <strong className="text-dota-radiant-light">1,000 gold</strong> plus
-                a share of half the loser pool.{' '}
-                <HelpButton onClick={() => setGold(true)} label="Gold calculation help" />
-              </Rule>
+            <Rule>
+              After each game, losers lose <strong className="text-dota-dire-light">half their gold</strong>.
+              Winners each receive <strong className="text-dota-radiant-light">1,000 gold</strong> plus
+              a share of half the loser pool.{' '}
+              <HelpButton onClick={() => setGold(true)} label="Gold calculation help" />
+            </Rule>
 
-              <Rule>
-                Each winner secretly offers to sell a teammate — naming their own price.{' '}
-                <HelpButton onClick={() => setOffer(true)} label="Offer help" />
-              </Rule>
+            <Rule>
+              Each winner secretly offers to sell a teammate — naming their own price.{' '}
+              <HelpButton onClick={() => setOffer(true)} label="Offer help" />
+            </Rule>
 
-              <Rule>
-                Losers see only{' '}
-                <span className="tier-low mx-0.5">Low</span>,{' '}
-                <span className="tier-medium mx-0.5">Medium</span>, or{' '}
-                <span className="tier-high mx-0.5">High</span> — they accept one offer,
-                the seller <strong className="text-dota-gold">receives the gold</strong>,
-                and the sold player <strong className="text-dota-text">switches teams</strong>.
-              </Rule>
+            <Rule>
+              Losers see only{' '}
+              <span className="tier-low mx-0.5">Low</span>,{' '}
+              <span className="tier-medium mx-0.5">Medium</span>, or{' '}
+              <span className="tier-high mx-0.5">High</span> — they accept one offer,
+              the seller <strong className="text-dota-gold">receives the gold</strong>,
+              and the sold player <strong className="text-dota-text">switches teams</strong>.
+            </Rule>
 
-              <Rule>
-                Match ends when a player wins <strong className="text-dota-text">alone on their team</strong>.
-              </Rule>
+            <Rule>
+              Match ends when a player wins <strong className="text-dota-text">alone on their team</strong>.
+            </Rule>
 
-            </ul>
-          </div>
-        )}
+          </ul>
+        </div>
       </div>
 
-      {/* ── Gold modal ─────────────────────────────────────────────────────── */}
+      {/* ── Gold modal ───────────────────────────────────────────────────────── */}
       {showGoldHelp && (
         <Modal onClose={() => setGold(false)} title="Gold Distribution Explained">
           <div className="space-y-4 font-barlow text-sm text-dota-text leading-relaxed">
@@ -156,7 +142,7 @@ export default function GameRulesCard() {
         </Modal>
       )}
 
-      {/* ── Offer modal ────────────────────────────────────────────────────── */}
+      {/* ── Offer modal ──────────────────────────────────────────────────────── */}
       {showOfferHelp && (
         <Modal onClose={() => setOffer(false)} title="Offers Explained">
           <div className="space-y-5 font-barlow text-sm text-dota-text leading-relaxed">
