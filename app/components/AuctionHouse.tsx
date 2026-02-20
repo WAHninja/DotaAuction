@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import GoldIcon from '@/app/components/GoldIcon';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import type { Player, Offer } from '@/types';
 
@@ -36,7 +35,7 @@ function GoldAmount({ amount }: { amount: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
       {amount}
-      <GoldIcon size={14} />
+      <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
     </span>
   );
 }
@@ -198,7 +197,7 @@ export default function AuctionHouse({
                 <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
                 {' '}–{' '}
                 <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
-                <GoldIcon size={14} />
+                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
               </p>
               <p className="font-barlow text-xs text-dota-text-dim">
                 Others see only a tier label until an offer is accepted
