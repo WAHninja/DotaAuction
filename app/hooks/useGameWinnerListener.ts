@@ -1,30 +1,27 @@
+// app/hooks/useGameWinnerListener.ts
 import { useEffect, useRef } from 'react';
-import ablyClient from '@/lib/ably-client';
+import { RealtimeChannel } from '@supabase/supabase-js';
+import supabaseClient from '@/lib/supabase-client';
 
 export function useGameWinnerListener(
   matchId: string,
   onGameWinnerSelected: () => void,
 ) {
-  // Stable ref so the effect doesn't re-subscribe on every render
   const callbackRef = useRef(onGameWinnerSelected);
   useEffect(() => { callbackRef.current = onGameWinnerSelected; }, [onGameWinnerSelected]);
 
   useEffect(() => {
-    if (!matchId || !ablyClient) return;
+    if (!matchId || !supabaseClient) return;
 
-    const channel = ablyClient.channels.get(`match-${matchId}`);
-
-    const handler = (msg: any) => {
-      if (msg.name === 'game-winner-selected') {
+    const channel: RealtimeChannel = supabaseClient
+      .channel(`match-${matchId}`)
+      .on('broadcast', { event: 'game-winner-selected' }, () => {
         callbackRef.current();
-      }
-    };
-
-    channel.subscribe('game-winner-selected', handler);
+      })
+      .subscribe();
 
     return () => {
-      channel.unsubscribe('game-winner-selected', handler);
+      supabaseClient!.removeChannel(channel);
     };
-  // Only re-subscribe when the match channel changes
   }, [matchId]);
 }
