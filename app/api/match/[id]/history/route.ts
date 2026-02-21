@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Require authentication — history exposes gold amounts and team
     // composition which should not be readable by unauthenticated callers.
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
     }
 
-    const matchId = params.id
+    const { id: matchId } = await params
     if (!matchId || isNaN(Number(matchId))) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 })
     }
