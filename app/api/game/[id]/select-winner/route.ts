@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ably from '@/lib/ably-server';
+import { broadcastEvent } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // ---- Auth ----------------------------------------------------------------
@@ -98,12 +98,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       await client.query('COMMIT');
 
-      await ably.channels.get(`match-${matchId}`).publish('game-winner-selected', {
-        gameId,
-        matchId,
-        winnerId: winningPlayerId,
-      });
-
+      await broadcastEvent(
+        `match-${matchId}`,
+        'game-winner-selected',
+        { gameId, matchId, winnerId: winningPlayerId }
+      );
+      
       return NextResponse.json({ success: true, message: 'Match finished with single winner.' });
     }
 
@@ -155,10 +155,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await client.query('COMMIT');
 
-    await ably.channels.get(`match-${matchId}`).publish('game-winner-selected', {
-      gameId,
-      matchId,
-    });
+    await broadcastEvent(
+      `match-${matchId}`,
+      'game-winner-selected',
+      { gameId, matchId }
+    );
 
     return NextResponse.json({ success: true, message: 'Winner selected, auction pending.' });
 
