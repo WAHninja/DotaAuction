@@ -170,9 +170,7 @@ export default function AuctionHouse({
       {/* ── Winner: submit form ─────────────────────────────────────────────── */}
       {isWinner && !alreadySubmitted && (
         <div className="relative rounded-lg overflow-hidden">
-          {/* Background image — Next.js Image replaces the CSS background-image,
-              giving automatic WebP/AVIF conversion and correct cache headers.
-              Not marked priority — only renders for winning team mid-auction. */}
+          {/* Background image */}
           <Image
             src="/match_predictions_bg.png"
             alt=""
@@ -188,7 +186,7 @@ export default function AuctionHouse({
             }}
           />
 
-          {/* Form — constrained to the left ~60% so it sits over the dark area */}
+          {/* Form */}
           <div className="relative z-10 max-w-md py-8 px-6 space-y-4">
             <div className="space-y-1">
               <p className="font-cinzel font-bold text-dota-gold text-lg">Make an Offer</p>
@@ -200,7 +198,7 @@ export default function AuctionHouse({
                 <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
               </p>
               <p className="font-barlow text-xs text-dota-text-dim">
-                Others see only a tier label until an offer is accepted
+                Details are hidden from everyone until all offers are submitted
               </p>
             </div>
 
@@ -268,6 +266,12 @@ export default function AuctionHouse({
           </p>
         )}
 
+        {!allSubmitted && (
+          <p className="text-center font-barlow text-xs text-dota-text-dim mb-4">
+            Offer details are revealed once everyone has submitted.
+          </p>
+        )}
+
         {offers.length === 0 ? (
           <p className="text-center font-barlow text-dota-text-dim py-4">No offers submitted yet.</p>
         ) : (
@@ -312,16 +316,22 @@ export default function AuctionHouse({
                       </div>
                       <div className="flex items-baseline gap-2">
                         <span className="stat-label w-10">Selling</span>
-                        <span className="font-barlow font-semibold text-dota-info">
-                          {to?.username ?? `Player #${offer.target_player_id}`}
-                        </span>
+                        {allSubmitted ? (
+                          <span className="font-barlow font-semibold text-dota-info">
+                            {to?.username ?? `Player #${offer.target_player_id}`}
+                          </span>
+                        ) : (
+                          <span className="font-barlow text-xs text-dota-text-dim italic">
+                            Hidden until all offers are in…
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    {/* Amount / tier */}
+                    {/* Amount / tier — hidden for everyone until all submitted */}
                     <div className="flex items-center gap-2">
                       <span className="stat-label w-10">Offer</span>
-                      {!allSubmitted && isLoser ? (
+                      {!allSubmitted ? (
                         <span className="font-barlow text-xs text-dota-text-dim italic">
                           Hidden until all offers are in…
                         </span>
