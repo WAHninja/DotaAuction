@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ably from '@/lib/ably-server';
+import { broadcastEvent } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   // ---- Auth ----------------------------------------------------------------
