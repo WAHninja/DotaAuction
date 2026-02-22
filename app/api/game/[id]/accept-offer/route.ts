@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ably from '@/lib/ably-server';
+import { broadcastEvent } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   // ---- Auth ----------------------------------------------------------------
@@ -162,15 +162,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await client.query('COMMIT');
 
     // ---- Notify clients (outside transaction) ------------------------------
-    await ably.channels
-      .get(`match-${game.match_id}-offers`)
-      .publish('offer-accepted', {
+    await broadcastEvent(
+      `match-${game.match_id}-offers`,
+      'offer-accepted',
+      {
         acceptedOfferId: offerId,
-        // Include the revealed amount so clients can update offer state
-        // directly without needing to refetch /api/game/offers
         acceptedAmount: offer_amount,
         newGame: newGameRows[0],
-      });
+      }
+    );
 
     return NextResponse.json({ message: 'Offer accepted and new game started.' });
 
