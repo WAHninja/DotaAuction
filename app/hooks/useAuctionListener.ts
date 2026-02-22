@@ -1,5 +1,7 @@
+// app/hooks/useAuctionListener.ts
 import { useEffect, useRef } from 'react';
-import ablyClient from '@/lib/ably-client';
+import { RealtimeChannel } from '@supabase/supabase-js';
+import supabaseClient from '@/lib/supabase-client';
 import type { NewOfferPayload, OfferAcceptedPayload } from '@/types';
 
 export function useAuctionListener(
@@ -15,24 +17,22 @@ export function useAuctionListener(
   useEffect(() => { onOfferAcceptedRef.current = onOfferAccepted; }, [onOfferAccepted]);
 
   useEffect(() => {
-    if (!matchId || !ablyClient || !latestGameId) return;
+    if (!matchId || !supabaseClient || !latestGameId) return;
 
-    const channel = ablyClient.channels.get(`match-${matchId}-offers`);
+    const channelName = `match-${matchId}-offers`;
 
-    const handleNewOffer = (msg: any) => {
-      onNewOfferRef.current(msg.data);
-    };
-
-    const handleOfferAccepted = (msg: any) => {
-      onOfferAcceptedRef.current(msg.data);
-    };
-
-    channel.subscribe('new-offer', handleNewOffer);
-    channel.subscribe('offer-accepted', handleOfferAccepted);
+    const channel: RealtimeChannel = supabaseClient
+      .channel(channelName)
+      .on('broadcast', { event: 'new-offer' }, ({ payload }) => {
+        onNewOfferRef.current(payload as NewOfferPayload);
+      })
+      .on('broadcast', { event: 'offer-accepted' }, ({ payload }) => {
+        onOfferAcceptedRef.current(payload as OfferAcceptedPayload);
+      })
+      .subscribe();
 
     return () => {
-      channel.unsubscribe('new-offer', handleNewOffer);
-      channel.unsubscribe('offer-accepted', handleOfferAccepted);
+      supabaseClient!.removeChannel(channel);
     };
   }, [matchId, latestGameId]);
 }
