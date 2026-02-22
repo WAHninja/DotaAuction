@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import ably from '@/lib/ably-server';
+import { broadcastEvent } from '@/lib/supabase-server';
 
 /* -----------------------------------------------------------------------
    Tier calculation
@@ -137,10 +137,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { offer_amount: _hidden, ...safeOffer } = savedOffer;
 
     if (matchId) {
-      await ably.channels
-        .get(`match-${matchId}-offers`)
-        .publish('new-offer', safeOffer);
-    }
+         await broadcastEvent(
+          `match-${matchId}-offers`,
+          'new-offer',
+          safeOffer
+        );
+      }
 
     return NextResponse.json({ message: 'Offer submitted.', offer: safeOffer });
   } catch (err) {
