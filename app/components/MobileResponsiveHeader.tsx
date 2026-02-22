@@ -13,14 +13,12 @@ export default function MobileResponsiveHeader() {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
 
-  // Tighten header on scroll
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Disable background scroll when mobile menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -60,7 +58,6 @@ export default function MobileResponsiveHeader() {
             : 'bg-dota-base border-b border-dota-border'
         }`}
       >
-        {/* Radiant/Dire faction strip — thin colour bar at very top */}
         <div className="h-0.5 w-full bg-gradient-to-r from-dota-radiant via-dota-border to-dota-dire" />
 
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
@@ -72,6 +69,11 @@ export default function MobileResponsiveHeader() {
               alt="Defence of the Auctions"
               width={100}
               height={34}
+              // priority: the header is sticky and visible on every single page.
+              // Without this the logo pops in after JS hydration — the most
+              // noticeable possible place for a loading flash.
+              priority
+              sizes="100px"
               className="object-contain"
             />
             <span className="font-cinzel font-bold text-lg md:text-xl text-dota-gold tracking-wide group-hover:text-dota-gold-light transition-colors hidden sm:block">
@@ -102,7 +104,6 @@ export default function MobileResponsiveHeader() {
           transform transition-transform duration-300 ease-in-out
           ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        {/* Drawer header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-dota-border">
           <span className="font-cinzel text-sm font-bold text-dota-gold tracking-wide">Menu</span>
           <button
@@ -114,7 +115,6 @@ export default function MobileResponsiveHeader() {
           </button>
         </div>
 
-        {/* Drawer nav */}
         <nav className="flex flex-col gap-1 p-4">
           {!loading && (
             <>
