@@ -27,7 +27,18 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center gap-4 mb-5">
-        <Image src={logo} alt={`${name} logo`} width={64} height={64} className="object-contain" priority />
+        <Image
+          src={logo}
+          alt={`${name} logo`}
+          width={64}
+          height={64}
+          // priority: both team cards are the first thing rendered on the
+          // match page — above the fold on every screen size. Without this
+          // they load lazily after JS hydration, causing a visible pop-in.
+          priority
+          sizes="64px"
+          className="object-contain"
+        />
         <h2 className={`font-cinzel text-2xl font-bold ${nameColour}`}>{name}</h2>
       </div>
 
@@ -54,7 +65,14 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
               </span>
               <span className="font-barlow font-bold tabular-nums text-dota-gold flex items-center gap-1">
                 {p.gold ?? 0}
-                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+                <Image
+                  src="/Gold_symbol.webp"
+                  alt="Gold"
+                  width={14}
+                  height={14}
+                  sizes="14px"
+                  className="inline-block"
+                />
               </span>
             </li>
           );
