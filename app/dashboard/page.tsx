@@ -87,7 +87,7 @@ export default async function DashboardPage() {
         WHERE m.winner_id IS NOT NULL
         GROUP BY u.id, u.username
         ORDER BY wins DESC
-        LIMIT 1
+        LIMIT 3
       `),
 
       // ── Hall of Fame #2: fewest games to win a match ─────────────────────
@@ -99,13 +99,10 @@ export default async function DashboardPage() {
         WHERE m.winner_id IS NOT NULL
         GROUP BY m.id, u.id, u.username
         ORDER BY game_count ASC
-        LIMIT 1
+        LIMIT 3
       `),
 
       // ── Hall of Fame #3: closest gold victory ────────────────────────────
-      // Sums match_players.gold for each team in the final game of every
-      // completed match. Lower (or negative) values are better — a negative
-      // diff means the winner had less gold than the losing team.
       db.query(`
         SELECT
           u.username,
@@ -135,12 +132,10 @@ export default async function DashboardPage() {
         ) g ON true
         WHERE m.winner_id IS NOT NULL
         ORDER BY gold_diff ASC
-        LIMIT 1
+        LIMIT 3
       `),
 
       // ── Hall of Fame #4: biggest underdog win ────────────────────────────
-      // The winner is always solo in the final game, so winning_size is
-      // always 1. The stat is just how large the opposing team was.
       db.query(`
         SELECT
           u.username,
@@ -158,7 +153,7 @@ export default async function DashboardPage() {
         ) g ON true
         WHERE m.winner_id IS NOT NULL
         ORDER BY losing_size DESC
-        LIMIT 1
+        LIMIT 3
       `),
     ]);
 
@@ -166,33 +161,36 @@ export default async function DashboardPage() {
     const ongoingMatches   = ongoingRes.rows.map(m => ({ ...m, id: m.match_id }));
     const completedMatches = completedRes.rows.map(m => ({ ...m, id: m.match_id }));
 
-    // ── Shape Hall of Fame records ─────────────────────────────────────────
-    const mostMatchWins: HallOfFameRecord = mostWinsRes.rows[0]
-      ? {
-          holder: mostWinsRes.rows[0].username,
-          stat:   `${mostWinsRes.rows[0].wins} ${Number(mostWinsRes.rows[0].wins) === 1 ? 'win' : 'wins'}`,
-        }
+    // ── Shape Hall of Fame records (arrays of up to 3) ─────────────────────
+    const mostMatchWins: HallOfFameRecord = mostWinsRes.rows.length
+      ? mostWinsRes.rows.map(r => ({
+          holder: r.username,
+          stat: `${r.wins} ${Number(r.wins) === 1 ? 'win' : 'wins'}`,
+        }))
       : null;
 
-    const fewestGamesToWin: HallOfFameRecord = fewestGamesRes.rows[0]
-      ? {
-          holder: fewestGamesRes.rows[0].username,
-          stat:   `${fewestGamesRes.rows[0].game_count} ${Number(fewestGamesRes.rows[0].game_count) === 1 ? 'game' : 'games'}`,
-        }
+    const fewestGamesToWin: HallOfFameRecord = fewestGamesRes.rows.length
+      ? fewestGamesRes.rows.map(r => ({
+          holder: r.username,
+          stat: `${r.game_count} ${Number(r.game_count) === 1 ? 'game' : 'games'}`,
+        }))
       : null;
 
-    const closestGoldWin: HallOfFameRecord = closestGoldRes.rows[0]
-      ? {
-          holder: closestGoldRes.rows[0].username,
-          stat:   `${Number(closestGoldRes.rows[0].gold_diff) > 0 ? '+' : ''}${Number(closestGoldRes.rows[0].gold_diff).toLocaleString()} gold`,
-        }
+    const closestGoldWin: HallOfFameRecord = closestGoldRes.rows.length
+      ? closestGoldRes.rows.map(r => {
+          const diff = Number(r.gold_diff);
+          return {
+            holder: r.username,
+            stat: `${diff > 0 ? '+' : ''}${diff.toLocaleString()} gold`,
+          };
+        })
       : null;
 
-    const biggestUnderdogWin: HallOfFameRecord = biggestUnderdogRes.rows[0]
-      ? {
-          holder: biggestUnderdogRes.rows[0].username,
-          stat:   `1v${biggestUnderdogRes.rows[0].losing_size}`,
-        }
+    const biggestUnderdogWin: HallOfFameRecord = biggestUnderdogRes.rows.length
+      ? biggestUnderdogRes.rows.map(r => ({
+          holder: r.username,
+          stat: `1v${r.losing_size}`,
+        }))
       : null;
 
     return (
