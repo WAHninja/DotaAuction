@@ -1,7 +1,7 @@
 import { getSession } from '@/app/session';
 import db from '@/lib/db';
 import { redirect } from 'next/navigation';
-import CreateMatchFormWrapper from '@/app/components/CreateMatchFormWrapper';
+import CreateMatchForm from '@/app/components/CreateMatchForm';
 import DashboardTabs from '@/app/components/DashboardTabs';
 import GameRulesCard from '@/app/components/GameRulesCard';
 
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
           {/* Create Match + Rules */}
           <section className="flex flex-col lg:flex-row gap-6">
             <div className="lg:w-1/2">
-              <CreateMatchFormWrapper />
+              <CreateMatchForm />
             </div>
             <div className="lg:w-1/2">
               <GameRulesCard />
