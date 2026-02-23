@@ -10,12 +10,6 @@ export default async function DashboardPage() {
   if (!session) redirect('/login');
 
   try {
-    // Current user
-    const { rows: [user] } = await db.query(
-      `SELECT id, username FROM users WHERE id = $1`,
-      [session.userId]
-    );
-
     // ===== Ongoing Matches =====
     const { rows: ongoingMatchesRaw } = await db.query(
       `
@@ -25,9 +19,6 @@ export default async function DashboardPage() {
 
         g.id AS game_id,
         g.status,
-
-        g.team_a_members,
-        g.team_1_members,
 
         -- Team A usernames
         (
@@ -52,17 +43,10 @@ export default async function DashboardPage() {
         LIMIT 1
       ) g ON true
 
-      WHERE EXISTS (
-        SELECT 1
-        FROM match_players mp
-        WHERE mp.match_id = m.id
-          AND mp.user_id = $1
-      )
-      AND m.winner_id IS NULL
+      WHERE m.winner_id IS NULL
 
       ORDER BY m.created_at DESC
-      `,
-      [session.userId]
+      `
     );
 
     // ===== Completed Matches =====
@@ -75,8 +59,6 @@ export default async function DashboardPage() {
         u_winner.username AS winner_username,
 
         g.id AS game_id,
-        g.team_a_members,
-        g.team_1_members,
 
         -- Team A usernames
         (
@@ -102,17 +84,10 @@ export default async function DashboardPage() {
         LIMIT 1
       ) g ON true
 
-      WHERE EXISTS (
-        SELECT 1
-        FROM match_players mp
-        WHERE mp.match_id = m.id
-          AND mp.user_id = $1
-      )
-      AND m.winner_id IS NOT NULL
+      WHERE m.winner_id IS NOT NULL
 
       ORDER BY m.created_at DESC
-      `,
-      [session.userId]
+      `
     );
 
     // Normalize match_id → id for frontend
