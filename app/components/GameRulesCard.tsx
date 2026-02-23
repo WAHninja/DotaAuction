@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import Image from 'next/image';
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function Modal({ onClose, title, children }: {
@@ -70,7 +71,7 @@ export default function GameRulesCard() {
     <>
       <div className="panel h-full flex flex-col p-6 space-y-5">
 
-        {/* Heading — matches CreateMatchForm */}
+        {/* Heading */}
         <div className="text-center space-y-1">
           <h2 className="font-cinzel text-3xl font-bold text-dota-gold">
             Match Rules
@@ -108,6 +109,17 @@ export default function GameRulesCard() {
             Match ends when a player wins <strong className="text-dota-text">alone on their team</strong>.
           </Rule>
         </ul>
+
+        {/* Performance image */}
+        <div className="mt-auto pt-2">
+          <Image
+            src="/performance.png"
+            alt="Performance"
+            width={600}
+            height={200}
+            className="w-full h-auto rounded-md object-contain"
+          />
+        </div>
       </div>
 
       {/* ── Gold modal ───────────────────────────────────────────────────────── */}
