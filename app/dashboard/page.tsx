@@ -103,10 +103,8 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #3: closest gold victory ────────────────────────────
-      // Uses the final game of each completed match. Sums match_players.gold
-      // for every member of the winning team and every member of the losing
-      // team, then takes the absolute difference. The smallest difference
-      // across all completed matches is the "closest" win by gold.
+      // Sums match_players.gold for each team in the final game of every
+      // completed match and takes the absolute difference.
       db.query(`
         SELECT
           u.username,
@@ -142,10 +140,8 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #4: biggest underdog win ────────────────────────────
-      // The match winner is always a solo player in the final game, so
-      // winning_size is always 1. The underdog factor is simply how many
-      // players were on the opposing team in that final game. Holder is the
-      // match winner's username.
+      // The winner is always solo in the final game, so winning_size is
+      // always 1. The stat is just how large the opposing team was.
       db.query(`
         SELECT
           u.username,
@@ -176,7 +172,6 @@ export default async function DashboardPage() {
       ? {
           holder: mostWinsRes.rows[0].username,
           stat:   `${mostWinsRes.rows[0].wins} ${Number(mostWinsRes.rows[0].wins) === 1 ? 'win' : 'wins'}`,
-          detail: 'Most match victories across all time',
         }
       : null;
 
@@ -184,7 +179,6 @@ export default async function DashboardPage() {
       ? {
           holder: fewestGamesRes.rows[0].username,
           stat:   `${fewestGamesRes.rows[0].game_count} ${Number(fewestGamesRes.rows[0].game_count) === 1 ? 'game' : 'games'}`,
-          detail: 'Fewest games needed to win a match',
         }
       : null;
 
@@ -192,7 +186,6 @@ export default async function DashboardPage() {
       ? {
           holder: closestGoldRes.rows[0].username,
           stat:   `${Number(closestGoldRes.rows[0].gold_diff).toLocaleString()} gold`,
-          detail: 'Smallest total gold gap between teams in the final game',
         }
       : null;
 
@@ -200,35 +193,33 @@ export default async function DashboardPage() {
       ? {
           holder: biggestUnderdogRes.rows[0].username,
           stat:   `1v${biggestUnderdogRes.rows[0].losing_size}`,
-          detail: `Defeated a team of ${biggestUnderdogRes.rows[0].losing_size} to win the match`,
         }
       : null;
 
     return (
       <div className="relative min-h-screen animate-fadeIn">
-        <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-10 text-white">
+        <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-6 text-white">
 
-          {/* Create Match + Rules + Hall of Fame */}
-          <section className="flex flex-col lg:flex-row gap-6">
-            <div className="lg:w-1/2">
-              <CreateMatchForm />
-            </div>
-            <div className="lg:w-1/2 flex flex-col gap-6">
-              <GameRulesCard />
-              <HallOfFame
-                mostMatchWins={mostMatchWins}
-                fewestGamesToWin={fewestGamesToWin}
-                closestGoldWin={closestGoldWin}
-                biggestUnderdogWin={biggestUnderdogWin}
-              />
-            </div>
+          {/* ── Zone 1: Create Match + Rules (equal columns) ─────────────── */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CreateMatchForm />
+            <GameRulesCard />
           </section>
 
-          {/* Tabs */}
+          {/* ── Zone 2: Hall of Fame (full-width 4-card strip) ───────────── */}
+          <HallOfFame
+            mostMatchWins={mostMatchWins}
+            fewestGamesToWin={fewestGamesToWin}
+            closestGoldWin={closestGoldWin}
+            biggestUnderdogWin={biggestUnderdogWin}
+          />
+
+          {/* ── Zone 3: Match tabs ────────────────────────────────────────── */}
           <DashboardTabs
             ongoingMatches={ongoingMatches}
             completedMatches={completedMatches}
           />
+
         </div>
       </div>
     );
