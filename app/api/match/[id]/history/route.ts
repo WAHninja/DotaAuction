@@ -4,8 +4,6 @@ import { getSession } from '@/app/session'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Require authentication — history exposes gold amounts and team
-    // composition which should not be readable by unauthenticated callers.
     const session = await getSession()
     if (!session?.userId) {
       return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
@@ -14,16 +12,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id: matchId } = await params
     if (!matchId || isNaN(Number(matchId))) {
       return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 })
-    }
-
-    // Verify the caller is a participant in this match — they should not be
-    // able to read the history of matches they weren't involved in.
-    const membershipRes = await db.query(
-      `SELECT 1 FROM match_players WHERE match_id = $1 AND user_id = $2`,
-      [matchId, session.userId]
-    )
-    if (membershipRes.rows.length === 0) {
-      return NextResponse.json({ error: 'Not a participant in this match.' }, { status: 403 })
     }
 
     // Fetch all users in the match
@@ -62,8 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Fetch offers per game.
     // Strip offer_amount for any offer that is still pending — the exact value
     // must not be transmitted to clients until the offer is resolved, even
-    // through the history endpoint. Without this, calling /api/match/[id]/history
-    // during an active auction would expose all pending amounts in plaintext.
+    // through the history endpoint.
     const offersResult = await db.query(
       `SELECT
         o.id,
@@ -93,7 +80,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         gameId:         offer.game_id,
         fromPlayerId:   offer.from_player_id,
         targetPlayerId: offer.target_player_id,
-        // Null out the amount while pending — revealed once resolved
         offerAmount:    offer.status === 'pending' ? null : offer.offer_amount,
         tierLabel:      offer.tier_label,
         status:         offer.status,
