@@ -203,7 +203,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
       {/* Tab bar */}
       <div className="flex justify-center gap-3">
-        {(['ongoing', 'completed', 'stats'] as const).map(tab => (
+        {(['stats', 'ongoing', 'completed'] as const).map(tab => (
           <TabButton key={tab} tab={tab} />
         ))}
       </div>
@@ -211,6 +211,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
       <div className="divider" />
 
       {/* Tab content */}
+      {activeTab === 'stats' && <StatsTab />}
       {activeTab === 'ongoing' && (
         <MatchGrid
           matches={ongoingMatches}
@@ -227,7 +228,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           type="completed"
         />
       )}
-      {activeTab === 'stats' && <StatsTab />}
+      
 
     </div>
   );
