@@ -52,7 +52,7 @@ export default function CreateMatchForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to create match.');
+        setError(data.error || 'Failed to create or rejoin match.');
         return;
       }
 
@@ -73,7 +73,7 @@ export default function CreateMatchForm() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="text-center space-y-1">
         <h2 className="font-cinzel text-3xl font-bold text-dota-gold">
-          Create Match
+          Select Players
         </h2>
         <div className="divider-gold" />
       </div>
@@ -88,7 +88,7 @@ export default function CreateMatchForm() {
       {/* ── Player grid ────────────────────────────────────────────────────── */}
       <div className="text-center space-y-1">
         <p className="font-barlow text-sm text-dota-text-muted">
-          Select <span className="text-dota-text font-semibold">4 or more players</span> to start a match
+          Select <span className="text-dota-text font-semibold">4 or more players</span> to start or continue a match
         </p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 overflow-y-auto pr-1 flex-1">
@@ -132,7 +132,7 @@ export default function CreateMatchForm() {
           className="btn-primary min-w-[160px]"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isSubmitting ? 'Creating…' : 'Create Match'}
+          {isSubmitting ? 'Creating…' : 'Play'}
         </button>
       </div>
 
