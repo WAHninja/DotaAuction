@@ -130,8 +130,8 @@ export default function HallOfFame({
       />
       <RecordCard
         icon={Scale}
-        title="Closest Gold"
-        tooltip="Smallest difference between winning and losing team's total gold in the final game. Negative means the winner had less gold."
+        title="Gold Difference"
+        tooltip="Won with the least amount of gold compared to the opponent team's total gold."
         record={closestGoldWin}
         accentClass="text-dota-info"
         iconBgClass="bg-dota-info/10 border border-dota-info/20"
