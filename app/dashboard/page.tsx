@@ -199,7 +199,9 @@ export default async function DashboardPage() {
 
           {/* ── Zone 1: Create Match + Rules (equal columns) ─────────────── */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CreateMatchForm />
+            {/* Pass the logged-in user's ID so the form can highlight their
+                own dot (gold) and subscribe to the presence channel. */}
+            <CreateMatchForm currentUserId={session.userId} />
             <GameRulesCard />
           </section>
 
