@@ -20,10 +20,7 @@ export default function CreateMatchForm() {
     fetch('/api/players')
       .then(res => res.json())
       .then(data => {
-        const filtered = Array.isArray(data.players)
-          ? data.players.filter((p: Player) => !p.username.toLowerCase().startsWith('ztest'))
-          : [];
-        setPlayers(filtered);
+        setPlayers(Array.isArray(data.players) ? data.players : []);
       })
       .catch(err => console.error('Failed to load players:', err));
   }, []);
