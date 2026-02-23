@@ -84,7 +84,7 @@ export default function HallOfFame({
       />
       <RecordCard
         icon={Scale}
-        title="Closest Gold"
+        title="Gold Differance"
         record={closestGoldWin}
         accentClass="text-dota-info"
         iconBgClass="bg-dota-info/10 border border-dota-info/20"
