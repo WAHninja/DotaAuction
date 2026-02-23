@@ -108,24 +108,23 @@ export default async function DashboardPage() {
       db.query(`
         SELECT
           u.username,
-          ABS(
-            (
-              SELECT COALESCE(SUM(mp.gold), 0)
-              FROM UNNEST(
-                CASE WHEN g.winning_team = 'team_1'
-                  THEN g.team_1_members ELSE g.team_a_members END
-              ) AS uid
-              JOIN match_players mp ON mp.user_id = uid AND mp.match_id = m.id
-            ) -
-            (
-              SELECT COALESCE(SUM(mp.gold), 0)
-              FROM UNNEST(
-                CASE WHEN g.winning_team = 'team_1'
-                  THEN g.team_a_members ELSE g.team_1_members END
-              ) AS uid
-              JOIN match_players mp ON mp.user_id = uid AND mp.match_id = m.id
-            )
-          ) AS gold_diff
+         (
+            SELECT COALESCE(SUM(mp.gold), 0)
+            FROM UNNEST(
+              CASE WHEN g.winning_team = 'team_1'
+                THEN g.team_1_members ELSE g.team_a_members END
+            ) AS uid
+            JOIN match_players mp ON mp.user_id = uid AND mp.match_id = m.id
+          ) -
+          (
+            SELECT COALESCE(SUM(mp.gold), 0)
+            FROM UNNEST(
+              CASE WHEN g.winning_team = 'team_1'
+                THEN g.team_a_members ELSE g.team_1_members END
+            ) AS uid
+            JOIN match_players mp ON mp.user_id = uid AND mp.match_id = m.id
+          )
+          AS gold_diff
         FROM matches m
         JOIN users u ON u.id = m.winner_id
         JOIN LATERAL (
