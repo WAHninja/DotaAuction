@@ -104,11 +104,12 @@ export default async function DashboardPage() {
 
       // ── Hall of Fame #3: closest gold victory ────────────────────────────
       // Sums match_players.gold for each team in the final game of every
-      // completed match and takes the absolute difference.
+      // completed match. Lower (or negative) values are better — a negative
+      // diff means the winner had less gold than the losing team.
       db.query(`
         SELECT
           u.username,
-         (
+          (
             SELECT COALESCE(SUM(mp.gold), 0)
             FROM UNNEST(
               CASE WHEN g.winning_team = 'team_1'
@@ -123,8 +124,7 @@ export default async function DashboardPage() {
                 THEN g.team_a_members ELSE g.team_1_members END
             ) AS uid
             JOIN match_players mp ON mp.user_id = uid AND mp.match_id = m.id
-          )
-          AS gold_diff
+          ) AS gold_diff
         FROM matches m
         JOIN users u ON u.id = m.winner_id
         JOIN LATERAL (
@@ -184,8 +184,7 @@ export default async function DashboardPage() {
     const closestGoldWin: HallOfFameRecord = closestGoldRes.rows[0]
       ? {
           holder: closestGoldRes.rows[0].username,
-          const sign = diff < 0 ? '' : '+';,
-          stat: `${sign}${diff.toLocaleString()} gold`,
+          stat:   `${Number(closestGoldRes.rows[0].gold_diff) > 0 ? '+' : ''}${Number(closestGoldRes.rows[0].gold_diff).toLocaleString()} gold`,
         }
       : null;
 
