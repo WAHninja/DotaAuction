@@ -25,7 +25,7 @@ const TAB_LABELS: Record<Tab, string> = {
 };
 
 export default function DashboardTabs({ ongoingMatches, completedMatches }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('ongoing');
+  const [activeTab, setActiveTab] = useState<Tab>('stats');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
   const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
