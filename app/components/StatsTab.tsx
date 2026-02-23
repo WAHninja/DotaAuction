@@ -98,16 +98,11 @@ export default function StatsTab() {
     }
   };
 
-  const filteredPlayers = useMemo(
-    () => players.filter(p => !p.username.toLowerCase().startsWith('ztest')),
-    [players]
-  );
-
-  const enrichedPlayers = useMemo(() => filteredPlayers.map(p => ({
+  const enrichedPlayers = useMemo(() => players.map(p => ({
     ...p,
-    gamesWinRate:   pct(p.gamesWon, p.gamesPlayed),
+    gamesWinRate:    pct(p.gamesWon, p.gamesPlayed),
     offerAcceptRate: pct(p.offersAccepted, p.offersMade),
-  })), [filteredPlayers]);
+  })), [players]);
 
   const sortedPlayers = useMemo(() => {
     return [...enrichedPlayers].sort((a: any, b: any) => {
