@@ -184,7 +184,8 @@ export default async function DashboardPage() {
     const closestGoldWin: HallOfFameRecord = closestGoldRes.rows[0]
       ? {
           holder: closestGoldRes.rows[0].username,
-          stat:   `${Number(closestGoldRes.rows[0].gold_diff).toLocaleString()} gold`,
+          const sign = diff < 0 ? '' : '+';,
+          stat: `${sign}${diff.toLocaleString()} gold`,
         }
       : null;
 
