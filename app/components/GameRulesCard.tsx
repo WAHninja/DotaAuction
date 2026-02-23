@@ -161,9 +161,9 @@ export default function GameRulesCard() {
               <p className="stat-label mb-3">Range by game</p>
               <div className="space-y-2">
                 {[
-                  { game: 'Game 1', range: '250 – 2,000' },
-                  { game: 'Game 3', range: '650 – 3,000' },
-                  { game: 'Game 7', range: '1,450 – 5,000' },
+                  { game: 'Game 1', range: '450 – 2,500' },
+                  { game: 'Game 3', range: '850 – 3,500' },
+                  { game: 'Game 7', range: '1,650 – 5,500' },
                 ].map(({ game, range }) => (
                   <div key={game} className="flex justify-between">
                     <span className="text-dota-text-muted">{game}</span>
