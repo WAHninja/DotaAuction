@@ -67,48 +67,35 @@ export default function HallOfFame({
   biggestUnderdogWin,
 }: HallOfFameProps) {
   return (
-    <div className="panel overflow-hidden">
-
-      {/* Header */}
-      <div className="px-5 py-3 border-b border-dota-border flex items-center gap-2.5">
-        <Trophy className="w-4 h-4 text-dota-gold shrink-0" />
-        <h2 className="font-cinzel text-base font-bold text-dota-gold tracking-wide">
-          Hall of Fame
-        </h2>
-      </div>
-
-      {/* 4-column card strip */}
-      <div className="p-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <RecordCard
-          icon={Trophy}
-          title="Most Match Wins"
-          record={mostMatchWins}
-          accentClass="text-dota-gold"
-          iconBgClass="bg-dota-gold/10 border border-dota-gold/20"
-        />
-        <RecordCard
-          icon={Zap}
-          title="Fastest Win"
-          record={fewestGamesToWin}
-          accentClass="text-dota-radiant-light"
-          iconBgClass="bg-dota-radiant/10 border border-dota-radiant/20"
-        />
-        <RecordCard
-          icon={Scale}
-          title="Closest Gold"
-          record={closestGoldWin}
-          accentClass="text-dota-info"
-          iconBgClass="bg-dota-info/10 border border-dota-info/20"
-        />
-        <RecordCard
-          icon={Swords}
-          title="Biggest Underdog"
-          record={biggestUnderdogWin}
-          accentClass="text-dota-dire-light"
-          iconBgClass="bg-dota-dire/10 border border-dota-dire/20"
-        />
-      </div>
-
+    <div className="panel p-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <RecordCard
+        icon={Trophy}
+        title="Most Match Wins"
+        record={mostMatchWins}
+        accentClass="text-dota-gold"
+        iconBgClass="bg-dota-gold/10 border border-dota-gold/20"
+      />
+      <RecordCard
+        icon={Zap}
+        title="Fastest Win"
+        record={fewestGamesToWin}
+        accentClass="text-dota-radiant-light"
+        iconBgClass="bg-dota-radiant/10 border border-dota-radiant/20"
+      />
+      <RecordCard
+        icon={Scale}
+        title="Closest Gold"
+        record={closestGoldWin}
+        accentClass="text-dota-info"
+        iconBgClass="bg-dota-info/10 border border-dota-info/20"
+      />
+      <RecordCard
+        icon={Swords}
+        title="Biggest Underdog"
+        record={biggestUnderdogWin}
+        accentClass="text-dota-dire-light"
+        iconBgClass="bg-dota-dire/10 border border-dota-dire/20"
+      />
     </div>
   );
 }
