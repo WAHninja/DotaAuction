@@ -83,8 +83,6 @@ function ResultZone({ game }: { game: HistoryGame }) {
 function LedgerZone({ game }: { game: HistoryGame }) {
   if (game.playerStats.length === 0) return null;
 
-  // Gains = win_reward + offer_accepted + offer_gain
-  // Losses = loss_penalty
   const gains  = game.playerStats.filter(s =>
     s.reason === 'win_reward' || s.reason === 'offer_accepted' || s.reason === 'offer_gain'
   );
@@ -164,15 +162,15 @@ function LedgerZone({ game }: { game: HistoryGame }) {
   );
 }
 
-// ── Zone 3: Auction Recap — offer cards in a grid ────────────────────────────
+// ── Zone 3: Auction Recap — compact offer cards, up to 4 columns ─────────────
 
 function AuctionZone({ game }: { game: HistoryGame }) {
   if (game.offers.length === 0) return null;
 
   return (
     <div>
-      <p className="stat-label mb-2.5">Auction</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <p className="stat-label mb-2">Auction</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {game.offers.map(offer => {
           const isAccepted = offer.status === 'accepted';
           const isRejected = offer.status === 'rejected';
@@ -180,15 +178,15 @@ function AuctionZone({ game }: { game: HistoryGame }) {
           return (
             <div
               key={offer.id}
-              className={`panel-raised rounded-lg p-3 flex flex-col gap-2 transition-all ${
+              className={`panel-raised rounded-md p-2 flex flex-col gap-1.5 transition-all ${
                 isAccepted ? 'border-dota-radiant shadow-radiant'  :
                 isRejected ? 'opacity-45'                          :
                              ''
               }`}
             >
-              {/* Status strip */}
-              <div className="flex items-center justify-between">
-                <span className={`font-barlow text-[10px] font-bold uppercase tracking-widest ${
+              {/* Status + tier on one line */}
+              <div className="flex items-center justify-between gap-1">
+                <span className={`font-barlow text-[9px] font-bold uppercase tracking-widest leading-none ${
                   isAccepted ? 'text-dota-radiant-light' :
                   isRejected ? 'text-dota-dire-light'    :
                                'text-dota-text-dim'
@@ -201,22 +199,22 @@ function AuctionZone({ game }: { game: HistoryGame }) {
               <div className="divider" />
 
               {/* Seller → Target */}
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="stat-label">From</span>
-                  <span className="font-barlow font-bold text-sm text-dota-gold">
+              <div className="space-y-0.5">
+                <div className="flex items-baseline gap-1 min-w-0">
+                  <span className="font-barlow text-[9px] font-semibold uppercase tracking-wider text-dota-text-muted shrink-0">From</span>
+                  <span className="font-barlow font-bold text-xs text-dota-gold truncate">
                     {offer.fromUsername}
                   </span>
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="stat-label">Selling</span>
-                  <span className="font-barlow font-bold text-sm text-dota-info">
+                <div className="flex items-baseline gap-1 min-w-0">
+                  <span className="font-barlow text-[9px] font-semibold uppercase tracking-wider text-dota-text-muted shrink-0">Sold</span>
+                  <span className="font-barlow font-bold text-xs text-dota-info truncate">
                     {offer.targetUsername}
                   </span>
                 </div>
               </div>
 
-              {/* Amount */}
+              {/* Amount — only shown once resolved */}
               {offer.offerAmount != null && (
                 <div className="mt-auto pt-1 border-t border-dota-border">
                   <GoldAmount amount={offer.offerAmount} />
