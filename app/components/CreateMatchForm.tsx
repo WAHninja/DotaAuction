@@ -68,16 +68,15 @@ export default function CreateMatchForm() {
   const enoughSelected = selectedPlayerIds.length >= 4;
 
   return (
-    <form onSubmit={handleSubmit} className="panel p-6 max-w-3xl mx-auto space-y-5">
+    <form onSubmit={handleSubmit} className="panel h-full flex flex-col p-6 space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="text-center space-y-1">
         <h2 className="font-cinzel text-3xl font-bold text-dota-gold">
           Create Match
         </h2>
+        <div className="divider-gold" />
       </div>
-
-      <div className="divider-gold" />
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
       {error && (
@@ -92,7 +91,7 @@ export default function CreateMatchForm() {
           Select <span className="text-dota-text font-semibold">4 or more players</span> to start a match
         </p>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[55vh] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 overflow-y-auto pr-1 flex-1">
         {players.map(player => {
           const selected = selectedPlayerIds.includes(player.id);
           return (
