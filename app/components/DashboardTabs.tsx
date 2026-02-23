@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Loader2, CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
@@ -30,9 +30,16 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const [completedVisible, setCompletedVisible] = useState(6);
   const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
 
+  // Track which match IDs have already been fetched so we never issue a
+  // second request for the same match, even when gamesPlayedMap triggers a
+  // re-run of the effect (which it will, because it's now a listed dep).
+  const fetchedIds = useRef<Set<number>>(new Set());
+
   useEffect(() => {
     ongoingMatches.forEach(match => {
-      if (gamesPlayedMap[match.id] !== undefined) return;
+      if (fetchedIds.current.has(match.id)) return;
+      fetchedIds.current.add(match.id);
+
       fetch(`/api/match/${match.id}/games-played`)
         .then(res => res.json())
         .then(data => setGamesPlayedMap(prev => ({ ...prev, [match.id]: data.gamesPlayed })))
