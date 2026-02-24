@@ -32,31 +32,31 @@ const COLUMNS: Column[] = [
     label: 'Win Rate',
     sublabel: `min. ${MIN_GAMES_FOR_RATE} games`,
     key: 'gamesWinRate',
-    tooltip: `Percentage of games won. Only displayed after ${MIN_GAMES_FOR_RATE}+ games — smaller samples are too noisy to be meaningful.`,
+    tooltip: `Percentage of games won.`,
   },
   {
     label: 'Offers Accepted',
     sublabel: 'as seller',
     key: 'offerAcceptRate',
-    tooltip: 'How often offers you submitted were accepted by the losing team. Influenced by competing offers and visible tier labels — not purely within your control.',
+    tooltip: 'How often offers you submitted that were accepted by the losing team.',
   },
   {
     label: 'Avg Bid',
     sublabel: 'when targeted',
     key: 'averageOfferValue',
-    tooltip: 'Average gold your own teammates offered when putting you up for sale. Higher means they valued offloading you at a premium.',
+    tooltip: 'Average gold your own teammates offered when putting you up for sale.',
   },
   {
     label: 'Targeted',
     sublabel: 'times offered',
     key: 'timesOffered',
-    tooltip: 'How many times a teammate has put you up for sale in an auction, regardless of whether the offer was accepted.',
+    tooltip: 'How many times a teammate has put you up for sale in an auction.',
   },
   {
     label: 'Sold',
     sublabel: 'times transferred',
     key: 'timesSold',
-    tooltip: 'How many times you have actually been transferred to the other team via an accepted offer.',
+    tooltip: 'How many times you have been transferred to the other team via an accepted offer.',
   },
   {
     label: 'Net Gold',
@@ -564,11 +564,6 @@ export default function StatsTab() {
         </div>
 
         <div className="px-5 py-2.5 border-t border-dota-border">
-          <p className="font-barlow text-[11px] text-dota-text-dim">
-            Avg Bid is the gold teammates offered when selling you.
-            Net Gold sums all win rewards, loss penalties, and auction payouts.
-            Win Rate requires {MIN_GAMES_FOR_RATE}+ games.
-          </p>
         </div>
       </div>
 
