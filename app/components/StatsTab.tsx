@@ -2,20 +2,15 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ChevronUp, ChevronDown, ChevronsUpDown, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ArrowUp, ArrowDown, Minus, Repeat2, Target, TrendingUp } from 'lucide-react'
 import type { PlayerStats, TeamCombo } from '@/types';
 
 // =============================================================================
 // Constants — defined outside the component so they're never recreated on render
 // =============================================================================
 
-// Win rate is only shown once a player has this many games. Below this threshold
-// a single lucky win skews the percentage to 100%, which tops the leaderboard
-// and misleads everyone. The cell shows "—" with an explanatory tooltip instead.
 const MIN_GAMES_FOR_RATE = 3;
 
-// Extended sort key — adds timesOffered which is in PlayerStats but was missing
-// from the shared SortKey type. Kept local to avoid a types-file change here.
 type LocalSortKey =
   | 'username'
   | 'gamesWinRate'
@@ -32,7 +27,6 @@ type Column = {
   tooltip: string;
 };
 
-// Static — never changes, no benefit to defining inside the component.
 const COLUMNS: Column[] = [
   {
     label: 'Win Rate',
@@ -80,7 +74,6 @@ function pct(success: number, total: number): number {
   return total > 0 ? +(success / total * 100).toFixed(1) : 0;
 }
 
-// Avoids trailing zeros: 1000 → "1k", 1500 → "1.5k", 2000 → "2k"
 function formatGold(value: number): string {
   const abs = Math.abs(value);
   if (abs >= 1000) {
@@ -101,9 +94,14 @@ function pctColour(value: number): string {
 // =============================================================================
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
-// Accessible via aria-describedby on the trigger element.
-// Visible on hover and focus-within (keyboard users see it when the button
-// inside is focused). role="tooltip" registers it with assistive tech.
+// Direction: top-full (downward into the table body).
+//
+// Why not bottom-full (upward)? The tooltip lives inside an overflow-x-auto
+// scroll wrapper. CSS does not allow overflow: auto on one axis and
+// overflow: visible on the other — the browser upgrades visible to auto,
+// clipping any absolutely-positioned descendant that tries to escape upward.
+// Pointing downward keeps the tooltip inside the scroll container where
+// clipping doesn't apply. The arrow now points upward to the trigger.
 function Tooltip({ id, content, children }: { id: string; content: string; children: ReactNode }) {
   return (
     <div className="relative group inline-flex justify-center">
@@ -113,7 +111,7 @@ function Tooltip({ id, content, children }: { id: string; content: string; child
         role="tooltip"
         className="
           pointer-events-none
-          absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20
+          absolute top-full left-1/2 -translate-x-1/2 mt-2 z-20
           w-56 px-3 py-2 rounded
           bg-dota-raised border border-dota-border-bright
           font-barlow text-xs text-dota-text-muted leading-snug
@@ -122,19 +120,18 @@ function Tooltip({ id, content, children }: { id: string; content: string; child
           text-left whitespace-normal
         "
       >
-        {content}
-        {/* Downward arrow */}
+        {/* Upward arrow — points toward the trigger button above */}
         <span
           aria-hidden="true"
-          className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-dota-border-bright"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-dota-border-bright"
         />
+        {content}
       </div>
     </div>
   );
 }
 
 // ── PctBadge ──────────────────────────────────────────────────────────────────
-// Shows "—" when total is 0 OR below the minimum sample threshold.
 function PctBadge({
   success,
   total,
@@ -144,24 +141,17 @@ function PctBadge({
   total: number;
   minGames?: number;
 }) {
-  if (total === 0) {
-    return <span className="text-dota-text-dim text-xs">—</span>;
-  }
+  if (total === 0) return <span className="text-dota-text-dim text-xs">—</span>;
   if (total < minGames) {
     return (
-      <span
-        className="text-dota-text-dim text-xs"
-        title={`Need ${minGames} games (has ${total})`}
-      >
+      <span className="text-dota-text-dim text-xs" title={`Need ${minGames} games (has ${total})`}>
         —
       </span>
     );
   }
   const rate = pct(success, total);
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(rate)}`}
-    >
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(rate)}`}>
       {rate}%
       <span className="text-[10px] opacity-50 font-normal">{success}/{total}</span>
     </span>
@@ -169,8 +159,6 @@ function PctBadge({
 }
 
 // ── GoldValue ─────────────────────────────────────────────────────────────────
-// Arrow icons (not Trending*) — net gold is a cumulative sum, not a time-series
-// trend. TrendingUp/Down imply directional movement over time which is wrong here.
 function GoldValue({ value }: { value: number }) {
   const colour =
     value > 0 ? 'text-dota-radiant-light' :
@@ -203,21 +191,96 @@ function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
 // =============================================================================
 
 type EnrichedPlayer = PlayerStats & {
-  gamesWinRate: number;    // pct — or -1 if below MIN_GAMES_FOR_RATE
-  offerAcceptRate: number; // pct
+  gamesWinRate: number;
+  offerAcceptRate: number;
 };
+
+// =============================================================================
+// Auction Insights helpers
+// =============================================================================
+
+// A player who has been targeted at least once is a valid "most targeted" entry.
+// A player who has made at least one offer is valid for sell-through rate.
+
+type AuctionInsight = {
+  username: string;
+  value: string;
+  subValue?: string;
+};
+
+function deriveAuctionInsights(players: PlayerStats[]): {
+  mostTargeted: AuctionInsight[];
+  bestSellers: AuctionInsight[];
+  totalOffersPerGame: string;
+  overallSoldThroughRate: string;
+} {
+  const active = players.filter(p => p.gamesPlayed > 0);
+
+  // Most targeted — ordered by timesOffered DESC
+  const mostTargeted: AuctionInsight[] = [...active]
+    .filter(p => p.timesOffered > 0)
+    .sort((a, b) => b.timesOffered - a.timesOffered)
+    .slice(0, 3)
+    .map(p => {
+      const soldRate = p.timesOffered > 0 ? pct(p.timesSold, p.timesOffered) : 0;
+      return {
+        username: p.username,
+        value: `${p.timesOffered}×`,
+        subValue: `sold ${soldRate}%`,
+      };
+    });
+
+  // Best sellers — among players who made ≥ 2 offers (enough sample to be meaningful)
+  const bestSellers: AuctionInsight[] = [...active]
+    .filter(p => p.offersMade >= 2)
+    .sort((a, b) => {
+      const rateA = pct(a.offersAccepted, a.offersMade);
+      const rateB = pct(b.offersAccepted, b.offersMade);
+      return rateB - rateA;
+    })
+    .slice(0, 3)
+    .map(p => ({
+      username: p.username,
+      value: `${pct(p.offersAccepted, p.offersMade)}%`,
+      subValue: `${p.offersAccepted}/${p.offersMade} offers`,
+    }));
+
+  // Total offers across all players / total games played
+  const totalOffers = active.reduce((sum, p) => sum + p.offersMade, 0);
+  // gamesPlayed is per-player (counts each player's games); divide by avg team size
+  // to approximate game count. We use the max gamesPlayed as a proxy since all
+  // players in a match play the same games — close enough for a display stat.
+  const maxGames = active.length > 0 ? Math.max(...active.map(p => p.gamesPlayed)) : 0;
+  const offersPerGame = maxGames > 0
+    ? (totalOffers / maxGames).toFixed(1)
+    : '—';
+
+  // Overall sold-through rate: all accepted / all made
+  const totalMade     = active.reduce((sum, p) => sum + p.offersMade, 0);
+  const totalAccepted = active.reduce((sum, p) => sum + p.offersAccepted, 0);
+  const soldThroughRate = totalMade > 0
+    ? `${pct(totalAccepted, totalMade)}%`
+    : '—';
+
+  return {
+    mostTargeted,
+    bestSellers,
+    totalOffersPerGame: offersPerGame,
+    overallSoldThroughRate: soldThroughRate,
+  };
+}
 
 // =============================================================================
 // StatsTab
 // =============================================================================
 
 export default function StatsTab() {
-  const [players, setPlayers]           = useState<PlayerStats[]>([]);
-  const [combos, setCombos]             = useState<TeamCombo[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState<string | null>(null);
-  const [sortKey, setSortKey]           = useState<LocalSortKey>('gamesWinRate');
-  const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('desc');
+  const [players, setPlayers]             = useState<PlayerStats[]>([]);
+  const [combos, setCombos]               = useState<TeamCombo[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState<string | null>(null);
+  const [sortKey, setSortKey]             = useState<LocalSortKey>('gamesWinRate');
+  const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('desc');
   const [showAllCombos, setShowAllCombos] = useState(false);
 
   useEffect(() => {
@@ -243,8 +306,6 @@ export default function StatsTab() {
     }
   };
 
-  // Enrich with computed rates. gamesWinRate is -1 for below-threshold players
-  // so they sort to the bottom when sorting descending by win rate.
   const enrichedPlayers = useMemo<EnrichedPlayer[]>(() =>
     players.map(p => ({
       ...p,
@@ -258,7 +319,6 @@ export default function StatsTab() {
 
   const sortedPlayers = useMemo<EnrichedPlayer[]>(() => {
     return [...enrichedPlayers].sort((a, b) => {
-      // Access by key — all LocalSortKey values are valid keys of EnrichedPlayer
       const aVal = a[sortKey as keyof EnrichedPlayer];
       const bVal = b[sortKey as keyof EnrichedPlayer];
       if (typeof aVal === 'string' && typeof bVal === 'string') {
@@ -270,13 +330,9 @@ export default function StatsTab() {
     });
   }, [enrichedPlayers, sortKey, sortDir]);
 
-  // Medals are only shown when the table is sorted by win rate descending.
-  // If we showed them on any sort, 🥇 would go to e.g. the player with the
-  // most negative net gold when sorting ascending — actively misleading.
   const showMedals = sortKey === 'gamesWinRate' && sortDir === 'desc';
-
-  // Show all combos or just the first 5
   const visibleCombos = showAllCombos ? combos : combos.slice(0, 5);
+  const auctionInsights = useMemo(() => deriveAuctionInsights(players), [players]);
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
@@ -297,8 +353,6 @@ export default function StatsTab() {
   }
 
   // ── Empty ───────────────────────────────────────────────────────────────────
-  // Render outside the table skeleton so the user gets a clean empty state
-  // instead of a full table scaffold with a single "no data" row inside it.
   if (sortedPlayers.length === 0) {
     return (
       <div className="space-y-8">
@@ -326,9 +380,8 @@ export default function StatsTab() {
 
         {/*
           Scroll wrapper + right-edge fade.
-          The fade gradient signals to mobile users that the table continues
-          horizontally — without it, hidden columns look like missing data.
-          lg:hidden because on large screens the table fits without scrolling.
+          overflow-x-auto clips absolutely-positioned children that escape
+          upward, so tooltips are anchored downward (top-full) instead.
         */}
         <div className="relative">
           <div
@@ -341,7 +394,6 @@ export default function StatsTab() {
               <thead>
                 <tr className="bg-dota-deep border-b border-dota-border">
 
-                  {/* Rank */}
                   <th
                     scope="col"
                     className="px-3 py-3 w-10 text-dota-text-dim font-medium text-xs text-center"
@@ -350,7 +402,6 @@ export default function StatsTab() {
                     #
                   </th>
 
-                  {/* Player name — sortable */}
                   <th
                     scope="col"
                     aria-sort={
@@ -378,10 +429,9 @@ export default function StatsTab() {
                     </button>
                   </th>
 
-                  {/* Stat columns */}
                   {COLUMNS.map(col => {
-                    const tooltipId  = `col-tooltip-${col.key}`;
-                    const isActive   = sortKey === col.key;
+                    const tooltipId = `col-tooltip-${col.key}`;
+                    const isActive  = sortKey === col.key;
                     const ariaSortValue =
                       isActive
                         ? sortDir === 'asc' ? 'ascending' : 'descending'
@@ -441,7 +491,6 @@ export default function StatsTab() {
                       }
                     `}
                   >
-                    {/* Rank — medals only when sorted by win rate descending */}
                     <td className="px-3 py-3 text-center text-xs font-bold">
                       {showMedals
                         ? (
@@ -458,7 +507,6 @@ export default function StatsTab() {
                       }
                     </td>
 
-                    {/* Name + games played */}
                     <td className="px-3 py-3">
                       <span className={`font-semibold ${showMedals && i === 0 ? 'text-dota-gold' : 'text-dota-text'}`}>
                         {p.username}
@@ -468,7 +516,6 @@ export default function StatsTab() {
                       )}
                     </td>
 
-                    {/* Win Rate — hidden below MIN_GAMES_FOR_RATE */}
                     <td className="px-3 py-3 text-center">
                       <PctBadge
                         success={p.gamesWon}
@@ -477,12 +524,10 @@ export default function StatsTab() {
                       />
                     </td>
 
-                    {/* Offers Accepted (as seller) */}
                     <td className="px-3 py-3 text-center">
                       <PctBadge success={p.offersAccepted} total={p.offersMade} />
                     </td>
 
-                    {/* Avg Bid — shown only when targeted at least once */}
                     <td className="px-3 py-3 text-center">
                       {p.timesOffered > 0 ? (
                         <span className="inline-flex items-center justify-center gap-1 text-dota-gold font-semibold tabular-nums">
@@ -494,7 +539,6 @@ export default function StatsTab() {
                       )}
                     </td>
 
-                    {/* Targeted (timesOffered) */}
                     <td className="px-3 py-3 text-center">
                       {p.timesOffered > 0
                         ? <span className="font-barlow font-semibold text-dota-text-muted">{p.timesOffered}</span>
@@ -502,7 +546,6 @@ export default function StatsTab() {
                       }
                     </td>
 
-                    {/* Sold (timesSold) */}
                     <td className="px-3 py-3 text-center">
                       {p.timesSold > 0
                         ? <span className="text-dota-info font-semibold">{p.timesSold}</span>
@@ -510,7 +553,6 @@ export default function StatsTab() {
                       }
                     </td>
 
-                    {/* Net Gold */}
                     <td className="px-3 py-3">
                       <GoldValue value={p.netGold} />
                     </td>
@@ -530,60 +572,171 @@ export default function StatsTab() {
         </div>
       </div>
 
-      {/* ── Top Winning Combinations ───────────────────────────────────────── */}
-      <div className="panel overflow-hidden">
+      {/* ── Bottom row: two cards side-by-side ─────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        <div className="px-5 py-4 border-b border-dota-border">
-          <h3 className="font-cinzel text-lg font-bold text-dota-gold">Top Winning Combinations</h3>
-          <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            Most frequent winning team compositions
-          </p>
-        </div>
+        {/* ── Auction House Insights ───────────────────────────────────────── */}
+        <div className="panel overflow-hidden">
 
-        <div className="p-4">
-          {combos.length === 0 ? (
-            <p className="text-center font-barlow text-dota-text-dim py-6">No completed games yet.</p>
-          ) : (
-            <>
-              {/*
-                Flat ranked list — no progress bars.
-                The previous relative-scale bars (always 100% for #1, proportionally
-                less for others) made small gaps look dramatic. Win counts speak clearly
-                on their own without a bar chart that has no meaningful baseline.
-              */}
-              <ul className="space-y-2">
-                {visibleCombos.map((c, i) => (
-                  <li
-                    key={c.combo}
-                    className="panel-sunken p-3 flex items-center gap-3"
-                  >
-                    <span className="font-barlow text-sm font-bold w-6 text-center shrink-0">
-                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
-                    </span>
-                    <span className="truncate font-barlow font-semibold text-sm text-dota-text flex-1 min-w-0">
-                      {c.combo}
-                    </span>
-                    <span className="font-barlow font-bold text-sm text-dota-radiant-light whitespace-nowrap tabular-nums shrink-0">
-                      {c.wins} {c.wins === 1 ? 'win' : 'wins'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          <div className="px-5 py-4 border-b border-dota-border">
+            <h3 className="font-cinzel text-lg font-bold text-dota-gold">Auction House Insights</h3>
+            <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
+              Auction patterns across all games
+            </p>
+          </div>
 
-              {/* Show more / less — exposes all combos returned by the API */}
-              {combos.length > 5 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllCombos(v => !v)}
-                  className="btn-ghost w-full mt-3 text-xs py-1.5"
-                >
-                  {showAllCombos ? 'Show less' : `Show all ${combos.length}`}
-                </button>
+          <div className="p-4 space-y-5">
+
+            {/* Aggregate stats strip */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="panel-sunken p-3 text-center space-y-0.5">
+                <p className="font-barlow text-[10px] font-semibold uppercase tracking-widest text-dota-text-muted">
+                  Offers per game
+                </p>
+                <p className="font-cinzel text-xl font-bold text-dota-gold tabular-nums">
+                  {auctionInsights.totalOffersPerGame}
+                </p>
+              </div>
+              <div className="panel-sunken p-3 text-center space-y-0.5">
+                <p className="font-barlow text-[10px] font-semibold uppercase tracking-widest text-dota-text-muted">
+                  Sold-through rate
+                </p>
+                <p className="font-cinzel text-xl font-bold text-dota-radiant-light tabular-nums">
+                  {auctionInsights.overallSoldThroughRate}
+                </p>
+              </div>
+            </div>
+
+            {/* Most Targeted */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Target className="w-3.5 h-3.5 text-dota-dire-light" aria-hidden="true" />
+                <p className="stat-label">Most targeted</p>
+                <p className="font-barlow text-[10px] text-dota-text-dim normal-case font-normal">
+                  times put up for sale
+                </p>
+              </div>
+              {auctionInsights.mostTargeted.length === 0 ? (
+                <p className="font-barlow text-xs text-dota-text-dim pl-5">No auction data yet.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {auctionInsights.mostTargeted.map((entry, i) => (
+                    <li key={entry.username} className="panel-sunken px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-barlow text-xs font-bold w-5 text-center text-dota-text-dim shrink-0">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                        </span>
+                        <span className="font-barlow font-semibold text-sm text-dota-text truncate">
+                          {entry.username}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-barlow font-bold text-sm text-dota-dire-light tabular-nums">
+                          {entry.value}
+                        </span>
+                        {entry.subValue && (
+                          <span className="font-barlow text-[10px] text-dota-text-dim tabular-nums">
+                            {entry.subValue}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </>
-          )}
+            </div>
+
+            {/* Best Sellers */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Repeat2 className="w-3.5 h-3.5 text-dota-radiant-light" aria-hidden="true" />
+                <p className="stat-label">Best sellers</p>
+                <p className="font-barlow text-[10px] text-dota-text-dim normal-case font-normal">
+                  offer acceptance rate · min. 2 offers
+                </p>
+              </div>
+              {auctionInsights.bestSellers.length === 0 ? (
+                <p className="font-barlow text-xs text-dota-text-dim pl-5">No auction data yet.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {auctionInsights.bestSellers.map((entry, i) => (
+                    <li key={entry.username} className="panel-sunken px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-barlow text-xs font-bold w-5 text-center text-dota-text-dim shrink-0">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                        </span>
+                        <span className="font-barlow font-semibold text-sm text-dota-text truncate">
+                          {entry.username}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-barlow font-bold text-sm text-dota-radiant-light tabular-nums">
+                          {entry.value}
+                        </span>
+                        {entry.subValue && (
+                          <span className="font-barlow text-[10px] text-dota-text-dim tabular-nums">
+                            {entry.subValue}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+          </div>
         </div>
-      </div>
+
+        {/* ── Top Winning Combinations ─────────────────────────────────────── */}
+        <div className="panel overflow-hidden">
+
+          <div className="px-5 py-4 border-b border-dota-border">
+            <h3 className="font-cinzel text-lg font-bold text-dota-gold">Top Winning Combinations</h3>
+            <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
+              Most frequent winning team compositions
+            </p>
+          </div>
+
+          <div className="p-4">
+            {combos.length === 0 ? (
+              <p className="text-center font-barlow text-dota-text-dim py-6">No completed games yet.</p>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {visibleCombos.map((c, i) => (
+                    <li
+                      key={c.combo}
+                      className="panel-sunken p-3 flex items-center gap-3"
+                    >
+                      <span className="font-barlow text-sm font-bold w-6 text-center shrink-0">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+                      </span>
+                      <span className="truncate font-barlow font-semibold text-sm text-dota-text flex-1 min-w-0">
+                        {c.combo}
+                      </span>
+                      <span className="font-barlow font-bold text-sm text-dota-radiant-light whitespace-nowrap tabular-nums shrink-0">
+                        {c.wins} {c.wins === 1 ? 'win' : 'wins'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {combos.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCombos(v => !v)}
+                    className="btn-ghost w-full mt-3 text-xs py-1.5"
+                  >
+                    {showAllCombos ? 'Show less' : `Show all ${combos.length}`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+      </div>{/* end bottom row */}
 
     </div>
   );
