@@ -206,7 +206,7 @@ export default function HallOfFame({
       <RecordCard
         icon={Zap}
         title="Fastest Win"
-        tooltip="Fewest games needed to win a single match. Format: 'Won in N games'."
+        tooltip="Fewest games needed to win a single match."
         tooltipId="hof-tooltip-fastest"
         record={fewestGamesToWin}
         accentClass="text-dota-radiant-light"
@@ -216,7 +216,7 @@ export default function HallOfFame({
       <RecordCard
         icon={Scale}
         title="Gold Underdog"
-        tooltip="Won a match while holding less accumulated gold than the opposing team at the final game. Largest deficit wins this record."
+        tooltip="Won a match while holding less accumulated gold than the opposing team at the final game."
         tooltipId="hof-tooltip-gold"
         record={biggestGoldUnderdog}
         accentClass="text-dota-info"
@@ -226,7 +226,7 @@ export default function HallOfFame({
       <RecordCard
         icon={Swords}
         title="Biggest Underdog"
-        tooltip="Won the final game outnumbered by the most players — e.g. 1v4."
+        tooltip="Won the final game outnumbered by the most players."
         tooltipId="hof-tooltip-underdog"
         record={biggestUnderdogWin}
         accentClass="text-dota-dire-light"
