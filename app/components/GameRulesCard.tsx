@@ -293,13 +293,13 @@ export default function GameRulesCard() {
             <span className="tier-high mx-0.5">High</span> for each offer — tiers{' '}
             <strong className="text-dota-text">overlap</strong>, so a Low offer can be worth
             more than a Medium. They accept one offer: the seller{' '}
-            <strong className="text-dota-gold">receives the gold</strong> and the sold player{' '}
+            <strong className="text-dota-text">receives the gold</strong> and the sold player{' '}
             <strong className="text-dota-text">switches teams</strong>.
           </Rule>
 
           <Rule>
-            Losers lose <strong className="text-dota-dire-light">half their gold</strong>.
-            Winners each receive <strong className="text-dota-radiant-light">1,000 gold</strong>{' '}
+            Losers lose <strong className="text-dota-text">half their gold</strong>.
+            Winners each receive <strong className="text-dota-text">1,000 gold</strong>{' '}
             plus a share of half the loser pool.{' '}
             <HelpButton
               ref={goldTriggerRef}
@@ -344,7 +344,7 @@ export default function GameRulesCard() {
               <li>
                 <strong>Base reward:</strong>{' '}
                 <span className="text-dota-text-muted">
-                  Each winner receives <strong className="text-dota-radiant-light">1,000 gold</strong>.
+                  Each winner receives <strong className="text-dota-text">1,000 gold</strong>.
                 </span>
               </li>
               <li>
@@ -363,7 +363,7 @@ export default function GameRulesCard() {
                 </p>
               </div>
               <div className="divider mt-3 mb-2" />
-              <p className="text-dota-radiant-light font-semibold">
+              <p className="text-dota-text font-semibold">
                 Each winner: 1,000 + 500 = <strong>1,500 gold</strong>
               </p>
             </div>
@@ -409,7 +409,7 @@ export default function GameRulesCard() {
               <p className="text-dota-text-muted">
                 Once all offers are in, losers see each offer's tier badge but not the exact
                 amount. They choose one offer to accept — the seller{' '}
-                <strong className="text-dota-gold">receives the gold</strong> and the sold
+                <strong className="text-dota-text">receives the gold</strong> and the sold
                 player <strong className="text-dota-text">switches to the losing team</strong>.
                 All other offers are rejected.
               </p>
