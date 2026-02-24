@@ -5,7 +5,7 @@ import CreateMatchForm from '@/app/components/CreateMatchForm';
 import DashboardTabs from '@/app/components/DashboardTabs';
 import GameRulesCard from '@/app/components/GameRulesCard';
 import HallOfFame from '@/app/components/HallOfFame';
-import type { HallOfFameRecord } from '@/app/components/HallOfFame';
+import type { HallOfFameRecord } from '@/types';
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -17,7 +17,7 @@ export default async function DashboardPage() {
       completedRes,
       mostWinsRes,
       fewestGamesRes,
-      closestGoldRes,
+      biggestGoldUnderdogRes,
       biggestUnderdogRes,
     ] = await Promise.all([
 
@@ -91,6 +91,9 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #2: fewest games to win a match ─────────────────────
+      //
+      // Groups by m.id so the same player can appear multiple times if they
+      // hold more than one of the top records — this is intentional.
       db.query(`
         SELECT u.username, COUNT(g.id) AS game_count
         FROM matches m
@@ -102,7 +105,16 @@ export default async function DashboardPage() {
         LIMIT 3
       `),
 
-      // ── Hall of Fame #3: closest gold victory ────────────────────────────
+      // ── Hall of Fame #3: biggest gold underdog win ────────────────────────
+      //
+      // Finds the match where the winner held the largest gold *deficit*
+      // relative to the opposing team's total accumulated gold at the end.
+      //
+      // gold_diff = winner_team_gold − loser_team_gold
+      // A large negative value = winner held much less gold = biggest underdog.
+      // Ordered ASC so the largest deficit (most negative) ranks first.
+      //
+      // Groups by m.id so the same player can hold multiple top-3 records.
       db.query(`
         SELECT
           u.username,
@@ -136,6 +148,8 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #4: biggest underdog win ────────────────────────────
+      //
+      // Groups by m.id so the same player can hold multiple top-3 records.
       db.query(`
         SELECT
           u.username,
@@ -162,6 +176,7 @@ export default async function DashboardPage() {
     const completedMatches = completedRes.rows.map(m => ({ ...m, id: m.match_id }));
 
     // ── Shape Hall of Fame records (arrays of up to 3) ─────────────────────
+
     const mostMatchWins: HallOfFameRecord = mostWinsRes.rows.length
       ? mostWinsRes.rows.map(r => ({
           holder: r.username,
@@ -172,12 +187,17 @@ export default async function DashboardPage() {
     const fewestGamesToWin: HallOfFameRecord = fewestGamesRes.rows.length
       ? fewestGamesRes.rows.map(r => ({
           holder: r.username,
-          stat: `${r.game_count} ${Number(r.game_count) === 1 ? 'game' : 'games'}`,
+          // "Won in N" is immediately self-explanatory as a record —
+          // "3 games" reads as a count, not a feat.
+          stat: `Won in ${r.game_count}`,
         }))
       : null;
 
-    const closestGoldWin: HallOfFameRecord = closestGoldRes.rows.length
-      ? closestGoldRes.rows.map(r => {
+    // gold_diff is negative when the winner held less gold than the loser —
+    // i.e. they won despite a gold deficit. We display it signed so a reader
+    // can see at a glance how large the disadvantage was.
+    const biggestGoldUnderdog: HallOfFameRecord = biggestGoldUnderdogRes.rows.length
+      ? biggestGoldUnderdogRes.rows.map(r => {
           const diff = Number(r.gold_diff);
           return {
             holder: r.username,
@@ -199,8 +219,6 @@ export default async function DashboardPage() {
 
           {/* ── Zone 1: Create Match + Rules (equal columns) ─────────────── */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Pass the logged-in user's ID so the form can highlight their
-                own dot (gold) and subscribe to the presence channel. */}
             <CreateMatchForm currentUserId={session.userId} />
             <GameRulesCard />
           </section>
@@ -209,7 +227,7 @@ export default async function DashboardPage() {
           <HallOfFame
             mostMatchWins={mostMatchWins}
             fewestGamesToWin={fewestGamesToWin}
-            closestGoldWin={closestGoldWin}
+            biggestGoldUnderdog={biggestGoldUnderdog}
             biggestUnderdogWin={biggestUnderdogWin}
           />
 
