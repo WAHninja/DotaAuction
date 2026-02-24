@@ -163,6 +163,30 @@ export type SortKey =
   | 'netGold';
 
 // ---------------------------------------------------------------------------
+// Hall of Fame
+// ---------------------------------------------------------------------------
+
+/** A single ranked entry in a Hall of Fame record. */
+export type HallOfFameEntry = {
+  holder: string;
+  stat: string;
+};
+
+/**
+ * Up to three ranked entries, or null when no data exists yet.
+ * Null renders a placeholder skeleton rather than an empty list.
+ */
+export type HallOfFameRecord = HallOfFameEntry[] | null;
+
+export type HallOfFameProps = {
+  mostMatchWins: HallOfFameRecord;
+  fewestGamesToWin: HallOfFameRecord;
+  /** Won with the largest gold deficit relative to the opposing team's total. */
+  biggestGoldUnderdog: HallOfFameRecord;
+  biggestUnderdogWin: HallOfFameRecord;
+};
+
+// ---------------------------------------------------------------------------
 // Ably event payloads
 // ---------------------------------------------------------------------------
 
