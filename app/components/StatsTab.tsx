@@ -373,7 +373,7 @@ export default function StatsTab() {
           <div>
             <h3 className="font-cinzel text-lg font-bold text-dota-gold">Player Leaderboard</h3>
             <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-              Click any column to sort · Medals shown for win rate ranking only
+              Click any column to sort
             </p>
           </div>
         </div>
