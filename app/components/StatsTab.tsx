@@ -265,16 +265,13 @@ type EnrichedPlayer = PlayerStats & {
   offerAcceptRate: number;
 };
 
-type StatsTabProps = {
-  /** Username of the currently signed-in user. Pre-selects them in the H2H picker. */
-  currentUsername?: string;
-};
+type StatsTabProps = Record<string, never>;
 
 // =============================================================================
 // StatsTab
 // =============================================================================
 
-export default function StatsTab({ currentUsername }: StatsTabProps) {
+export default function StatsTab(_props: StatsTabProps) {
   const [players, setPlayers]               = useState<PlayerStats[]>([]);
   const [combos, setCombos]                 = useState<TeamCombo[]>([]);
   const [acquisitionImpact, setAcquisition] = useState<AcquisitionImpact[]>([]);
@@ -285,18 +282,24 @@ export default function StatsTab({ currentUsername }: StatsTabProps) {
   const [sortKey, setSortKey]               = useState<LocalSortKey>('gamesWinRate');
   const [sortDir, setSortDir]               = useState<'asc' | 'desc'>('desc');
   const [showAllCombos, setShowAllCombos]   = useState(false);
-  // Head-to-head player selector — defaults to the signed-in user if provided
-  const [h2hSelected, setH2hSelected] = useState<string>(currentUsername ?? '');
+  // Head-to-head player selector — defaults to the signed-in user once /api/me resolves
+  const [h2hSelected, setH2hSelected] = useState<string>('');
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => {
-        setPlayers(data.players ?? []);
-        setCombos(data.topWinningCombos ?? []);
-        setAcquisition(data.acquisitionImpact ?? []);
-        setWinStreaks(data.winStreaks ?? []);
-        setHeadToHead(data.headToHead ?? []);
+    Promise.all([
+      fetch('/api/stats').then(r => r.json()),
+      fetch('/api/me').then(r => r.json()),
+    ])
+      .then(([statsData, meData]) => {
+        setPlayers(statsData.players ?? []);
+        setCombos(statsData.topWinningCombos ?? []);
+        setAcquisition(statsData.acquisitionImpact ?? []);
+        setWinStreaks(statsData.winStreaks ?? []);
+        setHeadToHead(statsData.headToHead ?? []);
+        // Pre-select the signed-in user in the H2H picker if they exist in the data
+        if (meData.username) {
+          setH2hSelected(meData.username);
+        }
       })
       .catch(err => {
         console.error(err);
