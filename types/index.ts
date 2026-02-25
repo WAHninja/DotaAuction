@@ -36,7 +36,7 @@ export type Offer = {
   game_id: number;
   from_player_id: number;
   target_player_id: number;
-  offer_amount?: number | null;  // null while status === 'pending', absent in Ably payloads
+  offer_amount?: number | null;
   tier_label: TierLabel | null;
   status: OfferStatus;
   created_at?: string;
@@ -48,7 +48,7 @@ export type HistoryOffer = {
   gameId: number;
   fromPlayerId: number;
   targetPlayerId: number;
-  offerAmount: number | null;   // null while status === 'pending'
+  offerAmount: number | null;
   tierLabel: TierLabel | null;
   status: OfferStatus;
   createdAt: string;
@@ -134,7 +134,7 @@ export type HistoryGame = {
 };
 
 // ---------------------------------------------------------------------------
-// Stats
+// Stats — leaderboard
 // ---------------------------------------------------------------------------
 
 export type PlayerStats = {
@@ -163,19 +163,58 @@ export type SortKey =
   | 'netGold';
 
 // ---------------------------------------------------------------------------
+// Stats — new metrics
+// ---------------------------------------------------------------------------
+
+/**
+ * How often a player's new team wins the game immediately after they are
+ * acquired via an accepted offer. Only computed for players with ≥ 2
+ * acquisitions — smaller samples are too noisy.
+ */
+export type AcquisitionImpact = {
+  username: string;
+  totalAcquisitions: number;
+  winsAfterAcquisition: number;
+  /** Pre-computed percentage, rounded to 1 decimal place. */
+  winRate: number;
+};
+
+/**
+ * Longest consecutive win streak a player has recorded within a single
+ * match. matchId included so the UI can reference the specific match.
+ * Only includes streaks of length ≥ 2.
+ */
+export type WinStreak = {
+  username: string;
+  longestStreak: number;
+  matchId: number;
+};
+
+/**
+ * Head-to-head record between two players who have appeared on opposing
+ * teams at least once. Pairs are canonicalised so the player with the
+ * lower numeric id is always playerA. Normalise to a given player's
+ * perspective on the frontend by checking which side they're on.
+ */
+export type HeadToHead = {
+  playerAId: number;
+  playerA: string;
+  playerBId: number;
+  playerB: string;
+  totalGames: number;
+  playerAWins: number;
+  playerBWins: number;
+};
+
+// ---------------------------------------------------------------------------
 // Hall of Fame
 // ---------------------------------------------------------------------------
 
-/** A single ranked entry in a Hall of Fame record. */
 export type HallOfFameEntry = {
   holder: string;
   stat: string;
 };
 
-/**
- * Up to three ranked entries, or null when no data exists yet.
- * Null renders a placeholder skeleton rather than an empty list.
- */
 export type HallOfFameRecord = HallOfFameEntry[] | null;
 
 export type HallOfFameProps = {
@@ -187,7 +226,7 @@ export type HallOfFameProps = {
 };
 
 // ---------------------------------------------------------------------------
-// Ably event payloads
+// Realtime event payloads
 // ---------------------------------------------------------------------------
 
 export type NewOfferPayload = Omit<Offer, 'offer_amount'>;
