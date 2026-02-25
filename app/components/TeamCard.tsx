@@ -1,10 +1,15 @@
 import Image from 'next/image';
+import PlayerAvatar from '@/app/components/PlayerAvatar';
 import type { Player } from '@/types';
+
+// Extend the shared Player type locally — steam_avatar comes from the DB
+// but isn't in the base type yet since not all endpoints return it.
+type PlayerWithAvatar = Player & { steam_avatar?: string | null };
 
 type TeamCardProps = {
   name: string;
   logo: string;
-  players: Player[];
+  players: PlayerWithAvatar[];
   teamId: string;
   faction: 'radiant' | 'dire';
   currentUserId?: number;
@@ -13,12 +18,10 @@ type TeamCardProps = {
 export default function TeamCard({ name, logo, players, teamId, faction, currentUserId }: TeamCardProps) {
   const isRadiant = faction === 'radiant';
 
-  const nameColour   = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
-  const youBg        = isRadiant
-    ? 'bg-dota-radiant/15 border border-dota-radiant/40'
-    : 'bg-dota-dire/15 border border-dota-dire/40';
-  const youText      = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
-  const youBadgeBg   = isRadiant
+  const nameColour  = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
+  const youBg       = isRadiant ? 'bg-dota-radiant/15 border border-dota-radiant/40' : 'bg-dota-dire/15 border border-dota-dire/40';
+  const youText     = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
+  const youBadgeBg  = isRadiant
     ? 'bg-dota-radiant/20 text-dota-radiant-light border border-dota-radiant/40'
     : 'bg-dota-dire/20 text-dota-dire-light border border-dota-dire/40';
 
@@ -32,9 +35,6 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
           alt={`${name} logo`}
           width={64}
           height={64}
-          // priority: both team cards are the first thing rendered on the
-          // match page — above the fold on every screen size. Without this
-          // they load lazily after JS hydration, causing a visible pop-in.
           priority
           sizes="64px"
           className="object-contain"
@@ -55,15 +55,23 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
                 isYou ? youBg : 'hover:bg-white/5'
               }`}
             >
-              <span className={`font-barlow font-semibold flex items-center gap-2 ${isYou ? youText : 'text-dota-text'}`}>
-                {p.username || 'Unknown'}
+              {/* Avatar + name */}
+              <span className={`font-barlow font-semibold flex items-center gap-2.5 min-w-0 ${isYou ? youText : 'text-dota-text'}`}>
+                <PlayerAvatar
+                  username={p.username || '?'}
+                  steamAvatar={p.steam_avatar}
+                  size={28}
+                />
+                <span className="truncate">{p.username || 'Unknown'}</span>
                 {isYou && (
-                  <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${youBadgeBg}`}>
+                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${youBadgeBg}`}>
                     You
                   </span>
                 )}
               </span>
-              <span className="font-barlow font-bold tabular-nums text-dota-gold flex items-center gap-1">
+
+              {/* Gold */}
+              <span className="font-barlow font-bold tabular-nums text-dota-gold flex items-center gap-1 shrink-0 ml-2">
                 {p.gold ?? 0}
                 <Image
                   src="/Gold_symbol.webp"
