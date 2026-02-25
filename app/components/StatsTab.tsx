@@ -297,8 +297,8 @@ export default function StatsTab(_props: StatsTabProps) {
         setWinStreaks(statsData.winStreaks ?? []);
         setHeadToHead(statsData.headToHead ?? []);
         // Pre-select the signed-in user in the H2H picker if they exist in the data
-        if (meData.username) {
-          setH2hSelected(meData.username);
+        if (meData.user?.username) {
+          setH2hSelected(meData.user.username);
         }
       })
       .catch(err => {
@@ -546,6 +546,9 @@ export default function StatsTab(_props: StatsTabProps) {
 
         <div className="px-5 py-2.5 border-t border-dota-border">
           <p className="font-barlow text-[11px] text-dota-text-dim">
+            Avg Bid is the gold teammates offered when selling you.
+            Net Gold sums all win rewards, loss penalties, and auction payouts.
+            Win Rate requires {MIN_GAMES_FOR_RATE}+ games.
           </p>
         </div>
       </div>
@@ -559,7 +562,7 @@ export default function StatsTab(_props: StatsTabProps) {
             icon={ShoppingCart}
             iconClass="text-dota-gold"
             title="Acquisition Impact"
-            subtitle="Win rate of your new team the game after you're sold"
+            subtitle="Win rate of your new team the game after you're sold · min. 2 sales"
           />
           <div className="p-4">
             {/*
@@ -594,7 +597,7 @@ export default function StatsTab(_props: StatsTabProps) {
             icon={Zap}
             iconClass="text-dota-radiant-light"
             title="Win Streaks"
-            subtitle="Longest consecutive winning run within a single match."
+            subtitle="Longest consecutive winning run within a single match · min. 2"
           />
           <div className="p-4">
             {/*
