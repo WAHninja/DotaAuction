@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState, useContext } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import LogoutButton from './LogoutButton';
 
@@ -44,6 +44,16 @@ export default function MobileResponsiveHeader() {
       >
         Home
       </Link>
+      {user && (
+        <Link
+          href="/profile"
+          className="font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold transition-colors flex items-center gap-1.5"
+          onClick={closeMenu}
+        >
+          <User className="w-3.5 h-3.5" />
+          Profile
+        </Link>
+      )}
       {user && <LogoutButton />}
     </>
   );
@@ -69,9 +79,6 @@ export default function MobileResponsiveHeader() {
               alt="Defence of the Auctions"
               width={100}
               height={34}
-              // priority: the header is sticky and visible on every single page.
-              // Without this the logo pops in after JS hydration — the most
-              // noticeable possible place for a loading flash.
               priority
               sizes="100px"
               className="object-contain"
@@ -131,6 +138,16 @@ export default function MobileResponsiveHeader() {
               >
                 Home
               </Link>
+              {user && (
+                <Link
+                  href="/profile"
+                  onClick={closeMenu}
+                  className="px-3 py-2.5 rounded font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay transition-all flex items-center gap-2"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Profile
+                </Link>
+              )}
               {user && (
                 <div className="mt-2">
                   <LogoutButton />
