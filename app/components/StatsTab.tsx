@@ -29,6 +29,8 @@ type Column = {
   sublabel?: string;
   key: LocalSortKey;
   tooltip: string;
+  /** Tooltip anchor. 'right' for the last column to prevent overflow. */
+  tooltipAlign?: 'center' | 'right';
 };
 
 const COLUMNS: Column[] = [
@@ -67,6 +69,7 @@ const COLUMNS: Column[] = [
     sublabel: 'all time',
     key: 'netGold',
     tooltip: 'Sum of all win rewards and auction payouts, minus all loss penalties, across every game played.',
+    tooltipAlign: 'right',
   },
 ];
 
@@ -106,28 +109,45 @@ function pctColour(value: number): string {
 // one axis with overflow: visible on the other — the browser promotes visible
 // to auto, clipping any absolutely-positioned child that escapes upward.
 // Pointing downward keeps the tooltip within the scroll container's bounds.
-function Tooltip({ id, content, children }: { id: string; content: string; children: ReactNode }) {
+//
+// align='center' (default) — centres the bubble on the trigger.
+// align='right'            — anchors the bubble to the right edge of the trigger.
+//   Used for the last table column (Net Gold) so the tooltip doesn't extend
+//   beyond the right edge of the table and widen the scroll container.
+function Tooltip({ id, content, children, align = 'center' }: {
+  id: string;
+  content: string;
+  children: ReactNode;
+  align?: 'center' | 'right';
+}) {
+  const bubblePos  = align === 'right'
+    ? 'right-0'
+    : 'left-1/2 -translate-x-1/2';
+  const arrowPos   = align === 'right'
+    ? 'right-4'
+    : 'left-1/2 -translate-x-1/2';
+
   return (
     <div className="relative group inline-flex justify-center">
       {children}
       <div
         id={id}
         role="tooltip"
-        className="
+        className={`
           pointer-events-none
-          absolute top-full left-1/2 -translate-x-1/2 mt-2 z-20
+          absolute top-full mt-2 z-20 ${bubblePos}
           w-56 px-3 py-2 rounded
           bg-dota-raised border border-dota-border-bright
           font-barlow text-xs text-dota-text-muted leading-snug
           opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
           transition-opacity duration-150
           text-left whitespace-normal
-        "
+        `}
       >
         {/* Arrow points up toward the trigger */}
         <span
           aria-hidden="true"
-          className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-dota-border-bright"
+          className={`absolute bottom-full ${arrowPos} border-4 border-transparent border-b-dota-border-bright`}
         />
         {content}
       </div>
@@ -245,11 +265,16 @@ type EnrichedPlayer = PlayerStats & {
   offerAcceptRate: number;
 };
 
+type StatsTabProps = {
+  /** Username of the currently signed-in user. Pre-selects them in the H2H picker. */
+  currentUsername?: string;
+};
+
 // =============================================================================
 // StatsTab
 // =============================================================================
 
-export default function StatsTab() {
+export default function StatsTab({ currentUsername }: StatsTabProps) {
   const [players, setPlayers]               = useState<PlayerStats[]>([]);
   const [combos, setCombos]                 = useState<TeamCombo[]>([]);
   const [acquisitionImpact, setAcquisition] = useState<AcquisitionImpact[]>([]);
@@ -260,8 +285,8 @@ export default function StatsTab() {
   const [sortKey, setSortKey]               = useState<LocalSortKey>('gamesWinRate');
   const [sortDir, setSortDir]               = useState<'asc' | 'desc'>('desc');
   const [showAllCombos, setShowAllCombos]   = useState(false);
-  // Head-to-head player selector
-  const [h2hSelected, setH2hSelected]       = useState<string>('');
+  // Head-to-head player selector — defaults to the signed-in user if provided
+  const [h2hSelected, setH2hSelected] = useState<string>(currentUsername ?? '');
 
   useEffect(() => {
     fetch('/api/stats')
@@ -433,7 +458,7 @@ export default function StatsTab() {
                         aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                         className="px-3 py-3 text-center"
                       >
-                        <Tooltip id={tooltipId} content={col.tooltip}>
+                        <Tooltip id={tooltipId} content={col.tooltip} align={col.tooltipAlign}>
                           <button
                             type="button"
                             onClick={() => handleSort(col.key)}
@@ -601,7 +626,10 @@ export default function StatsTab() {
 
       </div>
 
-      {/* ── Row 3: Head-to-Head ─────────────────────────────────────────────── */}
+      {/* ── Row 3 + 4: Head-to-Head and Top Combinations side by side ────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+      {/* ── Head-to-Head ─────────────────────────────────────────────────────── */}
       <div className="panel overflow-hidden">
         <CardHeader
           icon={Swords}
@@ -711,7 +739,7 @@ export default function StatsTab() {
         </div>
       </div>
 
-      {/* ── Row 4: Top Winning Combinations ─────────────────────────────────── */}
+      {/* ── Top Winning Combinations ─────────────────────────────────────────── */}
       <div className="panel overflow-hidden">
         <div className="px-5 py-4 border-b border-dota-border">
           <h3 className="font-cinzel text-lg font-bold text-dota-gold">Top Winning Combinations</h3>
@@ -734,9 +762,14 @@ export default function StatsTab() {
                     <span className="truncate font-barlow font-semibold text-sm text-dota-text flex-1 min-w-0">
                       {c.combo}
                     </span>
-                    <span className="font-barlow font-bold text-sm text-dota-radiant-light whitespace-nowrap tabular-nums shrink-0">
-                      {c.wins} {c.wins === 1 ? 'win' : 'wins'}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-barlow text-xs text-dota-text-dim tabular-nums whitespace-nowrap">
+                        {c.wins}W – {c.gamesPlayed - c.wins}L
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(c.winRate)}`}>
+                        {c.winRate}%
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -754,6 +787,8 @@ export default function StatsTab() {
           )}
         </div>
       </div>
+
+      </div>{/* end H2H + Combos grid */}
 
     </div>
   );
