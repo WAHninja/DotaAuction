@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2, ExternalLink, Unlink, CheckCircle2, AlertCircle, Steam } from 'lucide-react';
+import { Loader2, ExternalLink, Unlink, CheckCircle2, AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import { useRouter } from 'next/navigation';
 
