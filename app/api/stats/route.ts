@@ -66,7 +66,8 @@ export async function GET() {
       `
     )
 
-    const teamComboWins = new Map<string, number>()
+    const teamComboWins  = new Map<string, number>()
+    const teamComboGames = new Map<string, number>()
 
     for (const game of gamesResult.rows) {
       const team1 = game.team_1_members || []
@@ -74,16 +75,27 @@ export async function GET() {
 
       const winningTeam =
         game.winning_team === 'team_1' ? team1 : teamA
+      const losingTeam =
+        game.winning_team === 'team_1' ? teamA : team1
 
-      const comboKey = winningTeam
+      // Track wins for the winning combo
+      const winComboKey = winningTeam
         .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
         .sort()
         .join(' + ')
 
-      teamComboWins.set(
-        comboKey,
-        (teamComboWins.get(comboKey) || 0) + 1
-      )
+      teamComboWins.set(winComboKey,  (teamComboWins.get(winComboKey)  || 0) + 1)
+      teamComboGames.set(winComboKey, (teamComboGames.get(winComboKey) || 0) + 1)
+
+      // Track total appearances (no win) for the losing combo
+      const loseComboKey = losingTeam
+        .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
+        .sort()
+        .join(' + ')
+
+      // wins entry stays at 0 unless they've also won with this combo
+      if (!teamComboWins.has(loseComboKey))  teamComboWins.set(loseComboKey, 0)
+      teamComboGames.set(loseComboKey, (teamComboGames.get(loseComboKey) || 0) + 1)
 
       const allPlayers = new Set<number>([...team1, ...teamA])
 
@@ -371,8 +383,12 @@ export async function GET() {
     }))
 
     const topWinningCombos = Array.from(teamComboWins.entries())
-      .map(([combo, wins]) => ({ combo, wins }))
-      .sort((a, b) => b.wins - a.wins)
+      .map(([combo, wins]) => {
+        const gamesPlayed = teamComboGames.get(combo) || 0
+        const winRate     = gamesPlayed > 0 ? +(wins / gamesPlayed * 100).toFixed(1) : 0
+        return { combo, wins, gamesPlayed, winRate }
+      })
+      .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
       .slice(0, 10)
 
     const acquisitionImpact = acquisitionResult.rows.map(r => ({
