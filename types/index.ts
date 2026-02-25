@@ -152,6 +152,8 @@ export type PlayerStats = {
 export type TeamCombo = {
   combo: string;
   wins: number;
+  gamesPlayed: number;
+  winRate: number;
 };
 
 export type SortKey =
