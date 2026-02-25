@@ -4,7 +4,6 @@ import { getSession } from '@/app/session';
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
-// ── Fetch a Steam profile by 64-bit Steam ID ──────────────────────────────────
 async function fetchSteamProfile(steamId: string): Promise<{
   steamId: string;
   personaName: string;
@@ -12,12 +11,9 @@ async function fetchSteamProfile(steamId: string): Promise<{
   profileUrl: string;
   personaState: number;
 } | null> {
-  if (!STEAM_API_KEY) {
-    throw new Error('STEAM_API_KEY environment variable is not set.');
-  }
+  if (!STEAM_API_KEY) throw new Error('STEAM_API_KEY environment variable is not set.');
 
   const url = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamId}`;
-
   const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) return null;
 
@@ -30,33 +26,21 @@ async function fetchSteamProfile(steamId: string): Promise<{
     personaName:  player.personaname,
     avatarFull:   player.avatarfull,
     profileUrl:   player.profileurl,
-    personaState: player.personastate as number, // 0=offline, 1=online, 2=busy, 3=away, 4=snooze
+    personaState: player.personastate as number,
   };
 }
 
-// ── GET /api/me/steam ─────────────────────────────────────────────────────────
 export async function GET() {
   const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
-  }
+  if (!session?.userId) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
 
-  const { rows } = await db.query(
-    'SELECT steam_id FROM users WHERE id = $1',
-    [session.userId]
-  );
-
+  const { rows } = await db.query('SELECT steam_id FROM users WHERE id = $1', [session.userId]);
   const steamId: bigint | null = rows[0]?.steam_id ?? null;
-
-  if (!steamId) {
-    return NextResponse.json({ linked: false });
-  }
+  if (!steamId) return NextResponse.json({ linked: false });
 
   try {
     const profile = await fetchSteamProfile(steamId.toString());
-    if (!profile) {
-      return NextResponse.json({ linked: false, steamId: steamId.toString() });
-    }
+    if (!profile) return NextResponse.json({ linked: false, steamId: steamId.toString() });
     return NextResponse.json({ linked: true, profile });
   } catch (err) {
     console.error('[STEAM_GET_ERROR]', err);
@@ -64,12 +48,9 @@ export async function GET() {
   }
 }
 
-// ── POST /api/me/steam ────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
-  }
+  if (!session?.userId) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
 
   let rawSteamId: string;
   try {
@@ -105,27 +86,23 @@ export async function POST(req: NextRequest) {
     [BigInt(cleaned), session.userId]
   );
   if (existing.length > 0) {
-    return NextResponse.json(
-      { error: 'This Steam account is already linked to another player.' },
-      { status: 409 }
-    );
+    return NextResponse.json({ error: 'This Steam account is already linked to another player.' }, { status: 409 });
   }
 
+  // Save both the steam_id and avatarFull so other pages can show avatars
+  // without calling the Steam API on every page load.
   await db.query(
-    'UPDATE users SET steam_id = $1 WHERE id = $2',
-    [BigInt(cleaned), session.userId]
+    'UPDATE users SET steam_id = $1, steam_avatar = $2 WHERE id = $3',
+    [BigInt(cleaned), profile.avatarFull, session.userId]
   );
 
   return NextResponse.json({ ok: true, profile });
 }
 
-// ── DELETE /api/me/steam ──────────────────────────────────────────────────────
 export async function DELETE() {
   const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
-  }
+  if (!session?.userId) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
 
-  await db.query('UPDATE users SET steam_id = NULL WHERE id = $1', [session.userId]);
+  await db.query('UPDATE users SET steam_id = NULL, steam_avatar = NULL WHERE id = $1', [session.userId]);
   return NextResponse.json({ ok: true });
 }
