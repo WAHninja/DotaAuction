@@ -3,20 +3,29 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
 import type { DashboardMatch as Match } from '@/types';
 
+// =============================================================================
+// Types
+// =============================================================================
+
+type Tab = 'ongoing' | 'completed' | 'stats';
+
+type GamesPlayedMap = Record<number, number>;
+
 type DashboardTabsProps = {
   ongoingMatches: Match[];
   completedMatches: Match[];
 };
 
-type GamesPlayedMap = Record<number, number>;
-
-type Tab = 'ongoing' | 'completed' | 'stats';
+// =============================================================================
+// Constants
+// =============================================================================
 
 const TAB_LABELS: Record<Tab, string> = {
   ongoing:   'Ongoing',
@@ -24,130 +33,139 @@ const TAB_LABELS: Record<Tab, string> = {
   stats:     'Stats',
 };
 
-export default function DashboardTabs({ ongoingMatches, completedMatches }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('stats');
-  const [ongoingVisible, setOngoingVisible] = useState(6);
-  const [completedVisible, setCompletedVisible] = useState(6);
-  const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
+// =============================================================================
+// Sub-components — hoisted to module level so React reconciles them correctly
+// across re-renders rather than unmounting/remounting on every parent render.
+// =============================================================================
 
-  // Track which match IDs have already been fetched so we never issue a
-  // second request for the same match, even when gamesPlayedMap triggers a
-  // re-run of the effect (which it will, because it's now a listed dep).
-  const fetchedIds = useRef<Set<number>>(new Set());
+// ── TabButton ─────────────────────────────────────────────────────────────────
+function TabButton({
+  tab,
+  active,
+  onClick,
+}: {
+  tab: Tab;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`font-barlow font-semibold text-sm tracking-widest uppercase px-5 py-2 rounded transition-all ${
+        active
+          ? 'bg-dota-gold text-dota-base shadow-gold'
+          : 'bg-dota-surface border border-dota-border text-dota-text-muted hover:text-dota-text hover:border-dota-border-bright'
+      }`}
+    >
+      {TAB_LABELS[tab]}
+    </button>
+  );
+}
 
-  useEffect(() => {
-    ongoingMatches.forEach(match => {
-      if (fetchedIds.current.has(match.id)) return;
-      fetchedIds.current.add(match.id);
+// ── TeamRoster ────────────────────────────────────────────────────────────────
+function TeamRoster({
+  usernames,
+  faction,
+}: {
+  usernames?: string[];
+  faction: 'radiant' | 'dire';
+}) {
+  if (!usernames?.length) return null;
+  const isRadiant = faction === 'radiant';
+  return (
+    <div className={isRadiant ? 'team-radiant-panel p-2.5 rounded-lg' : 'team-dire-panel p-2.5 rounded-lg'}>
+      <p className={`stat-label mb-1.5 ${isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light'}`}>
+        {isRadiant ? 'Team 1' : 'Team A'}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {usernames.map(u => (
+          <span
+            key={u}
+            className={`font-barlow text-xs font-semibold px-2 py-0.5 rounded ${
+              isRadiant
+                ? 'bg-dota-radiant/20 text-dota-radiant-light border border-dota-radiant/30'
+                : 'bg-dota-dire/20 text-dota-dire-light border border-dota-dire/30'
+            }`}
+          >
+            {u}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      fetch(`/api/match/${match.id}/games-played`)
-        .then(res => res.json())
-        .then(data => setGamesPlayedMap(prev => ({ ...prev, [match.id]: data.gamesPlayed })))
-        .catch(err => console.error(`Failed to fetch games played for match ${match.id}`, err));
-    });
-  }, [ongoingMatches]);
+// ── MatchCard ─────────────────────────────────────────────────────────────────
+function MatchCard({
+  match,
+  isCompleted,
+  gamesPlayedMap,
+}: {
+  match: Match;
+  isCompleted: boolean;
+  gamesPlayedMap: GamesPlayedMap;
+}) {
+  const gamesPlayed = gamesPlayedMap[match.id];
 
-  // ── Sub-components ──────────────────────────────────────────────────────────
+  return (
+    <div className={`panel p-4 flex flex-col gap-3 hover:border-dota-border-bright transition-colors ${
+      !isCompleted ? 'border-dota-gold/30' : ''
+    }`}>
 
-  const TabButton = ({ tab }: { tab: Tab }) => {
-    const active = activeTab === tab;
-    return (
-      <button
-        onClick={() => setActiveTab(tab)}
-        className={`font-barlow font-semibold text-sm tracking-widest uppercase px-5 py-2 rounded transition-all ${
-          active
-            ? 'bg-dota-gold text-dota-base shadow-gold'
-            : 'bg-dota-surface border border-dota-border text-dota-text-muted hover:text-dota-text hover:border-dota-border-bright'
-        }`}
-      >
-        {TAB_LABELS[tab]}
-      </button>
-    );
-  };
+      {/* Card header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5">
+          <p className="font-barlow font-bold text-dota-text tracking-wide">
+            Match #{match.id}
+          </p>
 
-  const TeamRoster = ({
-    usernames,
-    faction,
-  }: {
-    usernames?: string[];
-    faction: 'radiant' | 'dire';
-  }) => {
-    if (!usernames?.length) return null;
-    const isRadiant = faction === 'radiant';
-    return (
-      <div className={isRadiant ? 'team-radiant-panel p-2.5 rounded-lg' : 'team-dire-panel p-2.5 rounded-lg'}>
-        <p className={`stat-label mb-1.5 ${isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light'}`}>
-          {isRadiant ? 'Team 1' : 'Team A'}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {usernames.map(u => (
-            <span
-              key={u}
-              className={`font-barlow text-xs font-semibold px-2 py-0.5 rounded ${
-                isRadiant
-                  ? 'bg-dota-radiant/20 text-dota-radiant-light border border-dota-radiant/30'
-                  : 'bg-dota-dire/20 text-dota-dire-light border border-dota-dire/30'
-              }`}
-            >
-              {u}
+          {isCompleted ? (
+            <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-gold">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Winner: {match.winner_username || 'Not recorded'}
             </span>
-          ))}
+          ) : (
+            <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-text-muted">
+              <PlayCircle className="w-3.5 h-3.5 text-dota-radiant-light" />
+              {gamesPlayed === undefined ? (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+                </span>
+              ) : (
+                <span>Game <strong className="text-dota-text">#{gamesPlayed}</strong></span>
+              )}
+            </span>
+          )}
         </div>
+
+        {/*
+          Apply button classes directly to Link (<a>) rather than nesting a
+          <button> inside it. Interactive-inside-interactive is invalid HTML
+          and produces broken keyboard/screen reader behaviour.
+        */}
+        <Link
+          href={`/match/${match.id}`}
+          className={isCompleted
+            ? 'btn-secondary text-sm py-1.5 px-3'
+            : 'btn-primary text-sm py-1.5 px-3'
+          }
+        >
+          {isCompleted ? 'View' : 'Continue'}
+        </Link>
       </div>
-    );
-  };
 
-  const MatchCard = ({ match, isCompleted }: { match: Match; isCompleted: boolean }) => {
-    const gamesPlayed = gamesPlayedMap[match.id];
-
-    return (
-      <div className={`panel p-4 flex flex-col gap-3 hover:border-dota-border-bright transition-colors ${
-        !isCompleted ? 'border-dota-gold/30' : ''
-      }`}>
-
-        {/* Card header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-0.5">
-            <p className="font-barlow font-bold text-dota-text tracking-wide">
-              Match #{match.id}
-            </p>
-
-            {isCompleted ? (
-              <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-gold">
-                <CheckCircle className="w-3.5 h-3.5" />
-                Winner: {match.winner_username || 'Not recorded'}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-text-muted">
-                <PlayCircle className="w-3.5 h-3.5 text-dota-radiant-light" />
-                {gamesPlayed === undefined ? (
-                  <span className="flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Loading…
-                  </span>
-                ) : (
-                  <span>Game <strong className="text-dota-text">#{gamesPlayed}</strong></span>
-                )}
-              </span>
-            )}
-          </div>
-
-          <Link href={`/match/${match.id}`}>
-            <button className={isCompleted ? 'btn-secondary text-sm py-1.5 px-3' : 'btn-primary text-sm py-1.5 px-3'}>
-              {isCompleted ? 'View' : 'Continue'}
-            </button>
-          </Link>
-        </div>
-
-        {/* Team rosters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <TeamRoster usernames={match.team_1_usernames} faction="radiant" />
-          <TeamRoster usernames={match.team_a_usernames} faction="dire" />
-        </div>
+      {/* Team rosters */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <TeamRoster usernames={match.team_1_usernames} faction="radiant" />
+        <TeamRoster usernames={match.team_a_usernames} faction="dire" />
       </div>
-    );
-  };
+    </div>
+  );
+}
 
-  const EmptyState = ({ type }: { type: 'ongoing' | 'completed' }) => (
+// ── EmptyState ────────────────────────────────────────────────────────────────
+function EmptyState({ type }: { type: 'ongoing' | 'completed' }) {
+  return (
     <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-dota-text-muted">
       {type === 'ongoing' ? (
         <>
@@ -164,25 +182,35 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
       )}
     </div>
   );
+}
 
-  const MatchGrid = ({
-    matches,
-    visible,
-    onLoadMore,
-    type,
-  }: {
-    matches: Match[];
-    visible: number;
-    onLoadMore: () => void;
-    type: 'ongoing' | 'completed';
-  }) => (
+// ── MatchGrid ─────────────────────────────────────────────────────────────────
+function MatchGrid({
+  matches,
+  visible,
+  onLoadMore,
+  type,
+  gamesPlayedMap,
+}: {
+  matches: Match[];
+  visible: number;
+  onLoadMore: () => void;
+  type: 'ongoing' | 'completed';
+  gamesPlayedMap: GamesPlayedMap;
+}) {
+  return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {matches.length === 0 ? (
         <EmptyState type={type} />
       ) : (
         <>
           {matches.slice(0, visible).map(match => (
-            <MatchCard key={match.id} match={match} isCompleted={type === 'completed'} />
+            <MatchCard
+              key={match.id}
+              match={match}
+              isCompleted={type === 'completed'}
+              gamesPlayedMap={gamesPlayedMap}
+            />
           ))}
           {visible < matches.length && (
             <div className="col-span-full flex justify-center mt-2">
@@ -195,6 +223,45 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
       )}
     </div>
   );
+}
+
+// =============================================================================
+// DashboardTabs
+// =============================================================================
+
+export default function DashboardTabs({ ongoingMatches, completedMatches }: DashboardTabsProps) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<Tab>('stats');
+  const [ongoingVisible, setOngoingVisible] = useState(6);
+  const [completedVisible, setCompletedVisible] = useState(6);
+  const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
+
+  // Track which match IDs have already been fetched so we never issue a
+  // second request for the same match even across re-renders.
+  const fetchedIds = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    ongoingMatches.forEach(match => {
+      if (fetchedIds.current.has(match.id)) return;
+      fetchedIds.current.add(match.id);
+
+      fetch(`/api/match/${match.id}/games-played`)
+        .then(res => res.json())
+        .then(data => setGamesPlayedMap(prev => ({ ...prev, [match.id]: data.gamesPlayed })))
+        .catch(err => console.error(`Failed to fetch games played for match ${match.id}`, err));
+    });
+  }, [ongoingMatches]);
+
+  // ── Tab switching ────────────────────────────────────────────────────────────
+  // router.refresh() re-runs the server component data fetch (ongoingMatches,
+  // completedMatches) so the lists reflect any matches that have changed since
+  // the page first loaded — without a full navigation or page reload.
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (tab !== 'stats') {
+      router.refresh();
+    }
+  };
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -204,7 +271,12 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
       {/* Tab bar */}
       <div className="flex justify-center gap-3">
         {(['stats', 'ongoing', 'completed'] as const).map(tab => (
-          <TabButton key={tab} tab={tab} />
+          <TabButton
+            key={tab}
+            tab={tab}
+            active={activeTab === tab}
+            onClick={() => handleTabChange(tab)}
+          />
         ))}
       </div>
 
@@ -218,6 +290,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           visible={ongoingVisible}
           onLoadMore={() => setOngoingVisible(v => v + 5)}
           type="ongoing"
+          gamesPlayedMap={gamesPlayedMap}
         />
       )}
       {activeTab === 'completed' && (
@@ -226,9 +299,9 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           visible={completedVisible}
           onLoadMore={() => setCompletedVisible(v => v + 5)}
           type="completed"
+          gamesPlayedMap={gamesPlayedMap}
         />
       )}
-      
 
     </div>
   );
