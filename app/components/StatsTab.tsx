@@ -38,31 +38,31 @@ const COLUMNS: Column[] = [
     label: 'Win Rate',
     sublabel: `min. ${MIN_GAMES_FOR_RATE} games`,
     key: 'gamesWinRate',
-    tooltip: `Percentage of games won.`,
+    tooltip: `Percentage of games won. Only displayed after ${MIN_GAMES_FOR_RATE}+ games — smaller samples are too noisy to be meaningful.`,
   },
   {
     label: 'Offers Accepted',
     sublabel: 'as seller',
     key: 'offerAcceptRate',
-    tooltip: 'How often offers you submitted were accepted by the opponent team.',
+    tooltip: 'How often offers you submitted were accepted by the losing team. Influenced by competing offers and visible tier labels — not purely within your control.',
   },
   {
     label: 'Avg Bid',
     sublabel: 'when targeted',
     key: 'averageOfferValue',
-    tooltip: 'Average gold your own teammates offered when putting you up for sale.',
+    tooltip: 'Average gold your own teammates offered when putting you up for sale. Higher means they valued offloading you at a premium.',
   },
   {
     label: 'Targeted',
     sublabel: 'times offered',
     key: 'timesOffered',
-    tooltip: 'How many times a teammate has put you up for sale in an auction.',
+    tooltip: 'How many times a teammate has put you up for sale in an auction, regardless of whether the offer was accepted.',
   },
   {
     label: 'Sold',
     sublabel: 'times transferred',
     key: 'timesSold',
-    tooltip: 'How many times you have been sold.',
+    tooltip: 'How many times you have actually been transferred to the other team via an accepted offer.',
   },
   {
     label: 'Net Gold',
@@ -545,6 +545,11 @@ export default function StatsTab(_props: StatsTabProps) {
         </div>
 
         <div className="px-5 py-2.5 border-t border-dota-border">
+          <p className="font-barlow text-[11px] text-dota-text-dim">
+            Avg Bid is the gold teammates offered when selling you.
+            Net Gold sums all win rewards, loss penalties, and auction payouts.
+            Win Rate requires {MIN_GAMES_FOR_RATE}+ games.
+          </p>
         </div>
       </div>
 
@@ -557,7 +562,7 @@ export default function StatsTab(_props: StatsTabProps) {
             icon={ShoppingCart}
             iconClass="text-dota-gold"
             title="Acquisition Impact"
-            subtitle="Win rate of your new team the game after you're sold"
+            subtitle="Win rate of your new team the game after you're sold · min. 2 sales"
           />
           <div className="p-4">
             {/*
@@ -578,6 +583,10 @@ export default function StatsTab(_props: StatsTabProps) {
               }))}
             />
             {acquisitionImpact.length > 0 && (
+              <p className="font-barlow text-[10px] text-dota-text-dim mt-3 leading-snug">
+                Percentage of games won by the team that acquired this player,
+                in the game immediately following the sale.
+              </p>
             )}
           </div>
         </div>
@@ -588,7 +597,7 @@ export default function StatsTab(_props: StatsTabProps) {
             icon={Zap}
             iconClass="text-dota-radiant-light"
             title="Win Streaks"
-            subtitle="Longest consecutive winning run within a single match"
+            subtitle="Longest consecutive winning run within a single match · min. 2"
           />
           <div className="p-4">
             {/*
@@ -721,6 +730,11 @@ export default function StatsTab(_props: StatsTabProps) {
                       ))}
                     </tbody>
                   </table>
+
+                  <p className="font-barlow text-[10px] text-dota-text-dim mt-3 leading-snug">
+                    Records cover all games where {h2hSelected} and the opponent were on opposing teams,
+                    across every match. Sorted by games played — most-played rivalries first.
+                  </p>
                 </div>
               )}
             </>
