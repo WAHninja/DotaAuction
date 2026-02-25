@@ -1,32 +1,18 @@
-import { NextResponse } from 'next/server';
-import { getSessionIdFromCookies } from '@/app/session';
-import db from '@/lib/db';
+import { NextResponse } from 'next/server'
+import { getSession } from '@/app/session'
+import db from '@/lib/db'
 
 export async function GET() {
-  const sessionId = await getSessionIdFromCookies(); // <-- MUST await
-
-  if (!sessionId) {
-    return NextResponse.json({ user: null });
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ username: null }, { status: 401 })
   }
 
-  try {
-    const result = await db.query(
-      `
-      SELECT users.id, users.username
-      FROM sessions
-      JOIN users ON users.id = sessions.user_id
-      WHERE sessions.id = $1
-      LIMIT 1
-      `,
-      [sessionId]
-    );
+  const result = await db.query(
+    'SELECT username FROM users WHERE id = $1',
+    [session.userId]
+  )
 
-    if (result.rows.length === 0) return NextResponse.json({ user: null });
-
-    const user = result.rows[0];
-    return NextResponse.json({ user });
-  } catch (error) {
-    console.error('Error fetching user from session:', error);
-    return NextResponse.json({ user: null });
-  }
+  const username = result.rows[0]?.username ?? null
+  return NextResponse.json({ username })
 }
