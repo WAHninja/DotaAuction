@@ -366,7 +366,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
               }`}
             >
               <span
-                className={`absolute top-0.5 w-3 h-3 rounded-full bg-dota-base transition-transform ${
+                className={`absolute top-0.5 left-0 w-3 h-3 rounded-full bg-dota-base transition-transform ${
                   myMatchesOnly ? 'translate-x-3.5' : 'translate-x-0.5'
                 }`}
               />
