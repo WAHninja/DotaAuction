@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Loader2, RefreshCw, Users } from 'lucide-react';
 import { useOnlineUsers } from '@/app/hooks/useOnlineUsers';
+import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 interface Player {
   id: number;
   username: string;
+  steam_avatar?: string | null;
 }
 
 type FetchState = 'loading' | 'error' | 'ready';
@@ -16,25 +18,25 @@ type CreateMatchFormProps = {
   currentUserId: number;
 };
 
-// ── Skeleton card — shown while players are loading ───────────────────────────
+// ── Skeleton card ─────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="px-3 py-2.5 rounded border border-dota-border bg-dota-deep animate-pulse">
-      <div className="h-4 rounded bg-dota-border/60 mx-auto w-3/4" />
+    <div className="px-3 py-3 rounded border border-dota-border bg-dota-deep animate-pulse flex items-center gap-2.5">
+      <div className="w-8 h-8 rounded-full bg-dota-border/60 shrink-0" />
+      <div className="h-4 rounded bg-dota-border/60 flex-1" />
     </div>
   );
 }
 
 export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps) {
-  const [players, setPlayers]               = useState<Player[]>([]);
-  const [fetchState, setFetchState]         = useState<FetchState>('loading');
+  const [players, setPlayers]                     = useState<Player[]>([]);
+  const [fetchState, setFetchState]               = useState<FetchState>('loading');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
-  const [error, setError]                   = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting]     = useState(false);
-  // Delay showing the "Creating…" spinner to avoid a flash on fast connections.
-  const [showSpinner, setShowSpinner]       = useState(false);
-  const spinnerTimer                        = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const router                              = useRouter();
+  const [error, setError]                         = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting]           = useState(false);
+  const [showSpinner, setShowSpinner]             = useState(false);
+  const spinnerTimer                              = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router                                    = useRouter();
 
   const onlineIds = useOnlineUsers(currentUserId);
 
@@ -56,8 +58,6 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
   useEffect(() => { loadPlayers(); }, []);
 
   // ── Spinner delay ───────────────────────────────────────────────────────────
-  // Only show the spinner if the request takes longer than 150 ms, preventing
-  // a jarring flash on fast connections where the state resolves almost instantly.
   useEffect(() => {
     if (isSubmitting) {
       spinnerTimer.current = setTimeout(() => setShowSpinner(true), 150);
@@ -65,9 +65,7 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
       if (spinnerTimer.current) clearTimeout(spinnerTimer.current);
       setShowSpinner(false);
     }
-    return () => {
-      if (spinnerTimer.current) clearTimeout(spinnerTimer.current);
-    };
+    return () => { if (spinnerTimer.current) clearTimeout(spinnerTimer.current); };
   }, [isSubmitting]);
 
   // ── Selection ───────────────────────────────────────────────────────────────
@@ -83,21 +81,14 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-
     try {
       const res = await fetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerIds: selectedPlayerIds }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to create or rejoin match.');
-        return;
-      }
-
+      if (!res.ok) { setError(data.error || 'Failed to create or rejoin match.'); return; }
       router.push(`/match/${data.id}`);
     } catch {
       setError('An unexpected error occurred.');
@@ -106,21 +97,16 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
     }
   };
 
-  const enoughSelected = selectedPlayerIds.length >= 4;
-
-  // Other users who are currently online (own dot is omitted — you're always here)
+  const enoughSelected  = selectedPlayerIds.length >= 4;
   const anyOthersOnline = players.some(p => onlineIds.has(p.id) && p.id !== currentUserId);
-  // Legend only appears when at least one dot is actually visible
-  const showLegend = anyOthersOnline;
+  const showLegend      = anyOthersOnline;
 
   return (
     <form onSubmit={handleSubmit} className="panel h-full flex flex-col p-6 space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="text-center space-y-1">
-        <h2 className="font-cinzel text-3xl font-bold text-dota-gold">
-          Select Players
-        </h2>
+        <h2 className="font-cinzel text-3xl font-bold text-dota-gold">Select Players</h2>
         <div className="divider-gold" />
       </div>
 
@@ -152,21 +138,15 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
       {/* ── Player grid ────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pr-1">
 
-        {/* Loading skeleton */}
         {fetchState === 'loading' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+            {Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
-        {/* Error state */}
         {fetchState === 'error' && (
           <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-            <p className="font-barlow text-sm text-dota-dire-light">
-              Failed to load players.
-            </p>
+            <p className="font-barlow text-sm text-dota-dire-light">Failed to load players.</p>
             <button
               type="button"
               onClick={loadPlayers}
@@ -178,24 +158,19 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
           </div>
         )}
 
-        {/* Empty state — fetched successfully but no players returned */}
         {fetchState === 'ready' && players.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
             <Users className="w-8 h-8 text-dota-text-dim opacity-40" />
-            <p className="font-barlow text-sm text-dota-text-muted">
-              No other players registered yet.
-            </p>
+            <p className="font-barlow text-sm text-dota-text-muted">No other players registered yet.</p>
           </div>
         )}
 
-        {/* Player grid */}
         {fetchState === 'ready' && players.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {players.map(player => {
-              const selected = selectedPlayerIds.includes(player.id);
-              // Own dot is omitted — you're always online by definition.
-              const isOnline = onlineIds.has(player.id) && player.id !== currentUserId;
-              const disabled = isSubmitting;
+              const selected  = selectedPlayerIds.includes(player.id);
+              const isOnline  = onlineIds.has(player.id) && player.id !== currentUserId;
+              const disabled  = isSubmitting;
 
               return (
                 <button
@@ -207,38 +182,43 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
                   disabled={disabled}
                   onClick={() => togglePlayer(player.id)}
                   className={`
-                    relative px-3 py-2.5 rounded border text-center font-barlow font-semibold
+                    relative px-3 py-2.5 rounded border text-left font-barlow font-semibold
                     text-sm tracking-wide transition-all select-none
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dota-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dota-base
                     disabled:cursor-not-allowed disabled:opacity-50
+                    flex items-center gap-2.5
                     ${selected
                       ? 'bg-dota-overlay border-dota-gold text-dota-gold shadow-gold'
                       : 'bg-dota-deep border-dota-border text-dota-text-muted hover:border-dota-border-bright hover:text-dota-text'
                     }
                   `}
                 >
-                  {/* Selected checkmark — state change is shape+colour, not colour alone */}
+                  {/* Avatar */}
+                  <PlayerAvatar
+                    username={player.username}
+                    steamAvatar={player.steam_avatar}
+                    size={32}
+                    className={`transition-opacity ${selected ? 'ring-2 ring-dota-gold/50 ring-offset-1 ring-offset-dota-overlay' : ''}`}
+                  />
+
+                  {/* Name */}
+                  <span className="truncate flex-1 min-w-0">{player.username}</span>
+
+                  {/* Selected checkmark */}
                   {selected && (
                     <CheckCircle2
-                      className="absolute top-1.5 left-1.5 w-3 h-3 text-dota-gold"
+                      className="absolute top-1.5 right-1.5 w-3 h-3 text-dota-gold shrink-0"
                       aria-hidden="true"
                     />
                   )}
 
-                  {/* Online presence dot — only for other users, not yourself */}
-                  {isOnline && (
+                  {/* Online presence dot */}
+                  {isOnline && !selected && (
                     <span
                       aria-hidden="true"
-                      className={`
-                        absolute top-1.5 right-1.5
-                        w-2 h-2 rounded-full bg-dota-radiant
-                        ring-2
-                        ${selected ? 'ring-dota-overlay' : 'ring-dota-deep'}
-                      `}
+                      className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-dota-radiant ring-2 ring-dota-deep"
                     />
                   )}
-
-                  {player.username}
                 </button>
               );
             })}
@@ -246,7 +226,7 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
         )}
       </div>
 
-      {/* ── Legend — only rendered when at least one online dot is visible ─── */}
+      {/* ── Legend ─────────────────────────────────────────────────────────── */}
       {showLegend && (
         <div className="flex items-center justify-center gap-1.5 font-barlow text-xs text-dota-text-dim">
           <span className="w-2 h-2 rounded-full bg-dota-radiant shrink-0" />
@@ -269,7 +249,6 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
             </span>
           )}
         </p>
-
         <button
           type="submit"
           disabled={!enoughSelected || isSubmitting}
