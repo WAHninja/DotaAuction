@@ -232,9 +232,18 @@ export default async function DashboardPage() {
           />
 
           {/* ── Zone 3: Match tabs ────────────────────────────────────────── */}
+          {/*
+            currentUsername pre-selects the signed-in user in the H2H picker
+            inside StatsTab. If your session object doesn't have a username
+            field, replace session.username with a quick db lookup:
+              const { username } = (await db.query(
+                'SELECT username FROM users WHERE id = $1', [session.userId]
+              )).rows[0]
+          */}
           <DashboardTabs
             ongoingMatches={ongoingMatches}
             completedMatches={completedMatches}
+            currentUsername={session.username}
           />
 
         </div>
