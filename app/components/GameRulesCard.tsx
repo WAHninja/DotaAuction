@@ -102,7 +102,7 @@ function Modal({
   return (
     // Backdrop — click outside to close
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 pt-16"
       onClick={onClose}
     >
       {/*
