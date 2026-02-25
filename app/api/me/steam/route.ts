@@ -5,12 +5,12 @@ import { getSession } from '@/app/session';
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
 // ── Fetch a Steam profile by 64-bit Steam ID ──────────────────────────────────
-// Returns null if the Steam ID doesn't exist or the API is unreachable.
 async function fetchSteamProfile(steamId: string): Promise<{
   steamId: string;
   personaName: string;
   avatarFull: string;
   profileUrl: string;
+  personaState: number;
 } | null> {
   if (!STEAM_API_KEY) {
     throw new Error('STEAM_API_KEY environment variable is not set.');
@@ -26,16 +26,15 @@ async function fetchSteamProfile(steamId: string): Promise<{
   if (!player) return null;
 
   return {
-    steamId:     player.steamid,
-    personaName: player.personaname,
-    avatarFull:  player.avatarfull,   // 184x184 px
-    profileUrl:  player.profileurl,
+    steamId:      player.steamid,
+    personaName:  player.personaname,
+    avatarFull:   player.avatarfull,
+    profileUrl:   player.profileurl,
+    personaState: player.personastate as number, // 0=offline, 1=online, 2=busy, 3=away, 4=snooze
   };
 }
 
 // ── GET /api/me/steam ─────────────────────────────────────────────────────────
-// Returns the current user's linked Steam profile (fetched live from Steam).
-// Returns { linked: false } if no Steam ID is saved.
 export async function GET() {
   const session = await getSession();
   if (!session?.userId) {
@@ -56,7 +55,6 @@ export async function GET() {
   try {
     const profile = await fetchSteamProfile(steamId.toString());
     if (!profile) {
-      // Steam ID saved but Steam returned no player — treat as unlinked
       return NextResponse.json({ linked: false, steamId: steamId.toString() });
     }
     return NextResponse.json({ linked: true, profile });
@@ -67,8 +65,6 @@ export async function GET() {
 }
 
 // ── POST /api/me/steam ────────────────────────────────────────────────────────
-// Body: { steamId: string }
-// Validates the Steam ID against the Steam API, then saves it to the user row.
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session?.userId) {
@@ -82,7 +78,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  // Sanitise — Steam 64-bit IDs are 17-digit numeric strings.
   const cleaned = rawSteamId?.toString().trim().replace(/\D/g, '');
   if (!cleaned || cleaned.length < 15 || cleaned.length > 20) {
     return NextResponse.json(
@@ -91,7 +86,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Verify the ID resolves to a real Steam account before saving.
   let profile: Awaited<ReturnType<typeof fetchSteamProfile>>;
   try {
     profile = await fetchSteamProfile(cleaned);
@@ -106,7 +100,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Check the Steam ID isn't already claimed by another user.
   const { rows: existing } = await db.query(
     'SELECT id FROM users WHERE steam_id = $1 AND id != $2',
     [BigInt(cleaned), session.userId]
@@ -127,7 +120,6 @@ export async function POST(req: NextRequest) {
 }
 
 // ── DELETE /api/me/steam ──────────────────────────────────────────────────────
-// Unlinks the Steam account from the current user.
 export async function DELETE() {
   const session = await getSession();
   if (!session?.userId) {
