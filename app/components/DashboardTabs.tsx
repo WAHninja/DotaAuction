@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
+import { UserContext } from '@/app/context/UserContext';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
@@ -164,7 +165,30 @@ function MatchCard({
 }
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
-function EmptyState({ type }: { type: 'ongoing' | 'completed' }) {
+// filtered=true  → matches exist but none belong to the current user
+// filtered=false → no matches at all
+function EmptyState({
+  type,
+  filtered,
+}: {
+  type: 'ongoing' | 'completed';
+  filtered: boolean;
+}) {
+  if (filtered) {
+    const Icon = type === 'ongoing' ? Swords : Trophy;
+    return (
+      <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-dota-text-muted">
+        <Icon className="w-12 h-12 mb-4 opacity-20" />
+        <p className="font-cinzel text-lg font-bold mb-1 text-dota-text-dim">
+          No {type === 'ongoing' ? 'ongoing' : 'completed'} matches for you
+        </p>
+        <p className="font-barlow text-sm">
+          Toggle <span className="text-dota-text font-semibold">All Matches</span> above to see every match.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-dota-text-muted">
       {type === 'ongoing' ? (
@@ -191,17 +215,19 @@ function MatchGrid({
   onLoadMore,
   type,
   gamesPlayedMap,
+  filtered,
 }: {
   matches: Match[];
   visible: number;
   onLoadMore: () => void;
   type: 'ongoing' | 'completed';
   gamesPlayedMap: GamesPlayedMap;
+  filtered: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {matches.length === 0 ? (
-        <EmptyState type={type} />
+        <EmptyState type={type} filtered={filtered} />
       ) : (
         <>
           {matches.slice(0, visible).map(match => (
@@ -231,10 +257,14 @@ function MatchGrid({
 
 export default function DashboardTabs({ ongoingMatches, completedMatches }: DashboardTabsProps) {
   const router = useRouter();
+  const { user } = useContext(UserContext);
+
   const [activeTab, setActiveTab] = useState<Tab>('stats');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
   const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
+  // Default to showing only the current user's matches. They can toggle to see all.
+  const [myMatchesOnly, setMyMatchesOnly] = useState(true);
 
   // Track which match IDs have already been fetched so we never issue a
   // second request for the same match even across re-renders.
@@ -252,6 +282,37 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
     });
   }, [ongoingMatches]);
 
+  // ── Filter ───────────────────────────────────────────────────────────────────
+  // A match belongs to the user if their username appears in either team's
+  // username list. Falls back to showing all matches if the user isn't loaded yet.
+  const isMyMatch = (match: Match): boolean => {
+    if (!user?.username) return true;
+    return (
+      (match.team_1_usernames ?? []).includes(user.username) ||
+      (match.team_a_usernames ?? []).includes(user.username)
+    );
+  };
+
+  const filteredOngoing = useMemo(
+    () => myMatchesOnly ? ongoingMatches.filter(isMyMatch) : ongoingMatches,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ongoingMatches, myMatchesOnly, user?.username]
+  );
+
+  const filteredCompleted = useMemo(
+    () => myMatchesOnly ? completedMatches.filter(isMyMatch) : completedMatches,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [completedMatches, myMatchesOnly, user?.username]
+  );
+
+  // Reset visible counts when the filter changes so a previously-expanded list
+  // doesn't show a lower count than expected after narrowing the results.
+  const handleFilterToggle = () => {
+    setMyMatchesOnly(v => !v);
+    setOngoingVisible(6);
+    setCompletedVisible(6);
+  };
+
   // ── Tab switching ────────────────────────────────────────────────────────────
   // router.refresh() re-runs the server component data fetch (ongoingMatches,
   // completedMatches) so the lists reflect any matches that have changed since
@@ -264,6 +325,8 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+
+  const showFilter = activeTab === 'ongoing' || activeTab === 'completed';
 
   return (
     <div className="space-y-6">
@@ -282,24 +345,57 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
       <div className="divider" />
 
+      {/* Filter toggle — only shown on match tabs */}
+      {showFilter && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleFilterToggle}
+            className={`flex items-center gap-2 font-barlow text-sm font-semibold px-4 py-1.5 rounded border transition-all ${
+              myMatchesOnly
+                ? 'bg-dota-gold/15 border-dota-gold/50 text-dota-gold hover:bg-dota-gold/20'
+                : 'bg-dota-surface border-dota-border text-dota-text-muted hover:border-dota-border-bright hover:text-dota-text'
+            }`}
+            aria-pressed={myMatchesOnly}
+          >
+            {/* Simple pill indicator */}
+            <span
+              aria-hidden="true"
+              className={`inline-block w-7 h-4 rounded-full transition-colors relative ${
+                myMatchesOnly ? 'bg-dota-gold' : 'bg-dota-border'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-3 h-3 rounded-full bg-dota-base transition-transform ${
+                  myMatchesOnly ? 'translate-x-3.5' : 'translate-x-0.5'
+                }`}
+              />
+            </span>
+            My matches only
+          </button>
+        </div>
+      )}
+
       {/* Tab content */}
       {activeTab === 'stats' && <StatsTab />}
       {activeTab === 'ongoing' && (
         <MatchGrid
-          matches={ongoingMatches}
+          matches={filteredOngoing}
           visible={ongoingVisible}
           onLoadMore={() => setOngoingVisible(v => v + 5)}
           type="ongoing"
           gamesPlayedMap={gamesPlayedMap}
+          filtered={myMatchesOnly && filteredOngoing.length < ongoingMatches.length}
         />
       )}
       {activeTab === 'completed' && (
         <MatchGrid
-          matches={completedMatches}
+          matches={filteredCompleted}
           visible={completedVisible}
           onLoadMore={() => setCompletedVisible(v => v + 5)}
           type="completed"
           gamesPlayedMap={gamesPlayedMap}
+          filtered={myMatchesOnly && filteredCompleted.length < completedMatches.length}
         />
       )}
 
