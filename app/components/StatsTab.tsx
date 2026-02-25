@@ -410,7 +410,6 @@ export default function StatsTab(_props: StatsTabProps) {
   }
 
   return (
-    <div className="space-y-8">
 
       {/* ── Player Leaderboard ─────────────────────────────────────────────── */}
       <div className="panel overflow-hidden">
