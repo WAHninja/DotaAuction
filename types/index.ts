@@ -24,6 +24,7 @@ export type Player = {
   id: number;
   username: string;
   gold: number;
+  steam_avatar?: string | null;
 };
 
 // ---------------------------------------------------------------------------
