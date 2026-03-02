@@ -25,7 +25,7 @@ export function useGameReportedListener(
     if (!matchId || !supabaseClient) return;
 
     const channel: RealtimeChannel = supabaseClient
-      .channel(`match-${matchId}`)
+      .channel(`match-${matchId}-dota`)
       .on('broadcast', { event: 'game-reported' }, ({ payload }) => {
         callbackRef.current(payload as GameReportedPayload);
       })
