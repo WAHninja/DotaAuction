@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import db from '../../../lib/db';
 
 export async function POST(req: Request) {
@@ -8,8 +9,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
 
+    const hashedPin = await bcrypt.hash(pin, 12);
+
     const query = 'INSERT INTO users (username, pin, created_at) VALUES ($1, $2, NOW()) RETURNING id';
-    const result = await db.query(query, [username, pin]);
+    const result = await db.query(query, [username, hashedPin]);
     return NextResponse.json({ message: 'User registered successfully!', userId: result.rows[0].id });
   } catch (error) {
     console.error('Register error:', error);
