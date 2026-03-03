@@ -30,8 +30,8 @@ export type RateLimitOptions = {
 };
 
 export type RateLimitResult =
-  | { allowed: true }
-  | { allowed: false; retryAfterMs: number };
+  | { readonly allowed: true }
+  | { readonly allowed: false; retryAfterMs: number };
 
 export function rateLimit(ip: string, options: RateLimitOptions): RateLimitResult {
   const { id, limit, windowMs } = options;
