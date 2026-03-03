@@ -11,6 +11,7 @@ import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
+import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
 import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload } from '@/types';
 
@@ -27,9 +28,6 @@ export default function MatchPage() {
   const [history, setHistory] = useState<HistoryGame[]>([]);
 
   // ---- Protect route -------------------------------------------------------
-  // Wait until the session check has finished before redirecting.
-  // Without the loading guard, user is null on every first render (including
-  // a hard refresh) and the page redirects before auth has a chance to resolve.
   const { loading: authLoading } = useContext(UserContext);
   useEffect(() => {
     if (!authLoading && user === null) router.push('/');
@@ -59,8 +57,6 @@ export default function MatchPage() {
     }
   }, []);
 
-  // gamesPlayed is derived from data.games.length — no separate fetch needed.
-
   const fetchGameHistory = useCallback(async () => {
     try {
       const res = await fetch(`/api/match/${matchId}/history`);
@@ -72,17 +68,8 @@ export default function MatchPage() {
     }
   }, [matchId]);
 
-  // ---- Ably state updaters -------------------------------------------------
-  // Rather than refetching all offers on every Ably event, we update local
-  // state directly from the event payload — eliminating N round trips during
-  // the offer submission phase (one per player on the winning team).
-
+  // ---- Realtime state updaters ---------------------------------------------
   const handleNewOffer = useCallback((offer: NewOfferPayload) => {
-    // Append the new offer directly — no fetch needed. The payload already
-    // contains all fields (id, from/target player ids, tier_label, status)
-    // with offer_amount intentionally stripped server-side while pending.
-    // Explicitly set offer_amount: null so the entry is a complete Offer
-    // and consistent with offers returned by the API.
     setOffers(prev =>
       prev.some(o => o.id === offer.id)
         ? prev
@@ -91,9 +78,6 @@ export default function MatchPage() {
   }, []);
 
   const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
-    // Update offer states directly from the event rather than refetching:
-    // - The accepted offer gets its real amount revealed
-    // - All remaining pending offers become rejected
     setOffers(prev => prev.map(o => {
       if (o.id === payload.acceptedOfferId) {
         return { ...o, status: 'accepted', offer_amount: payload.acceptedAmount };
@@ -103,14 +87,16 @@ export default function MatchPage() {
       }
       return o;
     }));
-    // Match data and history still need a fetch — gold balances changed,
-    // teams have swapped, and a new game was created server-side.
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [fetchMatchData, fetchGameHistory]);
+
+  // Fired when the Dota 2 Edge Function broadcasts that a game was reported.
+  // Refreshes match data so the page transitions from 'in progress' → 'auction pending'.
+  const handleGameReported = useCallback(() => {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
 
   // ---- Initial load --------------------------------------------------------
-  // Run both fetches in parallel — matchData and history are independent
-  // and neither needs to wait for the other to complete.
   useEffect(() => {
     if (!user) return;
     Promise.all([fetchMatchData(), fetchGameHistory()]);
@@ -122,13 +108,13 @@ export default function MatchPage() {
     }
   }, [data, fetchOffers]);
 
-  // ---- Real-time listeners -------------------------------------------------
+  // ---- Realtime listeners --------------------------------------------------
   const handleWinnerSelected = useCallback(() => {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
 
   useGameWinnerListener(matchId, handleWinnerSelected);
-
+  useGameReportedListener(matchId, handleGameReported);
   useAuctionListener(
     matchId,
     data?.latestGame?.id ?? null,
