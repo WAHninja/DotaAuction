@@ -29,9 +29,12 @@ export type RateLimitOptions = {
   windowMs: number;
 };
 
-export type RateLimitResult =
-  | { readonly allowed: true }
-  | { readonly allowed: false; retryAfterMs: number };
+// Flat type — no discriminated union — avoids narrowing issues with strict: false.
+// retryAfterMs is 0 when allowed: true.
+export type RateLimitResult = {
+  allowed: boolean;
+  retryAfterMs: number;
+};
 
 export function rateLimit(ip: string, options: RateLimitOptions): RateLimitResult {
   const { id, limit, windowMs } = options;
@@ -40,14 +43,14 @@ export function rateLimit(ip: string, options: RateLimitOptions): RateLimitResul
   if (!stores.has(id)) {
     stores.set(id, new Map());
   }
-  const store = stores.get(id)!;
 
+  const store = stores.get(id)!;
   const entry = store.get(ip);
 
   // First request from this IP, or window has expired — start a fresh window
   if (!entry || now - entry.windowStart >= windowMs) {
     store.set(ip, { count: 1, windowStart: now });
-    return { allowed: true };
+    return { allowed: true, retryAfterMs: 0 };
   }
 
   // Within the window — increment and check
@@ -58,7 +61,7 @@ export function rateLimit(ip: string, options: RateLimitOptions): RateLimitResul
     return { allowed: false, retryAfterMs };
   }
 
-  return { allowed: true };
+  return { allowed: true, retryAfterMs: 0 };
 }
 
 /**
