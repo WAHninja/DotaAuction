@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
 import db from '@/lib/db'
+import { getSession } from '@/app/session'
 
 export async function GET() {
+  const session = await getSession();
+  if (!session?.userId) {
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
+  }
+
   try {
     /* =========================
        1️⃣ Load users
@@ -93,7 +99,6 @@ export async function GET() {
         .sort()
         .join(' + ')
 
-      // wins entry stays at 0 unless they've also won with this combo
       if (!teamComboWins.has(loseComboKey))  teamComboWins.set(loseComboKey, 0)
       teamComboGames.set(loseComboKey, (teamComboGames.get(loseComboKey) || 0) + 1)
 
@@ -180,22 +185,6 @@ export async function GET() {
       headToHeadResult,
     ] = await Promise.all([
 
-      /* ── Acquisition Impact ─────────────────────────────────────────────
-         For each player who has been sold (accepted offer → target), find
-         the immediately following game in that match and check whether their
-         new team won.
-
-         Win condition is inverted: if they were on team_1 before the sale
-         they move to team_a, so winning means next_game.winning_team = 'team_a',
-         and vice versa.
-
-         LATERAL subquery gets the next finished game in the same match with
-         a higher id (games are inserted sequentially so id ordering equals
-         creation order).
-
-         Minimum 2 acquisitions before a player appears — a single data point
-         is too small to be meaningful.
-      ──────────────────────────────────────────────────────────────────── */
       db.query(`
         WITH acquisition_stats AS (
           SELECT
@@ -234,27 +223,6 @@ export async function GET() {
         ORDER BY win_rate DESC, total_acquisitions DESC
       `),
 
-      /* ── Win Streaks ────────────────────────────────────────────────────
-         Classic gaps-and-islands to find the longest consecutive win run
-         for each player within a single match.
-
-         Step 1 — player_game_results: for every finished game a player
-           participated in, record whether they won and their sequence
-           number within that match (ROW_NUMBER ordered by game id).
-
-         Step 2 — win_groups: keep only wins, then subtract a second
-           ROW_NUMBER (over wins only) from the overall sequence number.
-           Consecutive wins share the same difference → same island group.
-
-         Step 3 — streaks: count rows per island.
-
-         Step 4 — best_per_player: DISTINCT ON (user_id) keeps only each
-           player's single best streak; ORDER BY streak_length DESC picks
-           the longest.
-
-         Streaks of length 1 are excluded (min 2) — a single win is not
-         a meaningful streak.
-      ──────────────────────────────────────────────────────────────────── */
       db.query(`
         WITH player_game_results AS (
           SELECT
@@ -312,20 +280,6 @@ export async function GET() {
         LIMIT  10
       `),
 
-      /* ── Head-to-Head ───────────────────────────────────────────────────
-         For every finished game, take the cartesian product of
-         team_1_members × team_a_members — every pair of players on
-         opposing teams. Canonicalise each pair by LEAST/GREATEST(id) so
-         each pair always appears in the same order regardless of which
-         team they happened to be on.
-
-         lower_id_won = 1 when the player with the lower numeric id won
-         (i.e. they were on team_1 and team_1 won, or on team_a and team_a won).
-
-         CROSS JOIN UNNEST produces one row per element of the array,
-         joined with every element of the other array → full opposing
-         pairings for each game.
-      ──────────────────────────────────────────────────────────────────── */
       db.query(`
         WITH opposing_pairs AS (
           SELECT
