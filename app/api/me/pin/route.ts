@@ -2,11 +2,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
+import { rateLimit, getIp } from '@/lib/rate-limit';
+
+// 5 attempts per 15 minutes per IP.
+// Tighter than login since this is a sensitive account action.
+const PIN_CHANGE_RATE_LIMIT = {
+  id: 'pin-change',
+  limit: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+};
 
 // ── PATCH /api/me/pin ─────────────────────────────────────────────────────────
 // Body: { currentPin: string, newPin: string }
 // Verifies the current PIN before allowing a change.
 export async function PATCH(req: NextRequest) {
+  // ---- Rate limit ----------------------------------------------------------
+  const ip = getIp(req);
+  const result = rateLimit(ip, PIN_CHANGE_RATE_LIMIT);
+
+  if (!result.allowed) {
+    const retryAfterSecs = Math.ceil(result.retryAfterMs / 1000);
+    return new Response(
+      JSON.stringify({ error: 'Too many attempts. Please try again later.' }),
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfterSecs),
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+  }
+
+  // ---- Auth ----------------------------------------------------------------
   const session = await getSession();
   if (!session?.userId) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
