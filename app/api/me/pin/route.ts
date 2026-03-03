@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 
@@ -32,21 +33,30 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  // Verify the current PIN is correct
+  // Fetch the stored hash for this user
   const { rows } = await db.query(
-    'SELECT id FROM users WHERE id = $1 AND pin = $2',
-    [session.userId, currentPin]
+    'SELECT pin FROM users WHERE id = $1',
+    [session.userId]
   );
+
   if (rows.length === 0) {
+    return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+  }
+
+  // Constant-time comparison against the stored hash
+  const pinMatches = await bcrypt.compare(currentPin, rows[0].pin);
+  if (!pinMatches) {
     return NextResponse.json(
       { error: 'Current PIN is incorrect.' },
       { status: 403 }
     );
   }
 
+  const hashedNewPin = await bcrypt.hash(newPin, 12);
+
   await db.query(
     'UPDATE users SET pin = $1 WHERE id = $2',
-    [newPin, session.userId]
+    [hashedNewPin, session.userId]
   );
 
   return NextResponse.json({ ok: true });
