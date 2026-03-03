@@ -20,9 +20,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const matchId = Number(id);
     if (isNaN(matchId)) return NextResponse.json({ error: 'Invalid match ID' }, { status: 400 });
 
-    const matchRes = await db.query(`SELECT * FROM Matches WHERE id = $1`, [matchId]);
+    const matchRes = await db.query(`SELECT * FROM matches WHERE id = $1`, [matchId]);
     if (matchRes.rowCount === 0) return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     const match = matchRes.rows[0];
+
+    // ---- Membership check --------------------------------------------------
+    // Verify the caller is a participant before returning any match data.
+    // Without this, any authenticated user can enumerate teams, gold balances,
+    // and pending offers for arbitrary matches by iterating match IDs.
+    const membershipRes = await db.query(
+      `SELECT 1 FROM match_players WHERE match_id = $1 AND user_id = $2`,
+      [matchId, currentUserId]
+    );
+
+    if (membershipRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Not a participant in this match.' }, { status: 403 });
+    }
 
     // Include steam_avatar so TeamCard can show player avatars without an
     // extra fetch or Steam API call.
@@ -36,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const players = playersRes.rows;
 
     const gamesRes = await db.query(
-      `SELECT * FROM Games WHERE match_id = $1 ORDER BY id ASC`,
+      `SELECT * FROM games WHERE match_id = $1 ORDER BY id ASC`,
       [matchId]
     );
     const games = gamesRes.rows;
@@ -44,7 +57,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     let offers: any[] = [];
     if (latestGame?.status === 'auction pending') {
-      const offersRes = await db.query(`SELECT * FROM Offers WHERE game_id = $1`, [latestGame.id]);
+      const offersRes = await db.query(`SELECT * FROM offers WHERE game_id = $1`, [latestGame.id]);
       offers = offersRes.rows.map((offer) => ({
         ...offer,
         offer_amount: offer.status === 'pending' ? null : offer.offer_amount,
