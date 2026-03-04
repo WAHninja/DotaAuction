@@ -10,16 +10,18 @@
 //     no user-typed URL so there's no value in distinguishing "match doesn't
 //     exist" from "you're not in it".
 //
-// Query strategy — 3 queries total regardless of match length:
+// Query strategy — 3 queries + 1 parallel group regardless of match length:
 //   1. All match participants → username lookup map + membership check in JS
-//      (eliminates the separate membership round-trip; a non-existent match
-//      returns 0 rows, a match the caller isn't in returns rows that don't
-//      include currentUserId — both cases → 404)
 //   2. All games ordered by id ASC
-//   3. Offers + gold-change stats fetched in parallel via Promise.all
-//      (both use WHERE game_id = ANY($1) — one round trip each)
+//   3. Offers + gold-change stats + dota game stats fetched in parallel via
+//      Promise.all (all use WHERE game_id = ANY($1) — one round trip each)
 //   Results are grouped into Maps keyed by game_id and joined in JS.
 //   No N+1 — query count is constant regardless of how many games the match has.
+//
+// Backwards compatibility:
+//   dota_game_stats rows only exist for games played after the automated
+//   reporting feature shipped. For older games the query returns 0 rows and
+//   dotaStats will be an empty array — the client renders nothing for that zone.
 
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
@@ -28,6 +30,7 @@ import type {
   HistoryGame,
   HistoryOffer,
   HistoryPlayerStat,
+  DotaGameStat,
   TierLabel,
   OfferStatus,
   TeamId,
@@ -70,6 +73,18 @@ type StatRow = {
   reason: string;
 };
 
+type DotaStatRow = {
+  game_id: number;
+  player_id: number;
+  username: string;
+  hero: string | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  net_worth: number;
+  team: string;
+};
+
 // ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
@@ -93,13 +108,6 @@ export async function GET(
 
   try {
     // ---- Username lookup map + membership check ----------------------------
-    // Previously a separate membership query followed by this users query —
-    // two sequential round-trips. The users query already returns every
-    // participant in the match, so membership can be checked in JS against
-    // that result set. A non-existent match returns 0 rows (→ 404); a match
-    // the caller isn't in returns rows that don't include currentUserId
-    // (→ 404). Both cases collapse to 404, preserving the intentional
-    // 404-not-403 behaviour noted above.
     const usersRes = await db.query<{ id: number; username: string }>(
       `SELECT u.id, u.username
        FROM users u
@@ -144,11 +152,9 @@ export async function GET(
 
     const gameIds = games.map(g => g.game_id);
 
-    // ---- Offers + stats in parallel ----------------------------------------
-    const [offersRes, statsRes] = await Promise.all([
+    // ---- Offers + stats + dota stats in parallel ---------------------------
+    const [offersRes, statsRes, dotaStatsRes] = await Promise.all([
       // offer_amount is stripped server-side for pending offers.
-      // The CASE expression means the client can never receive the exact
-      // value while an offer is unresolved — not even through history.
       db.query<OfferRow>(
         `SELECT
            o.id,
@@ -181,6 +187,27 @@ export async function GET(
          JOIN users u ON u.id = gps.player_id
          WHERE gps.game_id = ANY($1)
          ORDER BY gps.game_id ASC, gps.id ASC`,
+        [gameIds]
+      ),
+
+      // dota_game_stats — only exists for games played after automated
+      // reporting was introduced. Returns 0 rows for older games, which is
+      // handled gracefully by producing an empty dotaStats array below.
+      db.query<DotaStatRow>(
+        `SELECT
+           dgs.game_id,
+           dgs.player_id,
+           u.username,
+           dgs.hero,
+           dgs.kills,
+           dgs.deaths,
+           dgs.assists,
+           dgs.net_worth,
+           dgs.team
+         FROM dota_game_stats dgs
+         JOIN users u ON u.id = dgs.player_id
+         WHERE dgs.game_id = ANY($1)
+         ORDER BY dgs.game_id ASC, dgs.team ASC, dgs.net_worth DESC`,
         [gameIds]
       ),
     ]);
@@ -217,6 +244,22 @@ export async function GET(
       statsByGame.set(row.game_id, list);
     }
 
+    const dotaStatsByGame = new Map<number, DotaGameStat[]>();
+    for (const row of dotaStatsRes.rows) {
+      const list = dotaStatsByGame.get(row.game_id) ?? [];
+      list.push({
+        playerId:  row.player_id,
+        username:  row.username,
+        hero:      row.hero,
+        kills:     Number(row.kills),
+        deaths:    Number(row.deaths),
+        assists:   Number(row.assists),
+        netWorth:  Number(row.net_worth),
+        team:      row.team as TeamId,
+      });
+      dotaStatsByGame.set(row.game_id, list);
+    }
+
     // ---- Assemble HistoryGame[] --------------------------------------------
     const history: HistoryGame[] = games.map((game, index) => ({
       gameNumber:   index + 1,
@@ -229,6 +272,7 @@ export async function GET(
       team1Members: game.team_1_members.map(usernameOf),
       offers:       offersByGame.get(game.game_id) ?? [],
       playerStats:  statsByGame.get(game.game_id) ?? [],
+      dotaStats:    dotaStatsByGame.get(game.game_id) ?? [],
     }));
 
     return NextResponse.json({ history });
