@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const cleaned = rawSteamId?.toString().trim().replace(/\D/g, '');
-  if (!cleaned.length !== 17) {
+  if (cleaned.length !== 17) {
     return NextResponse.json(
       { error: 'Invalid Steam ID. It should be a 17-digit number (e.g. 76561198012345678).' },
       { status: 400 }
