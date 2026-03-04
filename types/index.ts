@@ -97,6 +97,12 @@ export type DashboardMatch = {
   winner_username?: string;
   team_a_usernames?: string[];
   team_1_usernames?: string[];
+  /**
+   * Total number of games in this match (finished + current in-progress).
+   * Populated by the dashboard server query; replaces the old
+   * /api/match/[id]/games-played per-match fetch in DashboardTabs.
+   */
+  games_count?: number;
 };
 
 /** Full match data as returned by /api/match/[id] */
