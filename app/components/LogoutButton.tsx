@@ -1,35 +1,103 @@
 'use client';
 
-import { useState, useContext } from 'react';
+// app/components/LogoutButton.tsx
+//
+// Changes from original:
+//
+//   • Loader2 spinner while signing out — consistent with every other loading
+//     state in the app (which all use Loader2 animate-spin).
+//
+//   • `className` prop — callers can override styles. The mobile drawer uses
+//     this to make the button full-width and match the drawer's link style,
+//     rather than the compact inline button the desktop nav uses.
+//
+//   • `showConfirm` prop — adds a two-step "Sign out → Are you sure? →
+//     Confirm" flow. Pass this on touch surfaces (the mobile drawer) where
+//     accidental taps are more likely. On desktop the button has a visual
+//     divider separating it from navigation links, which is sufficient.
+
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
-import { UserContext } from '@/app/context/UserContext';
+import { Loader2, LogOut } from 'lucide-react';
 
-export default function LogoutButton() {
+type LogoutButtonProps = {
+  className?: string;
+  showConfirm?: boolean;
+};
+
+export default function LogoutButton({
+  className,
+  showConfirm = false,
+}: LogoutButtonProps) {
+  const [loading,    setLoading]    = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const router = useRouter();
-  const { refreshUser } = useContext(UserContext);
-  const [loading, setLoading] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     setLoading(true);
     try {
-      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-      await refreshUser();
-      router.replace('/login');
-    } catch (err) {
-      console.error('Logout failed', err);
-    } finally {
+      await fetch('/api/logout', { method: 'POST' });
+      router.push('/login');
+    } catch {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  const handleClick = useCallback(() => {
+    if (loading) return;
+    if (showConfirm && !confirming) {
+      setConfirming(true);
+      return;
+    }
+    handleLogout();
+  }, [loading, showConfirm, confirming, handleLogout]);
+
+  const handleCancel = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirming(false);
+  }, []);
+
+  // Default desktop style — compact, inline with nav links.
+  // Pass className to override for the mobile drawer.
+  const baseClass =
+    className ??
+    'btn-ghost text-sm flex items-center gap-1.5';
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleClick}
+          disabled={loading}
+          className={baseClass}
+          aria-label="Confirm sign out"
+        >
+          {loading
+            ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+            : null}
+          {loading ? 'Signing out…' : 'Confirm?'}
+        </button>
+        <button
+          onClick={handleCancel}
+          className="text-xs font-barlow text-dota-text-muted hover:text-dota-text transition-colors"
+          aria-label="Cancel sign out"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
 
   return (
     <button
-      onClick={handleLogout}
+      onClick={handleClick}
       disabled={loading}
-      className="btn-ghost text-sm flex items-center gap-1.5"
+      className={baseClass}
+      aria-label="Sign out"
     >
-      <LogOut className="w-3.5 h-3.5" />
+      {loading
+        ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+        : <LogOut  className="w-4 h-4"              aria-hidden="true" />}
       {loading ? 'Signing out…' : 'Sign out'}
     </button>
   );
