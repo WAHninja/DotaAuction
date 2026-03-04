@@ -4,11 +4,9 @@
 //
 // Security:
 //   • Auth checked first — no session → 401
-//   • Membership checked via the users query result — non-participant or
-//     non-existent match → 404. We use 404 rather than 403 because this
-//     endpoint is fetched silently in the background by MatchPage; there's
-//     no user-typed URL so there's no value in distinguishing "match doesn't
-//     exist" from "you're not in it".
+//   • Existence checked via the users query — 0 rows means match doesn't
+//     exist → 404. No membership check — any authenticated user can view
+//     any match as a spectator.
 //
 // Query strategy — 3 queries + 1 parallel group regardless of match length:
 //   1. All match participants → username lookup map + membership check in JS
@@ -107,7 +105,10 @@ export async function GET(
   }
 
   try {
-    // ---- Username lookup map + membership check ----------------------------
+    // ---- Verify match exists + build username lookup map -------------------
+    // No membership check — any authenticated user can view any match page
+    // as a spectator. Action routes (submit-offer, accept-offer etc.) enforce
+    // membership separately, so read-only data is safe to expose here.
     const usersRes = await db.query<{ id: number; username: string }>(
       `SELECT u.id, u.username
        FROM users u
@@ -116,8 +117,8 @@ export async function GET(
       [matchId]
     );
 
-    const isMember = usersRes.rows.some(u => u.id === session.userId);
-    if (!isMember) {
+    // If no rows, the match simply doesn't exist.
+    if (usersRes.rows.length === 0) {
       return NextResponse.json({ error: 'Match not found.' }, { status: 404 });
     }
 
