@@ -2,11 +2,11 @@
 //
 // Returns true if the current user has unseen patch notes.
 //
-// `enabled` must be true before the fetch fires — pass `!!user` at the
-// call site so logged-out visitors never hit /api/changelog at all.
-// (The endpoint requires auth and returns 401 when unauthenticated, so
-// the old version was harmless but wasteful and caused a redundant
-// network error in the console on every page load while logged out.)
+// The `enabled` flag must be true before the fetch fires. Pass `!!user` at
+// the call site so logged-out visitors never hit /api/changelog at all.
+// The endpoint requires auth and returns 401 when unauthenticated — the
+// previous version silently fired a fetch on every page load for logged-out
+// users, producing a redundant 401 in the console on every navigation.
 
 import { useEffect, useState } from 'react';
 
