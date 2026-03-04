@@ -60,7 +60,7 @@ import {
   useState,
 } from 'react';
 import { usePathname }  from 'next/navigation';
-import { Menu, X, ScrollText } from 'lucide-react';
+import { Menu, X, ScrollText, User } from 'lucide-react';
 import { UserContext }          from '@/app/context/UserContext';
 import LogoutButton             from './LogoutButton';
 import { useChangelogBadge }    from '@/app/hooks/useChangelogBadge';
@@ -187,8 +187,9 @@ function DesktopNav({ user, hasUnseen, pathname }: DesktopNavProps) {
           but wasn't, and duplicated the information in the Profile link. */}
       <Link
         href="/profile"
-        className={navLink('/profile', pathname)}
+        className={`${navLink("/profile", pathname)} flex items-center gap-1.5`}
       >
+        <User className="w-3.5 h-3.5" aria-hidden="true" />
         {user.username}
       </Link>
 
