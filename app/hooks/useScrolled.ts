@@ -2,20 +2,21 @@
 //
 // Returns true when the window has scrolled past `threshold` pixels.
 //
-// Two things the inline version in MobileResponsiveHeader got wrong:
-//   1. No initial sync — if the page loads already scrolled (hash link,
-//      browser restore) `scrolled` would stay false until the next event.
-//   2. The logic was inlined in the component, coupling scroll state to
-//      nav render cycles.
+// Default raised to 40px (was 8px). At 8px any incidental touch — especially
+// on short pages like /login or /changelog — triggered the header transition,
+// causing it to flicker between states. 40px requires a deliberate scroll.
+//
+// Also calls check() immediately on mount so the header renders in the correct
+// state if the page loads already scrolled (browser restore, hash link, etc.).
 
 import { useEffect, useState } from 'react';
 
-export function useScrolled(threshold = 8): boolean {
+export function useScrolled(threshold = 40): boolean {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const check = () => setScrolled(window.scrollY > threshold);
-    check(); // sync immediately on mount
+    check(); // sync on mount — don't wait for first scroll event
     window.addEventListener('scroll', check, { passive: true });
     return () => window.removeEventListener('scroll', check);
   }, [threshold]);
