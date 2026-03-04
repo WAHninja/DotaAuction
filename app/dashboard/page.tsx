@@ -22,12 +22,20 @@ export default async function DashboardPage() {
     ] = await Promise.all([
 
       // ── Ongoing matches ──────────────────────────────────────────────────
+      // games_count replaces the /api/match/[id]/games-played endpoint.
+      // COUNT(*) includes all games for the match (finished + current in-progress),
+      // which matches the old endpoint's behaviour exactly.
       db.query(`
         SELECT
           m.id AS match_id,
           m.created_at,
           g.id AS game_id,
           g.status,
+          (
+            SELECT COUNT(*)::int
+            FROM games g2
+            WHERE g2.match_id = m.id
+          ) AS games_count,
           (
             SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
             FROM UNNEST(g.team_a_members) AS uid
@@ -91,9 +99,6 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #2: fewest games to win a match ─────────────────────
-      //
-      // Groups by m.id so the same player can appear multiple times if they
-      // hold more than one of the top records — this is intentional.
       db.query(`
         SELECT u.username, COUNT(g.id) AS game_count
         FROM matches m
@@ -106,15 +111,6 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #3: biggest gold underdog win ────────────────────────
-      //
-      // Finds the match where the winner held the largest gold *deficit*
-      // relative to the opposing team's total accumulated gold at the end.
-      //
-      // gold_diff = winner_team_gold − loser_team_gold
-      // A large negative value = winner held much less gold = biggest underdog.
-      // Ordered ASC so the largest deficit (most negative) ranks first.
-      //
-      // Groups by m.id so the same player can hold multiple top-3 records.
       db.query(`
         SELECT
           u.username,
@@ -148,8 +144,6 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #4: biggest underdog win ────────────────────────────
-      //
-      // Groups by m.id so the same player can hold multiple top-3 records.
       db.query(`
         SELECT
           u.username,
@@ -187,15 +181,10 @@ export default async function DashboardPage() {
     const fewestGamesToWin: HallOfFameRecord = fewestGamesRes.rows.length
       ? fewestGamesRes.rows.map(r => ({
           holder: r.username,
-          // "Won in N" is immediately self-explanatory as a record —
-          // "3 games" reads as a count, not a feat.
           stat: `Won in ${r.game_count}`,
         }))
       : null;
 
-    // gold_diff is negative when the winner held less gold than the loser —
-    // i.e. they won despite a gold deficit. We display it signed so a reader
-    // can see at a glance how large the disadvantage was.
     const biggestGoldUnderdog: HallOfFameRecord = biggestGoldUnderdogRes.rows.length
       ? biggestGoldUnderdogRes.rows.map(r => {
           const diff = Number(r.gold_diff);
