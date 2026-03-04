@@ -6,52 +6,80 @@ export async function GET(req: NextRequest) {
   // ---- Auth ----------------------------------------------------------------
   const session = await getSession();
   if (!session?.userId) {
-    return NextResponse.json({ message: 'Not authenticated.' }, { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  // ---- Parse game ID -------------------------------------------------------
+  // ---- Parse + validate game ID -------------------------------------------
+  // Number() is too permissive — Number("1.5") and Number("0") both pass
+  // isNaN() but are not valid integer IDs. We require a positive integer.
   const { searchParams } = new URL(req.url);
   const idParam = searchParams.get('id');
-  const gameId = Number(idParam);
+  const gameId  = Number(idParam);
 
-  if (!idParam || isNaN(gameId)) {
-    return NextResponse.json({ message: 'Invalid game ID' }, { status: 400 });
+  if (!idParam || !Number.isInteger(gameId) || gameId <= 0) {
+    return NextResponse.json({ error: 'Invalid game ID.' }, { status: 400 });
   }
 
   try {
-    // ---- Membership check --------------------------------------------------
-    // Verify the caller belongs to the match that contains this game.
-    // Without this, any authenticated user could poll offers for any game.
-    const membershipRes = await db.query(
-      `SELECT 1
-       FROM games g
-       JOIN match_players mp ON mp.match_id = g.match_id
-       WHERE g.id = $1 AND mp.user_id = $2`,
-      [gameId, session.userId]
-    );
+    // ---- Run membership check + offers fetch in parallel ------------------
+    // The two queries have no dependency on each other at the DB level —
+    // whether game_id = X has offers is entirely independent of whether
+    // session.userId is a participant in that game's match. Firing both
+    // together saves a full sequential round-trip on the success path
+    // (the common case). If membership fails we discard the offers result.
+    const [membershipRes, offersRes] = await Promise.all([
 
+      // Membership check — does this user belong to the match for this game?
+      // LIMIT 1 stops Postgres scanning for further matches once it finds the
+      // first. The JOIN can produce multiple rows without it (one per game in
+      // the match) even though we only care about existence.
+      db.query(
+        `SELECT 1
+         FROM games g
+         JOIN match_players mp ON mp.match_id = g.match_id
+         WHERE g.id = $1
+           AND mp.user_id = $2
+         LIMIT 1`,
+        [gameId, session.userId]
+      ),
+
+      // Offers fetch — explicit columns rather than SELECT *.
+      // offer_amount is stripped at the SQL layer for pending offers so the
+      // raw value never enters the JS layer at all. This is consistent with
+      // how every other route in the codebase handles pending offer amounts
+      // (submit-offer, match/[id], and the history route all use the same
+      // CASE WHEN pattern).
+      db.query(
+        `SELECT
+           id,
+           game_id,
+           from_player_id,
+           target_player_id,
+           CASE WHEN status = 'pending' THEN NULL ELSE offer_amount END AS offer_amount,
+           tier_label,
+           status,
+           created_at
+         FROM offers
+         WHERE game_id = $1
+         ORDER BY created_at ASC`,
+        [gameId]
+      ),
+    ]);
+
+    // ---- Authorise --------------------------------------------------------
+    // Check membership result after both queries have resolved. If the user
+    // is not a participant we return 403 without sending the offers data.
     if (membershipRes.rows.length === 0) {
-      return NextResponse.json({ message: 'Not a participant in this match.' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Not a participant in this match.' },
+        { status: 403 }
+      );
     }
 
-    // ---- Fetch offers -------------------------------------------------------
-    const result = await db.query(
-      `SELECT * FROM offers WHERE game_id = $1 ORDER BY created_at ASC`,
-      [gameId]
-    );
+    return NextResponse.json({ offers: offersRes.rows });
 
-    // Strip offer_amount from pending offers server-side.
-    // This ensures the exact value is never transmitted to any client until
-    // the offer is resolved — it can't be discovered via DevTools or network
-    // inspection regardless of what the frontend does with the data.
-    const offers = result.rows.map((offer) => ({
-      ...offer,
-      offer_amount: offer.status === 'pending' ? null : offer.offer_amount,
-    }));
-
-    return NextResponse.json({ offers });
   } catch (err) {
-    console.error('Error fetching offers:', err);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    console.error('[OFFERS_GET_ERROR]', err);
+    return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }
