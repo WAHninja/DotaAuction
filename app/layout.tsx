@@ -1,6 +1,6 @@
 import './globals.css';
 import { Cinzel, Barlow_Condensed } from 'next/font/google';
-import BodyClassWrapper from '@/app/components/BodyClassWrapper';
+import PageBackground from '@/app/components/PageBackground';
 import MobileResponsiveHeader from '@/app/components/MobileResponsiveHeader';
 import UserProvider from './context/UserContext';
 import KeepAlive from '@/app/components/KeepAlive';
@@ -43,6 +43,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
           Team logos: immediately visible on any match page. Both are small
           PNGs so the cost of preloading one that isn't used is negligible.
+
+          Note: dashboard-background.jpg is intentionally NOT preloaded.
+          It is decorative, always sits behind a darkening overlay, and is
+          never the LCP element. Preloading it would compete with the assets
+          above without any perceptible benefit.
         */}
         <link rel="preload" href="/Gold_symbol.webp" as="image" type="image/webp" />
         <link rel="preload" href="/logo.png"  as="image" type="image/png" />
@@ -51,7 +56,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
       </head>
       <body className="min-h-screen flex flex-col">
         <UserProvider>
-          <BodyClassWrapper />
+          {/*
+            PageBackground uses fixed positioning at z-[-1].
+            UserProvider must remain a React fragment (no wrapper element)
+            so no intermediate positioned ancestor disrupts the stacking context.
+            See PageBackground.tsx for the full explanation.
+          */}
+          <PageBackground />
           <MobileResponsiveHeader />
           <KeepAlive />
 
