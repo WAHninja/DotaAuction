@@ -1,10 +1,10 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { Loader2, CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
+import { CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 
 const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
@@ -16,8 +16,6 @@ import type { DashboardMatch as Match } from '@/types';
 // =============================================================================
 
 type Tab = 'ongoing' | 'completed' | 'stats';
-
-type GamesPlayedMap = Record<number, number>;
 
 type DashboardTabsProps = {
   ongoingMatches: Match[];
@@ -97,17 +95,14 @@ function TeamRoster({
 }
 
 // ── MatchCard ─────────────────────────────────────────────────────────────────
+// games_count comes directly from the dashboard server query — no client fetch needed.
 function MatchCard({
   match,
   isCompleted,
-  gamesPlayedMap,
 }: {
   match: Match;
   isCompleted: boolean;
-  gamesPlayedMap: GamesPlayedMap;
 }) {
-  const gamesPlayed = gamesPlayedMap[match.id];
-
   return (
     <div className={`panel p-4 flex flex-col gap-3 hover:border-dota-border-bright transition-colors ${
       !isCompleted ? 'border-dota-gold/30' : ''
@@ -128,13 +123,10 @@ function MatchCard({
           ) : (
             <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-text-muted">
               <PlayCircle className="w-3.5 h-3.5 text-dota-radiant-light" />
-              {gamesPlayed === undefined ? (
-                <span className="flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Loading…
-                </span>
-              ) : (
-                <span>Game <strong className="text-dota-text">#{gamesPlayed}</strong></span>
-              )}
+              {match.games_count !== undefined
+                ? <span>Game <strong className="text-dota-text">#{match.games_count}</strong></span>
+                : <span className="text-dota-text-dim">—</span>
+              }
             </span>
           )}
         </div>
@@ -165,8 +157,6 @@ function MatchCard({
 }
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
-// filtered=true  → matches exist but none belong to the current user
-// filtered=false → no matches at all
 function EmptyState({
   type,
   filtered,
@@ -214,14 +204,12 @@ function MatchGrid({
   visible,
   onLoadMore,
   type,
-  gamesPlayedMap,
   filtered,
 }: {
   matches: Match[];
   visible: number;
   onLoadMore: () => void;
   type: 'ongoing' | 'completed';
-  gamesPlayedMap: GamesPlayedMap;
   filtered: boolean;
 }) {
   return (
@@ -235,7 +223,6 @@ function MatchGrid({
               key={match.id}
               match={match}
               isCompleted={type === 'completed'}
-              gamesPlayedMap={gamesPlayedMap}
             />
           ))}
           {visible < matches.length && (
@@ -262,29 +249,10 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const [activeTab, setActiveTab] = useState<Tab>('stats');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
-  const [gamesPlayedMap, setGamesPlayedMap] = useState<GamesPlayedMap>({});
   // Default to showing only the current user's matches. They can toggle to see all.
   const [myMatchesOnly, setMyMatchesOnly] = useState(true);
 
-  // Track which match IDs have already been fetched so we never issue a
-  // second request for the same match even across re-renders.
-  const fetchedIds = useRef<Set<number>>(new Set());
-
-  useEffect(() => {
-    ongoingMatches.forEach(match => {
-      if (fetchedIds.current.has(match.id)) return;
-      fetchedIds.current.add(match.id);
-
-      fetch(`/api/match/${match.id}/games-played`)
-        .then(res => res.json())
-        .then(data => setGamesPlayedMap(prev => ({ ...prev, [match.id]: data.gamesPlayed })))
-        .catch(err => console.error(`Failed to fetch games played for match ${match.id}`, err));
-    });
-  }, [ongoingMatches]);
-
   // ── Filter ───────────────────────────────────────────────────────────────────
-  // A match belongs to the user if their username appears in either team's
-  // username list. Falls back to showing all matches if the user isn't loaded yet.
   const isMyMatch = (match: Match): boolean => {
     if (!user?.username) return true;
     return (
@@ -305,8 +273,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
     [completedMatches, myMatchesOnly, user?.username]
   );
 
-  // Reset visible counts when the filter changes so a previously-expanded list
-  // doesn't show a lower count than expected after narrowing the results.
   const handleFilterToggle = () => {
     setMyMatchesOnly(v => !v);
     setOngoingVisible(6);
@@ -314,9 +280,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   };
 
   // ── Tab switching ────────────────────────────────────────────────────────────
-  // router.refresh() re-runs the server component data fetch (ongoingMatches,
-  // completedMatches) so the lists reflect any matches that have changed since
-  // the page first loaded — without a full navigation or page reload.
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     if (tab !== 'stats') {
@@ -358,7 +321,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
             }`}
             aria-pressed={myMatchesOnly}
           >
-            {/* Simple pill indicator */}
             <span
               aria-hidden="true"
               className={`inline-block w-7 h-4 rounded-full transition-colors relative ${
@@ -384,7 +346,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           visible={ongoingVisible}
           onLoadMore={() => setOngoingVisible(v => v + 5)}
           type="ongoing"
-          gamesPlayedMap={gamesPlayedMap}
           filtered={myMatchesOnly && filteredOngoing.length < ongoingMatches.length}
         />
       )}
@@ -394,7 +355,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
           visible={completedVisible}
           onLoadMore={() => setCompletedVisible(v => v + 5)}
           type="completed"
-          gamesPlayedMap={gamesPlayedMap}
           filtered={myMatchesOnly && filteredCompleted.length < completedMatches.length}
         />
       )}
