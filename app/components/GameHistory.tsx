@@ -237,34 +237,30 @@ function TeamScoreboard({
           {hasAuction && (
             <div className="min-w-0">
               {p.sellerInfo ? (
-                <div className="flex flex-col gap-1">
+                <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-0.5 ${p.sellerInfo.status === 'rejected' ? 'opacity-55' : ''}`}>
                   {/* Status pill */}
-                  <span className={`self-start font-barlow text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
+                  <span className={`font-barlow text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border shrink-0 ${
                     p.sellerInfo.status === 'accepted'
                       ? 'text-dota-radiant-light bg-dota-radiant/10 border-dota-radiant/30'
                       : p.sellerInfo.status === 'rejected'
-                      ? 'text-dota-dire-light bg-dota-dire/10 border-dota-dire/30 opacity-60'
+                      ? 'text-dota-dire-light bg-dota-dire/10 border-dota-dire/30'
                       : 'text-dota-text-dim bg-transparent border-dota-border/50'
                   }`}>
                     {p.sellerInfo.status}
                   </span>
-                  {/* Target */}
-                  <span className="font-barlow text-xs text-dota-text-muted">
-                    <span className="text-dota-text-dim">→ </span>
-                    <span className={p.sellerInfo.status === 'rejected' ? 'opacity-60' : 'text-dota-info font-semibold'}>
-                      {p.sellerInfo.targetUsername}
+                  {/* Arrow + target */}
+                  <span className="font-barlow text-xs text-dota-text-dim shrink-0">→</span>
+                  <span className={`font-barlow text-xs font-semibold truncate ${p.sellerInfo.status === 'accepted' ? 'text-dota-info' : 'text-dota-text-muted'}`}>
+                    {p.sellerInfo.targetUsername}
+                  </span>
+                  {/* Value */}
+                  {p.sellerInfo.amount != null ? (
+                    <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums shrink-0">
+                      {p.sellerInfo.amount.toLocaleString()}<GoldIcon />
                     </span>
-                  </span>
-                  {/* Value — amount takes priority, fall back to tier */}
-                  <span className={p.sellerInfo.status === 'rejected' ? 'opacity-60' : ''}>
-                    {p.sellerInfo.amount != null ? (
-                      <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums">
-                        {p.sellerInfo.amount.toLocaleString()}<GoldIcon />
-                      </span>
-                    ) : p.sellerInfo.tier ? (
-                      <TierBadge tier={p.sellerInfo.tier} />
-                    ) : null}
-                  </span>
+                  ) : p.sellerInfo.tier ? (
+                    <TierBadge tier={p.sellerInfo.tier} />
+                  ) : null}
                 </div>
               ) : (
                 <span className="text-dota-text-dim text-xs">—</span>
