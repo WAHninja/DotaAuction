@@ -4,17 +4,19 @@
 //
 // Security:
 //   • Auth checked first — no session → 401
-//   • Membership checked via match_players — non-participant or non-existent
-//     match → 404. We use 404 rather than 403 because this endpoint is fetched
-//     silently in the background by MatchPage; there's no user-typed URL so
-//     there's no value in distinguishing "match doesn't exist" from "you're
-//     not in it".
+//   • Membership checked via the users query result — non-participant or
+//     non-existent match → 404. We use 404 rather than 403 because this
+//     endpoint is fetched silently in the background by MatchPage; there's
+//     no user-typed URL so there's no value in distinguishing "match doesn't
+//     exist" from "you're not in it".
 //
-// Query strategy — 4 queries total regardless of match length:
-//   1. Membership check (implicitly validates match exists)
-//   2. All match participants → username lookup map
-//   3. All games ordered by id ASC
-//   4. Offers + gold-change stats fetched in parallel via Promise.all
+// Query strategy — 3 queries total regardless of match length:
+//   1. All match participants → username lookup map + membership check in JS
+//      (eliminates the separate membership round-trip; a non-existent match
+//      returns 0 rows, a match the caller isn't in returns rows that don't
+//      include currentUserId — both cases → 404)
+//   2. All games ordered by id ASC
+//   3. Offers + gold-change stats fetched in parallel via Promise.all
 //      (both use WHERE game_id = ANY($1) — one round trip each)
 //   Results are grouped into Maps keyed by game_id and joined in JS.
 //   No N+1 — query count is constant regardless of how many games the match has.
@@ -90,21 +92,14 @@ export async function GET(
   }
 
   try {
-    // ---- Membership check --------------------------------------------------
-    // A non-existent matchId returns 0 rows just like a match the caller isn't
-    // part of — both cases collapse to 404, avoiding match-existence leakage.
-    const membershipRes = await db.query<{ user_id: number }>(
-      `SELECT user_id
-       FROM match_players
-       WHERE match_id = $1 AND user_id = $2`,
-      [matchId, session.userId]
-    );
-
-    if (membershipRes.rows.length === 0) {
-      return NextResponse.json({ error: 'Match not found.' }, { status: 404 });
-    }
-
-    // ---- Username lookup map -----------------------------------------------
+    // ---- Username lookup map + membership check ----------------------------
+    // Previously a separate membership query followed by this users query —
+    // two sequential round-trips. The users query already returns every
+    // participant in the match, so membership can be checked in JS against
+    // that result set. A non-existent match returns 0 rows (→ 404); a match
+    // the caller isn't in returns rows that don't include currentUserId
+    // (→ 404). Both cases collapse to 404, preserving the intentional
+    // 404-not-403 behaviour noted above.
     const usersRes = await db.query<{ id: number; username: string }>(
       `SELECT u.id, u.username
        FROM users u
@@ -113,6 +108,11 @@ export async function GET(
       [matchId]
     );
 
+    const isMember = usersRes.rows.some(u => u.id === session.userId);
+    if (!isMember) {
+      return NextResponse.json({ error: 'Match not found.' }, { status: 404 });
+    }
+
     const idToUsername = new Map<number, string>(
       usersRes.rows.map(u => [u.id, u.username])
     );
@@ -120,7 +120,7 @@ export async function GET(
     const usernameOf = (id: number): string =>
       idToUsername.get(id) ?? `Player#${id}`;
 
-    // ---- All games for the match ------------------------------------------
+    // ---- All games for the match -------------------------------------------
     const gamesRes = await db.query<GameRow>(
       `SELECT
          g.id           AS game_id,
@@ -144,10 +144,10 @@ export async function GET(
 
     const gameIds = games.map(g => g.game_id);
 
-    // ---- Offers + stats in parallel ---------------------------------------
+    // ---- Offers + stats in parallel ----------------------------------------
     const [offersRes, statsRes] = await Promise.all([
       // offer_amount is stripped server-side for pending offers.
-      // The CASE expression here means the client can never receive the exact
+      // The CASE expression means the client can never receive the exact
       // value while an offer is unresolved — not even through history.
       db.query<OfferRow>(
         `SELECT
@@ -185,7 +185,7 @@ export async function GET(
       ),
     ]);
 
-    // ---- Group by game_id -------------------------------------------------
+    // ---- Group by game_id --------------------------------------------------
     const offersByGame = new Map<number, HistoryOffer[]>();
     for (const row of offersRes.rows) {
       const list = offersByGame.get(row.game_id) ?? [];
@@ -217,7 +217,7 @@ export async function GET(
       statsByGame.set(row.game_id, list);
     }
 
-    // ---- Assemble HistoryGame[] -------------------------------------------
+    // ---- Assemble HistoryGame[] --------------------------------------------
     const history: HistoryGame[] = games.map((game, index) => ({
       gameNumber:   index + 1,
       gameId:       game.game_id,
