@@ -1,15 +1,15 @@
 // app/hooks/useFocusTrap.ts
 //
 // Constrains Tab / Shift+Tab to focusable elements within a container.
-// Moves focus into the container when activated, and returns a ref to
-// attach to the container element.
+// Moves focus into the container when activated, and returns a ref to attach
+// to the container element.
 //
 // Generic so it works on any HTML element (div, aside, section, etc.):
 //   const ref = useFocusTrap<HTMLElement>(isOpen);
 //   <aside ref={ref}>...</aside>
 //
-// Extracted from GameRulesCard so it can be shared. GameRulesCard's
-// local copy can be replaced with this import.
+// Extracted from GameRulesCard so it can be shared across the app.
+// GameRulesCard's local copy can be replaced with this import.
 
 import { useEffect, useRef, type RefObject } from 'react';
 
@@ -31,7 +31,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     const container = containerRef.current;
 
-    // Move focus into the container immediately on activation.
+    // Move focus into the container on activation.
     // Prefer the first focusable child; fall back to the container itself.
     const focusable = getFocusable(container);
     if (focusable.length > 0) {
@@ -50,13 +50,13 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       const last  = els[els.length - 1];
 
       if (e.shiftKey) {
-        // Shift+Tab on the first element → wrap to last
+        // Shift+Tab on first element → wrap to last
         if (document.activeElement === first) {
           e.preventDefault();
           last.focus();
         }
       } else {
-        // Tab on the last element → wrap to first
+        // Tab on last element → wrap to first
         if (document.activeElement === last) {
           e.preventDefault();
           first.focus();
