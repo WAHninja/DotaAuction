@@ -127,6 +127,23 @@ export type HistoryPlayerStat = {
   reason: 'win_reward' | 'loss_penalty' | 'offer_gain' | 'offer_accepted' | string;
 };
 
+/**
+ * Per-player Dota 2 in-game performance stats, as reported by the VScript
+ * plugin and stored in dota_game_stats. Only present for games played after
+ * the automated match reporting feature was introduced — older games will
+ * have no rows and dotaStats will be an empty array.
+ */
+export type DotaGameStat = {
+  playerId: number;
+  username: string;
+  hero: string | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  netWorth: number;
+  team: TeamId;
+};
+
 export type HistoryGame = {
   gameNumber: number;
   gameId: number;
@@ -138,6 +155,11 @@ export type HistoryGame = {
   team1Members: string[];
   offers: HistoryOffer[];
   playerStats: HistoryPlayerStat[];
+  /**
+   * Dota 2 in-game performance stats per player. Empty array for games
+   * played before automated reporting was available.
+   */
+  dotaStats: DotaGameStat[];
 };
 
 // ---------------------------------------------------------------------------
