@@ -212,6 +212,7 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
                 onClick={onClose}
                 className={mobileNavLink('/profile', pathname)}
               >
+                <User className="w-3.5 h-3.5" aria-hidden="true" />
                 Profile
               </Link>
 
