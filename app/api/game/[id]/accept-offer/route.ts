@@ -3,41 +3,45 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { broadcastEvent } from '@/lib/supabase-server';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   // ---- Auth ----------------------------------------------------------------
   const session = await getSession();
-  const userId = session?.userId;
+  const userId  = session?.userId;
 
   if (!userId) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  // ---- Parse body ----------------------------------------------------------
+  // ---- Parse + validate body -----------------------------------------------
+  // Number() is too permissive — Number("1.5") passes isNaN but is not a
+  // valid integer ID. We require a positive integer throughout.
   let offerId: number;
   try {
     const body = await req.json();
     offerId = Number(body.offerId);
-    if (isNaN(offerId)) throw new Error();
+    if (!Number.isInteger(offerId) || offerId <= 0) throw new Error();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  // ---- Extract game ID from route params -----------------------------------
+  // ---- Validate route param ------------------------------------------------
   const { id } = await params;
-  const gameId = Number(id);
-  if (isNaN(gameId)) {
+  const gameId  = Number(id);
+  if (!Number.isInteger(gameId) || gameId <= 0) {
     return NextResponse.json({ error: 'Invalid game ID.' }, { status: 400 });
   }
 
-  // ---- Acquire a single pooled connection for the transaction --------------
   const client = await db.connect();
 
   try {
     await client.query('BEGIN');
 
-    // ---- Lock game row for the duration of the transaction -----------------
-    // FOR UPDATE prevents concurrent transactions from reading the same game
-    // row simultaneously and both proceeding past the status check.
+    // ---- Lock game row ------------------------------------------------------
+    // FOR UPDATE prevents concurrent accept-offer requests from reading the
+    // same game state simultaneously and both proceeding past the status check.
     const { rows: gameRows } = await client.query<{
       id: number;
       match_id: number;
@@ -46,7 +50,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       winning_team: 'team_a' | 'team_1' | null;
       status: string;
     }>(
-      'SELECT id, match_id, team_a_members, team_1_members, winning_team, status FROM games WHERE id = $1 FOR UPDATE',
+      `SELECT id, match_id, team_a_members, team_1_members, winning_team, status
+       FROM games
+       WHERE id = $1
+       FOR UPDATE`,
       [gameId]
     );
 
@@ -57,30 +64,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const game = gameRows[0];
 
-    // ---- Validate game state -----------------------------------------------
+    // ---- Validate game state ------------------------------------------------
     if (game.status !== 'auction pending') {
       await client.query('ROLLBACK');
       return NextResponse.json({ error: 'Game is not in auction phase.' }, { status: 400 });
     }
 
-    if (!game.winning_team) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'Game has no winner selected yet.' }, { status: 400 });
-    }
+    // Note: the winning_team null-check that previously appeared here has been
+    // removed. The select-winner route sets status and winning_team atomically
+    // in a single UPDATE, so winning_team is guaranteed non-null whenever
+    // status = 'auction pending'. The check was unreachable dead code.
 
-    // ---- Authorise: user must be on the losing team ------------------------
-    const { team_a_members: teamA, team_1_members: team1, winning_team: winningTeam } = game;
+    // ---- Authorise: caller must be on the losing team ----------------------
+    const {
+      team_a_members: teamA,
+      team_1_members: team1,
+      winning_team:   winningTeam,
+    } = game;
+
     const losingTeam = winningTeam === 'team_a' ? team1 : teamA;
 
     if (!losingTeam.includes(userId)) {
       await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'Only losing team members can accept offers.' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Only losing team members can accept offers.' },
+        { status: 403 }
+      );
     }
 
     // ---- Atomically claim the offer ----------------------------------------
-    // UPDATE ... WHERE status = 'pending' RETURNING is a single atomic operation.
-    // If two requests race here, only one will get rows back — the other gets
-    // zero rows and is rejected cleanly, even at READ COMMITTED isolation.
+    // UPDATE ... WHERE status = 'pending' RETURNING is a single atomic
+    // operation. If two requests race, only one gets rows back — the other
+    // gets zero rows and a 409 with no side effects, even at READ COMMITTED.
     const { rows: offerRows } = await client.query<{
       id: number;
       from_player_id: number;
@@ -89,51 +104,50 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }>(
       `UPDATE offers
        SET status = 'accepted'
-       WHERE id = $1 AND game_id = $2 AND status = 'pending'
+       WHERE id = $1
+         AND game_id = $2
+         AND status = 'pending'
        RETURNING id, from_player_id, target_player_id, offer_amount`,
       [offerId, gameId]
     );
 
     if (offerRows.length === 0) {
       await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'Offer already accepted or not found.' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Offer already accepted or not found.' },
+        { status: 409 }
+      );
     }
 
     const { from_player_id, target_player_id, offer_amount } = offerRows[0];
 
-    // ---- Validate the target player is actually in the game ----------------
+    // ---- Validate target player + build new teams before any further writes --
+    //
+    // Both checks and the team-building are pure lookups/computation using
+    // data already in hand. Running them here — immediately after the offer
+    // claim and before any other writes — means a ROLLBACK at this point only
+    // has to undo the single offer claim above, not five downstream writes.
+    //
+    // Previously the empty-team guard fired after the gold update, stats
+    // insert, and game status update had all executed, requiring a ROLLBACK
+    // to unwind five writes instead of one. The ROLLBACK was correct but
+    // the ordering was unnecessarily risky.
+
     const inTeamA = teamA.includes(target_player_id);
     const inTeam1 = team1.includes(target_player_id);
 
     if (!inTeamA && !inTeam1) {
+      // Defensive only — submit-offer already validates the target is a
+      // winning team member, so this path should never be reached with
+      // consistent data.
       await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'Target player not found in current game.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Target player not found in current game.' },
+        { status: 400 }
+      );
     }
 
-    await client.query(
-      'UPDATE offers SET status = $1 WHERE game_id = $2 AND id != $3 AND status = $4',
-      ['rejected', gameId, offerId, 'pending']
-    );
-
-    // ---- Award gold to the player whose offer was accepted -----------------
-    await client.query(
-      'UPDATE match_players SET gold = gold + $1 WHERE user_id = $2 AND match_id = $3',
-      [offer_amount, from_player_id, game.match_id]
-    );
-
-    await client.query(
-      `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
-       VALUES ($1, $2, $3, $4, 'offer_gain')`,
-      [gameId, from_player_id, winningTeam, offer_amount]
-    );
-
-    // ---- Mark current game as finished -------------------------------------
-    await client.query(
-      'UPDATE games SET status = $1 WHERE id = $2',
-      ['finished', gameId]
-    );
-
-    // ---- Build new teams with player swapped -------------------------------
+    // Build the new team composition before writing anything
     const newTeamA = [...teamA];
     const newTeam1 = [...team1];
 
@@ -145,17 +159,67 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       newTeamA.push(target_player_id);
     }
 
-    // ---- Guard against empty teams -----------------------------------------
+    // Guard before any further writes — ROLLBACK here only undoes the offer
+    // claim above. Previously this check ran after 5 downstream writes.
     if (newTeamA.length === 0 || newTeam1.length === 0) {
       await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'Trade would result in an empty team.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Trade would result in an empty team.' },
+        { status: 400 }
+      );
     }
 
+    // ---- Reject all other pending offers for this game ----------------------
+    // String literals 'rejected' and 'pending' are inlined — they are fixed
+    // values, not caller-supplied data, so there is no reason to parameterise
+    // them. The previous version passed them as $1 and $4 which added noise.
+    await client.query(
+      `UPDATE offers
+       SET status = 'rejected'
+       WHERE game_id = $1
+         AND id      != $2
+         AND status  = 'pending'`,
+      [gameId, offerId]
+    );
+
+    // ---- Award gold to the seller ------------------------------------------
+    await client.query(
+      `UPDATE match_players
+       SET gold = gold + $1
+       WHERE user_id  = $2
+         AND match_id = $3`,
+      [offer_amount, from_player_id, game.match_id]
+    );
+
+    await client.query(
+      `INSERT INTO game_player_stats
+         (game_id, player_id, team_id, gold_change, reason)
+       VALUES ($1, $2, $3, $4, 'offer_gain')`,
+      [gameId, from_player_id, winningTeam, offer_amount]
+    );
+
+    // ---- Mark current game as finished -------------------------------------
+    await client.query(
+      `UPDATE games SET status = 'finished' WHERE id = $1`,
+      [gameId]
+    );
+
     // ---- Create the next game ----------------------------------------------
-    const { rows: newGameRows } = await client.query(
+    // Explicit RETURNING columns rather than RETURNING * — the result is
+    // broadcast directly to clients as the newGame payload. RETURNING * would
+    // silently include any future columns added to the games table.
+    const { rows: newGameRows } = await client.query<{
+      id: number;
+      match_id: number;
+      status: string;
+      winning_team: string | null;
+      team_1_members: number[];
+      team_a_members: number[];
+      created_at: string;
+    }>(
       `INSERT INTO games (match_id, team_a_members, team_1_members, status)
        VALUES ($1, $2, $3, 'in progress')
-       RETURNING *`,
+       RETURNING id, match_id, status, winning_team, team_1_members, team_a_members, created_at`,
       [game.match_id, newTeamA, newTeam1]
     );
 
@@ -167,12 +231,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       'offer-accepted',
       {
         acceptedOfferId: offerId,
-        acceptedAmount: offer_amount,
-        newGame: newGameRows[0],
+        acceptedAmount:  offer_amount,
+        newGame:         newGameRows[0],
       }
     );
 
-    return NextResponse.json({ message: 'Offer accepted and new game started.' });
+    return NextResponse.json({ ok: true });
 
   } catch (err) {
     await client.query('ROLLBACK');
