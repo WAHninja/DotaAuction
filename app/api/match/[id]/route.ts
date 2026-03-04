@@ -21,18 +21,6 @@ export async function GET(
   }
 
   try {
-    // ---- Parallel fetch: match row, players, games -------------------------
-    //
-    // All three depend only on matchId, which is known before any query runs.
-    // Previously four sequential queries; now three concurrent round-trips
-    // whose total wall time equals the slowest of the three.
-    //
-    // The membership check was a separate fifth query — it's folded into the
-    // players fetch below: if currentUserId isn't in the returned player rows,
-    // the caller is not a participant, and we return 403 without an extra trip.
-    //
-    // SELECT * on matches and games has been replaced with explicit column
-    // lists so future schema additions don't silently appear in the response.
     const [matchRes, playersRes, gamesRes] = await Promise.all([
       db.query<{
         id: number;
@@ -76,34 +64,23 @@ export async function GET(
       ),
     ]);
 
-    // ---- Existence + membership checks -------------------------------------
+    // ---- Existence check ---------------------------------------------------
     if (matchRes.rowCount === 0) {
       return NextResponse.json({ error: 'Match not found.' }, { status: 404 });
     }
+    // No membership check — any authenticated user can view any match as a
+    // spectator. Action routes (submit-offer, accept-offer, select-winner)
+    // enforce membership independently. The UI already hides all action
+    // buttons when currentUserId doesn't match any player in the match.
 
-    // Membership check folded into the players result — no separate query
-    // needed. Without this, any authenticated user could enumerate team
-    // compositions, gold balances, and offers for arbitrary matches by
-    // iterating match IDs.
-    const players = playersRes.rows;
-    const isMember = players.some(p => p.id === currentUserId);
-    if (!isMember) {
-      return NextResponse.json(
-        { error: 'Not a participant in this match.' },
-        { status: 403 }
-      );
-    }
-
-    const match  = matchRes.rows[0];
-    const games  = gamesRes.rows;
+    const match      = matchRes.rows[0];
+    const players    = playersRes.rows;
+    const games      = gamesRes.rows;
     const latestGame = games.length > 0
       ? { ...games[games.length - 1], gameNumber: games.length }
       : null;
 
     // ---- Conditionally fetch offers ----------------------------------------
-    // Only relevant during the auction phase. offer_amount is stripped at the
-    // SQL level for pending offers (consistent with the submit-offer and
-    // accept-offer routes) rather than in JS after a SELECT *.
     let offers: unknown[] = [];
     if (latestGame?.status === 'auction pending') {
       const offersRes = await db.query(
