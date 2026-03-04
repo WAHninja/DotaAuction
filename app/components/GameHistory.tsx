@@ -34,7 +34,6 @@ type UnifiedPlayer = {
     tier:   TierLabel | null;
     status: OfferStatus;
   } | null;
-  soldInfo: { byUsername: string; amount: number | null } | null;
 };
 
 function buildUnifiedPlayers(
@@ -51,7 +50,6 @@ function buildUnifiedPlayers(
   }
 
   const sellerByName = new Map<string, UnifiedPlayer['sellerInfo']>();
-  const soldByName   = new Map<string, UnifiedPlayer['soldInfo']>();
   for (const o of offers) {
     sellerByName.set(o.fromUsername, {
       targetUsername: o.targetUsername,
@@ -59,9 +57,6 @@ function buildUnifiedPlayers(
       tier:   o.tierLabel,
       status: o.status,
     });
-    if (o.status === 'accepted') {
-      soldByName.set(o.targetUsername, { byUsername: o.fromUsername, amount: o.offerAmount });
-    }
   }
 
   return usernames.map(name => {
@@ -75,7 +70,6 @@ function buildUnifiedPlayers(
       netWorth:  d != null ? d.netWorth: null,
       goldTotal: goldByName.has(name) ? goldByName.get(name)! : null,
       sellerInfo: sellerByName.get(name) ?? null,
-      soldInfo:   soldByName.get(name)   ?? null,
     };
   });
 }
@@ -86,6 +80,33 @@ function buildUnifiedPlayers(
 
 function GoldIcon() {
   return <Image src="/Gold_symbol.webp" alt="" width={12} height={12} className="inline-block" />;
+}
+
+/**
+ * Converts the internal hero name stored by the Lua plugin to a Dota 2 CDN
+ * icon URL. The plugin stores the full unit name (e.g. "npc_dota_hero_antimage")
+ * so we strip the prefix before building the URL.
+ *
+ * sb.png = 59×33px horizontal portrait — ideal for a compact scoreboard row.
+ */
+function heroIconUrl(hero: string): string {
+  const name = hero.replace(/^npc_dota_hero_/, '');
+  return `https://cdn.dota2.com/apps/dota2/images/heroes/${name}_sb.png`;
+}
+
+function HeroIcon({ hero }: { hero: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return (
+    <img
+      src={heroIconUrl(hero)}
+      alt={hero.replace(/^npc_dota_hero_/, '').replace(/_/g, ' ')}
+      width={59}
+      height={33}
+      className="rounded object-cover shrink-0"
+      style={{ width: 44, height: 25 }}
+      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+    />
+  );
 }
 
 function formatNW(val: number): string {
@@ -152,7 +173,7 @@ function TeamScoreboard({
         {hasDotaStats && <span className="stat-label text-center">K / D / A</span>}
         {hasDotaStats && <span className="stat-label text-right">NET WORTH</span>}
         <span className="stat-label text-right">GOLD Δ</span>
-        {hasAuction && <span className="stat-label">AUCTION</span>}
+        {hasAuction && <span className="stat-label">OFFER</span>}
       </div>
 
       {/* Rows */}
@@ -162,9 +183,16 @@ function TeamScoreboard({
           style={{ gridTemplateColumns: cols }}
         >
           {/* Player + hero */}
-          <div className="flex flex-col min-w-0">
-            <span className="font-barlow font-semibold text-sm text-dota-text truncate">{p.username}</span>
-            {p.hero && <span className="font-barlow text-xs text-dota-text-muted truncate">{p.hero}</span>}
+          <div className="flex items-center gap-2 min-w-0">
+            {p.hero && <HeroIcon hero={p.hero} />}
+            <div className="flex flex-col min-w-0">
+              <span className="font-barlow font-semibold text-sm text-dota-text truncate">{p.username}</span>
+              {p.hero && (
+                <span className="font-barlow text-[11px] text-dota-text-muted truncate capitalize">
+                  {p.hero.replace(/^npc_dota_hero_/, '').replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* K / D / A */}
@@ -205,30 +233,39 @@ function TeamScoreboard({
             }
           </div>
 
-          {/* Auction */}
+          {/* Auction — show this player's offer if they made one */}
           {hasAuction && (
             <div className="min-w-0">
-              {p.sellerInfo?.status === 'accepted' ? (
-                <span className="font-barlow text-xs flex items-center gap-1 flex-wrap">
-                  <span className="text-dota-text-muted">Sold</span>
-                  <span className="text-dota-gold font-semibold truncate">{p.sellerInfo.targetUsername}</span>
-                  {p.sellerInfo.amount != null
-                    ? <span className="inline-flex items-center gap-0.5 text-dota-gold tabular-nums">· {p.sellerInfo.amount.toLocaleString()}<GoldIcon /></span>
-                    : <TierBadge tier={p.sellerInfo.tier} />
-                  }
-                </span>
-              ) : p.soldInfo ? (
-                <span className="font-barlow text-xs flex items-center gap-1 text-dota-info font-semibold">
-                  Acquired
-                  {p.soldInfo.amount != null && (
-                    <span className="inline-flex items-center gap-0.5 font-normal text-dota-text-muted tabular-nums">· {p.soldInfo.amount.toLocaleString()}<GoldIcon /></span>
-                  )}
-                </span>
-              ) : p.sellerInfo?.status === 'rejected' ? (
-                <span className="font-barlow text-[11px] text-dota-text-dim opacity-50 flex items-center gap-1">
-                  Offered <span className="truncate">{p.sellerInfo.targetUsername}</span>
-                  <TierBadge tier={p.sellerInfo.tier} />
-                </span>
+              {p.sellerInfo ? (
+                <div className="flex flex-col gap-1">
+                  {/* Status pill */}
+                  <span className={`self-start font-barlow text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
+                    p.sellerInfo.status === 'accepted'
+                      ? 'text-dota-radiant-light bg-dota-radiant/10 border-dota-radiant/30'
+                      : p.sellerInfo.status === 'rejected'
+                      ? 'text-dota-dire-light bg-dota-dire/10 border-dota-dire/30 opacity-60'
+                      : 'text-dota-text-dim bg-transparent border-dota-border/50'
+                  }`}>
+                    {p.sellerInfo.status}
+                  </span>
+                  {/* Target */}
+                  <span className="font-barlow text-xs text-dota-text-muted">
+                    <span className="text-dota-text-dim">→ </span>
+                    <span className={p.sellerInfo.status === 'rejected' ? 'opacity-60' : 'text-dota-info font-semibold'}>
+                      {p.sellerInfo.targetUsername}
+                    </span>
+                  </span>
+                  {/* Value — amount takes priority, fall back to tier */}
+                  <span className={p.sellerInfo.status === 'rejected' ? 'opacity-60' : ''}>
+                    {p.sellerInfo.amount != null ? (
+                      <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums">
+                        {p.sellerInfo.amount.toLocaleString()}<GoldIcon />
+                      </span>
+                    ) : p.sellerInfo.tier ? (
+                      <TierBadge tier={p.sellerInfo.tier} />
+                    ) : null}
+                  </span>
+                </div>
               ) : (
                 <span className="text-dota-text-dim text-xs">—</span>
               )}
