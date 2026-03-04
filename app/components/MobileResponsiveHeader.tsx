@@ -3,15 +3,17 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState, useContext } from 'react';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, ScrollText } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import LogoutButton from './LogoutButton';
+import { useChangelogBadge } from '@/app/hooks/useChangelogBadge';
 
 export default function MobileResponsiveHeader() {
-  const { user } = useContext(UserContext);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [scrolled, setScrolled] = useState(false);
+  const { user }                    = useContext(UserContext);
+  const [menuOpen, setMenuOpen]     = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [scrolled, setScrolled]     = useState(false);
+  const hasUnseen                   = useChangelogBadge();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -30,30 +32,39 @@ export default function MobileResponsiveHeader() {
 
   const closeMenu = () => setMenuOpen(false);
 
-  const NavLinks = () => (
+  // ── Shared nav link styles ─────────────────────────────────────────────────
+  const desktopLink = 'font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold transition-colors';
+  const mobileLink  = 'px-3 py-2.5 rounded font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay transition-all flex items-center gap-2';
+
+  // ── Desktop nav ────────────────────────────────────────────────────────────
+  const DesktopNav = () => (
     <>
       {user && (
         <span className="font-barlow text-sm text-dota-text-muted tracking-wide">
           {user.username}
         </span>
       )}
-      <Link
-        href="/"
-        className="font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold transition-colors"
-        onClick={closeMenu}
-      >
+
+      <Link href="/" className={desktopLink} onClick={closeMenu}>
         Home
       </Link>
+
       {user && (
-        <Link
-          href="/profile"
-          className="font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold transition-colors flex items-center gap-1.5"
-          onClick={closeMenu}
-        >
+        <Link href="/profile" className={`${desktopLink} flex items-center gap-1.5`} onClick={closeMenu}>
           <User className="w-3.5 h-3.5" />
           Profile
         </Link>
       )}
+
+      {/* Changelog with badge */}
+      <Link href="/changelog" className={`${desktopLink} relative flex items-center gap-1.5`} onClick={closeMenu}>
+        <ScrollText className="w-3.5 h-3.5" />
+        Changelog
+        {hasUnseen && (
+          <span className="absolute -top-1.5 -right-2.5 w-2 h-2 rounded-full bg-dota-gold shadow-gold" />
+        )}
+      </Link>
+
       {user && <LogoutButton />}
     </>
   );
@@ -90,17 +101,31 @@ export default function MobileResponsiveHeader() {
 
           {/* ── Desktop nav ──────────────────────────────────────────────── */}
           <nav className="hidden sm:flex items-center gap-5">
-            {!loading && <NavLinks />}
+            {!loading && <DesktopNav />}
           </nav>
 
-          {/* ── Mobile menu button ────────────────────────────────────────── */}
-          <button
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="sm:hidden p-1.5 rounded text-dota-text-muted hover:text-dota-gold transition-colors"
-          >
-            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* ── Mobile: changelog badge + menu button ─────────────────────── */}
+          <div className="flex items-center gap-2 sm:hidden">
+            {/* Standalone badge visible on mobile so it's not hidden inside the drawer */}
+            {hasUnseen && !menuOpen && (
+              <Link
+                href="/changelog"
+                onClick={closeMenu}
+                className="relative p-1.5 rounded text-dota-text-muted hover:text-dota-gold transition-colors"
+                aria-label="New changelog entries"
+              >
+                <ScrollText className="w-5 h-5" />
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-dota-gold shadow-gold" />
+              </Link>
+            )}
+            <button
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              onClick={() => setMenuOpen((v) => !v)}
+              className="p-1.5 rounded text-dota-text-muted hover:text-dota-gold transition-colors"
+            >
+              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -131,23 +156,30 @@ export default function MobileResponsiveHeader() {
                   <p className="font-barlow font-semibold text-dota-gold">{user.username}</p>
                 </div>
               )}
-              <Link
-                href="/"
-                onClick={closeMenu}
-                className="px-3 py-2.5 rounded font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay transition-all"
-              >
+
+              <Link href="/" onClick={closeMenu} className={mobileLink}>
                 Home
               </Link>
+
               {user && (
-                <Link
-                  href="/profile"
-                  onClick={closeMenu}
-                  className="px-3 py-2.5 rounded font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay transition-all flex items-center gap-2"
-                >
+                <Link href="/profile" onClick={closeMenu} className={mobileLink}>
                   <User className="w-3.5 h-3.5" />
                   Profile
                 </Link>
               )}
+
+              {/* Changelog with badge */}
+              <Link href="/changelog" onClick={closeMenu} className={`${mobileLink} relative`}>
+                <ScrollText className="w-3.5 h-3.5" />
+                Changelog
+                {hasUnseen && (
+                  <span className="ml-auto flex items-center gap-1 font-barlow text-xs font-bold text-dota-gold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-dota-gold" />
+                    New
+                  </span>
+                )}
+              </Link>
+
               {user && (
                 <div className="mt-2">
                   <LogoutButton />
