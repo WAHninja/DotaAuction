@@ -9,7 +9,6 @@ import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
-import MatchSummary from '@/app/components/MatchSummary';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
@@ -184,8 +183,8 @@ export default function MatchPage() {
   const isInProgress = latestGame?.status === 'in progress';
   const isFinished   = latestGame?.status === 'finished';
 
-  // Derived once and shared across WinnerBanner, MatchHeader, and MatchSummary
-  // so we're not calling .find() three separate times in JSX.
+  // Derived once and shared across WinnerBanner and MatchHeader so we're not
+  // calling .find() multiple times in JSX.
   const winnerName = match.winner_id
     ? players.find((p) => p.id === match.winner_id)?.username
     : undefined;
@@ -206,11 +205,17 @@ export default function MatchPage() {
             themed defeat screen that names the winner instead of celebrating.
           - Both variants use <Link href="/dashboard"> directly (no nested
             <button>) and go straight to /dashboard rather than bouncing
-            through the root redirect. */}
+            through the root redirect.
+          - totalGames and matchCreatedAt replace the separate MatchSummary
+            component that previously sat between the team cards and GameHistory.
+            Stats now surface immediately at the top of the finished-match view
+            rather than requiring the player to scroll past the team cards. */}
       {isFinished && match.winner_id && (
         <WinnerBanner
           winnerName={winnerName}
           isWinner={currentUserId === match.winner_id}
+          totalGames={history.length}
+          matchCreatedAt={match.created_at}
         />
       )}
 
@@ -254,21 +259,6 @@ export default function MatchPage() {
           onOfferAccepted={() => {
             Promise.all([fetchMatchData(), fetchGameHistory()]);
           }}
-        />
-      )}
-
-      {/* MatchSummary:
-          Sits between the team gold standings and the game-by-game history,
-          so the finished page reads top-to-bottom as:
-            winner banner → final gold → summary → how it unfolded.
-          Only rendered once the match is finished and a winner is known.
-          Requires match.created_at to be included in the /api/match/:id
-          response — add it to that query's SELECT if not already present. */}
-      {isFinished && winnerName && (
-        <MatchSummary
-          winnerName={winnerName}
-          totalGames={history.length}
-          matchCreatedAt={match.created_at}
         />
       )}
 
