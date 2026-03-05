@@ -9,14 +9,14 @@ import { broadcastEvent } from '@/lib/supabase-server';
    Tiers are defined as proportions of the current offer span so the
    ambiguity zones remain consistent regardless of which game you're in.
 
-   Proportions (verified against the stated game 1 values of 250–2000):
-     Low    → bottom 26% of span  (≈ 250–700 in game 1)
-     Medium → 14%–54% of span     (≈ 500–1200 in game 1)
-     High   → 37%–top of span     (≈ 900–2000 in game 1)
+   Proportions (verified against the stated game 1 values of 450–2500):
+     Low    → bottom 26% of span  (≈ 450–983 in game 1)
+     Medium → 14%–54% of span     (≈ 737–1558 in game 1)
+     High   → 37%–top of span     (≈ 1209–2500 in game 1)
 
    Overlap zones:
-     Low/Medium  → 14%–26%  (≈ 500–700 in game 1)
-     Medium/High → 37%–54%  (≈ 900–1200 in game 1)
+     Low/Medium  → 14%–26%  (≈ 737–983 in game 1)
+     Medium/High → 37%–54%  (≈ 1209–1558 in game 1)
 
    When an amount falls in an overlap zone, we pick one of the eligible
    tiers at random and store it. This means two offers at similar amounts
@@ -101,10 +101,11 @@ export async function POST(
     // The count is inlined as a scalar subquery so we pay one round-trip
     // instead of two. The lock (FOR UPDATE) still applies to the outer row.
     //
-    // Counting only finished games also fixes an off-by-one bug in the
-    // original: COUNT(*) included the current game, so game 1 returned
-    // count=1 → minOffer=450 instead of the correct 250.
-    // Counting finished games gives count=0 during game 1 → minOffer=250.
+    // `completedGames` counts only finished games — games that have already
+    // had their auction resolved. This gives 0 during game 1 (min = 450),
+    // 1 during game 2 (min = 650), and so on.
+    // Counting all games (including the current one) would be an off-by-one:
+    // game 1 would return count=1 → min=650 instead of the correct 450.
     const { rows: gameRows } = await client.query<{
       id: number;
       match_id: number;
@@ -138,8 +139,10 @@ export async function POST(
       return NextResponse.json({ error: 'Game not found.' }, { status: 404 });
     }
 
-    const game         = gameRows[0];
-    const gamesPlayed  = parseInt(game.finished_count, 10);
+    const game           = gameRows[0];
+    // completedGames = number of games fully finished BEFORE this auction.
+    // Game 1 auction → 0, game 2 auction → 1, game N auction → N-1.
+    const completedGames = parseInt(game.finished_count, 10);
 
     // ---- Validate game state ------------------------------------------------
     if (game.status !== 'auction pending') {
@@ -182,8 +185,11 @@ export async function POST(
     }
 
     // ---- Validate offer amount ----------------------------------------------
-    const minOfferAmount = 450 + gamesPlayed * 200;
-    const maxOfferAmount = 2500 + gamesPlayed * 500;
+    // Game 1:  min = 450,  max = 2500  (completedGames = 0)
+    // Game 2:  min = 650,  max = 3000  (completedGames = 1)
+    // Game N:  min = 450 + (N-1)*200,  max = 2500 + (N-1)*500
+    const minOfferAmount = 450 + completedGames * 200;
+    const maxOfferAmount = 2500 + completedGames * 500;
 
     if (offer_amount < minOfferAmount || offer_amount > maxOfferAmount) {
       await client.query('ROLLBACK');
