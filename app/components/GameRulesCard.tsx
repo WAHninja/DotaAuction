@@ -419,9 +419,9 @@ export default function GameRulesCard() {
               <p className="stat-label mb-3">Offer range by game</p>
               <div className="space-y-2">
                 {[
-                  { label: 'After game 1', range: '450 – 2,500' },
-                  { label: 'After game 3', range: '850 – 3,500' },
-                  { label: 'After game 7', range: '1,650 – 5,500' },
+                  { label: 'Game 1', range: '450 – 2,500' },   // completedGames=0: min=450,  max=2500
+                  { label: 'Game 3', range: '850 – 3,500' },   // completedGames=2: min=850,  max=3500
+                  { label: 'Game 7', range: '1,650 – 5,500' }, // completedGames=6: min=1650, max=5500
                 ].map(({ label, range }) => (
                   <div key={label} className="flex justify-between">
                     <span className="text-dota-text-muted">{label}</span>
