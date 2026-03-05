@@ -21,10 +21,6 @@ export async function POST(
   }
 
   // ---- Validate + parse body -----------------------------------------------
-  // Combined into one block: a missing or non-enum winningTeamId gets the
-  // same treatment as malformed JSON — both are caller errors. Unifying them
-  // also lets TypeScript narrow winningTeamId to the literal union type after
-  // validation rather than leaving it as `string`.
   let winningTeamId: 'team_1' | 'team_a';
   try {
     const body = await req.json();
@@ -45,15 +41,6 @@ export async function POST(
     await client.query('BEGIN');
 
     // ---- Load game state + verify membership in one locked query -----------
-    //
-    // Previously two sequential queries:
-    //   1. SELECT match_id FROM games WHERE id = $1
-    //   2. SELECT 1 FROM match_players WHERE match_id = $1 AND user_id = $2
-    //
-    // These are collapsed into one using an EXISTS sub-select. The FOR UPDATE
-    // lock on the games row means concurrent winner-selection requests
-    // serialise here — the second request blocks until the first commits,
-    // then reads the updated status and gets a 409 rather than racing through.
     const { rows: gameRows } = await client.query<{
       match_id: number;
       status: string;
@@ -106,13 +93,6 @@ export async function POST(
     const winningMembers = game[`${winningTeamId}_members`] as number[];
     const losingMembers  = game[`${losingTeamId}_members`]  as number[];
 
-    // ---- Determine correct target status + apply in one UPDATE -------------
-    //
-    // The original unconditionally set status = 'auction pending' here, then
-    // immediately overwrote it to 'finished' in the single-player branch —
-    // two writes to the same row when one is enough. Since we already have
-    // the game data from the SELECT above, we know the correct final status
-    // before writing and set it directly.
     const isSinglePlayerWin = winningMembers.length === 1;
     const targetStatus = isSinglePlayerWin ? 'finished' : 'auction pending';
 
@@ -124,6 +104,33 @@ export async function POST(
     );
 
     // ---- Single-player winning team: match ends immediately ----------------
+    //
+    // When one player wins alone, the match is over and no gold calculations
+    // are applied for this final game. This is intentional.
+    //
+    // Why gold is NOT applied here:
+    //
+    //   The match-level gold totals stored in match_players reflect each
+    //   player's accumulated gold at the START of the current game — i.e.
+    //   what they earned across all previous games. This is the figure the
+    //   Stats tab and Hall of Fame queries read to compare players' standing.
+    //
+    //   If we applied win rewards and loss penalties here, those totals would
+    //   represent an inflated post-game state rather than the authentic
+    //   "going into the final game" snapshot. A player who won with 500 gold
+    //   would suddenly show 1,500+ gold, misrepresenting how close (or not)
+    //   the final game actually was.
+    //
+    //   Similarly, no game_player_stats rows are written for this game.
+    //   The GameHistory component handles missing stats gracefully (empty
+    //   goldTotal and dotaStats), so the final game card will render without
+    //   gold deltas — which is the correct representation: no trade occurred,
+    //   and the match-ending gold state is already readable from the team cards
+    //   that were visible at the start of the game.
+    //
+    //   Every non-final game correctly writes stats and gold changes because
+    //   those transactions are meaningful inputs to the auction that follows.
+    //   The final game has no auction, so there is nothing to fund.
     if (isSinglePlayerWin) {
       const winningPlayerId = winningMembers[0];
 
@@ -146,11 +153,13 @@ export async function POST(
       });
     }
 
-    // ---- Bulk fetch all loser gold in one query ----------------------------
+    // ---- Multi-player winning team: apply gold and advance to auction ------
     //
-    // Previously one SELECT per loser player, each awaited sequentially.
-    // ANY($2::int[]) fetches all rows in a single round-trip; we map to a
-    // Map for O(1) lookup when computing per-player penalties below.
+    // Gold changes are meaningful here because they fund the auction that
+    // immediately follows. Losers pay 50% into a shared pool; winners receive
+    // a 1,000 base reward plus an equal share of that pool.
+
+    // ---- Bulk fetch all loser gold in one query ----------------------------
     const loserGoldRes = await client.query<{ user_id: number; gold: number }>(
       `SELECT user_id, gold
        FROM match_players
@@ -163,7 +172,6 @@ export async function POST(
       loserGoldRes.rows.map(r => [r.user_id, r.gold])
     );
 
-    // Compute all gold amounts in JS before issuing any writes
     const losingPenalties = losingMembers.map(
       id => Math.floor((losingGolds.get(id) ?? 0) * 0.5)
     );
@@ -172,8 +180,6 @@ export async function POST(
     const totalReward    = 1000 + perWinnerBonus;
 
     // ---- Bulk update winner gold -------------------------------------------
-    // All winners receive the same totalReward, so a single UPDATE with
-    // ANY covers all of them — one query instead of one per winner.
     await client.query(
       `UPDATE match_players
        SET gold = gold + $1
@@ -183,8 +189,6 @@ export async function POST(
     );
 
     // ---- Bulk insert winner stats ------------------------------------------
-    // unnest expands the player ID array into rows inside Postgres — one
-    // INSERT regardless of how many winners there are.
     await client.query(
       `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
        SELECT $1, unnest($2::int[]), $3, $4, 'win_reward'`,
@@ -192,10 +196,6 @@ export async function POST(
     );
 
     // ---- Bulk update loser gold --------------------------------------------
-    // Each loser has a different penalty (50% of their own gold), so we
-    // zip player IDs with their penalties using parallel unnest arrays.
-    // unnest($1::int[], $2::int[]) expands both arrays in lockstep, giving
-    // us (user_id, penalty) pairs without any application-layer looping.
     await client.query(
       `UPDATE match_players mp
        SET gold = gold - v.penalty
