@@ -82,13 +82,6 @@ function GoldIcon() {
   return <Image src="/Gold_symbol.webp" alt="" width={12} height={12} className="inline-block" />;
 }
 
-/**
- * Converts the internal hero name stored by the Lua plugin to a Dota 2 CDN
- * icon URL. The plugin stores the full unit name (e.g. "npc_dota_hero_antimage")
- * so we strip the prefix before building the URL.
- *
- * sb.png = 59×33px horizontal portrait — ideal for a compact scoreboard row.
- */
 function heroIconUrl(hero: string): string {
   const name = hero.replace(/^npc_dota_hero_/, '');
   return `https://cdn.dota2.com/apps/dota2/images/heroes/${name}_sb.png`;
@@ -142,7 +135,6 @@ function TeamScoreboard({
     ? { header: 'from-dota-radiant/20', border: 'border-dota-radiant/35', text: 'text-dota-radiant-light', hover: 'hover:bg-dota-radiant/5' }
     : { header: 'from-dota-dire/20',    border: 'border-dota-dire/35',    text: 'text-dota-dire-light',   hover: 'hover:bg-dota-dire/5'    };
 
-  // Dynamic grid: player | (kda) | (nw) | gold | (auction)
   const cols = [
     '1fr',
     hasDotaStats ? '90px' : null,
@@ -238,7 +230,6 @@ function TeamScoreboard({
             <div className="min-w-0">
               {p.sellerInfo ? (
                 <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-0.5 ${p.sellerInfo.status === 'rejected' ? 'opacity-55' : ''}`}>
-                  {/* Status pill */}
                   <span className={`font-barlow text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border shrink-0 ${
                     p.sellerInfo.status === 'accepted'
                       ? 'text-dota-radiant-light bg-dota-radiant/10 border-dota-radiant/30'
@@ -248,12 +239,10 @@ function TeamScoreboard({
                   }`}>
                     {p.sellerInfo.status}
                   </span>
-                  {/* Arrow + target */}
                   <span className="font-barlow text-xs text-dota-text-dim shrink-0">→</span>
                   <span className={`font-barlow text-xs font-semibold truncate ${p.sellerInfo.status === 'accepted' ? 'text-dota-info' : 'text-dota-text-muted'}`}>
                     {p.sellerInfo.targetUsername}
                   </span>
-                  {/* Value */}
                   <span className="inline-flex items-center gap-1.5 flex-wrap">
                     {p.sellerInfo.amount != null && (
                       <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums">
@@ -278,7 +267,7 @@ function TeamScoreboard({
 // Game card
 // ---------------------------------------------------------------------------
 
-function GameCard({ game }: { game: HistoryGame }) {
+function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const accepted     = game.offers.find(o => o.status === 'accepted');
   const hasDotaStats = game.dotaStats.length > 0;
@@ -286,6 +275,8 @@ function GameCard({ game }: { game: HistoryGame }) {
 
   const hasWinner     = game.winningTeam !== null;
   const winnerIsTeam1 = game.winningTeam === 'team_1';
+
+  const winningTeamLabel = game.winningTeam === 'team_1' ? 'Team 1' : 'Team A';
 
   const team1 = (
     <TeamScoreboard key="t1" teamId="team_1" label="Team 1"
@@ -302,43 +293,94 @@ function GameCard({ game }: { game: HistoryGame }) {
     <div className="panel cursor-pointer hover:border-dota-border-bright transition-colors"
          onClick={() => setExpanded(v => !v)}>
 
-      {/* Collapsed header */}
-      <div className="flex items-center justify-between p-4 gap-4">
+      {/* ── Collapsed header ─────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between p-4 gap-4">
         <div className="space-y-0.5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-cinzel font-bold text-dota-text">Game #{game.gameNumber}</h3>
+
+            {/* Final game badge — shown regardless of expanded state */}
+            {isFinalGame && (
+              <span className="badge-gold text-xs py-0.5">Final Game</span>
+            )}
+
             {hasDotaStats && !expanded && (
               <span className="font-barlow text-[9px] font-semibold uppercase tracking-widest text-dota-text-dim border border-dota-border rounded px-1.5 py-0.5">
                 K/D/A
               </span>
             )}
           </div>
-          {!expanded && accepted && (
-            <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
-              <span className="text-dota-gold font-semibold">{accepted.fromUsername}</span>
-              sold
-              <span className="text-dota-info font-semibold">{accepted.targetUsername}</span>
-              for
-              {accepted.offerAmount != null
-                ? <span className="inline-flex items-center gap-0.5 font-bold text-dota-gold tabular-nums">
-                    {accepted.offerAmount.toLocaleString()}<GoldIcon />
-                  </span>
-                : <TierBadge tier={accepted.tierLabel} />
-              }
-            </p>
+
+          {!expanded && (
+            <>
+              {/*
+                Final game: no auction took place, so there is no accepted offer
+                to summarise. Instead, show which team clinched the match.
+              */}
+              {isFinalGame && game.winningTeam && (
+                <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
+                  <Trophy className="w-3.5 h-3.5 text-dota-gold shrink-0" aria-hidden="true" />
+                  <span className="text-dota-gold font-semibold">{winningTeamLabel}</span>
+                  clinched the match
+                </p>
+              )}
+
+              {/* All other games: show the accepted offer summary as before */}
+              {!isFinalGame && accepted && (
+                <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
+                  <span className="text-dota-gold font-semibold">{accepted.fromUsername}</span>
+                  sold
+                  <span className="text-dota-info font-semibold">{accepted.targetUsername}</span>
+                  for
+                  {accepted.offerAmount != null
+                    ? <span className="inline-flex items-center gap-0.5 font-bold text-dota-gold tabular-nums">
+                        {accepted.offerAmount.toLocaleString()}<GoldIcon />
+                      </span>
+                    : <TierBadge tier={accepted.tierLabel} />
+                  }
+                </p>
+              )}
+            </>
           )}
         </div>
+
         <button
           className="font-barlow text-xs text-dota-text-muted hover:text-dota-text flex items-center gap-1 transition-colors shrink-0"
           onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}>
-          {expanded ? <><ChevronUp className="w-3.5 h-3.5" />Hide</> : <><ChevronDown className="w-3.5 h-3.5" />Details</>}
+          {expanded
+            ? <><ChevronUp   className="w-3.5 h-3.5" />Hide</>
+            : <><ChevronDown className="w-3.5 h-3.5" />Details</>
+          }
         </button>
       </div>
 
-      {/* Expanded — unified scoreboard, winner on top */}
+      {/* ── Expanded — scoreboard ─────────────────────────────────────────── */}
       {expanded && (
         <div className="border-t border-dota-border p-4 overflow-x-auto"
              onClick={e => e.stopPropagation()}>
+
+          {/*
+            Final game note — explains why gold delta cells all show "—".
+
+            No gold changes are applied when a player wins the match alone:
+            the gold totals frozen in match_players reflect each player's
+            standing at the START of this game, which is the meaningful
+            "going into the final" snapshot. Applying win/loss gold here would
+            inflate those totals and misrepresent how close the match actually
+            was. See select-winner/route.ts for the full rationale.
+          */}
+          {isFinalGame && (
+            <div className="mb-4 px-3 py-2.5 rounded bg-dota-gold/8 border border-dota-gold/20">
+              <p className="font-barlow text-xs text-dota-text-muted leading-relaxed">
+                <span className="text-dota-gold font-semibold">Final game — </span>
+                gold totals are unchanged. No auction followed this game, so win and
+                loss gold was intentionally not distributed. The gold shown in the
+                team cards above represents each player's standing at the start of
+                this game.
+              </p>
+            </div>
+          )}
+
           <div className="min-w-[340px] space-y-2">
             {winnerIsTeam1 ? [team1, teamA] : [teamA, team1]}
           </div>
@@ -352,8 +394,22 @@ function GameCard({ game }: { game: HistoryGame }) {
 // Public export
 // ---------------------------------------------------------------------------
 
-export default function GameHistory({ history }: { history: HistoryGame[] }) {
+export default function GameHistory({
+  history,
+  matchFinished = false,
+}: {
+  history: HistoryGame[];
+  // When true, the component identifies the last game as the "final game"
+  // and renders it with a distinct badge and explanatory note about gold.
+  matchFinished?: boolean;
+}) {
   if (history.length === 0) return null;
+
+  // The final game is the one with the highest gameNumber. Since games are
+  // numbered sequentially from 1, this is always history.length (but we
+  // compute it rather than assuming, in case history ever arrives non-contiguous).
+  const maxGameNumber = Math.max(...history.map(g => g.gameNumber));
+
   return (
     <section className="mt-12 space-y-4">
       <div className="text-center space-y-2">
@@ -362,7 +418,11 @@ export default function GameHistory({ history }: { history: HistoryGame[] }) {
       </div>
       <div className="space-y-3">
         {[...history].reverse().map(game => (
-          <GameCard key={game.gameNumber} game={game} />
+          <GameCard
+            key={game.gameNumber}
+            game={game}
+            isFinalGame={matchFinished && game.gameNumber === maxGameNumber}
+          />
         ))}
       </div>
     </section>
