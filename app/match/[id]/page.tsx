@@ -245,7 +245,6 @@ export default function MatchPage() {
 
       {isAuction && latestGame.winning_team && (
         <AuctionHouse
-          matchId={matchId}
           latestGame={latestGame}
           players={players}
           currentUserId={currentUserId}
