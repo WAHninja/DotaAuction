@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import type { Player, Offer } from '@/types';
 
 type AuctionHouseProps = {
-  matchId: string;
   latestGame: {
     id: number;
     winning_team: 'team_1' | 'team_a';
@@ -20,7 +19,7 @@ type AuctionHouseProps = {
   // Game 1 auction → 0, game 2 auction → 1, game N auction → N-1.
   // Pass as: completedGames={data.games.length - 1}
   completedGames: number;
-  onOfferSubmitted: (offer: any) => void;
+  onOfferSubmitted: (offer: Offer) => void; // was `any` — #11
   onOfferAccepted: () => void;
 };
 
@@ -48,55 +47,103 @@ export default function AuctionHouse({
   players,
   currentUserId,
   offers,
-  completedGames,
+  completedGames: rawCompletedGames,
   onOfferSubmitted,
   onOfferAccepted,
 }: AuctionHouseProps) {
-  const [offerAmount, setOfferAmount]           = useState('');
-  const [selectedPlayer, setSelectedPlayer]     = useState('');
-  const [submitting, setSubmitting]             = useState(false);
-  const [accepting, setAccepting]               = useState(false);
-  const [acceptedOfferId, setAcceptedOfferId]   = useState<number | null>(null);
-  const [submitError, setSubmitError]           = useState<string | null>(null);
-  const [acceptError, setAcceptError]           = useState<string | null>(null);
+  const [offerAmount, setOfferAmount]         = useState('');
+  const [selectedPlayer, setSelectedPlayer]   = useState('');
+  const [submitting, setSubmitting]           = useState(false);
+  const [accepting, setAccepting]             = useState(false);
+  const [acceptedOfferId, setAcceptedOfferId] = useState<number | null>(null);
+  const [submitError, setSubmitError]         = useState<string | null>(null);
+  const [acceptError, setAcceptError]         = useState<string | null>(null);
+
+  // ── Derived team / role data ─────────────────────────────────────────────────
 
   const { winning_team: winningTeam, team_1_members: team1, team_a_members: teamA } = latestGame;
 
-  const isWinner   = winningTeam === 'team_1' ? team1.includes(currentUserId) : teamA.includes(currentUserId);
-  const isLoser    = !isWinner;
-  const myWinTeam  = winningTeam === 'team_1' ? team1 : teamA;
-  const candidates = myWinTeam.filter(id => id !== currentUserId);
+  // Renamed from `myWinTeam` — this is the winning team, not "my" team. (#6)
+  const winningTeamMembers = winningTeam === 'team_1' ? team1 : teamA;
+  const losingTeamMembers  = winningTeam === 'team_1' ? teamA : team1;
 
-  const alreadySubmitted    = offers.some(o => o.from_player_id === currentUserId);
-  const submittedCount      = myWinTeam.filter(pid => offers.some(o => o.from_player_id === pid)).length;
-  const allSubmitted        = myWinTeam.every(pid => offers.some(o => o.from_player_id === pid));
-  const hasPending          = offers.some(o => o.status === 'pending');
+  // Explicit membership checks on both teams so observers/spectators don't
+  // accidentally fall through as losers via `!isOnWinningTeam`. (#8, #12)
+  const isOnWinningTeam = winningTeamMembers.includes(currentUserId);
+  const isOnLosingTeam  = losingTeamMembers.includes(currentUserId);
+
+  // Candidates are winning teammates the current user can offer — i.e. everyone
+  // on the winning team except themselves. (#6 — variable renamed for clarity)
+  const candidates = winningTeamMembers.filter(id => id !== currentUserId);
+
+  // ── Winner-specific derived state (#9) ──────────────────────────────────────
+
+  // Only meaningful when isOnWinningTeam; computed here to keep JSX readable.
+  const alreadySubmitted = offers.some(o => o.from_player_id === currentUserId);
+
+  // ── Shared offer state ───────────────────────────────────────────────────────
+
+  const submittedCount = winningTeamMembers.filter(
+    pid => offers.some(o => o.from_player_id === pid)
+  ).length;
+  const allSubmitted = winningTeamMembers.every(
+    pid => offers.some(o => o.from_player_id === pid)
+  );
+  const hasPending = offers.some(o => o.status === 'pending');
+
+  // ── Offer range ──────────────────────────────────────────────────────────────
+
+  // Guard against negative values if caller passes `data.games.length - 1`
+  // before any games exist. (#4)
+  const completedGames = Math.max(0, rawCompletedGames);
 
   // Game 1 auction (completedGames=0): min=450, max=2500
   // Each subsequent game: min += 200, max += 500
   const minOffer = 450 + completedGames * 200;
   const maxOffer = 2500 + completedGames * 500;
 
-  const getPlayer = (id: number) => players.find(p => p.id === id);
+  // ── Player lookup — memoised Map avoids O(n) find() in render loops (#10) ───
+
+  const playerById = useMemo(
+    () => new Map(players.map(p => [p.id, p])),
+    [players]
+  );
+  const getPlayer = (id: number): Player | undefined => playerById.get(id);
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmitOffer = async () => {
+    // Guard against double-submit if disabled state is bypassed (#13)
+    if (submitting || alreadySubmitted) return;
+
     setSubmitError(null);
     const parsed = parseInt(offerAmount, 10);
-    if (!selectedPlayer)                              { setSubmitError('Please select a player.'); return; }
-    if (isNaN(parsed) || parsed < minOffer || parsed > maxOffer) {
-      setSubmitError(`Amount must be between ${minOffer.toLocaleString()} and ${maxOffer.toLocaleString()}.`); return;
+
+    if (!selectedPlayer) {
+      setSubmitError('Please select a player.');
+      return;
     }
+    if (isNaN(parsed) || parsed < minOffer || parsed > maxOffer) {
+      setSubmitError(`Amount must be between ${minOffer.toLocaleString()} and ${maxOffer.toLocaleString()}.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const res  = await fetch(`/api/game/${latestGame.id}/submit-offer`, {
+      const res = await fetch(`/api/game/${latestGame.id}/submit-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_player_id: parseInt(selectedPlayer), offer_amount: parsed }),
+        body: JSON.stringify({
+          target_player_id: parseInt(selectedPlayer, 10), // radix added (#3)
+          offer_amount: parsed,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) { setSubmitError(data.error || 'Failed to submit offer.'); return; }
-      setOfferAmount(''); setSelectedPlayer('');
+      if (!res.ok) {
+        setSubmitError(data.error || 'Failed to submit offer.');
+        return;
+      }
+      setOfferAmount('');
+      setSelectedPlayer('');
       onOfferSubmitted(data.offer);
     } catch {
       setSubmitError('Server error submitting offer.');
@@ -112,13 +159,16 @@ export default function AuctionHouse({
     setAcceptedOfferId(offerId);
     setAccepting(true);
     try {
-      const res  = await fetch(`/api/game/${latestGame.id}/accept-offer`, {
+      const res = await fetch(`/api/game/${latestGame.id}/accept-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerId }),
       });
       const data = await res.json();
       if (!res.ok && res.status !== 409) {
+        // 409 = another player accepted first. We still call onOfferAccepted()
+        // because the auction is over either way — the loser should be moved
+        // on regardless of who triggered the resolution. (#5)
         setAcceptedOfferId(null);
         setAcceptError(data.error || 'Failed to accept offer.');
         return;
@@ -146,23 +196,27 @@ export default function AuctionHouse({
       <div className="flex justify-center">
         <div className="panel-sunken flex items-center gap-4 px-5 py-3 rounded-lg">
           <span className="stat-label">Offers in</span>
-          <div className="flex gap-1.5">
-            {myWinTeam.map(pid => (
-              <span
-                key={pid}
-                title={getPlayer(pid)?.username ?? `Player #${pid}`}
-                className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                  offers.some(o => o.from_player_id === pid)
-                    ? 'bg-dota-radiant'
-                    : 'bg-dota-border'
-                }`}
-              />
-            ))}
+          <div className="flex gap-1.5" role="group" aria-label="Offer submission status">
+            {winningTeamMembers.map(pid => {
+              const hasSubmitted = offers.some(o => o.from_player_id === pid);
+              const name = getPlayer(pid)?.username ?? `Player #${pid}`;
+              return (
+                <span
+                  key={pid}
+                  // title kept for sighted hover; aria-label for screen readers (#15)
+                  title={name}
+                  aria-label={`${name}: ${hasSubmitted ? 'submitted' : 'pending'}`}
+                  className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                    hasSubmitted ? 'bg-dota-radiant' : 'bg-dota-border'
+                  }`}
+                />
+              );
+            })}
           </div>
           <span className={`font-barlow font-bold text-sm tabular-nums ${
             allSubmitted ? 'text-dota-radiant-light' : 'text-dota-gold'
           }`}>
-            {submittedCount} / {myWinTeam.length}
+            {submittedCount} / {winningTeamMembers.length}
           </span>
           {allSubmitted && (
             <span className="flex items-center gap-1 text-dota-radiant-light text-xs font-barlow font-semibold">
@@ -173,7 +227,7 @@ export default function AuctionHouse({
       </div>
 
       {/* ── Winner: submit form ─────────────────────────────────────────────── */}
-      {isWinner && !alreadySubmitted && (
+      {isOnWinningTeam && !alreadySubmitted && (
         <div className="relative rounded-lg overflow-hidden">
           {/* Background image */}
           <Image
@@ -210,7 +264,10 @@ export default function AuctionHouse({
             <div className="flex flex-col gap-3">
               <select
                 value={selectedPlayer}
-                onChange={e => setSelectedPlayer(e.target.value)}
+                onChange={e => {
+                  setSelectedPlayer(e.target.value);
+                  setSubmitError(null); // clear stale error on change (#14)
+                }}
                 className="input"
               >
                 <option value="">Select player to offer…</option>
@@ -223,7 +280,11 @@ export default function AuctionHouse({
               <input
                 type="number"
                 value={offerAmount}
-                onChange={e => setOfferAmount(e.target.value)}
+                onChange={e => {
+                  setOfferAmount(e.target.value);
+                  setSubmitError(null); // clear stale error on change (#14)
+                }}
+                onKeyDown={e => e.key === 'Enter' && handleSubmitOffer()} // keyboard submit (#16)
                 placeholder={`${minOffer}–${maxOffer}`}
                 min={minOffer}
                 max={maxOffer}
@@ -231,8 +292,11 @@ export default function AuctionHouse({
               />
             </div>
 
+            {/* role="alert" so screen readers announce the error immediately (#17) */}
             {submitError && (
-              <p className="font-barlow text-sm text-dota-dire-light">{submitError}</p>
+              <p role="alert" className="font-barlow text-sm text-dota-dire-light">
+                {submitError}
+              </p>
             )}
 
             <button
@@ -248,14 +312,14 @@ export default function AuctionHouse({
       )}
 
       {/* ── Winner: already submitted ───────────────────────────────────────── */}
-      {isWinner && alreadySubmitted && (
+      {isOnWinningTeam && alreadySubmitted && (
         <p className="text-center font-barlow text-sm font-semibold text-dota-radiant-light flex items-center justify-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> Your offer is in.
         </p>
       )}
 
       {/* ── Loser: waiting message ──────────────────────────────────────────── */}
-      {isLoser && !allSubmitted && (
+      {isOnLosingTeam && !allSubmitted && (
         <p className="text-center font-barlow text-sm text-dota-text-muted">
           Waiting for all offers before you can accept…
         </p>
@@ -288,7 +352,9 @@ export default function AuctionHouse({
               const isRejected = offer.status === 'rejected';
               const isPending  = offer.status === 'pending';
 
-              const canAccept  = isLoser && isPending && acceptedOfferId === null && allSubmitted;
+              // canAccept uses isOnLosingTeam — explicit membership rather
+              // than the old `isLoser = !isWinner` alias. (#8, #12)
+              const canAccept  = isOnLosingTeam && isPending && acceptedOfferId === null && allSubmitted;
               const showAmount = !isPending;
 
               return (
@@ -371,8 +437,11 @@ export default function AuctionHouse({
           </div>
         )}
 
+        {/* role="alert" so screen readers announce accept errors immediately (#17) */}
         {acceptError && (
-          <p className="mt-3 font-barlow text-sm text-dota-dire-light text-center">{acceptError}</p>
+          <p role="alert" className="mt-3 font-barlow text-sm text-dota-dire-light text-center">
+            {acceptError}
+          </p>
         )}
       </div>
 
