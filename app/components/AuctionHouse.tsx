@@ -16,7 +16,10 @@ type AuctionHouseProps = {
   players: Player[];
   currentUserId: number;
   offers: Offer[];
-  gamesPlayed: number;
+  // Number of games fully finished BEFORE the current auction.
+  // Game 1 auction → 0, game 2 auction → 1, game N auction → N-1.
+  // Pass as: completedGames={data.games.length - 1}
+  completedGames: number;
   onOfferSubmitted: (offer: any) => void;
   onOfferAccepted: () => void;
 };
@@ -45,7 +48,7 @@ export default function AuctionHouse({
   players,
   currentUserId,
   offers,
-  gamesPlayed,
+  completedGames,
   onOfferSubmitted,
   onOfferAccepted,
 }: AuctionHouseProps) {
@@ -69,8 +72,10 @@ export default function AuctionHouse({
   const allSubmitted        = myWinTeam.every(pid => offers.some(o => o.from_player_id === pid));
   const hasPending          = offers.some(o => o.status === 'pending');
 
-  const minOffer = 250 + gamesPlayed * 200;
-  const maxOffer = 2000 + gamesPlayed * 500;
+  // Game 1 auction (completedGames=0): min=450, max=2500
+  // Each subsequent game: min += 200, max += 500
+  const minOffer = 450 + completedGames * 200;
+  const maxOffer = 2500 + completedGames * 500;
 
   const getPlayer = (id: number) => players.find(p => p.id === id);
 
