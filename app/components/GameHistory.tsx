@@ -254,13 +254,14 @@ function TeamScoreboard({
                     {p.sellerInfo.targetUsername}
                   </span>
                   {/* Value */}
-                  {p.sellerInfo.amount != null ? (
-                    <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums shrink-0">
-                      {p.sellerInfo.amount.toLocaleString()}<GoldIcon />
-                    </span>
-                  ) : p.sellerInfo.tier ? (
-                    <TierBadge tier={p.sellerInfo.tier} />
-                  ) : null}
+                  <span className="inline-flex items-center gap-1.5 flex-wrap">
+                    {p.sellerInfo.amount != null && (
+                      <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums">
+                        {p.sellerInfo.amount.toLocaleString()}<GoldIcon />
+                      </span>
+                    )}
+                    {p.sellerInfo.tier && <TierBadge tier={p.sellerInfo.tier} />}
+                  </span>
                 </div>
               ) : (
                 <span className="text-dota-text-dim text-xs">—</span>
@@ -283,17 +284,18 @@ function GameCard({ game }: { game: HistoryGame }) {
   const hasDotaStats = game.dotaStats.length > 0;
   const hasAuction   = game.offers.length > 0;
 
+  const hasWinner     = game.winningTeam !== null;
   const winnerIsTeam1 = game.winningTeam === 'team_1';
 
   const team1 = (
     <TeamScoreboard key="t1" teamId="team_1" label="Team 1"
       players={buildUnifiedPlayers(game.team1Members, game.dotaStats, game.playerStats, game.offers)}
-      isWinner={winnerIsTeam1} hasDotaStats={hasDotaStats} hasAuction={hasAuction} />
+      isWinner={hasWinner && winnerIsTeam1} hasDotaStats={hasDotaStats} hasAuction={hasAuction} />
   );
   const teamA = (
     <TeamScoreboard key="tA" teamId="team_a" label="Team A"
       players={buildUnifiedPlayers(game.teamAMembers, game.dotaStats, game.playerStats, game.offers)}
-      isWinner={!winnerIsTeam1} hasDotaStats={hasDotaStats} hasAuction={hasAuction} />
+      isWinner={hasWinner && !winnerIsTeam1} hasDotaStats={hasDotaStats} hasAuction={hasAuction} />
   );
 
   return (
