@@ -9,6 +9,7 @@ import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
+import MatchSummary from '@/app/components/MatchSummary';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
@@ -183,6 +184,12 @@ export default function MatchPage() {
   const isInProgress = latestGame?.status === 'in progress';
   const isFinished   = latestGame?.status === 'finished';
 
+  // Derived once and shared across WinnerBanner, MatchHeader, and MatchSummary
+  // so we're not calling .find() three separate times in JSX.
+  const winnerName = match.winner_id
+    ? players.find((p) => p.id === match.winner_id)?.username
+    : undefined;
+
   return (
     <>
       {latestGame && (
@@ -190,16 +197,27 @@ export default function MatchPage() {
           matchId={matchId}
           latestGame={latestGame}
           matchWinnerId={match.winner_id}
-          matchWinnerUsername={players.find((p) => p.id === match.winner_id)?.username}
+          matchWinnerUsername={winnerName}
         />
       )}
 
+      {/* WinnerBanner:
+          - isWinner gates confetti to the champion only; losers see a Dire-
+            themed defeat screen that names the winner instead of celebrating.
+          - Both variants use <Link href="/dashboard"> directly (no nested
+            <button>) and go straight to /dashboard rather than bouncing
+            through the root redirect. */}
       {isFinished && match.winner_id && (
         <WinnerBanner
-          winnerName={players.find((p) => p.id === match.winner_id)?.username}
+          winnerName={winnerName}
+          isWinner={currentUserId === match.winner_id}
         />
       )}
 
+      {/* TeamCard:
+          - matchFinished replaces the generic player-list heading with
+            "Final gold standings" so viewers immediately know these gold
+            values represent the end-of-match snapshot, not a live state. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <TeamCard
           name="Team 1"
@@ -208,6 +226,7 @@ export default function MatchPage() {
           teamId="team1"
           faction="radiant"
           currentUserId={currentUserId}
+          matchFinished={isFinished}
         />
         <TeamCard
           name="Team A"
@@ -216,6 +235,7 @@ export default function MatchPage() {
           teamId="teamA"
           faction="dire"
           currentUserId={currentUserId}
+          matchFinished={isFinished}
         />
       </div>
 
@@ -238,7 +258,30 @@ export default function MatchPage() {
         />
       )}
 
-      <GameHistory history={history} />
+      {/* MatchSummary:
+          Sits between the team gold standings and the game-by-game history,
+          so the finished page reads top-to-bottom as:
+            winner banner → final gold → summary → how it unfolded.
+          Only rendered once the match is finished and a winner is known.
+          Requires match.created_at to be included in the /api/match/:id
+          response — add it to that query's SELECT if not already present. */}
+      {isFinished && winnerName && (
+        <MatchSummary
+          winnerName={winnerName}
+          totalGames={history.length}
+          matchCreatedAt={match.created_at}
+        />
+      )}
+
+      {/* GameHistory:
+          - matchFinished tells the component which card is the "final game"
+            so it can render a badge and an explanatory note about why gold
+            delta cells show "—" (no gold is applied on the match-ending game
+            by design — see select-winner/route.ts for the full rationale). */}
+      <GameHistory
+        history={history}
+        matchFinished={isFinished}
+      />
     </>
   );
 }
