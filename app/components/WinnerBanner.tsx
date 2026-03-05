@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, Swords } from 'lucide-react';
+import { Trophy, Swords, Hash, Calendar } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import Link from 'next/link';
@@ -11,10 +11,58 @@ type WinnerBannerProps = {
   // true only for the player whose userId === match.winner_id.
   // Controls whether confetti fires and which variant (victory/defeat) renders.
   isWinner: boolean;
+  // Match summary stats — both optional so the banner degrades gracefully
+  // if the data isn't yet available (e.g. history hasn't loaded).
+  totalGames?: number;
+  matchCreatedAt?: string;
 };
 
-export default function WinnerBanner({ winnerName, isWinner }: WinnerBannerProps) {
+// ── Compact stat item ─────────────────────────────────────────────────────────
+// Shared between both variants for consistent layout.
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+  valueClass = 'text-dota-text',
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="flex items-center gap-1 text-dota-text-muted">
+        <Icon className="w-3 h-3" aria-hidden="true" />
+        <span className="font-barlow text-[10px] uppercase tracking-widest font-semibold">
+          {label}
+        </span>
+      </div>
+      <span className={`font-barlow font-bold text-sm tabular-nums ${valueClass}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export default function WinnerBanner({
+  winnerName,
+  isWinner,
+  totalGames,
+  matchCreatedAt,
+}: WinnerBannerProps) {
   const { width, height } = useWindowSize();
+
+  const formattedDate = matchCreatedAt
+    ? new Date(matchCreatedAt).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+
+  // Only render the stats row when we have at least one value to show.
+  const hasStats = totalGames != null || formattedDate != null;
 
   // ── Victory variant (winning player only) ──────────────────────────────────
   if (isWinner) {
@@ -69,6 +117,26 @@ export default function WinnerBanner({ winnerName, isWinner }: WinnerBannerProps
 
             <div className="divider-gold w-32 mx-auto" />
 
+            {/* Match summary — sits between the flavour text and the CTA */}
+            {hasStats && (
+              <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
+                {totalGames != null && (
+                  <StatItem
+                    icon={Hash}
+                    label="Total Games"
+                    value={String(totalGames)}
+                  />
+                )}
+                {formattedDate && (
+                  <StatItem
+                    icon={Calendar}
+                    label="Started"
+                    value={formattedDate}
+                  />
+                )}
+              </div>
+            )}
+
             {/*
               Link styled directly as a button — avoids the invalid
               <Link><button> nesting that existed previously.
@@ -90,6 +158,10 @@ export default function WinnerBanner({ winnerName, isWinner }: WinnerBannerProps
   //
   // No confetti, Dire-themed colour palette, names the winner so losers know
   // who beat them. Same back-to-dashboard affordance for easy navigation.
+  //
+  // The defeat variant repeats the winner name in the stats row (Champion)
+  // because the italic sentence above it is easy to miss. The explicit label
+  // makes the key facts scannable at a glance.
   return (
     <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[200px]">
       {/* Subtle Dire glow from the bottom */}
@@ -119,6 +191,34 @@ export default function WinnerBanner({ winnerName, isWinner }: WinnerBannerProps
         </p>
 
         <div className="divider w-32 mx-auto" />
+
+        {/* Match summary */}
+        {hasStats && (
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
+            {winnerName && (
+              <StatItem
+                icon={Trophy}
+                label="Champion"
+                value={winnerName}
+                valueClass="text-dota-gold"
+              />
+            )}
+            {totalGames != null && (
+              <StatItem
+                icon={Hash}
+                label="Total Games"
+                value={String(totalGames)}
+              />
+            )}
+            {formattedDate && (
+              <StatItem
+                icon={Calendar}
+                label="Started"
+                value={formattedDate}
+              />
+            )}
+          </div>
+        )}
 
         <Link
           href="/dashboard"
