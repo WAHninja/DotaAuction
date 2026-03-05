@@ -13,17 +13,25 @@ type TeamCardProps = {
   teamId: string;
   faction: 'radiant' | 'dire';
   currentUserId?: number;
+  // When true, the player list heading changes to make it clear the gold
+  // values represent the end-of-match snapshot, not a mid-game state.
+  matchFinished?: boolean;
 };
 
-export default function TeamCard({ name, logo, players, teamId, faction, currentUserId }: TeamCardProps) {
+export default function TeamCard({
+  name,
+  logo,
+  players,
+  teamId,
+  faction,
+  currentUserId,
+  matchFinished = false,
+}: TeamCardProps) {
   const isRadiant = faction === 'radiant';
 
   const nameColour  = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
   const youBg       = isRadiant ? 'bg-dota-radiant/15 border border-dota-radiant/40' : 'bg-dota-dire/15 border border-dota-dire/40';
   const youText     = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
-  const youBadgeBg  = isRadiant
-    ? 'bg-dota-radiant/20 text-dota-radiant-light border border-dota-radiant/40'
-    : 'bg-dota-dire/20 text-dota-dire-light border border-dota-dire/40';
 
   return (
     <div className={isRadiant ? 'team-radiant-panel p-6 rounded-xl shadow-panel' : 'team-dire-panel p-6 rounded-xl shadow-panel'}>
@@ -42,7 +50,19 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
         <h2 className={`font-cinzel text-2xl font-bold ${nameColour}`}>{name}</h2>
       </div>
 
-      <div className="divider mb-4" />
+      <div className="divider mb-3" />
+
+      {/*
+        When the match is finished, label the gold column so it's clear these
+        are end-of-match standings rather than mid-game values. The label sits
+        between the divider and the player list, styled as a stat-label so it
+        reads as metadata rather than content.
+      */}
+      {matchFinished && (
+        <p className="stat-label text-center mb-3">
+          Final gold standings
+        </p>
+      )}
 
       {/* ── Player list ────────────────────────────────────────────────────── */}
       <ul className="space-y-2">
@@ -63,11 +83,6 @@ export default function TeamCard({ name, logo, players, teamId, faction, current
                   size={28}
                 />
                 <span className="truncate">{p.username || 'Unknown'}</span>
-                {isYou && (
-                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${youBadgeBg}`}>
-                    You
-                  </span>
-                )}
               </span>
 
               {/* Gold */}
