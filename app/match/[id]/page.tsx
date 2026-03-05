@@ -250,7 +250,7 @@ export default function MatchPage() {
           players={players}
           currentUserId={currentUserId}
           offers={offers}
-          gamesPlayed={data.games.length}
+          completedGames={data.games.length - 1}
           onOfferSubmitted={handleNewOffer}
           onOfferAccepted={() => {
             Promise.all([fetchMatchData(), fetchGameHistory()]);
