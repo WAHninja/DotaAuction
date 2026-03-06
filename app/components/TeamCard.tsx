@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import GoldIcon from '@/app/components/GoldIcon';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 import type { Player } from '@/types';
 
@@ -85,17 +86,10 @@ export default function TeamCard({
                 <span className="truncate">{p.username || 'Unknown'}</span>
               </span>
 
-              {/* Gold */}
+              {/* Gold — uses GoldIcon for consistent caching with the rest of the app */}
               <span className="font-barlow font-bold tabular-nums text-dota-gold flex items-center gap-1 shrink-0 ml-2">
                 {p.gold ?? 0}
-                <Image
-                  src="/Gold_symbol.webp"
-                  alt="Gold"
-                  width={14}
-                  height={14}
-                  sizes="14px"
-                  className="inline-block"
-                />
+                <GoldIcon size={14} />
               </span>
             </li>
           );
