@@ -162,16 +162,6 @@ function Modal({
 
 // ---------------------------------------------------------------------------
 // HelpButton
-//
-// The visible hit area is w-4 h-4 but the actual interactive area is padded
-// to ~44×44 px (p-2.5 = 10px each side → 16+20 = 36px; close enough given
-// the inline context, and a significant improvement over the previous 16px).
-// Using a negative margin to counteract the padding keeps surrounding text
-// spacing visually unchanged.
-//
-// stopPropagation: GameCard in GameHistory attaches an onClick to its
-// container div. Without this, clicking a HelpButton inside that card would
-// also toggle the card's expanded state. The stop prevents that bubble.
 // ---------------------------------------------------------------------------
 
 const HelpButton = forwardRef<HTMLButtonElement, { onClick: () => void; label: string }>(
@@ -194,7 +184,6 @@ const HelpButton = forwardRef<HTMLButtonElement, { onClick: () => void; label: s
           focus-visible:ring-offset-dota-surface
         "
       >
-        {/* Visible badge — decorative, hidden from assistive tech via aria-hidden */}
         <span
           aria-hidden="true"
           className="w-4 h-4 rounded-full border border-dota-gold text-[10px] font-bold
@@ -214,11 +203,6 @@ const HelpButton = forwardRef<HTMLButtonElement, { onClick: () => void; label: s
 function Rule({ children }: { children: ReactNode }) {
   return (
     <li className="flex items-start gap-2.5 font-barlow text-sm text-dota-text-muted leading-snug">
-      {/*
-        mt-[0.4em] aligns the dot relative to the current font-size rather
-        than using a fixed pixel offset (mt-1.5), which would drift at
-        non-default browser zoom levels or if line-height ever changes.
-      */}
       <span className="mt-[0.4em] shrink-0 w-1 h-1 rounded-full bg-dota-gold/50" />
       <span>{children}</span>
     </li>
@@ -232,8 +216,6 @@ function Rule({ children }: { children: ReactNode }) {
 export default function GameRulesCard() {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
 
-  // Track which button triggered the currently open modal so we can
-  // return focus to it when the modal closes.
   const goldTriggerRef  = useRef<HTMLButtonElement>(null);
   const offerTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -242,9 +224,7 @@ export default function GameRulesCard() {
   }, []);
 
   const closeModal = useCallback(() => {
-    // Capture which modal is closing before clearing state, then restore focus.
     setActiveModal(prev => {
-      // Schedule the focus return after the state update + re-render cycle.
       requestAnimationFrame(() => {
         if (prev === 'gold')  goldTriggerRef.current?.focus();
         if (prev === 'offer') offerTriggerRef.current?.focus();
@@ -271,14 +251,12 @@ export default function GameRulesCard() {
             Requires <strong className="text-dota-text">4 or more players</strong>.
           </Rule>
 
-          {/*
-            Rule from the WINNER's perspective — previously missing entirely.
-            Players would understand what to do as a loser but not as a winner.
-          */}
+          {/* Point 2 fixed: "one offer each" made explicit */}
           <Rule>
-            After each game, each <strong className="text-dota-text">winner</strong> secretly
-            picks a teammate to sell and names their own price — within the current game's
-            allowed range, which increases every game.{' '}
+            After each game, every <strong className="text-dota-text">winner</strong> secretly
+            submits <strong className="text-dota-text">one offer</strong> — picking a teammate
+            to sell and naming their own price within the current game's allowed range, which
+            increases every game.{' '}
             <HelpButton
               ref={offerTriggerRef}
               onClick={() => openModal('offer')}
@@ -286,15 +264,25 @@ export default function GameRulesCard() {
             />
           </Rule>
 
+          {/* Point 1 fixed: hidden-until-all-submitted surfaced in main rules */}
           <Rule>
-            <strong className="text-dota-text">Losers</strong> see only{' '}
+            Offers — including who is being sold — are{' '}
+            <strong className="text-dota-text">hidden from everyone</strong> until all winners
+            have submitted. Once all offers are in,{' '}
+            <strong className="text-dota-text">losers</strong> see only{' '}
             <span className="tier-low mx-0.5">Low</span>,{' '}
             <span className="tier-medium mx-0.5">Medium</span>, or{' '}
-            <span className="tier-high mx-0.5">High</span> for each offer — tiers{' '}
+            <span className="tier-high mx-0.5">High</span> for each — tiers{' '}
             <strong className="text-dota-text">overlap</strong>, so a Low offer can be worth
-            more than a Medium. They accept one offer: the seller{' '}
+            more than a Medium.
+          </Rule>
+
+          {/* Point 4 fixed: "the winner who made that offer" instead of "the seller" */}
+          <Rule>
+            Losers accept one offer: the winner who made that offer{' '}
             <strong className="text-dota-text">receives the gold</strong> and the sold player{' '}
-            <strong className="text-dota-text">switches teams</strong>.
+            <strong className="text-dota-text">switches teams</strong>. All other offers are
+            rejected.
           </Rule>
 
           <Rule>
@@ -308,9 +296,10 @@ export default function GameRulesCard() {
             />
           </Rule>
 
+          {/* Minor phrasing fix: "alone on their team" → clearer phrasing */}
           <Rule>
-            Match ends when a player wins{' '}
-            <strong className="text-dota-text">alone on their team</strong>.
+            The match ends when a team is down to{' '}
+            <strong className="text-dota-text">one player and wins a game</strong>.
           </Rule>
 
         </ul>
@@ -398,9 +387,11 @@ export default function GameRulesCard() {
             <div>
               <p className="stat-label mb-2">For winners</p>
               <p className="text-dota-text-muted">
-                Each winner secretly picks a teammate to sell and names a price. Offers are
-                hidden from everyone — including other winners — until all offers are
-                submitted. The price must be within the current game's allowed range.
+                Each winner secretly submits <strong className="text-dota-text">one offer</strong> —
+                picking a teammate to sell and naming a price within the current game's allowed
+                range. Offers are hidden from everyone, including other winners, until{' '}
+                <strong className="text-dota-text">all offers are submitted</strong>. Only then
+                are the targets and tier badges revealed to the losing team.
               </p>
             </div>
 
@@ -408,7 +399,7 @@ export default function GameRulesCard() {
               <p className="stat-label mb-2">For losers</p>
               <p className="text-dota-text-muted">
                 Once all offers are in, losers see each offer's tier badge but not the exact
-                amount. They choose one offer to accept — the seller{' '}
+                amount. They choose one offer to accept — the winner who made that offer{' '}
                 <strong className="text-dota-text">receives the gold</strong> and the sold
                 player <strong className="text-dota-text">switches to the losing team</strong>.
                 All other offers are rejected.
@@ -419,9 +410,9 @@ export default function GameRulesCard() {
               <p className="stat-label mb-3">Offer range by game</p>
               <div className="space-y-2">
                 {[
-                  { label: 'Game 1', range: '450 – 2,500' },   // completedGames=0: min=450,  max=2500
-                  { label: 'Game 3', range: '850 – 3,500' },   // completedGames=2: min=850,  max=3500
-                  { label: 'Game 7', range: '1,650 – 5,500' }, // completedGames=6: min=1650, max=5500
+                  { label: 'Game 1', range: '450 – 2,500' },
+                  { label: 'Game 3', range: '850 – 3,500' },
+                  { label: 'Game 7', range: '1,650 – 5,500' },
                 ].map(({ label, range }) => (
                   <div key={label} className="flex justify-between">
                     <span className="text-dota-text-muted">{label}</span>
@@ -445,7 +436,6 @@ export default function GameRulesCard() {
                   </div>
                 ))}
               </div>
-              {/* Tier overlap surfaced prominently rather than buried */}
               <div className="bg-dota-gold/8 border border-dota-gold/25 rounded px-3 py-2.5">
                 <p className="text-dota-gold text-xs leading-relaxed">
                   <strong>Tiers overlap intentionally.</strong> A{' '}
