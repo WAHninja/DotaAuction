@@ -132,10 +132,19 @@ export async function POST(req: NextRequest) {
     );
 
     // ---- Assign teams ------------------------------------------------------
-    const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
-    const mid      = Math.ceil(shuffled.length / 2);
-    const team1    = shuffled.slice(0, mid);
-    const teamA    = shuffled.slice(mid);
+    // Fisher-Yates produces a uniformly random shuffle. The sort-based
+    // approach (arr.sort(() => Math.random() - 0.5)) is biased because the
+    // comparator is called a variable number of times on the same elements,
+    // making some orderings significantly more likely than others.
+    const shuffled = [...playerIds];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const mid   = Math.ceil(shuffled.length / 2);
+    const team1 = shuffled.slice(0, mid);
+    const teamA = shuffled.slice(mid);
 
     // ---- Create first game -------------------------------------------------
     const gameResult = await client.query<{ id: number }>(
