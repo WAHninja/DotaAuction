@@ -269,8 +269,11 @@ export type HallOfFameProps = {
 
 export type NewOfferPayload = Omit<Offer, 'offer_amount'>;
 
+// newGame has been removed from this payload. The match page calls
+// fetchMatchData() on offer-accepted, which re-fetches full match state
+// including the new game row. Carrying newGame in the broadcast was dead
+// weight — the client never consumed it from the payload.
 export type OfferAcceptedPayload = {
   acceptedOfferId: number;
   acceptedAmount: number;
-  newGame: Game;
 };
