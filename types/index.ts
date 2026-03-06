@@ -16,6 +16,13 @@ export type TeamId = 'team_1' | 'team_a';
 
 export type GameStatus = 'in progress' | 'auction pending' | 'finished';
 
+// Which role the current viewer has on a finished match page.
+// Used by WinnerBanner to determine which variant to render.
+//   winner    — the current user is the match winner
+//   loser     — the current user was a participant but didn't win
+//   spectator — the current user is not in the player list at all
+export type ViewerState = 'winner' | 'loser' | 'spectator';
+
 // ---------------------------------------------------------------------------
 // Players
 // ---------------------------------------------------------------------------
