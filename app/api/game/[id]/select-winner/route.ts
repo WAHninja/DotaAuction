@@ -8,8 +8,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // ---- Auth ----------------------------------------------------------------
-  const session = await getSession();
-  if (!session?.userId) {
+  // Accepts either a valid user session (normal web flow) or an internal
+  // secret header (Supabase Edge Function / Dota plugin flow).
+  // The internal secret bypasses membership checks since the request is
+  // server-to-server and the game ID + winning team are already validated
+  // by the Edge Function before it calls here.
+  const internalSecret = req.headers.get('x-internal-secret');
+  const isInternalCall =
+    !!internalSecret &&
+    internalSecret === process.env.INTERNAL_API_SECRET;
+
+  const session = isInternalCall ? null : await getSession();
+
+  if (!isInternalCall && !session?.userId) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
@@ -40,7 +51,9 @@ export async function POST(
   try {
     await client.query('BEGIN');
 
-    // ---- Load game state + verify membership in one locked query -----------
+    // ---- Load game state ---------------------------------------------------
+    // Internal calls skip the membership check (no session to check against).
+    // Web calls verify the caller is a participant in the match.
     const { rows: gameRows } = await client.query<{
       match_id: number;
       status: string;
@@ -48,21 +61,31 @@ export async function POST(
       team_a_members: number[];
       is_member: boolean;
     }>(
-      `SELECT
-         g.match_id,
-         g.status,
-         g.team_1_members,
-         g.team_a_members,
-         EXISTS(
-           SELECT 1
-           FROM match_players mp
-           WHERE mp.match_id = g.match_id
-             AND mp.user_id  = $2
-         ) AS is_member
-       FROM games g
-       WHERE g.id = $1
-       FOR UPDATE`,
-      [gameId, session.userId]
+      isInternalCall
+        ? `SELECT
+             g.match_id,
+             g.status,
+             g.team_1_members,
+             g.team_a_members,
+             true AS is_member
+           FROM games g
+           WHERE g.id = $1
+           FOR UPDATE`
+        : `SELECT
+             g.match_id,
+             g.status,
+             g.team_1_members,
+             g.team_a_members,
+             EXISTS(
+               SELECT 1
+               FROM match_players mp
+               WHERE mp.match_id = g.match_id
+                 AND mp.user_id  = $2
+             ) AS is_member
+           FROM games g
+           WHERE g.id = $1
+           FOR UPDATE`,
+      isInternalCall ? [gameId] : [gameId, session!.userId]
     );
 
     if (gameRows.length === 0) {
@@ -72,7 +95,7 @@ export async function POST(
 
     const game = gameRows[0];
 
-    if (!game.is_member) {
+    if (!isInternalCall && !game.is_member) {
       await client.query('ROLLBACK');
       return NextResponse.json(
         { error: 'You are not a participant in this match.' },
@@ -103,34 +126,6 @@ export async function POST(
       [targetStatus, winningTeamId, gameId]
     );
 
-    // ---- Single-player winning team: match ends immediately ----------------
-    //
-    // When one player wins alone, the match is over and no gold calculations
-    // are applied for this final game. This is intentional.
-    //
-    // Why gold is NOT applied here:
-    //
-    //   The match-level gold totals stored in match_players reflect each
-    //   player's accumulated gold at the START of the current game — i.e.
-    //   what they earned across all previous games. This is the figure the
-    //   Stats tab and Hall of Fame queries read to compare players' standing.
-    //
-    //   If we applied win rewards and loss penalties here, those totals would
-    //   represent an inflated post-game state rather than the authentic
-    //   "going into the final game" snapshot. A player who won with 500 gold
-    //   would suddenly show 1,500+ gold, misrepresenting how close (or not)
-    //   the final game actually was.
-    //
-    //   Similarly, no game_player_stats rows are written for this game.
-    //   The GameHistory component handles missing stats gracefully (empty
-    //   goldTotal and dotaStats), so the final game card will render without
-    //   gold deltas — which is the correct representation: no trade occurred,
-    //   and the match-ending gold state is already readable from the team cards
-    //   that were visible at the start of the game.
-    //
-    //   Every non-final game correctly writes stats and gold changes because
-    //   those transactions are meaningful inputs to the auction that follows.
-    //   The final game has no auction, so there is nothing to fund.
     if (isSinglePlayerWin) {
       const winningPlayerId = winningMembers[0];
 
@@ -154,12 +149,6 @@ export async function POST(
     }
 
     // ---- Multi-player winning team: apply gold and advance to auction ------
-    //
-    // Gold changes are meaningful here because they fund the auction that
-    // immediately follows. Losers pay 50% into a shared pool; winners receive
-    // a 1,000 base reward plus an equal share of that pool.
-
-    // ---- Bulk fetch all loser gold in one query ----------------------------
     const loserGoldRes = await client.query<{ user_id: number; gold: number }>(
       `SELECT user_id, gold
        FROM match_players
@@ -179,7 +168,6 @@ export async function POST(
     const perWinnerBonus = Math.floor(totalBonusPool / winningMembers.length);
     const totalReward    = 1000 + perWinnerBonus;
 
-    // ---- Bulk update winner gold -------------------------------------------
     await client.query(
       `UPDATE match_players
        SET gold = gold + $1
@@ -188,14 +176,12 @@ export async function POST(
       [totalReward, matchId, winningMembers]
     );
 
-    // ---- Bulk insert winner stats ------------------------------------------
     await client.query(
       `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
        SELECT $1, unnest($2::int[]), $3, $4, 'win_reward'`,
       [gameId, winningMembers, winningTeamId, totalReward]
     );
 
-    // ---- Bulk update loser gold --------------------------------------------
     await client.query(
       `UPDATE match_players mp
        SET gold = gold - v.penalty
@@ -205,7 +191,6 @@ export async function POST(
       [losingMembers, losingPenalties, matchId]
     );
 
-    // ---- Bulk insert loser stats -------------------------------------------
     await client.query(
       `INSERT INTO game_player_stats (game_id, player_id, team_id, gold_change, reason)
        SELECT $1, v.user_id, $2, -v.penalty, 'loss_penalty'
