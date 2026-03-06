@@ -8,13 +8,12 @@ import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import WinnerBanner from '@/app/components/WinnerBanner';
-import type { ViewerState } from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
-import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload } from '@/types';
+import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, ViewerState } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Stat computation helpers
