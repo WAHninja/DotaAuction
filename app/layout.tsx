@@ -3,6 +3,7 @@ import { Cinzel, Barlow_Condensed } from 'next/font/google';
 import PageBackground           from '@/app/components/PageBackground';
 import MobileResponsiveHeader   from '@/app/components/MobileResponsiveHeader';
 import UserProvider             from './context/UserContext';
+import { OnlineUsersProvider }  from '@/app/context/OnlineUsersContext';
 import KeepAlive                from '@/app/components/KeepAlive';
 
 export const dynamic = 'force-dynamic';
@@ -29,41 +30,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`${cinzel.variable} ${barlowCondensed.variable}`}>
       <head>
-        {/*
-          Preload hints for assets used on almost every page.
-
-          Gold symbol: used 20+ times per page across TeamCard, AuctionHouse,
-          GameHistory, and StatsTab. A single preload covers all of them.
-
-          Logo: always in the sticky header, visible on every page.
-
-          Team1.png / TeamA.png are intentionally NOT preloaded here.
-          They are only rendered on /match/[id] pages. Preloading them in
-          the root layout fires a hint on every page (dashboard, profile,
-          changelog, etc.) and the browser warns "preloaded but not used
-          within a few seconds" on those pages. The images are small PNGs
-          that load fast enough on the match page without a preload hint.
-
-          dashboard-background.jpg is also intentionally not preloaded —
-          it is decorative, sits behind a darkening overlay, and is never
-          the LCP element.
-        */}
         <link rel="preload" href="/Gold_symbol.webp" as="image" type="image/webp" />
         <link rel="preload" href="/logo.png"  as="image" type="image/png" />
       </head>
       <body className="min-h-screen flex flex-col">
 
-        {/*
-          Skip navigation link — WCAG 2.4.1 (Bypass Blocks), Level A.
-
-          Keyboard and screen reader users land here first on every page.
-          Without it they must Tab through all header links before reaching
-          the main content — a significant accessibility barrier.
-
-          Visually hidden by default (sr-only), revealed on :focus so it's
-          invisible to mouse users but immediately usable by keyboard users.
-          The gold-on-base colour ensures sufficient contrast when visible.
-        */}
         <a
           href="#main-content"
           className="
@@ -80,32 +51,28 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
         <UserProvider>
           {/*
-            PageBackground uses fixed positioning at z-[-1].
-            UserProvider must remain a React fragment (no wrapper element)
-            so no intermediate positioned ancestor disrupts the stacking
-            context. See PageBackground.tsx for the full explanation.
+            OnlineUsersProvider must be inside UserProvider so it can read
+            the current user ID from UserContext. This means presence is
+            tracked on every page, not just the dashboard.
           */}
-          <PageBackground />
-          <MobileResponsiveHeader />
-          <KeepAlive />
+          <OnlineUsersProvider>
+            <PageBackground />
+            <MobileResponsiveHeader />
+            <KeepAlive />
 
-          {/*
-            id="main-content" is the skip link target.
-            Responsive horizontal padding mirrors the header's px-4 sm:px-6 lg:px-8
-            so content aligns with the nav at all viewport widths.
-          */}
-          <main
-            id="main-content"
-            className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8"
-          >
-            {children}
-          </main>
+            <main
+              id="main-content"
+              className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8"
+            >
+              {children}
+            </main>
 
-          <footer className="border-t border-dota-border py-4 px-6 text-center">
-            <p className="font-barlow text-sm text-dota-text-dim tracking-wide">
-              © 2025 Defence of the Auctions
-            </p>
-          </footer>
+            <footer className="border-t border-dota-border py-4 px-6 text-center">
+              <p className="font-barlow text-sm text-dota-text-dim tracking-wide">
+                © 2025 Defence of the Auctions
+              </p>
+            </footer>
+          </OnlineUsersProvider>
         </UserProvider>
       </body>
     </html>
