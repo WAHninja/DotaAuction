@@ -33,14 +33,28 @@ export async function POST(req: Request) {
   // ---- Register ------------------------------------------------------------
   try {
     const { username, pin } = await req.json();
-    if (!username || !pin || pin.length < 4) {
-      return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+
+    // Validate PIN — same rule as /api/me/pin
+    if (!pin || !/^\d{4,}$/.test(pin)) {
+      return NextResponse.json(
+        { error: 'PIN must be at least 4 digits.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate username — same rule as /api/me/username (2–32 characters)
+    const cleanedUsername = username?.trim();
+    if (!cleanedUsername || cleanedUsername.length < 2 || cleanedUsername.length > 32) {
+      return NextResponse.json(
+        { error: 'Username must be between 2 and 32 characters.' },
+        { status: 400 }
+      );
     }
 
     const hashedPin = await bcrypt.hash(pin, 12);
 
     const query = 'INSERT INTO users (username, pin, created_at) VALUES ($1, $2, NOW()) RETURNING id';
-    const dbResult = await db.query(query, [username, hashedPin]);
+    const dbResult = await db.query(query, [cleanedUsername, hashedPin]);
     return NextResponse.json({ message: 'User registered successfully!', userId: dbResult.rows[0].id });
   } catch (error: any) {
     // Catch unique constraint violation on username (Postgres error code 23505)
