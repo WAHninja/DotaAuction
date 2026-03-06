@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Trophy } from 'lucide-react';
+import GoldIcon from '@/app/components/GoldIcon';
 import type {
   HistoryGame,
   TierLabel,
@@ -77,10 +78,6 @@ function buildUnifiedPlayers(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function GoldIcon() {
-  return <Image src="/Gold_symbol.webp" alt="" width={12} height={12} className="inline-block" />;
-}
 
 // cdn.cloudflare.steamstatic.com is the canonical Valve-maintained CDN.
 // cdn.dota2.com has a broken SSL certificate (ERR_CERT_COMMON_NAME_INVALID).
@@ -213,7 +210,7 @@ function TeamScoreboard({
             <div className="text-right">
               {p.netWorth !== null
                 ? <span className="inline-flex items-center justify-end gap-0.5 font-barlow font-bold text-sm text-dota-gold tabular-nums">
-                    {formatNW(p.netWorth)}<GoldIcon />
+                    {formatNW(p.netWorth)}<GoldIcon size={12} />
                   </span>
                 : <span className="text-dota-text-dim text-xs block text-right">—</span>
               }
@@ -224,7 +221,7 @@ function TeamScoreboard({
           <div className="text-right">
             {p.goldTotal !== null
               ? <span className={`inline-flex items-center justify-end gap-0.5 font-barlow font-bold text-sm tabular-nums whitespace-nowrap ${p.goldTotal >= 0 ? 'text-dota-radiant-light' : 'text-dota-dire-light'}`}>
-                  {p.goldTotal >= 0 ? '+' : ''}{p.goldTotal.toLocaleString()}<GoldIcon />
+                  {p.goldTotal >= 0 ? '+' : ''}{p.goldTotal.toLocaleString()}<GoldIcon size={12} />
                 </span>
               : <span className="text-dota-text-dim text-xs block text-right">—</span>
             }
@@ -251,7 +248,7 @@ function TeamScoreboard({
                   <span className="inline-flex items-center gap-1.5 flex-wrap">
                     {p.sellerInfo.amount != null && (
                       <span className="inline-flex items-center gap-0.5 font-barlow font-bold text-xs text-dota-gold tabular-nums">
-                        {p.sellerInfo.amount.toLocaleString()}<GoldIcon />
+                        {p.sellerInfo.amount.toLocaleString()}<GoldIcon size={12} />
                       </span>
                     )}
                     {p.sellerInfo.tier && <TierBadge tier={p.sellerInfo.tier} />}
@@ -333,7 +330,7 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
                   for
                   {accepted.offerAmount != null
                     ? <span className="inline-flex items-center gap-0.5 font-bold text-dota-gold tabular-nums">
-                        {accepted.offerAmount.toLocaleString()}<GoldIcon />
+                        {accepted.offerAmount.toLocaleString()}<GoldIcon size={12} />
                       </span>
                     : <TierBadge tier={accepted.tierLabel} />
                   }
