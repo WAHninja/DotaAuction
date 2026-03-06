@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import GoldIcon from '@/app/components/GoldIcon';
 import type { Player, Offer } from '@/types';
 
 type AuctionHouseProps = {
@@ -37,7 +38,7 @@ function GoldAmount({ amount }: { amount: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
       {amount}
-      <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+      <GoldIcon size={14} />
     </span>
   );
 }
@@ -254,7 +255,7 @@ export default function AuctionHouse({
                 <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
                 {' '}–{' '}
                 <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
-                <Image src="/Gold_symbol.webp" alt="Gold" width={14} height={14} className="inline-block" />
+                <GoldIcon size={14} />
               </p>
               <p className="font-barlow text-xs text-dota-text-dim">
                 Details are hidden from everyone until all offers are submitted
