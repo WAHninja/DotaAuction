@@ -1,25 +1,43 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "es2017",
+    // strict: true enables the full suite of TypeScript safety checks:
+    //   strictNullChecks        — catches missing null/undefined guards
+    //   noImplicitAny           — bans untyped function params and variables
+    //   strictFunctionTypes     — prevents unsafe function subtyping
+    //   strictBindCallApply     — type-checks bind/call/apply
+    //   strictPropertyInitialization — ensures class fields are assigned
+    //   noImplicitThis          — flags untyped `this` references
+    //   alwaysStrict            — emits "use strict" in every file
+    //
+    // These were previously disabled (strict: false). The codebase had a few
+    // latent issues that strict mode now catches — they are fixed alongside
+    // this change:
+    //   • err: any in catch blocks replaced with err: unknown + type guards
+    //   • winningMembers / losingMembers casts in select-winner/route.ts
+    //     replaced with properly typed query results
+    //   • newUsername: string parameter removed from handleUsernameSuccess
+    //     and ChangeUsernameForm.onSuccess (it was unused; callers now get
+    //     the correct () => void type)
+    "strict": true,
+
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false,
-    "noEmit": true,
-    "incremental": true,
-    "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "downlevelIteration": true,
-    "baseUrl": ".",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["*"]
-    },
-    "plugins": [{ "name": "next" }]
+      "@/*": ["./*"]
+    }
   },
-  "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
