@@ -82,9 +82,14 @@ function GoldIcon() {
   return <Image src="/Gold_symbol.webp" alt="" width={12} height={12} className="inline-block" />;
 }
 
+// cdn.cloudflare.steamstatic.com is the canonical Valve-maintained CDN.
+// cdn.dota2.com has a broken SSL certificate (ERR_CERT_COMMON_NAME_INVALID).
+// The path and filename format (_sb = small banner, 59×33px) are identical.
+// cdn.cloudflare.steamstatic.com matches the *.steamstatic.com pattern already
+// in next.config.js so no config change is required.
 function heroIconUrl(hero: string): string {
   const name = hero.replace(/^npc_dota_hero_/, '');
-  return `https://cdn.dota2.com/apps/dota2/images/heroes/${name}_sb.png`;
+  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/heroes/${name}_sb.png`;
 }
 
 function HeroIcon({ hero }: { hero: string }) {
@@ -299,7 +304,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-cinzel font-bold text-dota-text">Game #{game.gameNumber}</h3>
 
-            {/* Final game badge — shown regardless of expanded state */}
             {isFinalGame && (
               <span className="badge-gold text-xs py-0.5">Final Game</span>
             )}
@@ -313,10 +317,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
 
           {!expanded && (
             <>
-              {/*
-                Final game: no auction took place, so there is no accepted offer
-                to summarise. Instead, show which team clinched the match.
-              */}
               {isFinalGame && game.winningTeam && (
                 <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
                   <Trophy className="w-3.5 h-3.5 text-dota-gold shrink-0" aria-hidden="true" />
@@ -325,7 +325,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
                 </p>
               )}
 
-              {/* All other games: show the accepted offer summary as before */}
               {!isFinalGame && accepted && (
                 <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
                   <span className="text-dota-gold font-semibold">{accepted.fromUsername}</span>
@@ -359,16 +358,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
         <div className="border-t border-dota-border p-4 overflow-x-auto"
              onClick={e => e.stopPropagation()}>
 
-          {/*
-            Final game note — explains why gold delta cells all show "—".
-
-            No gold changes are applied when a player wins the match alone:
-            the gold totals frozen in match_players reflect each player's
-            standing at the START of this game, which is the meaningful
-            "going into the final" snapshot. Applying win/loss gold here would
-            inflate those totals and misrepresent how close the match actually
-            was. See select-winner/route.ts for the full rationale.
-          */}
           {isFinalGame && (
             <div className="mb-4 px-3 py-2.5 rounded bg-dota-gold/8 border border-dota-gold/20">
               <p className="font-barlow text-xs text-dota-text-muted leading-relaxed">
@@ -399,15 +388,10 @@ export default function GameHistory({
   matchFinished = false,
 }: {
   history: HistoryGame[];
-  // When true, the component identifies the last game as the "final game"
-  // and renders it with a distinct badge and explanatory note about gold.
   matchFinished?: boolean;
 }) {
   if (history.length === 0) return null;
 
-  // The final game is the one with the highest gameNumber. Since games are
-  // numbered sequentially from 1, this is always history.length (but we
-  // compute it rather than assuming, in case history ever arrives non-contiguous).
   const maxGameNumber = Math.max(...history.map(g => g.gameNumber));
 
   return (
