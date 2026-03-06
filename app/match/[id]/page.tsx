@@ -11,7 +11,6 @@ import WinnerBanner from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
 import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload } from '@/types';
 
@@ -90,12 +89,6 @@ export default function MatchPage() {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
 
-  // Fired when the Dota 2 Edge Function broadcasts that a game was reported.
-  // Refreshes match data so the page transitions from 'in progress' → 'auction pending'.
-  const handleGameReported = useCallback(() => {
-    Promise.all([fetchMatchData(), fetchGameHistory()]);
-  }, [fetchMatchData, fetchGameHistory]);
-
   // ---- Initial load --------------------------------------------------------
   useEffect(() => {
     if (!user) return;
@@ -114,7 +107,6 @@ export default function MatchPage() {
   }, [fetchMatchData, fetchGameHistory]);
 
   useGameWinnerListener(matchId, handleWinnerSelected);
-  useGameReportedListener(matchId, handleGameReported);
   useAuctionListener(
     matchId,
     data?.latestGame?.id ?? null,
