@@ -1,12 +1,12 @@
 'use client'
 
-import Image from 'next/image';
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   ChevronUp, ChevronDown, ChevronsUpDown,
   ArrowUp, ArrowDown, Minus,
   Zap, Swords, ShoppingCart, ChevronDown as SelectChevron,
 } from 'lucide-react'
+import GoldIcon from '@/app/components/GoldIcon';
 import type { PlayerStats, TeamCombo, AcquisitionImpact, WinStreak, HeadToHead } from '@/types';
 
 // =============================================================================
@@ -189,7 +189,7 @@ function GoldValue({ value }: { value: number }) {
         : <Minus     className="w-3 h-3 shrink-0" aria-hidden="true" />
       }
       <span>{value > 0 ? '+' : ''}{formatGold(value)}</span>
-      <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} className="inline-block" />
+      <GoldIcon size={13} />
     </span>
   );
 }
@@ -517,7 +517,7 @@ export default function StatsTab(_props: StatsTabProps) {
                       {p.timesOffered > 0
                         ? <span className="inline-flex items-center justify-center gap-1 text-dota-gold font-semibold tabular-nums">
                             {p.averageOfferValue.toFixed(0)}
-                            <Image src="/Gold_symbol.webp" alt="Gold" width={13} height={13} className="inline-block" />
+                            <GoldIcon size={13} />
                           </span>
                         : <span className="text-dota-text-dim text-xs">—</span>
                       }
@@ -565,15 +565,6 @@ export default function StatsTab(_props: StatsTabProps) {
             subtitle="Win rate of your new team the game after you're sold · min. 2 sales"
           />
           <div className="p-4">
-            {/*
-              This metric is genuinely novel: it measures whether you're a
-              liability or an asset to the team that acquires you. A high rate
-              means opponents tend to regret accepting you; a low rate means
-              you consistently fail to help your new team win.
-
-              Only players with ≥ 2 acquisitions are shown — one sale is
-              too small a sample to draw any conclusion from.
-            */}
             <RankedList
               emptyMessage="Need at least 2 sold players to show acquisition impact."
               items={acquisitionImpact.map(p => ({
@@ -600,15 +591,6 @@ export default function StatsTab(_props: StatsTabProps) {
             subtitle="Longest consecutive winning run within a single match · min. 2"
           />
           <div className="p-4">
-            {/*
-              A win streak within a match is a different story to a high
-              overall win rate — it captures dominance during a session.
-              A player with 6 wins in a row held court for the whole back
-              half of a match; that's more vivid than knowing they win 55%
-              of games globally.
-
-              matchId is shown as context so players can look up that match.
-            */}
             <RankedList
               emptyMessage="No win streaks of 2+ games recorded yet."
               items={winStreaks.map(s => ({
@@ -679,13 +661,6 @@ export default function StatsTab(_props: StatsTabProps) {
                 </p>
               ) : (
                 <div>
-                  {/*
-                    Table structure for the H2H results.
-                    Columns: opponent | W | L | games | win rate badge
-                    Sorted by total games desc so the most-played rivalries
-                    surface first — these are the most statistically meaningful
-                    and the most emotionally resonant for a regular playgroup.
-                  */}
                   <table className="w-full font-barlow text-sm" aria-label={`Head-to-head record for ${h2hSelected}`}>
                     <thead>
                       <tr className="border-b border-dota-border text-left">
