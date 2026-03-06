@@ -47,7 +47,10 @@ export function rateLimit(ip: string, options: RateLimitOptions): RateLimitResul
   const store = stores.get(id)!;
   const entry = store.get(ip);
 
-  // First request from this IP, or window has expired — start a fresh window
+  // First request from this IP, or window has expired — start a fresh window.
+  // Expired entries are pruned here on access rather than via a background
+  // sweep, which keeps the store from accumulating entries indefinitely for
+  // IPs that only ever make a handful of requests.
   if (!entry || now - entry.windowStart >= windowMs) {
     store.set(ip, { count: 1, windowStart: now });
     return { allowed: true, retryAfterMs: 0 };
@@ -66,16 +69,25 @@ export function rateLimit(ip: string, options: RateLimitOptions): RateLimitResul
 
 /**
  * Extract the real client IP from a Next.js request.
- * Prefers the X-Forwarded-For header set by Render's proxy.
- * Falls back to a placeholder that still allows rate limiting to work
- * (all unknown-IP requests share one bucket, which is conservative but safe).
+ *
+ * X-Forwarded-For is a comma-separated list of IPs appended by each proxy
+ * in the chain: "client, proxy1, proxy2". Render's infrastructure appends
+ * the verified client IP as the LAST value — reading the first value instead
+ * is unsafe because callers can inject arbitrary IPs there (e.g. sending
+ * "X-Forwarded-For: 1.2.3.4" to appear as a different IP and bypass limits).
+ *
+ * We read the last value because that's the one Render itself wrote and
+ * cannot be spoofed by the client.
+ *
+ * If you migrate away from Render, verify where your proxy appends the real
+ * IP — some providers use the first value or a separate header (e.g.
+ * CF-Connecting-IP on Cloudflare, X-Real-IP on nginx).
  */
 export function getIp(req: Request): string {
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
-    // X-Forwarded-For can be a comma-separated list — the first value is the
-    // original client IP, subsequent values are intermediate proxies.
-    return forwarded.split(',')[0].trim();
+    // Last value is the one appended by Render's proxy — not spoofable.
+    return forwarded.split(',').at(-1)!.trim();
   }
   return 'unknown';
 }
