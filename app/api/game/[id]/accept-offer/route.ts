@@ -122,17 +122,6 @@ export async function POST(
     const { from_player_id, target_player_id, offer_amount } = offerRows[0];
 
     // ---- Validate target player + build new teams before any further writes --
-    //
-    // Both checks and the team-building are pure lookups/computation using
-    // data already in hand. Running them here — immediately after the offer
-    // claim and before any other writes — means a ROLLBACK at this point only
-    // has to undo the single offer claim above, not five downstream writes.
-    //
-    // Previously the empty-team guard fired after the gold update, stats
-    // insert, and game status update had all executed, requiring a ROLLBACK
-    // to unwind five writes instead of one. The ROLLBACK was correct but
-    // the ordering was unnecessarily risky.
-
     const inTeamA = teamA.includes(target_player_id);
     const inTeam1 = team1.includes(target_player_id);
 
@@ -170,9 +159,6 @@ export async function POST(
     }
 
     // ---- Reject all other pending offers for this game ----------------------
-    // String literals 'rejected' and 'pending' are inlined — they are fixed
-    // values, not caller-supplied data, so there is no reason to parameterise
-    // them. The previous version passed them as $1 and $4 which added noise.
     await client.query(
       `UPDATE offers
        SET status = 'rejected'
@@ -205,34 +191,25 @@ export async function POST(
     );
 
     // ---- Create the next game ----------------------------------------------
-    // Explicit RETURNING columns rather than RETURNING * — the result is
-    // broadcast directly to clients as the newGame payload. RETURNING * would
-    // silently include any future columns added to the games table.
-    const { rows: newGameRows } = await client.query<{
-      id: number;
-      match_id: number;
-      status: string;
-      winning_team: string | null;
-      team_1_members: number[];
-      team_a_members: number[];
-      created_at: string;
-    }>(
+    await client.query(
       `INSERT INTO games (match_id, team_a_members, team_1_members, status)
-       VALUES ($1, $2, $3, 'in progress')
-       RETURNING id, match_id, status, winning_team, team_1_members, team_a_members, created_at`,
+       VALUES ($1, $2, $3, 'in progress')`,
       [game.match_id, newTeamA, newTeam1]
     );
 
     await client.query('COMMIT');
 
     // ---- Notify clients (outside transaction) ------------------------------
+    // newGame is intentionally excluded from this payload. The match page
+    // calls fetchMatchData() on offer-accepted, which re-fetches the full
+    // match state including the new game. Sending newGame here was dead weight
+    // — the client never read it from the broadcast payload.
     await broadcastEvent(
       `match-${game.match_id}-offers`,
       'offer-accepted',
       {
         acceptedOfferId: offerId,
         acceptedAmount:  offer_amount,
-        newGame:         newGameRows[0],
       }
     );
 
