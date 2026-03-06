@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Loader2, RefreshCw, Users } from 'lucide-react';
-import { useOnlineUsers } from '@/app/hooks/useOnlineUsers';
+import { OnlineUsersContext } from '@/app/context/OnlineUsersContext';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 interface Player {
@@ -38,7 +38,9 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
   const spinnerTimer                              = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router                                    = useRouter();
 
-  const onlineIds = useOnlineUsers(currentUserId);
+  // Read from context — presence is now tracked globally in OnlineUsersProvider
+  // so it works even when the user is on a different page.
+  const onlineIds = useContext(OnlineUsersContext);
 
   // ── Player fetch ────────────────────────────────────────────────────────────
   const loadPlayers = () => {
@@ -97,9 +99,7 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
     }
   };
 
-  const enoughSelected  = selectedPlayerIds.length >= 4;
-  const anyOthersOnline = players.some(p => onlineIds.has(p.id) && p.id !== currentUserId);
-  const showLegend      = anyOthersOnline;
+  const enoughSelected = selectedPlayerIds.length >= 4;
 
   return (
     <form onSubmit={handleSubmit} className="panel h-full flex flex-col p-6 space-y-5">
@@ -117,22 +117,11 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
         </div>
       )}
 
-      {/* ── Subheading + online count ───────────────────────────────────────── */}
-      <div className="text-center space-y-1.5">
+      {/* ── Subheading ──────────────────────────────────────────────────────── */}
+      <div className="text-center">
         <p className="font-barlow text-sm text-dota-text-muted">
           Select <span className="text-dota-text font-semibold">4 or more players</span> to start or continue a match
         </p>
-        {anyOthersOnline && (
-          <p className="font-barlow text-xs text-dota-text-dim flex items-center justify-center gap-1.5">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-dota-radiant shrink-0" />
-            {(() => {
-              const others = players.filter(p => onlineIds.has(p.id) && p.id !== currentUserId);
-              return others.length === 1
-                ? `${others[0].username} is online`
-                : `${others.length} players online`;
-            })()}
-          </p>
-        )}
       </div>
 
       {/* ── Player grid ────────────────────────────────────────────────────── */}
@@ -168,9 +157,10 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
         {fetchState === 'ready' && players.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {players.map(player => {
-              const selected  = selectedPlayerIds.includes(player.id);
-              const isOnline  = onlineIds.has(player.id) && player.id !== currentUserId;
-              const disabled  = isSubmitting;
+              const selected = selectedPlayerIds.includes(player.id);
+              // Never show the current user as "online" — they're always online by definition.
+              const isOnline = onlineIds.has(player.id) && player.id !== currentUserId;
+              const disabled = isSubmitting;
 
               return (
                 <button
@@ -212,7 +202,7 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
                     />
                   )}
 
-                  {/* Online presence dot */}
+                  {/* Online presence dot — the only indicator, kept simple */}
                   {isOnline && !selected && (
                     <span
                       aria-hidden="true"
@@ -225,14 +215,6 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
           </div>
         )}
       </div>
-
-      {/* ── Legend ─────────────────────────────────────────────────────────── */}
-      {showLegend && (
-        <div className="flex items-center justify-center gap-1.5 font-barlow text-xs text-dota-text-dim">
-          <span className="w-2 h-2 rounded-full bg-dota-radiant shrink-0" />
-          Online now
-        </div>
-      )}
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center gap-3 pt-1">
