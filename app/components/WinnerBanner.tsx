@@ -8,17 +8,12 @@ import Link from 'next/link';
 
 type WinnerBannerProps = {
   winnerName?: string;
-  // true only for the player whose userId === match.winner_id.
-  // Controls whether confetti fires and which variant (victory/defeat) renders.
   isWinner: boolean;
-  // Match summary stats — both optional so the banner degrades gracefully
-  // if the data isn't yet available (e.g. history hasn't loaded).
   totalGames?: number;
   matchCreatedAt?: string;
 };
 
 // ── Compact stat item ─────────────────────────────────────────────────────────
-// Shared between both variants for consistent layout.
 function StatItem({
   icon: Icon,
   label,
@@ -61,17 +56,12 @@ export default function WinnerBanner({
       })
     : null;
 
-  // Only render the stats row when we have at least one value to show.
   const hasStats = totalGames != null || formattedDate != null;
 
-  // ── Victory variant (winning player only) ──────────────────────────────────
+  // ── Victory variant ────────────────────────────────────────────────────────
   if (isWinner) {
     return (
       <>
-        {/*
-          Confetti is intentionally gated behind isWinner. Showing it to the
-          losing players would be confusing — only the champion should see it.
-        */}
         <Confetti
           width={width}
           height={height}
@@ -80,19 +70,27 @@ export default function WinnerBanner({
           colors={['#c8a951', '#dfc06a', '#4a9b3c', '#c0392b', '#e8e0d0']}
         />
 
+        {/* Screen reader announcement — confetti and visual fanfare convey
+            nothing to assistive technology without this. aria-live="assertive"
+            interrupts immediately because the win is the most important event
+            on the page; "polite" could be delayed until after other activity. */}
+        <p className="sr-only" aria-live="assertive" aria-atomic="true">
+          Victory! {winnerName ? `${winnerName} wins` : 'You win'} the match
+          {totalGames != null ? ` after ${totalGames} games` : ''}.
+        </p>
+
         <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/40 min-h-[260px]">
-          {/* Aegis — mix-blend-mode: screen drops the black background */}
           <Image
             src="/rewards_aegis2024.png"
             alt=""
             aria-hidden="true"
             width={420}
             height={420}
+            sizes="420px"
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
             style={{ mixBlendMode: 'screen' }}
           />
 
-          {/* Centre vignette — keeps text legible over the bright shield */}
           <div
             aria-hidden="true"
             className="absolute inset-0 pointer-events-none"
@@ -111,15 +109,33 @@ export default function WinnerBanner({
               <Trophy className="w-6 h-6 text-dota-gold" aria-hidden="true" />
             </div>
 
+            {/* Personalised tagline — names the winner rather than a generic phrase */}
             <p className="font-barlow text-sm text-dota-text-muted italic tracking-wide">
-              A champion rises. Glory is yours.
+              {winnerName ? (
+                <>
+                  <span className="text-dota-gold font-semibold not-italic">
+                    {winnerName}
+                  </span>{' '}
+                  claims the Aegis. Glory is yours.
+                </>
+              ) : (
+                'A champion rises. Glory is yours.'
+              )}
             </p>
 
             <div className="divider-gold w-32 mx-auto" />
 
-            {/* Match summary — sits between the flavour text and the CTA */}
-            {hasStats && (
+            {/* Stats — now includes Champion so the row matches the defeat variant */}
+            {(hasStats || winnerName) && (
               <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
+                {winnerName && (
+                  <StatItem
+                    icon={Trophy}
+                    label="Champion"
+                    value={winnerName}
+                    valueClass="text-dota-gold"
+                  />
+                )}
                 {totalGames != null && (
                   <StatItem
                     icon={Hash}
@@ -137,14 +153,11 @@ export default function WinnerBanner({
               </div>
             )}
 
-            {/*
-              Link styled directly as a button — avoids the invalid
-              <Link><button> nesting that existed previously.
-              href="/dashboard" avoids the unnecessary redirect through "/".
-            */}
+            {/* btn-secondary gives more visual weight than btn-ghost after a
+                high-emotion moment — the CTA should feel deliberate, not ghostly. */}
             <Link
               href="/dashboard"
-              className="btn-ghost text-xs px-4 py-1.5 mt-1 inline-flex items-center justify-center gap-2"
+              className="btn-secondary text-xs px-4 py-1.5 mt-1 inline-flex items-center justify-center gap-2"
             >
               Back to Dashboard
             </Link>
@@ -154,17 +167,13 @@ export default function WinnerBanner({
     );
   }
 
-  // ── Defeat variant (all other players) ─────────────────────────────────────
-  //
-  // No confetti, Dire-themed colour palette, names the winner so losers know
-  // who beat them. Same back-to-dashboard affordance for easy navigation.
-  //
-  // The defeat variant repeats the winner name in the stats row (Champion)
-  // because the italic sentence above it is easy to miss. The explicit label
-  // makes the key facts scannable at a glance.
+  // ── Defeat variant ─────────────────────────────────────────────────────────
   return (
-    <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[200px]">
-      {/* Subtle Dire glow from the bottom */}
+    <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[260px]">
+      {/* min-h matches the victory variant so both banners occupy the same
+          vertical space regardless of which one renders — prevents layout shift
+          when the same match page is viewed by different players. */}
+
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
@@ -192,7 +201,6 @@ export default function WinnerBanner({
 
         <div className="divider w-32 mx-auto" />
 
-        {/* Match summary */}
         {hasStats && (
           <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
             {winnerName && (
