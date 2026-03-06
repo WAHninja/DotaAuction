@@ -8,12 +8,76 @@ import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
 import WinnerBanner from '@/app/components/WinnerBanner';
+import type { ViewerState } from '@/app/components/WinnerBanner';
 import AuctionHouse from '@/app/components/AuctionHouse';
 import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
 import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Stat computation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Count how many games a player (by username) won and lost across the match.
+ * History uses string usernames for team member lists.
+ */
+function computeRecord(
+  username: string | undefined,
+  history: HistoryGame[]
+): { wins: number; losses: number } | undefined {
+  if (!username) return undefined;
+
+  let wins = 0;
+  let losses = 0;
+
+  for (const game of history) {
+    // Only count finished games — in-progress/auction-pending games have no result yet
+    if (game.status !== 'finished') continue;
+    if (!game.winningTeam) continue;
+
+    const inTeam1 = game.team1Members.includes(username);
+    const inTeamA = game.teamAMembers.includes(username);
+
+    if (!inTeam1 && !inTeamA) continue; // player wasn't in this game
+
+    const playerWon =
+      (game.winningTeam === 'team_1' && inTeam1) ||
+      (game.winningTeam === 'team_a' && inTeamA);
+
+    if (playerWon) wins++;
+    else losses++;
+  }
+
+  return { wins, losses };
+}
+
+/**
+ * Count how many times a player was the target of an accepted offer
+ * (i.e. sold to the other team) across the match.
+ */
+function computeTimesTraded(
+  username: string | undefined,
+  history: HistoryGame[]
+): number {
+  if (!username) return 0;
+
+  let count = 0;
+  for (const game of history) {
+    for (const offer of game.offers) {
+      if (offer.status === 'accepted' && offer.targetUsername === username) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function MatchPage() {
   const { id } = useParams();
@@ -90,8 +154,6 @@ export default function MatchPage() {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
 
-  // Fired when the Dota 2 Edge Function broadcasts that a game was reported.
-  // Refreshes match data so the page transitions from 'in progress' → 'auction pending'.
   const handleGameReported = useCallback(() => {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
@@ -183,11 +245,36 @@ export default function MatchPage() {
   const isInProgress = latestGame?.status === 'in progress';
   const isFinished   = latestGame?.status === 'finished';
 
-  // Derived once and shared across WinnerBanner and MatchHeader so we're not
-  // calling .find() multiple times in JSX.
   const winnerName = match.winner_id
     ? players.find((p) => p.id === match.winner_id)?.username
     : undefined;
+
+  // ---- Winner banner props -------------------------------------------------
+  //
+  // viewerState: determines which banner variant renders.
+  //   • 'winner'    — the current user is the match winner
+  //   • 'loser'     — the current user was a participant but didn't win
+  //   • 'spectator' — the current user is not in the player list at all
+  //
+  // Spectators are valid: /match/[id] has no membership requirement (any
+  // authenticated user can view any match). The banner must not show
+  // "Defeated" or personal stats to someone who wasn't playing.
+  const isParticipant = players.some(p => p.id === currentUserId);
+  const viewerState: ViewerState =
+    !isParticipant            ? 'spectator' :
+    currentUserId === match.winner_id ? 'winner'    :
+                                        'loser';
+
+  const viewerUsername = players.find(p => p.id === currentUserId)?.username;
+
+  // Compute personal record and traded count from history.
+  // These are only meaningful once history has loaded — the banner
+  // handles undefined gracefully by simply not rendering that stat.
+  const winnerRecord      = computeRecord(winnerName, history);
+  const viewerRecord      = viewerState === 'loser'
+    ? computeRecord(viewerUsername, history)
+    : undefined;
+  const winnerTimesTraded = computeTimesTraded(winnerName, history);
 
   return (
     <>
@@ -200,29 +287,18 @@ export default function MatchPage() {
         />
       )}
 
-      {/* WinnerBanner:
-          - isWinner gates confetti to the champion only; losers see a Dire-
-            themed defeat screen that names the winner instead of celebrating.
-          - Both variants use <Link href="/dashboard"> directly (no nested
-            <button>) and go straight to /dashboard rather than bouncing
-            through the root redirect.
-          - totalGames and matchCreatedAt replace the separate MatchSummary
-            component that previously sat between the team cards and GameHistory.
-            Stats now surface immediately at the top of the finished-match view
-            rather than requiring the player to scroll past the team cards. */}
       {isFinished && match.winner_id && (
         <WinnerBanner
           winnerName={winnerName}
-          isWinner={currentUserId === match.winner_id}
+          viewerState={viewerState}
           totalGames={history.length}
           matchCreatedAt={match.created_at}
+          winnerRecord={winnerRecord}
+          viewerRecord={viewerRecord}
+          winnerTimesTraded={winnerTimesTraded}
         />
       )}
 
-      {/* TeamCard:
-          - matchFinished replaces the generic player-list heading with
-            "Final gold standings" so viewers immediately know these gold
-            values represent the end-of-match snapshot, not a live state. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <TeamCard
           name="Team 1"
@@ -262,11 +338,6 @@ export default function MatchPage() {
         />
       )}
 
-      {/* GameHistory:
-          - matchFinished tells the component which card is the "final game"
-            so it can render a badge and an explanatory note about why gold
-            delta cells show "—" (no gold is applied on the match-ending game
-            by design — see select-winner/route.ts for the full rationale). */}
       <GameHistory
         history={history}
         matchFinished={isFinished}
