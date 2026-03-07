@@ -4,6 +4,7 @@ import { useEffect, useState, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
+import { useJitsi, getLoserRoom, MAIN_ROOM } from '@/app/context/JitsiContext';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
@@ -19,10 +20,6 @@ import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPaylo
 // Stat computation helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Count how many games a player (by username) won and lost across the match.
- * History uses string usernames for team member lists.
- */
 function computeRecord(
   username: string | undefined,
   history: HistoryGame[]
@@ -33,14 +30,13 @@ function computeRecord(
   let losses = 0;
 
   for (const game of history) {
-    // Only count finished games — in-progress/auction-pending games have no result yet
     if (game.status !== 'finished') continue;
     if (!game.winningTeam) continue;
 
     const inTeam1 = game.team1Members.includes(username);
     const inTeamA = game.teamAMembers.includes(username);
 
-    if (!inTeam1 && !inTeamA) continue; // player wasn't in this game
+    if (!inTeam1 && !inTeamA) continue;
 
     const playerWon =
       (game.winningTeam === 'team_1' && inTeam1) ||
@@ -53,10 +49,6 @@ function computeRecord(
   return { wins, losses };
 }
 
-/**
- * Count how many times a player was the target of an accepted offer
- * (i.e. sold to the other team) across the match.
- */
 function computeTimesTraded(
   username: string | undefined,
   history: HistoryGame[]
@@ -84,6 +76,8 @@ export default function MatchPage() {
   const router = useRouter();
   const { user } = useContext(UserContext);
 
+  const { hasJoined, switchRoom } = useJitsi();
+
   const [data, setData] = useState<MatchData | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,8 +96,8 @@ export default function MatchPage() {
       const res = await fetch(`/api/match/${matchId}`);
       if (!res.ok) throw new Error('Failed to fetch match data');
       setData(await res.json());
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -183,6 +177,49 @@ export default function MatchPage() {
     handleOfferAccepted,
   );
 
+  // ---- Jitsi room switching ------------------------------------------------
+  // When the game is in auction pending and the current user is on the losing
+  // team, move them to the loser's lounge. In all other states (in progress,
+  // finished, or not a participant), keep them in the main room.
+  useEffect(() => {
+    if (!hasJoined || !data?.latestGame || !user) return;
+
+    const game = data.latestGame;
+    const isAuction = game.status === 'auction pending';
+
+    if (isAuction && game.winning_team) {
+      const losingMembers =
+        game.winning_team === 'team_1'
+          ? game.team_a_members
+          : game.team_1_members;
+
+      const isLoser = losingMembers.includes(user.id);
+
+      if (isLoser) {
+        switchRoom(getLoserRoom(game.id));
+        return;
+      }
+    }
+
+    // Winner, spectator, in-progress, or finished → main room
+    switchRoom(MAIN_ROOM);
+  }, [
+    hasJoined,
+    data?.latestGame?.id,
+    data?.latestGame?.status,
+    data?.latestGame?.winning_team,
+    user?.id,
+    switchRoom,
+  ]);
+
+  // Return to main room when leaving the match page
+  useEffect(() => {
+    return () => {
+      switchRoom(MAIN_ROOM);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- Render guards -------------------------------------------------------
   if (!user && authLoading) {
     return (
@@ -248,27 +285,14 @@ export default function MatchPage() {
     ? players.find((p) => p.id === match.winner_id)?.username
     : undefined;
 
-  // ---- Winner banner props -------------------------------------------------
-  //
-  // viewerState: determines which banner variant renders.
-  //   • 'winner'    — the current user is the match winner
-  //   • 'loser'     — the current user was a participant but didn't win
-  //   • 'spectator' — the current user is not in the player list at all
-  //
-  // Spectators are valid: /match/[id] has no membership requirement (any
-  // authenticated user can view any match). The banner must not show
-  // "Defeated" or personal stats to someone who wasn't playing.
   const isParticipant = players.some(p => p.id === currentUserId);
   const viewerState: ViewerState =
-    !isParticipant            ? 'spectator' :
+    !isParticipant                    ? 'spectator' :
     currentUserId === match.winner_id ? 'winner'    :
                                         'loser';
 
   const viewerUsername = players.find(p => p.id === currentUserId)?.username;
 
-  // Compute personal record and traded count from history.
-  // These are only meaningful once history has loaded — the banner
-  // handles undefined gracefully by simply not rendering that stat.
   const winnerRecord      = computeRecord(winnerName, history);
   const viewerRecord      = viewerState === 'loser'
     ? computeRecord(viewerUsername, history)
