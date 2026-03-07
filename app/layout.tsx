@@ -5,7 +5,7 @@ import MobileResponsiveHeader   from '@/app/components/MobileResponsiveHeader';
 import UserProvider             from './context/UserContext';
 import { OnlineUsersProvider }  from '@/app/context/OnlineUsersContext';
 import { JitsiProvider }        from '@/app/context/JitsiContext';
-import JitsiWidget              from '@/app/components/JitsiWidget';
+import ChatWidget               from '@/app/components/ChatWidget';
 import KeepAlive                from '@/app/components/KeepAlive';
 
 export const dynamic = 'force-dynamic';
@@ -86,7 +86,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 page content as a fixed floating panel. It reads auth state
                 and Jitsi state internally via context — no props needed.
               */}
-              <JitsiWidget />
+              <ChatWidget />
             </JitsiProvider>
           </OnlineUsersProvider>
         </UserProvider>
