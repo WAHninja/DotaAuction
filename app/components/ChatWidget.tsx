@@ -1,53 +1,13 @@
 'use client';
 
 import { useContext, useEffect, useRef, useState } from 'react';
+import Daily, { type DailyCall } from '@daily-co/daily-js';
 import {
-  Mic, MicOff, Minimize2, Maximize2, PhoneOff, Phone,
-  Lock, Users,
+  Minimize2, Maximize2, PhoneOff, Phone,
+  Lock, Users, MicOff,
 } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import { useJitsi, MAIN_ROOM } from '@/app/context/JitsiContext';
-
-// ---------------------------------------------------------------------------
-// Jitsi External API type stub
-// ---------------------------------------------------------------------------
-
-declare global {
-  interface Window {
-    JitsiMeetExternalAPI?: new (
-      domain: string,
-      options: Record<string, unknown>
-    ) => JitsiAPI;
-  }
-}
-
-interface JitsiAPI {
-  dispose: () => void;
-  executeCommand: (command: string, ...args: unknown[]) => void;
-  addEventListeners: (listeners: Record<string, (e?: unknown) => void>) => void;
-}
-
-// ---------------------------------------------------------------------------
-// Script loader — loads the Jitsi External API once
-// ---------------------------------------------------------------------------
-
-let scriptPromise: Promise<void> | null = null;
-
-function loadJitsiScript(): Promise<void> {
-  if (scriptPromise) return scriptPromise;
-
-  scriptPromise = new Promise((resolve, reject) => {
-    if (window.JitsiMeetExternalAPI) { resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://meet.jit.si/external_api.js';
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => { scriptPromise = null; reject(new Error('Failed to load Jitsi script')); };
-    document.head.appendChild(script);
-  });
-
-  return scriptPromise;
-}
 
 // ---------------------------------------------------------------------------
 // Join button — shown before the user enters voice chat
@@ -84,12 +44,12 @@ function JoinButton({ onJoin }: { onJoin: () => void }) {
 const WIDGET_W = 340;
 const WIDGET_H = 280;
 
-export default function JitsiWidget() {
+export default function ChatWidget() {
   const { user } = useContext(UserContext);
   const { hasJoined, isMinimized, currentRoom, joinChat, leaveChat, toggleMinimize } = useJitsi();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const apiRef       = useRef<JitsiAPI | null>(null);
+  const apiRef       = useRef<DailyCall | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
@@ -104,7 +64,7 @@ export default function JitsiWidget() {
     async function init() {
       // Tear down any existing session
       if (apiRef.current) {
-        try { apiRef.current.dispose(); } catch { /* ignore */ }
+        try { apiRef.current.destroy(); } catch { /* ignore */ }
         apiRef.current = null;
       }
 
@@ -117,43 +77,38 @@ export default function JitsiWidget() {
       setError(null);
 
       try {
-        await loadJitsiScript();
-        if (!mounted || !containerRef.current || !window.JitsiMeetExternalAPI) return;
+        // Fetch a short-lived Daily meeting token from our backend
+        const tokenRes = await fetch(
+          `/api/daily/token?room=${encodeURIComponent(currentRoom)}`
+        );
+        if (!tokenRes.ok) throw new Error('Failed to get meeting token');
+        const { token } = await tokenRes.json();
 
-        const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-          roomName: currentRoom,
-          parentNode: containerRef.current,
-          width: '100%',
-          height: '100%',
-          userInfo: { displayName: user.username },
-          configOverwrite: {
-            prejoinPageEnabled: false,
-            startWithVideoMuted: true,
-            startWithAudioMuted: false,
-            disableDeepLinking: true,
-            enableNoisyMicDetection: false,
-            toolbarButtons: [
-              'microphone', 'hangup', 'tileview', 'participants-pane',
-            ],
-          },
-          interfaceConfigOverwrite: {
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            SHOW_BRAND_WATERMARK: false,
-            DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
-            MOBILE_APP_PROMO: false,
-            HIDE_INVITE_MORE_HEADER: true,
-            TOOLBAR_ALWAYS_VISIBLE: false,
-          },
+        if (!mounted || !containerRef.current) return;
+
+        const call = Daily.createFrame(containerRef.current, {
+          iframeStyle: { width: '100%', height: '100%', border: 'none', borderRadius: '0' },
+          showLeaveButton: false,
+          showFullscreenButton: false,
+          showLocalVideo: false,
         });
 
-        apiRef.current = api;
-
-        api.addEventListeners({
-          videoConferenceJoined: () => { if (mounted) setConnecting(false); },
-          videoConferenceLeft:   () => { if (mounted) leaveChat(); },
-          errorOccurred:        () => { if (mounted) setError('Connection error. Try leaving and rejoining.'); setConnecting(false); },
+        call.on('joined-meeting', () => { if (mounted) setConnecting(false); });
+        call.on('left-meeting',   () => { if (mounted) leaveChat(); });
+        call.on('error',          () => {
+          if (mounted) {
+            setError('Connection error. Try leaving and rejoining.');
+            setConnecting(false);
+          }
         });
+
+        await call.join({
+          url: `https://dotaauction.daily.co/${currentRoom}`,
+          token,
+        });
+
+        apiRef.current = call;
+
       } catch (err) {
         if (mounted) {
           setError('Failed to start voice chat. Check your connection and try again.');
@@ -170,20 +125,20 @@ export default function JitsiWidget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasJoined, currentRoom, user?.id]);
 
-  // ---- Dispose on leave --------------------------------------------------
+  // ---- Destroy call when user leaves ------------------------------------
   useEffect(() => {
     if (!hasJoined && apiRef.current) {
-      try { apiRef.current.dispose(); } catch { /* ignore */ }
+      try { apiRef.current.destroy(); } catch { /* ignore */ }
       apiRef.current = null;
       if (containerRef.current) containerRef.current.innerHTML = '';
     }
   }, [hasJoined]);
 
-  // ---- Dispose on unmount ------------------------------------------------
+  // ---- Destroy call on unmount ------------------------------------------
   useEffect(() => {
     return () => {
       if (apiRef.current) {
-        try { apiRef.current.dispose(); } catch { /* ignore */ }
+        try { apiRef.current.destroy(); } catch { /* ignore */ }
       }
     };
   }, []);
@@ -191,8 +146,8 @@ export default function JitsiWidget() {
   if (!user) return null;
   if (!hasJoined) return <JoinButton onJoin={joinChat} />;
 
-  const roomLabel = isLosersRoom ? "Loser's Lounge" : 'Main Chat';
-  const headerBg  = isLosersRoom
+  const roomLabel  = isLosersRoom ? "Loser's Lounge" : 'Main Chat';
+  const headerBg   = isLosersRoom
     ? 'bg-dota-dire/20 border-dota-dire-border'
     : 'bg-dota-gold/10 border-dota-gold/30';
   const headerText = isLosersRoom ? 'text-dota-dire-light' : 'text-dota-gold';
@@ -241,7 +196,7 @@ export default function JitsiWidget() {
         </div>
       </div>
 
-      {/* ── Jitsi iframe container — always mounted, hidden when minimised ─ */}
+      {/* ── Daily iframe container — always mounted, hidden when minimised ─ */}
       <div
         style={{
           height: isMinimized ? 0 : WIDGET_H,
@@ -250,7 +205,7 @@ export default function JitsiWidget() {
           position: 'relative',
         }}
       >
-        {error ? (
+        {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
             <MicOff className="w-6 h-6 text-dota-dire-light" />
             <p className="font-barlow text-xs text-dota-text-muted">{error}</p>
@@ -261,7 +216,7 @@ export default function JitsiWidget() {
               Dismiss
             </button>
           </div>
-        ) : null}
+        )}
         <div
           ref={containerRef}
           style={{ width: '100%', height: '100%' }}
