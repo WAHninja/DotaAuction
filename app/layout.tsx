@@ -4,6 +4,8 @@ import PageBackground           from '@/app/components/PageBackground';
 import MobileResponsiveHeader   from '@/app/components/MobileResponsiveHeader';
 import UserProvider             from './context/UserContext';
 import { OnlineUsersProvider }  from '@/app/context/OnlineUsersContext';
+import { JitsiProvider }        from '@/app/context/JitsiContext';
+import JitsiWidget              from '@/app/components/JitsiWidget';
 import KeepAlive                from '@/app/components/KeepAlive';
 
 export const dynamic = 'force-dynamic';
@@ -52,26 +54,40 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <UserProvider>
           {/*
             OnlineUsersProvider must be inside UserProvider so it can read
-            the current user ID from UserContext. This means presence is
-            tracked on every page, not just the dashboard.
+            the current user ID from UserContext.
           */}
           <OnlineUsersProvider>
-            <PageBackground />
-            <MobileResponsiveHeader />
-            <KeepAlive />
+            {/*
+              JitsiProvider wraps everything so both the widget and any page
+              (e.g. the match page) can read and mutate chat state via context.
+              The widget itself is rendered here so it persists across all
+              client-side navigations — Next.js keeps layout components mounted.
+            */}
+            <JitsiProvider>
+              <PageBackground />
+              <MobileResponsiveHeader />
+              <KeepAlive />
 
-            <main
-              id="main-content"
-              className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8"
-            >
-              {children}
-            </main>
+              <main
+                id="main-content"
+                className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8"
+              >
+                {children}
+              </main>
 
-            <footer className="border-t border-dota-border py-4 px-6 text-center">
-              <p className="font-barlow text-sm text-dota-text-dim tracking-wide">
-                © 2025 Defence of the Auctions
-              </p>
-            </footer>
+              <footer className="border-t border-dota-border py-4 px-6 text-center">
+                <p className="font-barlow text-sm text-dota-text-dim tracking-wide">
+                  © 2025 Defence of the Auctions
+                </p>
+              </footer>
+
+              {/*
+                JitsiWidget is outside <main> so it overlays on top of all
+                page content as a fixed floating panel. It reads auth state
+                and Jitsi state internally via context — no props needed.
+              */}
+              <JitsiWidget />
+            </JitsiProvider>
           </OnlineUsersProvider>
         </UserProvider>
       </body>
