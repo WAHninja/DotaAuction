@@ -52,8 +52,6 @@ export async function POST(
     await client.query('BEGIN');
 
     // ---- Load game state ---------------------------------------------------
-    // Internal calls skip the membership check (no session to check against).
-    // Web calls verify the caller is a participant in the match.
     const { rows: gameRows } = await client.query<{
       match_id: number;
       status: string;
@@ -111,10 +109,18 @@ export async function POST(
       );
     }
 
-    const matchId        = game.match_id;
-    const losingTeamId   = winningTeamId === 'team_1' ? 'team_a' : 'team_1';
-    const winningMembers = game[`${winningTeamId}_members`] as number[];
-    const losingMembers  = game[`${losingTeamId}_members`]  as number[];
+    const matchId = game.match_id;
+
+    // Derive winning/losing member arrays via explicit conditionals rather
+    // than dynamic property access (game[`${teamId}_members`]). The dynamic
+    // version required `as number[]` casts that strict mode rightly flags —
+    // TypeScript can't verify a computed key maps to a known property type.
+    const winningMembers: number[] =
+      winningTeamId === 'team_1' ? game.team_1_members : game.team_a_members;
+    const losingTeamId: 'team_1' | 'team_a' =
+      winningTeamId === 'team_1' ? 'team_a' : 'team_1';
+    const losingMembers: number[] =
+      losingTeamId === 'team_1' ? game.team_1_members : game.team_a_members;
 
     const isSinglePlayerWin = winningMembers.length === 1;
     const targetStatus = isSinglePlayerWin ? 'finished' : 'auction pending';
@@ -149,6 +155,9 @@ export async function POST(
     }
 
     // ---- Multi-player winning team: apply gold and advance to auction ------
+
+    // Type parameter ensures r is { user_id: number; gold: number } — no
+    // implicit any, no cast needed on the .map() callback below.
     const loserGoldRes = await client.query<{ user_id: number; gold: number }>(
       `SELECT user_id, gold
        FROM match_players
@@ -211,7 +220,7 @@ export async function POST(
       message: 'Winner selected, auction pending.',
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     await client.query('ROLLBACK');
     console.error('[SELECT_WINNER_ERROR]', error);
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
