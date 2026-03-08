@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   ChevronUp, ChevronDown, ChevronsUpDown,
-  ArrowUp, ArrowDown, Minus,
   Zap, Swords, ShoppingCart, ChevronDown as SelectChevron,
 } from 'lucide-react'
 import GoldIcon from '@/app/components/GoldIcon';
@@ -63,6 +62,7 @@ const COLUMNS: Column[] = [
     key: 'timesSold',
     tooltip: 'How many times you have been sold to the other team.',
   },
+
 ];
 
 const RANK_EMOJIS = ['🥇', '🥈', '🥉'];
@@ -73,15 +73,6 @@ const RANK_EMOJIS = ['🥇', '🥈', '🥉'];
 
 function pct(success: number, total: number): number {
   return total > 0 ? +(success / total * 100).toFixed(1) : 0;
-}
-
-function formatGold(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1000) {
-    const k = value / 1000;
-    return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-  }
-  return value.toString();
 }
 
 function pctColour(value: number): string {
@@ -162,26 +153,6 @@ function PctBadge({ success, total, minGames = 0 }: {
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(rate)}`}>
       {rate}%
       <span className="text-[10px] opacity-50 font-normal">{success}/{total}</span>
-    </span>
-  );
-}
-
-// ── GoldValue ─────────────────────────────────────────────────────────────────
-function GoldValue({ value }: { value: number }) {
-  const colour =
-    value > 0 ? 'text-dota-radiant-light' :
-    value < 0 ? 'text-dota-dire-light'    :
-                'text-dota-text-muted';
-  return (
-    <span className={`flex items-center justify-center gap-1 font-barlow font-semibold tabular-nums ${colour}`}>
-      {value > 0
-        ? <ArrowUp   className="w-3 h-3 shrink-0" aria-hidden="true" />
-        : value < 0
-        ? <ArrowDown className="w-3 h-3 shrink-0" aria-hidden="true" />
-        : <Minus     className="w-3 h-3 shrink-0" aria-hidden="true" />
-      }
-      <span>{value > 0 ? '+' : ''}{formatGold(value)}</span>
-      <GoldIcon size={13} />
     </span>
   );
 }
@@ -526,6 +497,7 @@ export default function StatsTab(_props: StatsTabProps) {
                         : <span className="text-dota-text-dim text-xs">—</span>
                       }
                     </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -536,7 +508,7 @@ export default function StatsTab(_props: StatsTabProps) {
         <div className="px-5 py-2.5 border-t border-dota-border">
           <p className="font-barlow text-[11px] text-dota-text-dim">
             Avg Bid is the gold teammates offered when selling you.
-            Net Gold sums all win rewards, loss penalties, and auction payouts.
+            Win Rate requires {MIN_GAMES_FOR_RATE}+ games.
           </p>
         </div>
       </div>
