@@ -248,7 +248,7 @@ export default function GameRulesCard() {
         <ul className="space-y-2.5">
 
           <Rule>
-            Requires <strong className="text-dota-text">4 or more players</strong>.
+            Requires <strong className="text-dota-text">3 or more players</strong>.
           </Rule>
 
           {/* Point 2 fixed: "one offer each" made explicit */}
