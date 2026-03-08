@@ -3,13 +3,13 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import {
   Minimize2, Maximize2, PhoneOff, Phone,
-  Lock, Users, MicOff,
+  Lock, Users, MicOff, AlertTriangle,
 } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import { useJitsi, MAIN_ROOM } from '@/app/context/JitsiContext';
 
 // ---------------------------------------------------------------------------
-// JaaS config — set NEXT_PUBLIC_JAAS_APP_ID in your .env.local
+// JaaS config
 // ---------------------------------------------------------------------------
 const JAAS_APP_ID = process.env.NEXT_PUBLIC_JAAS_APP_ID!;
 const JAAS_DOMAIN = '8x8.vc';
@@ -30,7 +30,7 @@ function loadJitsiScript(): Promise<void> {
     script.async = true;
     script.onload  = () => resolve();
     script.onerror = () => {
-      scriptPromise = null; // allow retry on next attempt
+      scriptPromise = null;
       reject(new Error('Failed to load Jitsi script'));
     };
     document.head.appendChild(script);
@@ -39,7 +39,7 @@ function loadJitsiScript(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Join button — shown before the user enters voice chat
+// Join button
 // ---------------------------------------------------------------------------
 
 function JoinButton({ onJoin }: { onJoin: () => void }) {
@@ -67,6 +67,53 @@ function JoinButton({ onJoin }: { onJoin: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
+// Room-switch notification toast
+// ---------------------------------------------------------------------------
+
+function RoomNotificationToast() {
+  const { notification, dismissNotification } = useJitsi();
+  if (!notification) return null;
+
+  const { countdown, isLoserRoom } = notification;
+  const destination = isLoserRoom ? "Loser's Lounge" : 'Main Chat';
+  const bgClass     = isLoserRoom
+    ? 'bg-dota-dire/90 border-dota-dire-border text-dota-dire-light'
+    : 'bg-dota-gold/20 border-dota-gold/50 text-dota-gold';
+
+  return (
+    <div
+      className={`
+        fixed bottom-24 right-6 z-50
+        flex items-start gap-3
+        px-4 py-3 rounded-xl
+        border shadow-raised
+        font-barlow text-sm
+        animate-in slide-in-from-right duration-300
+        ${bgClass}
+      `}
+      style={{ maxWidth: 280 }}
+    >
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold leading-tight">
+          Moving to {destination}
+        </p>
+        <p className="text-xs opacity-75 mt-0.5">
+          Switching in {countdown}s…
+        </p>
+      </div>
+      <button
+        onClick={dismissNotification}
+        className="shrink-0 text-xs opacity-60 hover:opacity-100 transition-opacity"
+        aria-label="Dismiss"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main widget
 // ---------------------------------------------------------------------------
 
@@ -75,7 +122,10 @@ const WIDGET_H = 280;
 
 export default function ChatWidget() {
   const { user } = useContext(UserContext);
-  const { hasJoined, isMinimized, currentRoom, joinChat, leaveChat, toggleMinimize } = useJitsi();
+  const {
+    hasJoined, isMinimized, currentRoom,
+    joinChat, leaveChat, toggleMinimize,
+  } = useJitsi();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const apiRef       = useRef<any>(null);
@@ -91,7 +141,6 @@ export default function ChatWidget() {
     let mounted = true;
 
     async function init() {
-      // Tear down any existing Jitsi instance
       if (apiRef.current) {
         try { apiRef.current.dispose(); } catch { /* ignore */ }
         apiRef.current = null;
@@ -101,7 +150,6 @@ export default function ChatWidget() {
       setError(null);
 
       try {
-        // Load external API script and fetch JWT in parallel
         const [, tokenRes] = await Promise.all([
           loadJitsiScript(),
           fetch(`/api/jaas/token?room=${encodeURIComponent(currentRoom)}`),
@@ -119,14 +167,23 @@ export default function ChatWidget() {
           width:      '100%',
           height:     '100%',
           configOverwrite: {
-            startWithAudioMuted:  false,
-            startWithVideoMuted:  true,
-            disableDeepLinking:   true,
-            prejoinPageEnabled: false, prejoinConfig: { enabled: false },
+            // Audio-only — disable video entirely
+            startWithAudioMuted:     false,
+            startWithVideoMuted:     true,
+            disableVideoMute:        true,   // hides the mute button so user can't re-enable
+            disableFilmstripAutohide: true,
+            disableDeepLinking:      true,
+            prejoinPageEnabled:      false,
+            prejoinConfig:           { enabled: false },
+            // Prevent camera from being started at all
+            constraints: {
+              video: false,
+            },
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK:      false,
             SHOW_WATERMARK_FOR_GUESTS: false,
+            // No camera button in toolbar
             TOOLBAR_BUTTONS: [
               'microphone', 'hangup', 'tileview', 'settings',
             ],
@@ -137,7 +194,10 @@ export default function ChatWidget() {
         });
 
         api.addEventListener('videoConferenceJoined', () => {
-          if (mounted) setConnecting(false);
+          if (!mounted) return;
+          setConnecting(false);
+          // Ensure video stays off and can't be turned on
+          try { api.executeCommand('stopVideo'); } catch { /* ignore */ }
         });
 
         api.addEventListener('readyToClose', () => {
@@ -187,7 +247,12 @@ export default function ChatWidget() {
   }, []);
 
   if (!user) return null;
-  if (!hasJoined) return <JoinButton onJoin={joinChat} />;
+  if (!hasJoined) return (
+    <>
+      <RoomNotificationToast />
+      <JoinButton onJoin={joinChat} />
+    </>
+  );
 
   const roomLabel  = isLosersRoom ? "Loser's Lounge" : 'Main Chat';
   const headerBg   = isLosersRoom
@@ -196,75 +261,79 @@ export default function ChatWidget() {
   const headerText = isLosersRoom ? 'text-dota-dire-light' : 'text-dota-gold';
 
   return (
-    <div
-      className="fixed bottom-6 right-6 z-40 flex flex-col rounded-xl overflow-hidden shadow-raised border border-dota-border"
-      style={{ width: WIDGET_W }}
-      aria-label="Voice chat"
-    >
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className={`flex items-center justify-between px-3 py-2 border-b ${headerBg} gap-2`}>
-        <div className={`flex items-center gap-2 font-barlow font-semibold text-xs tracking-wide ${headerText}`}>
-          {isLosersRoom
-            ? <Lock className="w-3 h-3 shrink-0" />
-            : <Users className="w-3 h-3 shrink-0" />
-          }
-          <span>{roomLabel}</span>
-          {connecting && (
-            <span className="text-dota-text-dim font-normal animate-pulse">Connecting…</span>
-          )}
-          {isLosersRoom && !connecting && (
-            <span className="text-dota-dire-light/60 font-normal text-[10px]">
-              Waiting for auction…
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={toggleMinimize}
-            className="p-1 rounded text-dota-text-dim hover:text-dota-text transition-colors"
-            aria-label={isMinimized ? 'Expand voice chat' : 'Minimise voice chat'}
-          >
-            {isMinimized
-              ? <Maximize2 className="w-3.5 h-3.5" />
-              : <Minimize2 className="w-3.5 h-3.5" />
-            }
-          </button>
-          <button
-            onClick={leaveChat}
-            className="p-1 rounded text-dota-dire-light/70 hover:text-dota-dire-light transition-colors"
-            aria-label="Leave voice chat"
-          >
-            <PhoneOff className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+    <>
+      <RoomNotificationToast />
 
-      {/* ── Jitsi container — always mounted, hidden when minimised ─────── */}
       <div
-        style={{
-          height: isMinimized ? 0 : WIDGET_H,
-          display: isMinimized ? 'none' : 'block',
-          background: '#111827',
-          position: 'relative',
-        }}
+        className="fixed bottom-6 right-6 z-40 flex flex-col rounded-xl overflow-hidden shadow-raised border border-dota-border"
+        style={{ width: WIDGET_W }}
+        aria-label="Voice chat"
       >
-        {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center z-10">
-            <MicOff className="w-6 h-6 text-dota-dire-light" />
-            <p className="font-barlow text-xs text-dota-text-muted">{error}</p>
+        {/* ── Header ───────────────────────────────────────────────────── */}
+        <div className={`flex items-center justify-between px-3 py-2 border-b ${headerBg} gap-2`}>
+          <div className={`flex items-center gap-2 font-barlow font-semibold text-xs tracking-wide ${headerText}`}>
+            {isLosersRoom
+              ? <Lock  className="w-3 h-3 shrink-0" />
+              : <Users className="w-3 h-3 shrink-0" />
+            }
+            <span>{roomLabel}</span>
+            {connecting && (
+              <span className="text-dota-text-dim font-normal animate-pulse">Connecting…</span>
+            )}
+            {isLosersRoom && !connecting && (
+              <span className="text-dota-dire-light/60 font-normal text-[10px]">
+                Waiting for auction…
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={toggleMinimize}
+              className="p-1 rounded text-dota-text-dim hover:text-dota-text transition-colors"
+              aria-label={isMinimized ? 'Expand voice chat' : 'Minimise voice chat'}
+            >
+              {isMinimized
+                ? <Maximize2 className="w-3.5 h-3.5" />
+                : <Minimize2 className="w-3.5 h-3.5" />
+              }
+            </button>
             <button
               onClick={leaveChat}
-              className="btn-ghost text-xs px-3 py-1.5"
+              className="p-1 rounded text-dota-dire-light/70 hover:text-dota-dire-light transition-colors"
+              aria-label="Leave voice chat"
             >
-              Dismiss
+              <PhoneOff className="w-3.5 h-3.5" />
             </button>
           </div>
-        )}
+        </div>
+
+        {/* ── Jitsi container ──────────────────────────────────────────── */}
         <div
-          ref={containerRef}
-          style={{ width: '100%', height: '100%' }}
-        />
+          style={{
+            height:   isMinimized ? 0 : WIDGET_H,
+            display:  isMinimized ? 'none' : 'block',
+            background: '#111827',
+            position: 'relative',
+          }}
+        >
+          {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center z-10">
+              <MicOff className="w-6 h-6 text-dota-dire-light" />
+              <p className="font-barlow text-xs text-dota-text-muted">{error}</p>
+              <button
+                onClick={leaveChat}
+                className="btn-ghost text-xs px-3 py-1.5"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+          <div
+            ref={containerRef}
+            style={{ width: '100%', height: '100%' }}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
