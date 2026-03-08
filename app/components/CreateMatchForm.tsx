@@ -120,7 +120,7 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
       {/* ── Subheading ──────────────────────────────────────────────────────── */}
       <div className="text-center">
         <p className="font-barlow text-sm text-dota-text-muted">
-          Select <span className="text-dota-text font-semibold">4 or more players</span> to start or continue a match
+          Select <span className="text-dota-text font-semibold">3 or more players</span> to start or continue a match
         </p>
       </div>
 
