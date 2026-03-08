@@ -21,8 +21,7 @@ type LocalSortKey =
   | 'offerAcceptRate'
   | 'averageOfferValue'
   | 'timesOffered'
-  | 'timesSold'
-  | 'netGold';
+  | 'timesSold';
 
 type Column = {
   label: string;
@@ -63,13 +62,6 @@ const COLUMNS: Column[] = [
     sublabel: 'times transferred',
     key: 'timesSold',
     tooltip: 'How many times you have been sold to the other team.',
-  },
-  {
-    label: 'Net Gold',
-    sublabel: 'all time',
-    key: 'netGold',
-    tooltip: 'Sum of all win rewards and auction payouts, minus all loss penalties, across every game played.',
-    tooltipAlign: 'right',
   },
 ];
 
@@ -534,9 +526,6 @@ export default function StatsTab(_props: StatsTabProps) {
                         : <span className="text-dota-text-dim text-xs">—</span>
                       }
                     </td>
-                    <td className="px-3 py-3">
-                      <GoldValue value={p.netGold} />
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -548,7 +537,6 @@ export default function StatsTab(_props: StatsTabProps) {
           <p className="font-barlow text-[11px] text-dota-text-dim">
             Avg Bid is the gold teammates offered when selling you.
             Net Gold sums all win rewards, loss penalties, and auction payouts.
-            Win Rate requires {MIN_GAMES_FOR_RATE}+ games.
           </p>
         </div>
       </div>
