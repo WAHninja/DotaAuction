@@ -80,7 +80,7 @@ export async function GET(req: Request) {
         },
       },
     })
-      .setProtectedHeader({ alg: 'RS256', kid: `${appId}/${keyId}` })
+      .setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid: `${appId}/${keyId}` })
       .setIssuedAt(now)
       .setNotBefore(now - 10)
       .setExpirationTime(now + 7200)
