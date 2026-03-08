@@ -99,7 +99,7 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
     }
   };
 
-  const enoughSelected = selectedPlayerIds.length >= 4;
+  const enoughSelected = selectedPlayerIds.length >= 3;
 
   return (
     <form onSubmit={handleSubmit} className="panel h-full flex flex-col p-6 space-y-5">
@@ -222,12 +222,12 @@ export default function CreateMatchForm({ currentUserId }: CreateMatchFormProps)
           {selectedPlayerIds.length} selected
           {!enoughSelected && selectedPlayerIds.length > 0 && (
             <span className="text-dota-text-dim normal-case font-normal">
-              {' '}· need {4 - selectedPlayerIds.length} more
+              {' '}· need {3 - selectedPlayerIds.length} more
             </span>
           )}
           {selectedPlayerIds.length === 0 && (
             <span className="text-dota-text-dim normal-case font-normal">
-              {' '}· select at least 4
+              {' '}· select at least 3
             </span>
           )}
         </p>
