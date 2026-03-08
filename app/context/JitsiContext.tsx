@@ -145,6 +145,7 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
           setCurrentRoom(pendingRoomRef.current ?? room);
           pendingRoomRef.current = null;
         } else {
+          playRoomSwitchBeep(isLoserRoom);
           setNotification(n =>
             n ? { ...n, countdown: remaining } : null
           );
