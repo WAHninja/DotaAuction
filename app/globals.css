@@ -260,7 +260,7 @@
   .tier-badge {
     @apply inline-flex items-center;
     @apply font-barlow font-bold;
-    @apply px-3 py-0.5 rounded text-sm;
+    @apply px-2 py-0.5 rounded text-sm;
     letter-spacing: 0.05em;
   }
 
