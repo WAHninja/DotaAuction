@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 import GoldIcon from '@/app/components/GoldIcon';
 import type {
@@ -43,25 +43,31 @@ function buildUnifiedPlayers(
     goldByName.set(s.username, (goldByName.get(s.username) ?? 0) + s.goldChange);
   }
 
+  // Accepted offer takes priority over pending/rejected if duplicates exist.
+  // In normal operation there should only ever be one offer per player per game,
+  // but this guards against inconsistent data silently swapping the displayed offer.
   const sellerByName = new Map<string, UnifiedPlayer['sellerInfo']>();
   for (const o of offers) {
-    sellerByName.set(o.fromUsername, {
-      targetUsername: o.targetUsername,
-      amount: o.offerAmount,
-      tier:   o.tierLabel,
-      status: o.status,
-    });
+    const existing = sellerByName.get(o.fromUsername);
+    if (!existing || o.status === 'accepted') {
+      sellerByName.set(o.fromUsername, {
+        targetUsername: o.targetUsername,
+        amount: o.offerAmount,
+        tier:   o.tierLabel,
+        status: o.status,
+      });
+    }
   }
 
   return usernames.map(name => {
     const d = dotaByName.get(name);
     return {
       username:  name,
-      hero:      d?.hero   ?? null,
-      kills:     d != null ? d.kills   : null,
-      deaths:    d != null ? d.deaths  : null,
-      assists:   d != null ? d.assists : null,
-      netWorth:  d != null ? d.netWorth: null,
+      hero:      d?.hero    ?? null,
+      kills:     d != null  ? d.kills    : null,
+      deaths:    d != null  ? d.deaths   : null,
+      assists:   d != null  ? d.assists  : null,
+      netWorth:  d != null  ? d.netWorth : null,
       goldTotal: goldByName.has(name) ? goldByName.get(name)! : null,
       sellerInfo: sellerByName.get(name) ?? null,
     };
@@ -117,42 +123,52 @@ function TeamScoreboard({
     ? { header: 'from-dota-radiant/20', border: 'border-dota-radiant/35', text: 'text-dota-radiant-light', hover: 'hover:bg-dota-radiant/5' }
     : { header: 'from-dota-dire/20',    border: 'border-dota-dire/35',    text: 'text-dota-dire-light',   hover: 'hover:bg-dota-dire/5'    };
 
-  const cols = [
+  // Memoised so the gridTemplateColumns string isn't reconstructed on every render.
+  // hasDotaStats and hasAuction are stable within a single game card render.
+  const cols = useMemo(() => [
     '1fr',
     hasDotaStats ? '90px' : null,
     hasDotaStats ? '68px' : null,
     '76px',
     hasAuction   ? 'minmax(100px,0.7fr)' : null,
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean).join(' '), [hasDotaStats, hasAuction]);
 
   return (
     <div className={`border ${f.border} rounded-lg overflow-hidden`}>
 
       {/* Header */}
       <div className={`bg-gradient-to-r ${f.header} via-transparent to-transparent flex items-center gap-2.5 px-4 py-2.5 border-b ${f.border}`}>
-        <Image src={r ? '/Team1.png' : '/TeamA.png'} alt={label} width={20} height={20} className="object-contain" />
+        {/* Logo doubled from 20×20 to 40×40 */}
+        <Image src={r ? '/Team1.png' : '/TeamA.png'} alt={label} width={40} height={40} className="object-contain" />
         <span className={`font-cinzel font-bold text-sm tracking-widest ${f.text}`}>{label}</span>
         {isWinner && (
-          <span className={`ml-auto flex items-center gap-1.5 font-barlow text-[11px] font-bold px-2.5 py-0.5 rounded border ${f.text} bg-current/10 border-current/30`}
-            style={{ color: r ? '#6ab85a' : '#e05040' }}>
+          <span
+            className={`ml-auto flex items-center gap-1.5 font-barlow text-[11px] font-bold px-2.5 py-0.5 rounded border ${f.text} bg-current/10 border-current/30`}
+            style={{ color: r ? '#6ab85a' : '#e05040' }}
+          >
             <Trophy className="w-3 h-3" /> WINNER
           </span>
         )}
       </div>
 
       {/* Column headers */}
-      <div className="grid gap-x-4 px-4 py-1.5 bg-dota-deep border-b border-dota-border/40"
-           style={{ gridTemplateColumns: cols }}>
+      <div
+        className="grid gap-x-4 px-4 py-1.5 bg-dota-deep border-b border-dota-border/40"
+        style={{ gridTemplateColumns: cols }}
+      >
         <span className="stat-label">PLAYER{hasDotaStats ? ' · HERO' : ''}</span>
         {hasDotaStats && <span className="stat-label text-center">K / D / A</span>}
         {hasDotaStats && <span className="stat-label text-right">NET WORTH</span>}
         <span className="stat-label text-right">GOLD Δ</span>
-        {hasAuction && <span className="stat-label">OFFER</span>}
+        {/* "OFFER SUBMITTED" clarifies this shows what the player offered outbound,
+            not what was offered for them. */}
+        {hasAuction && <span className="stat-label">OFFER SUBMITTED</span>}
       </div>
 
       {/* Rows */}
       {players.map((p, i) => (
-        <div key={p.username}
+        <div
+          key={p.username}
           className={`grid gap-x-4 items-center px-4 py-2.5 transition-colors ${f.hover} ${i < players.length - 1 ? `border-b border-dota-border/25` : ''}`}
           style={{ gridTemplateColumns: cols }}
         >
@@ -169,17 +185,23 @@ function TeamScoreboard({
             </div>
           </div>
 
-          {/* K / D / A */}
+          {/* K / D / A — aria-label gives screen readers meaningful context
+              instead of reading out bare numbers with no labels */}
           {hasDotaStats && (
             <div className="text-center">
               {p.kills !== null
-                ? <span className="font-barlow font-semibold text-sm tabular-nums whitespace-nowrap">
-                    <span className="text-dota-radiant-light">{p.kills}</span>
-                    <span className="text-dota-text-dim mx-0.5">/</span>
-                    <span className="text-dota-dire-light">{p.deaths}</span>
-                    <span className="text-dota-text-dim mx-0.5">/</span>
-                    <span className="text-[#7aaad4]">{p.assists}</span>
+                ? (
+                  <span
+                    className="font-barlow font-semibold text-sm tabular-nums whitespace-nowrap"
+                    aria-label={`${p.kills} kills, ${p.deaths} deaths, ${p.assists} assists`}
+                  >
+                    <span className="text-dota-radiant-light" aria-hidden="true">{p.kills}</span>
+                    <span className="text-dota-text-dim mx-0.5" aria-hidden="true">/</span>
+                    <span className="text-dota-dire-light" aria-hidden="true">{p.deaths}</span>
+                    <span className="text-dota-text-dim mx-0.5" aria-hidden="true">/</span>
+                    <span className="text-[#7aaad4]" aria-hidden="true">{p.assists}</span>
                   </span>
+                )
                 : <span className="text-dota-text-dim text-xs">—</span>
               }
             </div>
@@ -189,9 +211,11 @@ function TeamScoreboard({
           {hasDotaStats && (
             <div className="text-right">
               {p.netWorth !== null
-                ? <span className="inline-flex items-center justify-end gap-0.5 font-barlow font-bold text-sm text-dota-gold tabular-nums">
+                ? (
+                  <span className="inline-flex items-center justify-end gap-0.5 font-barlow font-bold text-sm text-dota-gold tabular-nums">
                     {formatNW(p.netWorth)}<GoldIcon size={12} />
                   </span>
+                )
                 : <span className="text-dota-text-dim text-xs block text-right">—</span>
               }
             </div>
@@ -200,14 +224,16 @@ function TeamScoreboard({
           {/* Gold Δ */}
           <div className="text-right">
             {p.goldTotal !== null
-              ? <span className={`inline-flex items-center justify-end gap-0.5 font-barlow font-bold text-sm tabular-nums whitespace-nowrap ${p.goldTotal >= 0 ? 'text-dota-radiant-light' : 'text-dota-dire-light'}`}>
+              ? (
+                <span className={`inline-flex items-center justify-end gap-0.5 font-barlow font-bold text-sm tabular-nums whitespace-nowrap ${p.goldTotal >= 0 ? 'text-dota-radiant-light' : 'text-dota-dire-light'}`}>
                   {p.goldTotal >= 0 ? '+' : ''}{p.goldTotal.toLocaleString()}<GoldIcon size={12} />
                 </span>
+              )
               : <span className="text-dota-text-dim text-xs block text-right">—</span>
             }
           </div>
 
-          {/* Auction — show this player's offer if they made one */}
+          {/* Offer submitted by this player — shows who they tried to sell and for how much */}
           {hasAuction && (
             <div className="min-w-0">
               {p.sellerInfo ? (
@@ -253,7 +279,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
 
   const hasWinner     = game.winningTeam !== null;
   const winnerIsTeam1 = game.winningTeam === 'team_1';
-
   const winningTeamLabel = game.winningTeam === 'team_1' ? 'Team 1' : 'Team A';
 
   const team1 = (
@@ -268,11 +293,19 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
   );
 
   return (
-    <div className="panel cursor-pointer hover:border-dota-border-bright transition-colors"
-         onClick={() => setExpanded(v => !v)}>
+    <div className="panel">
 
-      {/* ── Collapsed header ─────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between p-4 gap-4">
+      {/* ── Header — a single <button> owns expand/collapse.
+           Previously the outer panel div had onClick, a nested button had
+           onClick + stopPropagation, and the expanded body had stopPropagation
+           to prevent collapse on click. Consolidating into one button removes
+           all three workarounds and gives aria-expanded for free. ─────────── */}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        aria-expanded={expanded}
+        className="w-full text-left flex items-start justify-between p-4 gap-4 hover:bg-dota-overlay/30 transition-colors rounded-t-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dota-gold focus-visible:ring-inset"
+      >
         <div className="space-y-0.5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-cinzel font-bold text-dota-text">Game #{game.gameNumber}</h3>
@@ -289,6 +322,9 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
                   <Trophy className="w-3.5 h-3.5 text-dota-gold shrink-0" aria-hidden="true" />
                   <span className="text-dota-gold font-semibold">{winningTeamLabel}</span>
                   clinched the match
+                  {/* Surface the no-auction fact in the collapsed row so users
+                      don't need to expand to understand why gold looks different */}
+                  <span className="text-dota-text-dim text-xs">· No auction followed</span>
                 </p>
               )}
 
@@ -299,9 +335,11 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
                   <span className="text-dota-info font-semibold">{accepted.targetUsername}</span>
                   for
                   {accepted.offerAmount != null
-                    ? <span className="inline-flex items-center gap-0.5 font-bold text-dota-gold tabular-nums">
+                    ? (
+                      <span className="inline-flex items-center gap-0.5 font-bold text-dota-gold tabular-nums">
                         {accepted.offerAmount.toLocaleString()}<GoldIcon size={12} />
                       </span>
+                    )
                     : <TierBadge tier={accepted.tierLabel} />
                   }
                 </p>
@@ -310,20 +348,19 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
           )}
         </div>
 
-        <button
-          className="font-barlow text-xs text-dota-text-muted hover:text-dota-text flex items-center gap-1 transition-colors shrink-0"
-          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}>
+        <span className="font-barlow text-xs text-dota-text-muted hover:text-dota-text flex items-center gap-1 transition-colors shrink-0 pt-0.5">
           {expanded
             ? <><ChevronUp   className="w-3.5 h-3.5" />Hide</>
             : <><ChevronDown className="w-3.5 h-3.5" />Details</>
           }
-        </button>
-      </div>
+        </span>
+      </button>
 
-      {/* ── Expanded — scoreboard ─────────────────────────────────────────── */}
+      {/* ── Expanded — scoreboard.
+           No stopPropagation needed since the button above is a sibling,
+           not an ancestor of this content. ──────────────────────────────── */}
       {expanded && (
-        <div className="border-t border-dota-border p-4 overflow-x-auto"
-             onClick={e => e.stopPropagation()}>
+        <div className="border-t border-dota-border p-4 overflow-x-auto">
 
           {isFinalGame && (
             <div className="mb-4 px-3 py-2.5 rounded bg-dota-gold/8 border border-dota-gold/20">
@@ -355,7 +392,12 @@ export default function GameHistory({
 }) {
   if (history.length === 0) return null;
 
-  const maxGameNumber = Math.max(...history.map(g => g.gameNumber));
+  // history arrives ordered ASC by game id from the API — the last element
+  // is always the highest game number, so no need to spread into Math.max.
+  const maxGameNumber = history[history.length - 1].gameNumber;
+
+  // Memoised to avoid allocating a new reversed array on every re-render.
+  const reversedHistory = useMemo(() => [...history].reverse(), [history]);
 
   return (
     <section className="mt-12 space-y-4">
@@ -364,7 +406,7 @@ export default function GameHistory({
         <div className="divider-gold w-48 mx-auto" />
       </div>
       <div className="space-y-3">
-        {[...history].reverse().map(game => (
+        {reversedHistory.map(game => (
           <GameCard
             key={game.gameNumber}
             game={game}
