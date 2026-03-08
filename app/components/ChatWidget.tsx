@@ -70,45 +70,79 @@ function JoinButton({ onJoin }: { onJoin: () => void }) {
 // Room-switch notification toast
 // ---------------------------------------------------------------------------
 
+const COUNTDOWN_SECS = 5;
+
 function RoomNotificationToast() {
   const { notification, dismissNotification } = useJitsi();
   if (!notification) return null;
 
   const { countdown, isLoserRoom } = notification;
   const destination = isLoserRoom ? "Loser's Lounge" : 'Main Chat';
-  const bgClass     = isLoserRoom
-    ? 'bg-dota-dire/90 border-dota-dire-border text-dota-dire-light'
-    : 'bg-dota-gold/20 border-dota-gold/50 text-dota-gold';
+  const progress    = (countdown / COUNTDOWN_SECS) * 100;
+
+  // Solid colours — no transparency so text is always readable
+  const bg          = isLoserRoom ? '#3d0f0f' : '#1a1508';
+  const border      = isLoserRoom ? '#7f1d1d' : '#92400e';
+  const titleColor  = isLoserRoom ? '#fca5a5' : '#fcd34d';
+  const barColor    = isLoserRoom ? '#ef4444' : '#f59e0b';
 
   return (
     <div
-      className={`
-        fixed bottom-24 right-6 z-50
-        flex items-start gap-3
-        px-4 py-3 rounded-xl
-        border shadow-raised
-        font-barlow text-sm
-        animate-in slide-in-from-right duration-300
-        ${bgClass}
-      `}
-      style={{ maxWidth: 280 }}
+      style={{
+        position: 'fixed',
+        bottom: 96,
+        right: 24,
+        zIndex: 50,
+        width: 280,
+        background: bg,
+        border: `1px solid ${border}`,
+        borderRadius: 12,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+        overflow: 'hidden',
+        fontFamily: 'var(--font-barlow, sans-serif)',
+      }}
     >
-      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold leading-tight">
-          Moving to {destination}
-        </p>
-        <p className="text-xs opacity-75 mt-0.5">
-          Switching in {countdown}s…
-        </p>
+      {/* Progress bar at top */}
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.1)' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${progress}%`,
+            background: barColor,
+            transition: 'width 0.9s linear',
+          }}
+        />
       </div>
-      <button
-        onClick={dismissNotification}
-        className="shrink-0 text-xs opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="Dismiss"
-      >
-        ✕
-      </button>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px' }}>
+        <AlertTriangle style={{ width: 18, height: 18, color: titleColor, flexShrink: 0, marginTop: 1 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: titleColor, lineHeight: 1.3 }}>
+            Moving to {destination}
+          </p>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>
+            Switching in <span style={{ color: titleColor, fontWeight: 600 }}>{countdown}s</span>
+          </p>
+        </div>
+        <button
+          onClick={dismissNotification}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'rgba(255,255,255,0.4)',
+            fontSize: 16,
+            lineHeight: 1,
+            padding: '2px 4px',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+          aria-label="Dismiss"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }
