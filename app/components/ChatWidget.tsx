@@ -60,7 +60,7 @@ function JoinButton({ onJoin }: { onJoin: () => void }) {
         aria-label="Join voice chat"
       >
         <Phone className="w-4 h-4 group-hover:text-dota-gold transition-colors" />
-        Voice Chat
+        Join Voice Chat
       </button>
     </div>
   );
