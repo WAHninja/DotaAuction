@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
   // is always a UI bug, not a malicious request.
   const playerIds: number[] = [...new Set(rawPlayerIds as number[])];
 
-  if (playerIds.length < 4) {
+  if (playerIds.length < 3) {
     return NextResponse.json(
-      { error: 'At least 4 distinct players are required.' },
+      { error: 'At least 3 distinct players are required.' },
       { status: 400 }
     );
   }
