@@ -4,6 +4,20 @@
 @tailwind utilities;
 
 /* =============================================================================
+   DESIGN TOKENS — RGB channel values for opacity-variant colours
+   Using channel variables (R G B) lets us write rgb(var(--ch-gold) / 0.15)
+   everywhere instead of repeating hardcoded rgba() literals. The hex source of
+   truth stays in tailwind.config; only the channels are mirrored here.
+   ============================================================================= */
+
+:root {
+  --ch-gold:    200 169 81;
+  --ch-radiant: 74  155 60;
+  --ch-dire:    192 57  43;
+  --ch-info:    77  123 181;
+}
+
+/* =============================================================================
    BASE — default element styles
    Applied globally. Scoped overrides should live in the component.
    ============================================================================= */
@@ -31,7 +45,9 @@
 
   /* Barlow Condensed for sub-headings — readable, compact, UI-native */
   h4, h5, h6 {
-    @apply font-barlow font-semibold tracking-wide uppercase;
+    /* tracking-wide = 0.025em in Tailwind; letter-spacing: 0.08em is intentionally
+       wider than that, so we set it directly and skip the @apply to avoid conflict. */
+    @apply font-barlow font-semibold uppercase;
     color: theme('colors.dota-text-muted');
     letter-spacing: 0.08em;
   }
@@ -122,20 +138,23 @@
     Secondary: surface — secondary actions (View, cancel)
     Danger: dire red — destructive actions
     Ghost: transparent with border — low-emphasis actions
+    Radiant: green — team/win affirmation actions
   */
   .btn {
     @apply inline-flex items-center justify-center gap-2;
-    @apply font-barlow font-semibold tracking-wide;
+    @apply font-barlow font-semibold;
     @apply px-5 py-2.5 rounded-md;
     @apply transition-all duration-150;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
+    /* 0.06em doesn't map to a Tailwind tracking step, set directly */
     letter-spacing: 0.06em;
   }
 
   .btn-primary {
     @apply btn;
     background-color: theme('colors.dota-gold');
-    color: #0d1117;
+    /* dota-base matches the dark background the label sits over */
+    color: theme('colors.dota-base');
     border: 1px solid theme('colors.dota-gold-dark');
   }
   .btn-primary:hover:not(:disabled) {
@@ -156,6 +175,9 @@
     background-color: theme('colors.dota-raised');
     border-color: theme('colors.dota-gold-dark');
   }
+  .btn-secondary:active:not(:disabled) {
+    background-color: theme('colors.dota-deep');
+  }
 
   .btn-danger {
     @apply btn;
@@ -166,6 +188,10 @@
   .btn-danger:hover:not(:disabled) {
     background-color: theme('colors.dota-dire-light');
     box-shadow: theme('boxShadow.dire');
+  }
+  .btn-danger:active:not(:disabled) {
+    background-color: theme('colors.dota-dire');
+    filter: brightness(0.85);
   }
 
   .btn-ghost {
@@ -178,6 +204,9 @@
     color: theme('colors.dota-text');
     border-color: theme('colors.dota-border-bright');
   }
+  .btn-ghost:active:not(:disabled) {
+    background-color: theme('colors.dota-overlay');
+  }
 
   .btn-radiant {
     @apply btn;
@@ -188,6 +217,10 @@
   .btn-radiant:hover:not(:disabled) {
     background-color: theme('colors.dota-radiant-light');
     box-shadow: theme('boxShadow.radiant');
+  }
+  .btn-radiant:active:not(:disabled) {
+    background-color: theme('colors.dota-radiant');
+    filter: brightness(0.85);
   }
 
   /* ── Inputs ───────────────────────────────────────────────────────────────── */
@@ -207,6 +240,10 @@
   .input:focus {
     border-color: theme('colors.dota-gold-dark');
     box-shadow: theme('boxShadow.gold');
+    /* Explicit outline ensures focus is visible in high-contrast mode and
+       when box-shadow is suppressed by OS accessibility settings. */
+    outline: 2px solid theme('colors.dota-gold-dark');
+    outline-offset: 1px;
   }
   .input:disabled {
     @apply opacity-40 cursor-not-allowed;
@@ -219,95 +256,99 @@
   */
   .badge {
     @apply inline-flex items-center gap-1.5;
-    @apply font-barlow font-semibold tracking-wide;
+    @apply font-barlow font-semibold;
     @apply px-3 py-1 rounded-sm text-sm;
     letter-spacing: 0.06em;
   }
 
   .badge-gold {
     @apply badge;
-    background-color: rgba(200, 169, 81, 0.15);
+    background-color: rgb(var(--ch-gold) / 0.15);
     color: theme('colors.dota-gold');
-    border: 1px solid rgba(200, 169, 81, 0.35);
+    border: 1px solid rgb(var(--ch-gold) / 0.35);
   }
 
   .badge-radiant {
     @apply badge;
-    background-color: rgba(74, 155, 60, 0.15);
+    background-color: rgb(var(--ch-radiant) / 0.15);
     color: theme('colors.dota-radiant-light');
-    border: 1px solid rgba(74, 155, 60, 0.35);
+    border: 1px solid rgb(var(--ch-radiant) / 0.35);
   }
 
   .badge-dire {
     @apply badge;
-    background-color: rgba(192, 57, 43, 0.15);
+    background-color: rgb(var(--ch-dire) / 0.15);
     color: theme('colors.dota-dire-light');
-    border: 1px solid rgba(192, 57, 43, 0.35);
+    border: 1px solid rgb(var(--ch-dire) / 0.35);
   }
 
   .badge-info {
     @apply badge;
-    background-color: rgba(77, 123, 181, 0.15);
-    color: #7aaad4;
-    border: 1px solid rgba(77, 123, 181, 0.35);
+    background-color: rgb(var(--ch-info) / 0.15);
+    color: theme('colors.dota-info');
+    border: 1px solid rgb(var(--ch-info) / 0.35);
   }
 
   /* ── Offer tier badges ────────────────────────────────────────────────────── */
   /*
-    Distinct from team/status badges. These are the Low/Medium/High labels
-    shown in AuctionHouse and GameHistory. Slightly larger, pill-shaped.
+    Distinct from team/status badges: these are the Low/Medium/High labels
+    shown in AuctionHouse and GameHistory.
+    Unified with .badge — same shape, same font, same rounded-sm radius.
+
+    Colour scale communicates ascending value:
+      Low    = blue  (informational / low-stakes)
+      Medium = gold  (moderate value)
+      High   = green (premium / radiant — intentionally NOT red to avoid
+                      collision with the Dire/danger colour palette)
   */
   .tier-badge {
     @apply inline-flex items-center;
     @apply font-barlow font-bold;
-    @apply px-2 py-0.5 rounded text-sm;
+    @apply px-2 py-0.5 rounded-sm text-sm;
     letter-spacing: 0.05em;
   }
 
   .tier-low {
     @apply tier-badge;
-    background-color: rgba(77, 123, 181, 0.2);
-    color: #7aaad4;
-    border: 1px solid rgba(77, 123, 181, 0.4);
+    background-color: rgb(var(--ch-info) / 0.2);
+    color: theme('colors.dota-info');
+    border: 1px solid rgb(var(--ch-info) / 0.4);
   }
 
   .tier-medium {
     @apply tier-badge;
-    background-color: rgba(200, 169, 81, 0.2);
+    background-color: rgb(var(--ch-gold) / 0.2);
     color: theme('colors.dota-gold-light');
-    border: 1px solid rgba(200, 169, 81, 0.4);
+    border: 1px solid rgb(var(--ch-gold) / 0.4);
   }
 
   .tier-high {
     @apply tier-badge;
-    background-color: rgba(192, 57, 43, 0.2);
-    color: theme('colors.dota-dire-light');
-    border: 1px solid rgba(192, 57, 43, 0.4);
+    /* Green — signals premium/high value. Red was misleading here because it
+       matched the Dire/danger palette and implied something negative. */
+    background-color: rgb(var(--ch-radiant) / 0.2);
+    color: theme('colors.dota-radiant-light');
+    border: 1px solid rgb(var(--ch-radiant) / 0.4);
   }
 
   /* ── Dividers ─────────────────────────────────────────────────────────────── */
-  .divider {
+  /*
+    Both dividers share the same fade stop positions (30%/70%).
+    The only difference is the colour, driven by a CSS custom property
+    so the stop logic lives in one place.
+  */
+  .divider, .divider-gold {
     height: 1px;
     background: linear-gradient(
       to right,
       transparent,
-      theme('colors.dota-border-bright') 30%,
-      theme('colors.dota-border-bright') 70%,
+      var(--divider-color) 30%,
+      var(--divider-color) 70%,
       transparent
     );
   }
-
-  /* Gold divider — for section headings on dark backgrounds */
-  .divider-gold {
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      rgba(200, 169, 81, 0.5) 30%,
-      rgba(200, 169, 81, 0.5) 70%,
-      transparent
-    );
-  }
+  .divider      { --divider-color: theme('colors.dota-border-bright'); }
+  .divider-gold { --divider-color: rgb(var(--ch-gold) / 0.5); }
 
   /* ── Team card backgrounds ────────────────────────────────────────────────── */
   /*
@@ -324,15 +365,23 @@
   }
 
   /* ── Section heading style ────────────────────────────────────────────────── */
+  /*
+    Can be applied to any element, not just h1-h3, so font-cinzel is kept here
+    even though it's redundant when applied to headings that already inherit it
+    from the base layer above.
+  */
   .section-heading {
     @apply font-cinzel text-3xl font-bold text-center;
     color: theme('colors.dota-gold');
-    text-shadow: 0 0 20px rgba(200, 169, 81, 0.2);
+    text-shadow: 0 0 20px rgb(var(--ch-gold) / 0.2);
   }
 
   /* ── Stat label + value pair ──────────────────────────────────────────────── */
   .stat-label {
-    @apply font-barlow text-xs font-semibold uppercase tracking-widest;
+    /* 0.1em doesn't map to a Tailwind tracking step, set directly.
+       Previously this also had @apply tracking-widest which resolves to the same
+       0.1em — the duplicate has been removed. */
+    @apply font-barlow text-xs font-semibold uppercase;
     color: theme('colors.dota-text-muted');
     letter-spacing: 0.1em;
   }
@@ -348,6 +397,16 @@
    UTILITIES — one-off helpers that don't warrant a component class
    ============================================================================= */
 
+/*
+  @keyframes are always global scope regardless of @layer — wrapping them in
+  @layer utilities has no scoping effect and is misleading. Defined here,
+  outside any layer, to make the global nature explicit.
+*/
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @layer utilities {
 
   /* ── Animations ───────────────────────────────────────────────────────────── */
@@ -355,22 +414,17 @@
     animation: fadeIn 0.4s ease-out forwards;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
   /* ── Text glow ────────────────────────────────────────────────────────────── */
   .text-glow-gold {
-    text-shadow: 0 0 12px rgba(200, 169, 81, 0.5);
+    text-shadow: 0 0 12px rgb(var(--ch-gold) / 0.5);
   }
 
   .text-glow-radiant {
-    text-shadow: 0 0 12px rgba(74, 155, 60, 0.5);
+    text-shadow: 0 0 12px rgb(var(--ch-radiant) / 0.5);
   }
 
   .text-glow-dire {
-    text-shadow: 0 0 12px rgba(192, 57, 43, 0.5);
+    text-shadow: 0 0 12px rgb(var(--ch-dire) / 0.5);
   }
 
   /* ── Truncation ───────────────────────────────────────────────────────────── */
