@@ -122,7 +122,7 @@ export default function ChatWidget() {
             startWithAudioMuted:  false,
             startWithVideoMuted:  true,
             disableDeepLinking:   true,
-            prejoinPageEnabled:   false,
+            prejoinPageEnabled: false, prejoinConfig: { enabled: false },
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK:      false,
