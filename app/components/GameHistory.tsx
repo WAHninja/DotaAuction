@@ -105,7 +105,7 @@ function formatNW(val: number): string {
 function TierBadge({ tier }: { tier: TierLabel | null }) {
   if (!tier) return null;
   const cls = tier === 'Low' ? 'tier-low' : tier === 'Medium' ? 'tier-medium' : 'tier-high';
-  return <span className={`${cls} text-[10px]`}>{tier}</span>;
+  return <span className={cls}>{tier}</span>;
 }
 
 function TeamScoreboard({
