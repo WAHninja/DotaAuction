@@ -1,13 +1,42 @@
 'use client';
 
 import { useContext, useEffect, useRef, useState } from 'react';
-import Daily, { type DailyCall } from '@daily-co/daily-js';
 import {
   Minimize2, Maximize2, PhoneOff, Phone,
   Lock, Users, MicOff,
 } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import { useJitsi, MAIN_ROOM } from '@/app/context/JitsiContext';
+
+// ---------------------------------------------------------------------------
+// JaaS config — set NEXT_PUBLIC_JAAS_APP_ID in your .env.local
+// ---------------------------------------------------------------------------
+const JAAS_APP_ID = process.env.NEXT_PUBLIC_JAAS_APP_ID!;
+const JAAS_DOMAIN = '8x8.vc';
+
+// ---------------------------------------------------------------------------
+// Load the Jitsi External API script once
+// ---------------------------------------------------------------------------
+
+let scriptPromise: Promise<void> | null = null;
+
+function loadJitsiScript(): Promise<void> {
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return resolve();
+    if ((window as any).JitsiMeetExternalAPI) return resolve();
+    const script = document.createElement('script');
+    script.src = `https://${JAAS_DOMAIN}/libs/external_api.min.js`;
+    script.async = true;
+    script.onload  = () => resolve();
+    script.onerror = () => {
+      scriptPromise = null; // allow retry on next attempt
+      reject(new Error('Failed to load Jitsi script'));
+    };
+    document.head.appendChild(script);
+  });
+  return scriptPromise;
+}
 
 // ---------------------------------------------------------------------------
 // Join button — shown before the user enters voice chat
@@ -49,7 +78,7 @@ export default function ChatWidget() {
   const { hasJoined, isMinimized, currentRoom, joinChat, leaveChat, toggleMinimize } = useJitsi();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const apiRef       = useRef<DailyCall | null>(null);
+  const apiRef       = useRef<any>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
@@ -62,52 +91,67 @@ export default function ChatWidget() {
     let mounted = true;
 
     async function init() {
-      // Tear down any existing session
+      // Tear down any existing Jitsi instance
       if (apiRef.current) {
-        try { apiRef.current.destroy(); } catch { /* ignore */ }
+        try { apiRef.current.dispose(); } catch { /* ignore */ }
         apiRef.current = null;
-      }
-
-      // Clear any previous iframe content
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
       }
 
       setConnecting(true);
       setError(null);
 
       try {
-        // Fetch a short-lived Daily meeting token from our backend
-        const tokenRes = await fetch(
-          `/api/daily/token?room=${encodeURIComponent(currentRoom)}`
-        );
+        // Load external API script and fetch JWT in parallel
+        const [, tokenRes] = await Promise.all([
+          loadJitsiScript(),
+          fetch(`/api/jaas/token?room=${encodeURIComponent(currentRoom)}`),
+        ]);
+
         if (!tokenRes.ok) throw new Error('Failed to get meeting token');
         const { token } = await tokenRes.json();
 
         if (!mounted || !containerRef.current) return;
 
-        const call = Daily.createFrame(containerRef.current, {
-          iframeStyle: { width: '100%', height: '100%', border: 'none', borderRadius: '0' },
-          showLeaveButton: false,
-          showFullscreenButton: false,
-          showLocalVideo: false,
+        const api = new (window as any).JitsiMeetExternalAPI(JAAS_DOMAIN, {
+          roomName:   `${JAAS_APP_ID}/${currentRoom}`,
+          jwt:        token,
+          parentNode: containerRef.current,
+          width:      '100%',
+          height:     '100%',
+          configOverwrite: {
+            startWithAudioMuted:  false,
+            startWithVideoMuted:  true,
+            disableDeepLinking:   true,
+            prejoinPageEnabled:   false,
+          },
+          interfaceConfigOverwrite: {
+            SHOW_JITSI_WATERMARK:      false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            TOOLBAR_BUTTONS: [
+              'microphone', 'hangup', 'tileview', 'settings',
+            ],
+            SETTINGS_SECTIONS: ['devices'],
+            DEFAULT_BACKGROUND: '#111827',
+            MOBILE_APP_PROMO:   false,
+          },
         });
 
-        call.on('joined-meeting', () => { if (mounted) setConnecting(false); });
-        call.on('left-meeting',   () => { if (mounted) leaveChat(); });
-        call.on('error',          () => {
+        api.addEventListener('videoConferenceJoined', () => {
+          if (mounted) setConnecting(false);
+        });
+
+        api.addEventListener('readyToClose', () => {
+          if (mounted) leaveChat();
+        });
+
+        api.addEventListener('errorOccurred', () => {
           if (mounted) {
             setError('Connection error. Try leaving and rejoining.');
             setConnecting(false);
           }
         });
 
-        await call.join({
-          url: `https://dotaauction.daily.co/${currentRoom}`,
-          token,
-        });
-
-        apiRef.current = call;
+        apiRef.current = api;
 
       } catch (err) {
         if (mounted) {
@@ -125,20 +169,19 @@ export default function ChatWidget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasJoined, currentRoom, user?.id]);
 
-  // ---- Destroy call when user leaves ------------------------------------
+  // ---- Dispose when user leaves ----------------------------------------
   useEffect(() => {
     if (!hasJoined && apiRef.current) {
-      try { apiRef.current.destroy(); } catch { /* ignore */ }
+      try { apiRef.current.dispose(); } catch { /* ignore */ }
       apiRef.current = null;
-      if (containerRef.current) containerRef.current.innerHTML = '';
     }
   }, [hasJoined]);
 
-  // ---- Destroy call on unmount ------------------------------------------
+  // ---- Dispose on unmount -----------------------------------------------
   useEffect(() => {
     return () => {
       if (apiRef.current) {
-        try { apiRef.current.destroy(); } catch { /* ignore */ }
+        try { apiRef.current.dispose(); } catch { /* ignore */ }
       }
     };
   }, []);
@@ -196,7 +239,7 @@ export default function ChatWidget() {
         </div>
       </div>
 
-      {/* ── Daily iframe container — always mounted, hidden when minimised ─ */}
+      {/* ── Jitsi container — always mounted, hidden when minimised ─────── */}
       <div
         style={{
           height: isMinimized ? 0 : WIDGET_H,
@@ -206,7 +249,7 @@ export default function ChatWidget() {
         }}
       >
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center z-10">
             <MicOff className="w-6 h-6 text-dota-dire-light" />
             <p className="font-barlow text-xs text-dota-text-muted">{error}</p>
             <button
