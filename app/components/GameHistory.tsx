@@ -159,7 +159,7 @@ function TeamScoreboard({
         <span className="stat-label">PLAYER{hasDotaStats ? ' · HERO' : ''}</span>
         {hasDotaStats && <span className="stat-label text-center">K / D / A</span>}
         {hasDotaStats && <span className="stat-label text-right">NET WORTH</span>}
-        <span className="stat-label text-right">GOLD Δ</span>
+        <span className="stat-label text-right">GOLD CHANGE</span>
         {/* "OFFER SUBMITTED" clarifies this shows what the player offered outbound,
             not what was offered for them. */}
         {hasAuction && <span className="stat-label">OFFER SUBMITTED</span>}
