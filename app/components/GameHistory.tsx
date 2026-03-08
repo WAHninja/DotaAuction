@@ -14,21 +14,14 @@ import type {
   OfferStatus,
 } from '@/types';
 
-// ---------------------------------------------------------------------------
-// Unified per-player row data — merges all four data sources
-// ---------------------------------------------------------------------------
-
 type UnifiedPlayer = {
   username:    string;
-  // Dota in-game stats (null for pre-reporting games)
   hero:        string | null;
   kills:       number | null;
   deaths:      number | null;
   assists:     number | null;
   netWorth:    number | null;
-  // Gold ledger (sum of all game_player_stats rows for this player)
   goldTotal:   number | null;
-  // Auction involvement
   sellerInfo: {
     targetUsername: string;
     amount: number | null;
@@ -75,15 +68,6 @@ function buildUnifiedPlayers(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-// cdn.cloudflare.steamstatic.com is the canonical Valve-maintained CDN.
-// cdn.dota2.com has a broken SSL certificate (ERR_CERT_COMMON_NAME_INVALID).
-// The path and filename format (_sb = small banner, 59×33px) are identical.
-// cdn.cloudflare.steamstatic.com matches the *.steamstatic.com pattern already
-// in next.config.js so no config change is required.
 function heroIconUrl(hero: string): string {
   const name = hero.replace(/^npc_dota_hero_/, '');
   return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/heroes/${name}_sb.png`;
@@ -117,10 +101,6 @@ function TierBadge({ tier }: { tier: TierLabel | null }) {
   const cls = tier === 'Low' ? 'tier-low' : tier === 'Medium' ? 'tier-medium' : 'tier-high';
   return <span className={`${cls} text-[10px]`}>{tier}</span>;
 }
-
-// ---------------------------------------------------------------------------
-// Team scoreboard — single unified table per team
-// ---------------------------------------------------------------------------
 
 function TeamScoreboard({
   teamId, label, players, isWinner, hasDotaStats, hasAuction,
@@ -265,10 +245,6 @@ function TeamScoreboard({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Game card
-// ---------------------------------------------------------------------------
-
 function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const accepted     = game.offers.find(o => o.status === 'accepted');
@@ -303,12 +279,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
 
             {isFinalGame && (
               <span className="badge-gold text-xs py-0.5">Final Game</span>
-            )}
-
-            {hasDotaStats && !expanded && (
-              <span className="font-barlow text-[9px] font-semibold uppercase tracking-widest text-dota-text-dim border border-dota-border rounded px-1.5 py-0.5">
-                K/D/A
-              </span>
             )}
           </div>
 
@@ -375,10 +345,6 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Public export
-// ---------------------------------------------------------------------------
 
 export default function GameHistory({
   history,
