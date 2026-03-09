@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import '@excalidraw/excalidraw/index.css';
 import Link from 'next/link';
 import { ArrowLeft, Wifi, WifiOff } from 'lucide-react';
 import supabaseClient from '@/lib/supabase-client';
 
-// Excalidraw uses browser-only APIs — must be dynamically imported.
 const ExcalidrawComponent = dynamic(
   async () => {
     const { Excalidraw } = await import('@excalidraw/excalidraw');
@@ -14,7 +14,7 @@ const ExcalidrawComponent = dynamic(
   },
   {
     ssr: false,
-    loading: () => <div className="flex-1 w-full h-full bg-[#121212]" />,
+    loading: () => <div style={{ height: 'calc(100vh - 52px)' }} className="w-full bg-[#121212]" />,
   }
 );
 
@@ -49,16 +49,11 @@ function ConnectionBadge({ status }: { status: 'connecting' | 'online' | 'offlin
 export default function WhiteboardClient({ roomId, username, userId }: Props) {
   const [connStatus, setConnStatus] = useState<'connecting' | 'online' | 'offline'>('connecting');
 
-  // Refs — all mutable state that must not re-render the component
-  const apiRef         = useRef<any>(null);
-  const channelRef     = useRef<any>(null);
-  const isRemote       = useRef(false);   // true while applying a remote update
-  const debounceTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const apiRef        = useRef<any>(null);
+  const channelRef    = useRef<any>(null);
+  const isRemote      = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Supabase Realtime channel ────────────────────────────────────────────
-  // Broadcasts the full scene (elements only — appState is local-only) to
-  // all other clients in the same room. Using broadcast rather than presence
-  // or database keeps latency low and avoids writing draw data to Postgres.
   useEffect(() => {
     if (!supabaseClient) {
       setConnStatus('offline');
@@ -68,20 +63,16 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
     const channel = supabaseClient
       .channel(`whiteboard-${roomId}`)
       .on('broadcast', { event: 'scene' }, ({ payload }) => {
-        // Drop our own echoes
         if (payload.senderId === userId) return;
         if (!apiRef.current) return;
-
-        // Apply remote elements without triggering our own broadcast
         isRemote.current = true;
         apiRef.current.updateScene({ elements: payload.elements });
-        // Reset after the synchronous React update cycle completes
         setTimeout(() => { isRemote.current = false; }, 0);
       })
       .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED')    setConnStatus('online');
+        if (status === 'SUBSCRIBED')         setConnStatus('online');
         else if (status === 'CHANNEL_ERROR') setConnStatus('offline');
-        else                            setConnStatus('connecting');
+        else                                 setConnStatus('connecting');
       });
 
     channelRef.current = channel;
@@ -93,15 +84,10 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
     };
   }, [roomId, userId]);
 
-  // ── Broadcast local changes ──────────────────────────────────────────────
-  // Debounced so we don't flood the channel on every pointer move.
-  // We only send elements — appState (zoom, scroll, selected tool) is
-  // intentionally kept local so users don't hijack each other's viewports.
   const handleChange = useCallback(
     (elements: readonly any[]) => {
       if (isRemote.current) return;
       if (!channelRef.current) return;
-
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         channelRef.current?.send({
@@ -115,12 +101,11 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
   );
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col" style={{ top: 0 }}>
-
-      {/* ── Toolbar ──────────────────────────────────────────────────────── */}
+    <>
+      {/* ── Toolbar ── */}
       <div
         className="
-          relative z-40 flex items-center justify-between gap-4
+          fixed top-0 inset-x-0 z-40 flex items-center justify-between gap-4
           px-4 py-2.5
           bg-dota-surface/95 backdrop-blur-md
           border-b border-dota-border shadow-raised
@@ -146,22 +131,23 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
         <ConnectionBadge status={connStatus} />
       </div>
 
-      {/* ── Excalidraw canvas ─────────────────────────────────────────────── */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* ── Excalidraw canvas — sits below the 52px toolbar ── */}
+      <div
+        className="fixed inset-x-0 bottom-0"
+        style={{ top: 52, height: 'calc(100vh - 52px)' }}
+      >
         <ExcalidrawComponent
           excalidrawAPI={(api: any) => { apiRef.current = api; }}
           onChange={handleChange}
           theme="dark"
           UIOptions={{
             canvasActions: {
-              // Disable file-based actions that don't make sense in a
-              // shared session — saving to disk is per-user anyway
               saveToActiveFile: false,
               loadScene: false,
             },
           }}
         />
       </div>
-    </div>
+    </>
   );
 }
