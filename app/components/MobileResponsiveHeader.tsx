@@ -138,7 +138,7 @@ function DesktopPrimaryLinks({ pathname }: DesktopPrimaryLinksProps) {
         className={`${navLink('/whiteboard', pathname)} flex items-center gap-1.5`}
       >
         <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-        Draw
+        Scribbles
       </Link>
     </>
   );
@@ -179,6 +179,11 @@ function UserMenuDropdown({ user, hasUnseen, pathname }: UserMenuDropdownProps) 
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [open]);
+
+  // Close on navigation (e.g. after logout redirects to /login)
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <div ref={containerRef} className="relative">
