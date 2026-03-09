@@ -56,7 +56,7 @@ export async function GET(
         team_a_members: number[];
         created_at: string;
       }>(
-        `SELECT id, match_id, status, winning_team, team_1_members, team_a_members, created_at
+        `SELECT id, match_id, status, winning_team, team_1_members, team_a_members, created_at, phase
          FROM games
          WHERE match_id = $1
          ORDER BY id ASC`,
