@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import { usePathname }  from 'next/navigation';
-import { Menu, X, ScrollText, User, LayoutDashboard } from 'lucide-react';
+import { Menu, X, ScrollText, User, LayoutDashboard, PenLine } from 'lucide-react';
 import { UserContext }          from '@/app/context/UserContext';
 import LogoutButton             from './LogoutButton';
 import { useChangelogBadge }    from '@/app/hooks/useChangelogBadge';
@@ -87,6 +87,10 @@ function AccentBar({ pathname }: { pathname: string }) {
 
 type NavUser = { username: string } | null;
 
+// =============================================================================
+// DesktopNav
+// =============================================================================
+
 type DesktopNavProps = {
   user:      NavUser;
   hasUnseen: boolean;
@@ -107,8 +111,16 @@ function DesktopNav({ user, hasUnseen, pathname }: DesktopNavProps) {
       </Link>
 
       <Link
+        href="/whiteboard"
+        className={`${navLink('/whiteboard', pathname)} flex items-center gap-1.5`}
+      >
+        <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
+        Whiteboard
+      </Link>
+
+      <Link
         href="/profile"
-        className={`${navLink("/profile", pathname)} flex items-center gap-1.5`}
+        className={`${navLink('/profile', pathname)} flex items-center gap-1.5`}
       >
         <User className="w-3.5 h-3.5" aria-hidden="true" />
         {user.username}
@@ -134,6 +146,10 @@ function DesktopNav({ user, hasUnseen, pathname }: DesktopNavProps) {
     </>
   );
 }
+
+// =============================================================================
+// MobileDrawer
+// =============================================================================
 
 type MobileDrawerProps = {
   isOpen:    boolean;
@@ -208,6 +224,15 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
               </Link>
 
               <Link
+                href="/whiteboard"
+                onClick={onClose}
+                className={mobileNavLink('/whiteboard', pathname)}
+              >
+                <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
+                Whiteboard
+              </Link>
+
+              <Link
                 href="/profile"
                 onClick={onClose}
                 className={mobileNavLink('/profile', pathname)}
@@ -268,6 +293,10 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
     </>
   );
 }
+
+// =============================================================================
+// MobileResponsiveHeader
+// =============================================================================
 
 export default function MobileResponsiveHeader() {
   const { user, loading: authLoading } = useContext(UserContext);
