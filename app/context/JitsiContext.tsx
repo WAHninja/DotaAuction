@@ -14,10 +14,18 @@ import {
 // Room naming
 // ---------------------------------------------------------------------------
 
-export const MAIN_ROOM = 'DotA-Auctions-Main-Lobby-v2';
+export const MAIN_ROOM = 'Main-Lobby';
 
 export function getLoserRoom(gameId: number): string {
-  return `DotA-Auctions-Losers-Game-${gameId}`;
+  return `Losers-Lounge-Game-${gameId}`;
+}
+
+export function getTeam1DraftRoom(gameId: number): string {
+  return `Draft-Team1-Game-${gameId}`;
+}
+
+export function getTeamADraftRoom(gameId: number): string {
+  return `Draft-TeamA-Game-${gameId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -29,6 +37,14 @@ export type RoomNotification = {
   countdown:   number;   // seconds remaining
   isLoserRoom: boolean;
 };
+
+export type RoomType = 'main' | 'loser' | 'draft';
+
+export function getRoomType(room: string): RoomType {
+  if (room === MAIN_ROOM)         return 'main';
+  if (room.includes('Draft'))     return 'draft';
+  return 'loser';
+}
 
 type JitsiContextType = {
   hasJoined:        boolean;
