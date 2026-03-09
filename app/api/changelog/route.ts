@@ -22,7 +22,10 @@ export async function GET() {
 
   const lastSeen: Date | null = userResult.rows[0]?.last_seen_changelog ?? null;
   const latest: Date | null   = notesResult.rows[0]?.released_at ?? null;
-  const hasUnseen             = !lastSeen || (latest && latest > lastSeen);
+  // latest must exist before we can have anything unseen.
+  // The old expression (!lastSeen || ...) returned true whenever lastSeen
+  // was null — including when there are zero patch notes in the DB.
+  const hasUnseen             = !!latest && (!lastSeen || latest > lastSeen);
 
   return NextResponse.json({
     notes: notesResult.rows,
