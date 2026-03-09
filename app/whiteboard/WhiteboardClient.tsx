@@ -74,6 +74,7 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
   const store = useSyncDemo({
     roomId,
     userInfo: {
+      id:    String(userId),
       name:  username,
       color: colorForUserId(userId),
     },
