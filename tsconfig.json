@@ -18,6 +18,7 @@
     "paths": {
       "@/*": ["*"]
     },
+    "typeRoots": ["node_modules/@types"],
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx"],
