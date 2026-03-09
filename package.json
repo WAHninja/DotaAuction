@@ -24,12 +24,14 @@
     "recharts": "^2.7.2",
     "tldraw": "latest",
     "@tldraw/sync": "latest"
-
   },
   "devDependencies": {
     "typescript": "^5.3.3",
     "@types/react": "^18.2.46",
     "@types/node": "^20.11.19",
+    "@types/bcryptjs": "latest",
+    "@types/pg": "latest",
+    "@types/ws": "latest",
     "tailwindcss": "^3.4.1",
     "postcss": "^8.4.38",
     "autoprefixer": "^10.4.17"
