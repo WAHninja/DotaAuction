@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -95,7 +95,6 @@ function TeamRoster({
 }
 
 // ── MatchCard ─────────────────────────────────────────────────────────────────
-// games_count comes directly from the dashboard server query — no client fetch needed.
 function MatchCard({
   match,
   isCompleted,
@@ -131,11 +130,6 @@ function MatchCard({
           )}
         </div>
 
-        {/*
-          Apply button classes directly to Link (<a>) rather than nesting a
-          <button> inside it. Interactive-inside-interactive is invalid HTML
-          and produces broken keyboard/screen reader behaviour.
-        */}
         <Link
           href={`/match/${match.id}`}
           className={isCompleted
@@ -249,28 +243,25 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const [activeTab, setActiveTab] = useState<Tab>('stats');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
-  // Default to showing only the current user's matches. They can toggle to see all.
   const [myMatchesOnly, setMyMatchesOnly] = useState(true);
 
   // ── Filter ───────────────────────────────────────────────────────────────────
-  const isMyMatch = (match: Match): boolean => {
+  const isMyMatch = useCallback((match: Match): boolean => {
     if (!user?.username) return true;
     return (
       (match.team_1_usernames ?? []).includes(user.username) ||
       (match.team_a_usernames ?? []).includes(user.username)
     );
-  };
+  }, [user?.username]);
 
   const filteredOngoing = useMemo(
     () => myMatchesOnly ? ongoingMatches.filter(isMyMatch) : ongoingMatches,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ongoingMatches, myMatchesOnly, user?.username]
+    [ongoingMatches, myMatchesOnly, isMyMatch]
   );
 
   const filteredCompleted = useMemo(
     () => myMatchesOnly ? completedMatches.filter(isMyMatch) : completedMatches,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [completedMatches, myMatchesOnly, user?.username]
+    [completedMatches, myMatchesOnly, isMyMatch]
   );
 
   const handleFilterToggle = () => {
