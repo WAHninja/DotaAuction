@@ -84,12 +84,12 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
   // The tldraw store exposes a `status` field on the sync object.
   useEffect(() => {
     const status = store?.status;
-    if (status === 'synced-remote' || status === 'synced-local') {
-      setConnStatus('online');
-    } else if (status === 'error') {
+    if (status === 'error') {
       setConnStatus('offline');
-    } else {
+    } else if (status === 'loading') {
       setConnStatus('connecting');
+    } else {
+      setConnStatus('online');
     }
   }, [store]);
 
