@@ -251,6 +251,12 @@ export type HeadToHead = {
 export type HallOfFameEntry = {
   holder: string;
   stat: string;
+  /**
+   * Optional secondary context shown beneath the stat in smaller text.
+   * Used to surface field size for achievements where it adds meaning —
+   * e.g. "5 players" on Fastest Win or Gold Difference records.
+   */
+  context?: string;
 };
 
 export type HallOfFameRecord = HallOfFameEntry[] | null;
