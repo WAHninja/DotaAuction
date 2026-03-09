@@ -34,43 +34,45 @@ export function getTeamADraftRoom(gameId: number): string {
 
 export type RoomNotification = {
   targetRoom:  string;
-  countdown:   number;   // seconds remaining
+  countdown:   number;
   isLoserRoom: boolean;
 };
 
 export type RoomType = 'main' | 'loser' | 'draft';
 
 export function getRoomType(room: string): RoomType {
-  if (room === MAIN_ROOM)         return 'main';
-  if (room.includes('Draft'))     return 'draft';
+  if (room === MAIN_ROOM)     return 'main';
+  if (room.includes('Draft')) return 'draft';
   return 'loser';
 }
 
 type JitsiContextType = {
-  hasJoined:        boolean;
-  isMinimized:      boolean;
-  currentRoom:      string;
-  notification:     RoomNotification | null;
-  joinChat:         () => void;
-  leaveChat:        () => void;
-  switchRoom:       (room: string) => void;
-  toggleMinimize:   () => void;
+  hasJoined:           boolean;
+  isMinimized:         boolean;
+  currentRoom:         string;
+  pendingRoom:         string | null;  // room being pre-loaded during countdown
+  notification:        RoomNotification | null;
+  joinChat:            () => void;
+  leaveChat:           () => void;
+  switchRoom:          (room: string) => void;
+  toggleMinimize:      () => void;
   dismissNotification: () => void;
 };
 
 export const JitsiContext = createContext<JitsiContextType>({
-  hasJoined:        false,
-  isMinimized:      false,
-  currentRoom:      MAIN_ROOM,
-  notification:     null,
-  joinChat:         () => {},
-  leaveChat:        () => {},
-  switchRoom:       () => {},
-  toggleMinimize:   () => {},
+  hasJoined:           false,
+  isMinimized:         false,
+  currentRoom:         MAIN_ROOM,
+  pendingRoom:         null,
+  notification:        null,
+  joinChat:            () => {},
+  leaveChat:           () => {},
+  switchRoom:          () => {},
+  toggleMinimize:      () => {},
   dismissNotification: () => {},
 });
 
-const COUNTDOWN_SECS = 5;
+export const COUNTDOWN_SECS = 5;
 
 // ---------------------------------------------------------------------------
 // Audio notification — two-tone beep via Web Audio API (no file needed)
@@ -79,7 +81,7 @@ const COUNTDOWN_SECS = 5;
 function playRoomSwitchBeep(isLoserRoom: boolean) {
   if (typeof window === 'undefined') return;
   try {
-    const ctx = new AudioContext();
+    const ctx   = new AudioContext();
     const tones = isLoserRoom ? [880, 660] : [660, 880];
     tones.forEach((freq, i) => {
       const osc     = ctx.createOscillator();
@@ -107,19 +109,17 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
   const [hasJoined,    setHasJoined]    = useState(false);
   const [isMinimized,  setIsMinimized]  = useState(false);
   const [currentRoom,  setCurrentRoom]  = useState(MAIN_ROOM);
+  const [pendingRoom,  setPendingRoom]  = useState<string | null>(null);
   const [notification, setNotification] = useState<RoomNotification | null>(null);
 
-  // Hold the pending target so the interval can read it without stale closure
-  const pendingRoomRef  = useRef<string | null>(null);
-  const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Clean up any running countdown
   const clearCountdown = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    pendingRoomRef.current = null;
+    setPendingRoom(null);
     setNotification(null);
   }, []);
 
@@ -137,17 +137,16 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
   }, [clearCountdown]);
 
   const switchRoom = useCallback((room: string) => {
-    // No-op if already in that room or a countdown to that room is running
     setCurrentRoom(prev => {
       if (prev === room) return prev;
 
-      // Cancel any previous countdown that hasn't fired yet
       if (intervalRef.current) clearInterval(intervalRef.current);
-      pendingRoomRef.current = room;
 
-      const isLoserRoom = room !== MAIN_ROOM;
-      let remaining = COUNTDOWN_SECS;
+      const isLoserRoom = getRoomType(room) !== 'main';
+      let remaining     = COUNTDOWN_SECS;
 
+      // Signal ChatWidget to start pre-connecting immediately
+      setPendingRoom(room);
       setNotification({ targetRoom: room, countdown: remaining, isLoserRoom });
       playRoomSwitchBeep(isLoserRoom);
 
@@ -157,18 +156,16 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
           setNotification(null);
-          // Actually perform the switch
-          setCurrentRoom(pendingRoomRef.current ?? room);
-          pendingRoomRef.current = null;
+          // Promote pending → current; ChatWidget swaps visibility
+          setCurrentRoom(room);
+          setPendingRoom(null);
         } else {
           playRoomSwitchBeep(isLoserRoom);
-          setNotification(n =>
-            n ? { ...n, countdown: remaining } : null
-          );
+          setNotification(n => n ? { ...n, countdown: remaining } : null);
         }
       }, 1000);
 
-      return prev; // don't change room yet — wait for countdown
+      return prev; // don't change currentRoom yet — wait for countdown
     });
   }, []);
 
@@ -180,7 +177,6 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
     setIsMinimized(v => !v);
   }, []);
 
-  // Clean up on unmount
   useEffect(() => () => clearCountdown(), [clearCountdown]);
 
   return (
@@ -188,6 +184,7 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
       hasJoined,
       isMinimized,
       currentRoom,
+      pendingRoom,
       notification,
       joinChat,
       leaveChat,
