@@ -14,7 +14,7 @@ import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
-import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, ViewerState } from '@/types';
+import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, ViewerState, Player } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Stat computation helpers
@@ -178,9 +178,6 @@ export default function MatchPage() {
   );
 
   // ---- Jitsi room switching ------------------------------------------------
-  // When the game is in auction pending and the current user is on the losing
-  // team, move them to the loser's lounge. In all other states (in progress,
-  // finished, or not a participant), keep them in the main room.
   useEffect(() => {
     if (!hasJoined || !data?.latestGame || !user) return;
 
@@ -201,7 +198,6 @@ export default function MatchPage() {
       }
     }
 
-    // Winner, spectator, in-progress, or finished → main room
     switchRoom(MAIN_ROOM);
   }, [
     hasJoined,
@@ -299,14 +295,14 @@ export default function MatchPage() {
     : undefined;
   const winnerTimesTraded = computeTimesTraded(winnerName, history);
 
+  const isPlayer = (p: Player | undefined): p is Player => p !== undefined;
+
   return (
     <>
       {latestGame && (
         <MatchHeader
           matchId={matchId}
           latestGame={latestGame}
-          matchWinnerId={match.winner_id}
-          matchWinnerUsername={winnerName}
         />
       )}
 
@@ -326,7 +322,7 @@ export default function MatchPage() {
         <TeamCard
           name="Team 1"
           logo="/Team1.png"
-          players={team1.map(getPlayer).filter(Boolean)}
+          players={team1.map(getPlayer).filter(isPlayer)}
           teamId="team1"
           faction="radiant"
           currentUserId={currentUserId}
@@ -335,7 +331,7 @@ export default function MatchPage() {
         <TeamCard
           name="Team A"
           logo="/TeamA.png"
-          players={teamA.map(getPlayer).filter(Boolean)}
+          players={teamA.map(getPlayer).filter(isPlayer)}
           teamId="teamA"
           faction="dire"
           currentUserId={currentUserId}
