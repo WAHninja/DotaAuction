@@ -6,7 +6,7 @@ import {
   Lock, Users, MicOff, AlertTriangle, Swords
 } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
-import { useJitsi, MAIN_ROOM, getRoomType } from '@/app/context/JitsiContext';
+import { useJitsi, MAIN_ROOM, COUNTDOWN_SECS, getRoomType } from '@/app/context/JitsiContext';
 
 // ---------------------------------------------------------------------------
 // JaaS config
@@ -36,6 +36,68 @@ function loadJitsiScript(): Promise<void> {
     document.head.appendChild(script);
   });
   return scriptPromise;
+}
+
+// ---------------------------------------------------------------------------
+// Shared Jitsi config (audio-only)
+// ---------------------------------------------------------------------------
+
+function jitsiConfig() {
+  return {
+    configOverwrite: {
+      startWithAudioMuted:      false,
+      startWithVideoMuted:      true,
+      disableVideoMute:         true,
+      disableFilmstripAutohide: true,
+      disableDeepLinking:       true,
+      prejoinPageEnabled:       false,
+      prejoinConfig:            { enabled: false },
+      constraints:              { video: false },
+    },
+    interfaceConfigOverwrite: {
+      SHOW_JITSI_WATERMARK:      false,
+      SHOW_WATERMARK_FOR_GUESTS: false,
+      TOOLBAR_BUTTONS:           ['microphone', 'hangup', 'tileview', 'settings'],
+      SETTINGS_SECTIONS:         ['devices'],
+      DEFAULT_BACKGROUND:        '#111827',
+      MOBILE_APP_PROMO:          false,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Helper: spin up a Jitsi instance into a given DOM node
+// ---------------------------------------------------------------------------
+
+async function createJitsiInstance(
+  room: string,
+  node: HTMLDivElement,
+  onJoined: () => void,
+  onClose:  () => void,
+  onError:  () => void,
+): Promise<any> {
+  await loadJitsiScript();
+  const tokenRes = await fetch(`/api/jaas/token?room=${encodeURIComponent(room)}`);
+  if (!tokenRes.ok) throw new Error('Failed to get meeting token');
+  const { token } = await tokenRes.json();
+
+  const api = new (window as any).JitsiMeetExternalAPI(JAAS_DOMAIN, {
+    roomName:   `${JAAS_APP_ID}/${room}`,
+    jwt:        token,
+    parentNode: node,
+    width:      '100%',
+    height:     '100%',
+    ...jitsiConfig(),
+  });
+
+  api.addEventListener('videoConferenceJoined', () => {
+    try { api.executeCommand('stopVideo'); } catch { /* ignore */ }
+    onJoined();
+  });
+  api.addEventListener('readyToClose', onClose);
+  api.addEventListener('errorOccurred', onError);
+
+  return api;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,8 +132,6 @@ function JoinButton({ onJoin }: { onJoin: () => void }) {
 // Room-switch notification toast
 // ---------------------------------------------------------------------------
 
-const COUNTDOWN_SECS = 5;
-
 function RoomNotificationToast() {
   const { notification, dismissNotification } = useJitsi();
   if (!notification) return null;
@@ -80,11 +140,10 @@ function RoomNotificationToast() {
   const destination = isLoserRoom ? "Loser's Lounge" : 'Main Chat';
   const progress    = (countdown / COUNTDOWN_SECS) * 100;
 
-  // Solid colours — no transparency so text is always readable
-  const bg          = isLoserRoom ? '#3d0f0f' : '#1a1508';
-  const border      = isLoserRoom ? '#7f1d1d' : '#92400e';
-  const titleColor  = isLoserRoom ? '#fca5a5' : '#fcd34d';
-  const barColor    = isLoserRoom ? '#ef4444' : '#f59e0b';
+  const bg         = isLoserRoom ? '#3d0f0f' : '#1a1508';
+  const border     = isLoserRoom ? '#7f1d1d' : '#92400e';
+  const titleColor = isLoserRoom ? '#fca5a5' : '#fcd34d';
+  const barColor   = isLoserRoom ? '#ef4444' : '#f59e0b';
 
   return (
     <div
@@ -157,97 +216,51 @@ const WIDGET_H = 280;
 export default function ChatWidget() {
   const { user } = useContext(UserContext);
   const {
-    hasJoined, isMinimized, currentRoom,
+    hasJoined, isMinimized, currentRoom, pendingRoom,
     joinChat, leaveChat, toggleMinimize,
   } = useJitsi();
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const apiRef       = useRef<any>(null);
+  // Two containers — active (visible) and pending (hidden, pre-connecting)
+  const activeContainerRef  = useRef<HTMLDivElement>(null);
+  const pendingContainerRef = useRef<HTMLDivElement>(null);
+  const activeApiRef        = useRef<any>(null);
+  const pendingApiRef       = useRef<any>(null);
+
   const [connecting, setConnecting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
-  const roomType   = getRoomType(currentRoom);
+  const roomType = getRoomType(currentRoom);
 
-  // ---- Initialise / switch rooms ----------------------------------------
+  // ---- Helper: dispose an api instance safely ----------------------------
+  function disposeApi(ref: React.MutableRefObject<any>) {
+    if (ref.current) {
+      try { ref.current.dispose(); } catch { /* ignore */ }
+      ref.current = null;
+    }
+  }
+
+  // ---- Initial join ------------------------------------------------------
   useEffect(() => {
     if (!hasJoined || !user) return;
 
     let mounted = true;
 
     async function init() {
-      if (apiRef.current) {
-        try { apiRef.current.dispose(); } catch { /* ignore */ }
-        apiRef.current = null;
-      }
-
+      disposeApi(activeApiRef);
       setConnecting(true);
       setError(null);
 
       try {
-        const [, tokenRes] = await Promise.all([
-          loadJitsiScript(),
-          fetch(`/api/jaas/token?room=${encodeURIComponent(currentRoom)}`),
-        ]);
-
-        if (!tokenRes.ok) throw new Error('Failed to get meeting token');
-        const { token } = await tokenRes.json();
-
-        if (!mounted || !containerRef.current) return;
-
-        const api = new (window as any).JitsiMeetExternalAPI(JAAS_DOMAIN, {
-          roomName:   `${JAAS_APP_ID}/${currentRoom}`,
-          jwt:        token,
-          parentNode: containerRef.current,
-          width:      '100%',
-          height:     '100%',
-          configOverwrite: {
-            // Audio-only — disable video entirely
-            startWithAudioMuted:     false,
-            startWithVideoMuted:     true,
-            disableVideoMute:        true,   // hides the mute button so user can't re-enable
-            disableFilmstripAutohide: true,
-            disableDeepLinking:      true,
-            prejoinPageEnabled:      false,
-            prejoinConfig:           { enabled: false },
-            // Prevent camera from being started at all
-            constraints: {
-              video: false,
-            },
-          },
-          interfaceConfigOverwrite: {
-            SHOW_JITSI_WATERMARK:      false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            // No camera button in toolbar
-            TOOLBAR_BUTTONS: [
-              'microphone', 'hangup', 'tileview', 'settings',
-            ],
-            SETTINGS_SECTIONS: ['devices'],
-            DEFAULT_BACKGROUND: '#111827',
-            MOBILE_APP_PROMO:   false,
-          },
-        });
-
-        api.addEventListener('videoConferenceJoined', () => {
-          if (!mounted) return;
-          setConnecting(false);
-          // Ensure video stays off and can't be turned on
-          try { api.executeCommand('stopVideo'); } catch { /* ignore */ }
-        });
-
-        api.addEventListener('readyToClose', () => {
-          if (mounted) leaveChat();
-        });
-
-        api.addEventListener('errorOccurred', () => {
-          if (mounted) {
-            setError('Connection error. Try leaving and rejoining.');
-            setConnecting(false);
-          }
-        });
-
-        apiRef.current = api;
-
-      } catch (err) {
+        const api = await createJitsiInstance(
+          currentRoom,
+          activeContainerRef.current!,
+          () => { if (mounted) setConnecting(false); },
+          () => { if (mounted) leaveChat(); },
+          () => { if (mounted) { setError('Connection error. Try leaving and rejoining.'); setConnecting(false); } },
+        );
+        if (!mounted) { try { api.dispose(); } catch { /* ignore */ } return; }
+        activeApiRef.current = api;
+      } catch {
         if (mounted) {
           setError('Failed to start voice chat. Check your connection and try again.');
           setConnecting(false);
@@ -256,28 +269,106 @@ export default function ChatWidget() {
     }
 
     init();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasJoined, currentRoom, user?.id]);
+  }, [hasJoined, user?.id]);
 
-  // ---- Dispose when user leaves ----------------------------------------
+  // ---- Pre-connect to pending room during countdown ----------------------
   useEffect(() => {
-    if (!hasJoined && apiRef.current) {
-      try { apiRef.current.dispose(); } catch { /* ignore */ }
-      apiRef.current = null;
+    if (!hasJoined || !user || !pendingRoom || !pendingContainerRef.current) return;
+
+    let mounted = true;
+
+    async function preload() {
+      disposeApi(pendingApiRef);
+      try {
+        const api = await createJitsiInstance(
+          pendingRoom!,
+          pendingContainerRef.current!,
+          () => { /* silently connected — wait for swap */ },
+          () => { if (mounted) leaveChat(); },
+          () => { /* pre-load failed — fallback handles it */ },
+        );
+        if (!mounted) { try { api.dispose(); } catch { /* ignore */ } return; }
+        pendingApiRef.current = api;
+      } catch {
+        // Pre-load failed — fallback effect below will handle it on swap
+      }
+    }
+
+    preload();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRoom, hasJoined, user?.id]);
+
+  // ---- Swap: countdown finished, promote pending → active ----------------
+  useEffect(() => {
+    if (!hasJoined || !user || pendingRoom !== null) return;
+
+    if (pendingApiRef.current) {
+      // Pre-loaded instance is ready — promote it instantly
+      disposeApi(activeApiRef);
+      activeApiRef.current  = pendingApiRef.current;
+      pendingApiRef.current = null;
+
+      // Move the pre-built iframe node from pending div into active div
+      if (activeContainerRef.current && pendingContainerRef.current) {
+        while (pendingContainerRef.current.firstChild) {
+          activeContainerRef.current.appendChild(pendingContainerRef.current.firstChild);
+        }
+      }
+
+      setConnecting(false);
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRoom]);
+
+  // ---- Fallback: if pre-load failed, connect normally after swap ----------
+  useEffect(() => {
+    if (!hasJoined || !user || pendingRoom !== null) return;
+    if (activeApiRef.current) return; // pre-load succeeded, nothing to do
+
+    let mounted = true;
+
+    async function fallback() {
+      setConnecting(true);
+      setError(null);
+      try {
+        const api = await createJitsiInstance(
+          currentRoom,
+          activeContainerRef.current!,
+          () => { if (mounted) setConnecting(false); },
+          () => { if (mounted) leaveChat(); },
+          () => { if (mounted) { setError('Connection error. Try leaving and rejoining.'); setConnecting(false); } },
+        );
+        if (!mounted) { try { api.dispose(); } catch { /* ignore */ } return; }
+        activeApiRef.current = api;
+      } catch {
+        if (mounted) {
+          setError('Failed to start voice chat. Check your connection and try again.');
+          setConnecting(false);
+        }
+      }
+    }
+
+    fallback();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRoom, pendingRoom]);
+
+  // ---- Dispose when user leaves ------------------------------------------
+  useEffect(() => {
+    if (!hasJoined) {
+      disposeApi(activeApiRef);
+      disposeApi(pendingApiRef);
     }
   }, [hasJoined]);
 
-  // ---- Dispose on unmount -----------------------------------------------
-  useEffect(() => {
-    return () => {
-      if (apiRef.current) {
-        try { apiRef.current.dispose(); } catch { /* ignore */ }
-      }
-    };
+  // ---- Dispose on unmount ------------------------------------------------
+  useEffect(() => () => {
+    disposeApi(activeApiRef);
+    disposeApi(pendingApiRef);
   }, []);
 
   if (!user) return null;
@@ -288,13 +379,13 @@ export default function ChatWidget() {
     </>
   );
 
-  const roomLabel  =
-    roomType === 'loser' ? "Loser's Lounge" :
-    roomType === 'draft' ? 'Team Draft Channel'  :
+  const roomLabel =
+    roomType === 'loser' ? "Loser's Lounge"      :
+    roomType === 'draft' ? 'Team Draft Channel'   :
                            'Main Chat';
-  const headerBg   =
-    roomType === 'loser' ? 'bg-dota-dire/20 border-dota-dire-border'   :
-    roomType === 'draft' ? 'bg-dota-info/20 border-dota-info/40'       :
+  const headerBg =
+    roomType === 'loser' ? 'bg-dota-dire/20 border-dota-dire-border' :
+    roomType === 'draft' ? 'bg-dota-info/20 border-dota-info/40'     :
                            'bg-dota-gold/10 border-dota-gold/30';
   const headerText =
     roomType === 'loser' ? 'text-dota-dire-light' :
@@ -313,9 +404,9 @@ export default function ChatWidget() {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className={`flex items-center justify-between px-3 py-2 border-b ${headerBg} gap-2`}>
           <div className={`flex items-center gap-2 font-barlow font-semibold text-xs tracking-wide ${headerText}`}>
-            {roomType === 'draft'  && <Swords className="w-3 h-3 shrink-0" />}
-            {roomType === 'loser'  && <Lock   className="w-3 h-3 shrink-0" />}
-            {roomType === 'main'   && <Users  className="w-3 h-3 shrink-0" />}
+            {roomType === 'draft' && <Swords className="w-3 h-3 shrink-0" />}
+            {roomType === 'loser' && <Lock   className="w-3 h-3 shrink-0" />}
+            {roomType === 'main'  && <Users  className="w-3 h-3 shrink-0" />}
             <span>{roomLabel}</span>
             {connecting && (
               <span className="text-dota-text-dim font-normal animate-pulse">Connecting…</span>
@@ -352,13 +443,13 @@ export default function ChatWidget() {
           </div>
         </div>
 
-        {/* ── Jitsi container ──────────────────────────────────────────── */}
+        {/* ── Jitsi containers ─────────────────────────────────────────── */}
         <div
           style={{
-            height:   isMinimized ? 0 : WIDGET_H,
-            display:  isMinimized ? 'none' : 'block',
+            height:     isMinimized ? 0 : WIDGET_H,
+            display:    isMinimized ? 'none' : 'block',
             background: '#111827',
-            position: 'relative',
+            position:   'relative',
           }}
         >
           {error && (
@@ -373,9 +464,22 @@ export default function ChatWidget() {
               </button>
             </div>
           )}
+
+          {/* Active room — always visible */}
+          <div ref={activeContainerRef} style={{ width: '100%', height: '100%' }} />
+
+          {/* Pending room — hidden while pre-connecting during countdown */}
           <div
-            ref={containerRef}
-            style={{ width: '100%', height: '100%' }}
+            ref={pendingContainerRef}
+            style={{
+              position:      'absolute',
+              width:         '100%',
+              height:        '100%',
+              top:           0,
+              left:          0,
+              visibility:    'hidden',
+              pointerEvents: 'none',
+            }}
           />
         </div>
       </div>
