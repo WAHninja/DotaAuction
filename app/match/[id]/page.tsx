@@ -4,7 +4,7 @@ import { useEffect, useState, useContext, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
-import { useJitsi, getLoserRoom, MAIN_ROOM } from '@/app/context/JitsiContext';
+import { useJitsi, getLoserRoom, MAIN_ROOM, getTeam1DraftRoom, getTeamADraftRoom } from '@/app/context/JitsiContext';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
 import MatchHeader from '@/app/components/MatchHeader';
 import TeamCard from '@/app/components/TeamCard';
@@ -14,6 +14,7 @@ import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
 import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
+import { usePhaseListener } from '@/app/hooks/usePhaseListener';
 import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, ViewerState, Player } from '@/types';
 
 // ---------------------------------------------------------------------------
