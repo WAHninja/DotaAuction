@@ -61,6 +61,7 @@ const COLUMNS: Column[] = [
     sublabel: 'times transferred',
     key: 'timesSold',
     tooltip: 'How many times you have been sold to the other team.',
+    tooltipAlign: 'right',
   },
 
 ];
