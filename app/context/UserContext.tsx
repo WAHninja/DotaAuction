@@ -11,6 +11,7 @@ import {
 type User = {
   id: number;
   username: string;
+  steam_avatar?: string | null;
 } | null;
 
 type UserContextType = {
