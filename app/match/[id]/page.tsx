@@ -78,6 +78,8 @@ export default function MatchPage() {
   const { user } = useContext(UserContext);
 
   const { hasJoined, switchRoom } = useJitsi();
+  
+  const DRAFT_PHASE = 3;
 
   const [data, setData] = useState<MatchData | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -152,6 +154,12 @@ export default function MatchPage() {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
 
+  const handlePhaseChanged = useCallback(() => {
+  // Re-fetch so latestGame.phase is current; the Jitsi effect below then
+  // re-runs automatically via its dependency on latestGame.phase.
+    fetchMatchData();
+  }, [fetchMatchData]);
+
   // ---- Initial load --------------------------------------------------------
   useEffect(() => {
     if (!user) return;
@@ -171,6 +179,7 @@ export default function MatchPage() {
 
   useGameWinnerListener(matchId, handleWinnerSelected);
   useGameReportedListener(matchId, handleGameReported);
+  usePhaseListener(matchId, handlePhaseChanged);
   useAuctionListener(
     matchId,
     data?.latestGame?.id ?? null,
@@ -183,17 +192,30 @@ export default function MatchPage() {
     if (!hasJoined || !data?.latestGame || !user) return;
 
     const game = data.latestGame;
-    const isAuction = game.status === 'auction pending';
 
-    if (isAuction && game.winning_team) {
+  // ── Draft phase: both teams go to private channels ───────────────────
+    if (Number(game.phase) === DRAFT_PHASE) {
+      if (game.team_1_members.includes(user.id)) {
+        switchRoom(getTeam1DraftRoom(game.id));
+        return;
+      }
+      if (game.team_a_members.includes(user.id)) {
+        switchRoom(getTeamADraftRoom(game.id));
+        return;
+      }
+    // Spectator during draft — stays in main room
+      switchRoom(MAIN_ROOM);
+      return;
+    }
+
+  // ── Auction phase: losing team goes to the loser lounge ─────────────
+    if (game.status === 'auction pending' && game.winning_team) {
       const losingMembers =
         game.winning_team === 'team_1'
           ? game.team_a_members
           : game.team_1_members;
 
-      const isLoser = losingMembers.includes(user.id);
-
-      if (isLoser) {
+      if (losingMembers.includes(user.id)) {
         switchRoom(getLoserRoom(game.id));
         return;
       }
@@ -205,6 +227,7 @@ export default function MatchPage() {
     data?.latestGame?.id,
     data?.latestGame?.status,
     data?.latestGame?.winning_team,
+    data?.latestGame?.phase,
     user?.id,
     switchRoom,
   ]);
