@@ -86,7 +86,7 @@ function RecordEntry({ entry, rank }: { entry: HallOfFameEntry; rank: number }) 
   const isFirst   = rank === 0;
 
   return (
-    <div className="flex items-baseline justify-between gap-2 min-w-0">
+    <div className="flex items-start justify-between gap-2 min-w-0">
       <div className="flex items-baseline gap-1.5 min-w-0">
         <span className={`text-xs shrink-0 ${rankStyle}`}>
           {rankLabel}
@@ -95,9 +95,17 @@ function RecordEntry({ entry, rank }: { entry: HallOfFameEntry; rank: number }) 
           {entry.holder}
         </span>
       </div>
-      <span className="font-barlow text-xs font-semibold text-dota-text-muted tabular-nums shrink-0">
-        {entry.stat}
-      </span>
+      {/* Right side: primary stat + optional context sub-line */}
+      <div className="flex flex-col items-end shrink-0 text-right">
+        <span className="font-barlow text-xs font-semibold text-dota-text-muted tabular-nums">
+          {entry.stat}
+        </span>
+        {entry.context && (
+          <span className="font-barlow text-[10px] text-dota-text-dim leading-tight tabular-nums">
+            {entry.context}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
