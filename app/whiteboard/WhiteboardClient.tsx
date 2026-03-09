@@ -96,11 +96,10 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
   // Poll the store status since it updates asynchronously
   useEffect(() => {
     const interval = setInterval(() => {
-      // @ts-expect-error
       const s = store?.status;
-      if (s === 'synced-remote' || s === 'synced-local') setConnStatus('online');
-      else if (s === 'error') setConnStatus('offline');
-      else setConnStatus('connecting');
+      if (s === 'error') setConnStatus('offline');
+      else if (s === 'loading') setConnStatus('connecting');
+      else setConnStatus('online');
     }, 1000);
     return () => clearInterval(interval);
   }, [store]);
