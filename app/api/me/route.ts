@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   const result = await db.query(
-    'SELECT id, username FROM users WHERE id = $1',
+    'SELECT id, username, steam_avatar FROM users WHERE id = $1',
     [session.userId]
   )
 
