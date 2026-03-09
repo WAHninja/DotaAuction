@@ -99,8 +99,17 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #2: fewest games to win a match ─────────────────────
+      // player_count included so the UI can show field size as context —
+      // winning fast in a 6-player match is a bigger achievement than in a 3-player one.
       db.query(`
-        SELECT u.username, COUNT(g.id) AS game_count
+        SELECT
+          u.username,
+          COUNT(g.id) AS game_count,
+          (
+            SELECT COUNT(*)::int
+            FROM match_players mp2
+            WHERE mp2.match_id = m.id
+          ) AS player_count
         FROM matches m
         JOIN users u ON u.id = m.winner_id
         JOIN games g ON g.match_id = m.id
@@ -111,6 +120,8 @@ export default async function DashboardPage() {
       `),
 
       // ── Hall of Fame #3: biggest gold underdog win ────────────────────────
+      // player_count included so the UI can show field size as context —
+      // overcoming a gold deficit in a larger match is a bigger achievement.
       db.query(`
         SELECT
           u.username,
@@ -129,7 +140,12 @@ export default async function DashboardPage() {
                 THEN g.team_a_members ELSE g.team_1_members END
             ) AS uid
             JOIN match_players mp ON mp.user_id = uid AND mp.match_id = m.id
-          ) AS gold_diff
+          ) AS gold_diff,
+          (
+            SELECT COUNT(*)::int
+            FROM match_players mp2
+            WHERE mp2.match_id = m.id
+          ) AS player_count
         FROM matches m
         JOIN users u ON u.id = m.winner_id
         JOIN LATERAL (
@@ -178,23 +194,30 @@ export default async function DashboardPage() {
         }))
       : null;
 
+    // context shows the player count so "Won in 3" reads differently for a
+    // 4-player match vs an 8-player match.
     const fewestGamesToWin: HallOfFameRecord = fewestGamesRes.rows.length
       ? fewestGamesRes.rows.map(r => ({
-          holder: r.username,
-          stat: `Won in ${r.game_count}`,
+          holder:  r.username,
+          stat:    `Won in ${r.game_count}`,
+          context: `${r.player_count} players`,
         }))
       : null;
 
+    // context shows the player count for the same reason — a large gold
+    // deficit against a bigger field is harder to overcome.
     const biggestGoldUnderdog: HallOfFameRecord = biggestGoldUnderdogRes.rows.length
       ? biggestGoldUnderdogRes.rows.map(r => {
           const diff = Number(r.gold_diff);
           return {
-            holder: r.username,
-            stat: `${diff > 0 ? '+' : ''}${diff.toLocaleString()} gold`,
+            holder:  r.username,
+            stat:    `${diff > 0 ? '+' : ''}${diff.toLocaleString()} gold`,
+            context: `${r.player_count} players`,
           };
         })
       : null;
 
+    // Biggest Underdog already encodes field size via "1vN", no context needed.
     const biggestUnderdogWin: HallOfFameRecord = biggestUnderdogRes.rows.length
       ? biggestUnderdogRes.rows.map(r => ({
           holder: r.username,
