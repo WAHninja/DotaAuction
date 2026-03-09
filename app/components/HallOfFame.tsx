@@ -215,8 +215,8 @@ export default function HallOfFame({
 
       <RecordCard
         icon={Scale}
-        title="Gold Underdog"
-        tooltip="Won a match while holding less accumulated gold than the opposing team at the final game."
+        title="Gold Difference"
+        tooltip="Gold difference of the winning player vs the opposing team at start of the final game."
         tooltipId="hof-tooltip-gold"
         record={biggestGoldUnderdog}
         accentClass="text-dota-info"
