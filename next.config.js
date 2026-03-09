@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['@excalidraw/excalidraw'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.steamstatic.com' },
