@@ -251,9 +251,20 @@ export default function GameRulesCard() {
             Requires <strong className="text-dota-text">3 or more players</strong>.
           </Rule>
 
+          <Rule>
+            After each game, members of the losing team lose <strong className="text-dota-text">half their gold</strong>.
+            Winners each receive <strong className="text-dota-text">1,000 gold</strong>{' '}
+            plus a share of half the loser pool.{' '}
+            <HelpButton
+              ref={goldTriggerRef}
+              onClick={() => openModal('gold')}
+              label="How gold is calculated"
+            />
+          </Rule>
+
           {/* Point 2 fixed: "one offer each" made explicit */}
           <Rule>
-            After each game, every <strong className="text-dota-text">winner</strong> secretly
+            The auction then starts and every <strong className="text-dota-text">winner</strong> secretly
             submits <strong className="text-dota-text">one offer</strong> — picking a teammate
             to sell and naming their own price within the current game's allowed range, which
             increases every game.{' '}
@@ -283,17 +294,6 @@ export default function GameRulesCard() {
             <strong className="text-dota-text">receives the gold</strong> and the sold player{' '}
             <strong className="text-dota-text">switches teams</strong>. All other offers are
             rejected.
-          </Rule>
-
-          <Rule>
-            Losers lose <strong className="text-dota-text">half their gold</strong>.
-            Winners each receive <strong className="text-dota-text">1,000 gold</strong>{' '}
-            plus a share of half the loser pool.{' '}
-            <HelpButton
-              ref={goldTriggerRef}
-              onClick={() => openModal('gold')}
-              label="How gold is calculated"
-            />
           </Rule>
 
           {/* Minor phrasing fix: "alone on their team" → clearer phrasing */}
