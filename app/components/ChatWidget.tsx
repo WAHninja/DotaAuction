@@ -3,10 +3,10 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import {
   Minimize2, Maximize2, PhoneOff, Phone,
-  Lock, Users, MicOff, AlertTriangle,
+  Lock, Users, MicOff, AlertTriangle, Swords
 } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
-import { useJitsi, MAIN_ROOM } from '@/app/context/JitsiContext';
+import { useJitsi, MAIN_ROOM, getRoomType } from '@/app/context/JitsiContext';
 
 // ---------------------------------------------------------------------------
 // JaaS config
@@ -166,7 +166,7 @@ export default function ChatWidget() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
-  const isLosersRoom = currentRoom !== MAIN_ROOM;
+  const roomType   = getRoomType(currentRoom);
 
   // ---- Initialise / switch rooms ----------------------------------------
   useEffect(() => {
@@ -288,11 +288,18 @@ export default function ChatWidget() {
     </>
   );
 
-  const roomLabel  = isLosersRoom ? "Loser's Lounge" : 'Main Chat';
-  const headerBg   = isLosersRoom
-    ? 'bg-dota-dire/20 border-dota-dire-border'
-    : 'bg-dota-gold/10 border-dota-gold/30';
-  const headerText = isLosersRoom ? 'text-dota-dire-light' : 'text-dota-gold';
+  const roomLabel  =
+    roomType === 'loser' ? "Loser's Lounge" :
+    roomType === 'draft' ? 'Team Draft Channel'  :
+                           'Main Chat';
+  const headerBg   =
+    roomType === 'loser' ? 'bg-dota-dire/20 border-dota-dire-border'   :
+    roomType === 'draft' ? 'bg-dota-info/20 border-dota-info/40'       :
+                           'bg-dota-gold/10 border-dota-gold/30';
+  const headerText =
+    roomType === 'loser' ? 'text-dota-dire-light' :
+    roomType === 'draft' ? 'text-dota-info'        :
+                           'text-dota-gold';
 
   return (
     <>
@@ -306,17 +313,21 @@ export default function ChatWidget() {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className={`flex items-center justify-between px-3 py-2 border-b ${headerBg} gap-2`}>
           <div className={`flex items-center gap-2 font-barlow font-semibold text-xs tracking-wide ${headerText}`}>
-            {isLosersRoom
-              ? <Lock  className="w-3 h-3 shrink-0" />
-              : <Users className="w-3 h-3 shrink-0" />
-            }
+            {roomType === 'draft'  && <Swords className="w-3 h-3 shrink-0" />}
+            {roomType === 'loser'  && <Lock   className="w-3 h-3 shrink-0" />}
+            {roomType === 'main'   && <Users  className="w-3 h-3 shrink-0" />}
             <span>{roomLabel}</span>
             {connecting && (
               <span className="text-dota-text-dim font-normal animate-pulse">Connecting…</span>
             )}
-            {isLosersRoom && !connecting && (
+            {roomType === 'loser' && !connecting && (
               <span className="text-dota-dire-light/60 font-normal text-[10px]">
                 Waiting for auction…
+              </span>
+            )}
+            {roomType === 'draft' && !connecting && (
+              <span className="text-dota-info/60 font-normal text-[10px]">
+                Draft in progress — private channel
               </span>
             )}
           </div>
