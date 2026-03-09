@@ -76,6 +76,7 @@ export type Game = {
   team_1_members: number[];
   team_a_members: number[];
   created_at?: string;
+  phase?: string | null;
 };
 
 /** Lightweight version used in MatchHeader (gameNumber added client-side) */
