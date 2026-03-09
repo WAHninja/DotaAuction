@@ -1,5 +1,4 @@
 'use client';
-
 // app/components/LogoutButton.tsx
 //
 // Changes from original:
@@ -15,10 +14,13 @@
 //     Confirm" flow. Pass this on touch surfaces (the mobile drawer) where
 //     accidental taps are more likely. On desktop the button has a visual
 //     divider separating it from navigation links, which is sufficient.
-
-import { useCallback, useState } from 'react';
+//
+//   • Calls refreshUser() after logout so UserContext is cleared immediately,
+//     preventing nav items from persisting on the /login page.
+import { useCallback, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, LogOut } from 'lucide-react';
+import { UserContext } from '@/app/context/UserContext';
 
 type LogoutButtonProps = {
   className?: string;
@@ -32,16 +34,18 @@ export default function LogoutButton({
   const [loading,    setLoading]    = useState(false);
   const [confirming, setConfirming] = useState(false);
   const router = useRouter();
+  const { refreshUser } = useContext(UserContext);
 
   const handleLogout = useCallback(async () => {
     setLoading(true);
     try {
       await fetch('/api/logout', { method: 'POST' });
+      await refreshUser();       // clears user in context before navigation
       router.push('/login');
     } catch {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, refreshUser]);
 
   const handleClick = useCallback(() => {
     if (loading) return;
