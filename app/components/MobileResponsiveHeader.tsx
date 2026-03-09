@@ -10,9 +10,10 @@ import {
   useState,
 } from 'react';
 import { usePathname }  from 'next/navigation';
-import { Menu, X, ScrollText, User, LayoutDashboard, PenLine, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, ScrollText, User, LayoutDashboard, PenLine, ChevronDown } from 'lucide-react';
 import { UserContext }          from '@/app/context/UserContext';
 import LogoutButton             from './LogoutButton';
+import PlayerAvatar             from './PlayerAvatar';
 import { useChangelogBadge }    from '@/app/hooks/useChangelogBadge';
 import { useFocusTrap }         from '@/app/hooks/useFocusTrap';
 import { useScrolled }          from '@/app/hooks/useScrolled';
@@ -67,10 +68,6 @@ function dropdownItemClass(href: string, pathname: string, exact = true): string
   return isActive ? DROPDOWN_ITEM_ACTIVE : DROPDOWN_ITEM;
 }
 
-function getInitials(username: string): string {
-  return username.slice(0, 2).toUpperCase();
-}
-
 // =============================================================================
 // Sub-components
 // =============================================================================
@@ -115,10 +112,10 @@ function AccentBar({ pathname }: { pathname: string }) {
   );
 }
 
-type NavUser = { username: string } | null;
+type NavUser = { username: string; steam_avatar?: string | null } | null;
 
 // =============================================================================
-// DesktopPrimaryLinks — Dashboard + Whiteboard, sits near the logo
+// DesktopPrimaryLinks — Dashboard + Whiteboard
 // =============================================================================
 
 type DesktopPrimaryLinksProps = {
@@ -141,7 +138,7 @@ function DesktopPrimaryLinks({ pathname }: DesktopPrimaryLinksProps) {
         className={`${navLink('/whiteboard', pathname)} flex items-center gap-1.5`}
       >
         <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-        Scribbles
+        Draw
       </Link>
     </>
   );
@@ -200,17 +197,14 @@ function UserMenuDropdown({ user, hasUnseen, pathname }: UserMenuDropdownProps) 
           }
         `}
       >
-        {/* Initials circle */}
-        <span className="
-          w-7 h-7 rounded-full flex items-center justify-center
-          bg-dota-surface border border-dota-border-bright
-          font-cinzel font-bold text-xs text-dota-gold
-          select-none
-        ">
-          {getInitials(user.username)}
-        </span>
+        {/* Avatar — Steam image if linked, coloured initials fallback */}
+        <PlayerAvatar
+          username={user.username}
+          steamAvatar={user.steam_avatar}
+          size={28}
+        />
 
-        <span className="font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted group-hover:text-dota-gold hidden lg:block">
+        <span className="font-barlow font-semibold text-sm tracking-widest uppercase text-dota-text-muted hidden lg:block">
           {user.username}
         </span>
 
@@ -287,7 +281,7 @@ function UserMenuDropdown({ user, hasUnseen, pathname }: UserMenuDropdownProps) 
 }
 
 // =============================================================================
-// DesktopNav — composes PrimaryLinks + UserMenuDropdown
+// DesktopNav — spacer first, then primary links, then user cluster
 // =============================================================================
 
 type DesktopNavProps = {
@@ -301,12 +295,11 @@ function DesktopNav({ user, hasUnseen, pathname }: DesktopNavProps) {
 
   return (
     <>
-      {/* Primary links sit left — rendered here so the parent can place them
-          between the logo and the flex spacer */}
-      <DesktopPrimaryLinks pathname={pathname} />
-
-      {/* Spacer pushes user cluster to far right */}
+      {/* Spacer pushes everything to the right */}
       <span className="flex-1" />
+
+      {/* Primary nav links — Dashboard + Scribbles, right-aligned before avatar */}
+      <DesktopPrimaryLinks pathname={pathname} />
 
       <UserMenuDropdown user={user} hasUnseen={hasUnseen} pathname={pathname} />
     </>
@@ -314,7 +307,7 @@ function DesktopNav({ user, hasUnseen, pathname }: DesktopNavProps) {
 }
 
 // =============================================================================
-// MobileDrawer — unchanged in structure, kept in sync with new items
+// MobileDrawer — structurally unchanged
 // =============================================================================
 
 type MobileDrawerProps = {
@@ -370,11 +363,18 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
         <nav aria-label="Mobile navigation" className="flex flex-col gap-1 p-4">
 
           {user && (
-            <div className="px-3 py-2 mb-2 rounded bg-dota-overlay border border-dota-border">
-              <p className="font-barlow text-xs text-dota-text-muted tracking-widest uppercase mb-0.5">
-                Signed in as
-              </p>
-              <p className="font-barlow font-semibold text-dota-gold">{user.username}</p>
+            <div className="px-3 py-2 mb-2 rounded bg-dota-overlay border border-dota-border flex items-center gap-3">
+              <PlayerAvatar
+                username={user.username}
+                steamAvatar={user.steam_avatar}
+                size={32}
+              />
+              <div className="min-w-0">
+                <p className="font-barlow text-xs text-dota-text-muted tracking-widest uppercase mb-0.5">
+                  Signed in as
+                </p>
+                <p className="font-barlow font-semibold text-dota-gold truncate">{user.username}</p>
+              </div>
             </div>
           )}
 
@@ -498,9 +498,8 @@ export default function MobileResponsiveHeader() {
         <AccentBar pathname={pathname} />
 
         {/*
-          Layout: [Logo | PrimaryLinks ----spacer---- UserMenu] on desktop
-          The nav is `flex` and takes full width; DesktopNav renders the
-          primary links then a flex-1 spacer then the user cluster.
+          Layout: [Logo ----spacer---- PrimaryLinks | UserMenu] on desktop
+          The spacer is rendered inside DesktopNav so the logo stays anchored left.
         */}
         <div className="max-w-7xl mx-auto flex items-center px-4 sm:px-6 lg:px-8 py-3 gap-6">
 
