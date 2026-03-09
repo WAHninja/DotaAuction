@@ -197,8 +197,8 @@ export type SortKey =
   | 'gamesWinRate'
   | 'offerAcceptRate'
   | 'averageOfferValue'
-  | 'timesSold'
-  | 'netGold';
+  | 'timesOffered'
+  | 'timesSold';
 
 // ---------------------------------------------------------------------------
 // Stats — new metrics
