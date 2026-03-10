@@ -79,7 +79,7 @@ export default function MatchPage() {
 
   const { hasJoined, switchRoom } = useJitsi();
   
-  const DRAFT_PHASE = 3;
+  const DRAFT_PHASE = 4;
 
   const [data, setData] = useState<MatchData | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
