@@ -33,8 +33,7 @@ const TAB_LABELS: Record<Tab, string> = {
 };
 
 // =============================================================================
-// Sub-components — hoisted to module level so React reconciles them correctly
-// across re-renders rather than unmounting/remounting on every parent render.
+// Sub-components
 // =============================================================================
 
 // ── TabButton ─────────────────────────────────────────────────────────────────
@@ -57,6 +56,42 @@ function TabButton({
       }`}
     >
       {TAB_LABELS[tab]}
+    </button>
+  );
+}
+
+// ── MyMatchesToggle ───────────────────────────────────────────────────────────
+function MyMatchesToggle({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2 font-barlow text-sm font-semibold px-4 py-1.5 rounded border transition-all ${
+        active
+          ? 'bg-dota-gold/15 border-dota-gold/50 text-dota-gold hover:bg-dota-gold/20'
+          : 'bg-dota-surface border-dota-border text-dota-text-muted hover:border-dota-border-bright hover:text-dota-text'
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`inline-block w-7 h-4 rounded-full transition-colors relative shrink-0 ${
+          active ? 'bg-dota-gold' : 'bg-dota-border'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 left-0 w-3 h-3 rounded-full bg-dota-base transition-transform ${
+            active ? 'translate-x-3.5' : 'translate-x-0.5'
+          }`}
+        />
+      </span>
+      <span className="hidden sm:inline">My matches only</span>
     </button>
   );
 }
@@ -106,14 +141,11 @@ function MatchCard({
     <div className={`panel p-4 flex flex-col gap-3 hover:border-dota-border-bright transition-colors ${
       !isCompleted ? 'border-dota-gold/30' : ''
     }`}>
-
-      {/* Card header */}
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
           <p className="font-barlow font-bold text-dota-text tracking-wide">
             Match #{match.id}
           </p>
-
           {isCompleted ? (
             <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-gold">
               <CheckCircle className="w-3.5 h-3.5" />
@@ -129,7 +161,6 @@ function MatchCard({
             </span>
           )}
         </div>
-
         <Link
           href={`/match/${match.id}`}
           className={isCompleted
@@ -140,8 +171,6 @@ function MatchCard({
           {isCompleted ? 'View' : 'Continue'}
         </Link>
       </div>
-
-      {/* Team rosters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <TeamRoster usernames={match.team_1_usernames} faction="radiant" />
         <TeamRoster usernames={match.team_a_usernames} faction="dire" />
@@ -167,7 +196,7 @@ function EmptyState({
           No {type === 'ongoing' ? 'ongoing' : 'completed'} matches for you
         </p>
         <p className="font-barlow text-sm">
-          Toggle <span className="text-dota-text font-semibold">All Matches</span> above to see every match.
+          Toggle <span className="text-dota-text font-semibold">My matches only</span> above to see every match.
         </p>
       </div>
     );
@@ -240,10 +269,10 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const router = useRouter();
   const { user } = useContext(UserContext);
 
-  const [activeTab, setActiveTab] = useState<Tab>('stats');
+  const [activeTab, setActiveTab]           = useState<Tab>('stats');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
-  const [myMatchesOnly, setMyMatchesOnly] = useState(true);
+  const [myMatchesOnly, setMyMatchesOnly]   = useState(true);
 
   // ── Filter ───────────────────────────────────────────────────────────────────
   const isMyMatch = useCallback((match: Match): boolean => {
@@ -273,20 +302,17 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   // ── Tab switching ────────────────────────────────────────────────────────────
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    if (tab !== 'stats') {
-      router.refresh();
-    }
+    if (tab !== 'stats') router.refresh();
   };
-
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   const showFilter = activeTab === 'ongoing' || activeTab === 'completed';
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
 
-      {/* Tab bar */}
-      <div className="flex justify-center gap-3">
+      {/* Tab bar — toggle lives here so it doesn't add a separate row */}
+      <div className="relative flex justify-center gap-3">
         {(['stats', 'ongoing', 'completed'] as const).map(tab => (
           <TabButton
             key={tab}
@@ -295,39 +321,12 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
             onClick={() => handleTabChange(tab)}
           />
         ))}
+        {showFilter && (
+          <MyMatchesToggle active={myMatchesOnly} onClick={handleFilterToggle} />
+        )}
       </div>
 
       <div className="divider" />
-
-      {/* Filter toggle — only shown on match tabs */}
-      {showFilter && (
-        <div className="flex items-center justify-end">
-          <button
-            type="button"
-            onClick={handleFilterToggle}
-            className={`flex items-center gap-2 font-barlow text-sm font-semibold px-4 py-1.5 rounded border transition-all ${
-              myMatchesOnly
-                ? 'bg-dota-gold/15 border-dota-gold/50 text-dota-gold hover:bg-dota-gold/20'
-                : 'bg-dota-surface border-dota-border text-dota-text-muted hover:border-dota-border-bright hover:text-dota-text'
-            }`}
-            aria-pressed={myMatchesOnly}
-          >
-            <span
-              aria-hidden="true"
-              className={`inline-block w-7 h-4 rounded-full transition-colors relative ${
-                myMatchesOnly ? 'bg-dota-gold' : 'bg-dota-border'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0 w-3 h-3 rounded-full bg-dota-base transition-transform ${
-                  myMatchesOnly ? 'translate-x-3.5' : 'translate-x-0.5'
-                }`}
-              />
-            </span>
-            My matches only
-          </button>
-        </div>
-      )}
 
       {/* Tab content */}
       {activeTab === 'stats' && <StatsTab />}
