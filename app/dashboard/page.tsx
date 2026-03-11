@@ -5,6 +5,7 @@ import CreateMatchForm from '@/app/components/CreateMatchForm';
 import DashboardTabs from '@/app/components/DashboardTabs';
 import GameRulesCard from '@/app/components/GameRulesCard';
 import HallOfFame from '@/app/components/HallOfFame';
+import JitsiPreloader from '@/app/components/JitsiPreloader';
 import type { HallOfFameRecord } from '@/types';
 
 export default async function DashboardPage() {
@@ -227,6 +228,10 @@ export default async function DashboardPage() {
 
     return (
       <div className="relative min-h-screen animate-fadeIn">
+        {/* Preloads the Jitsi script and warms the token cache as soon as the
+            dashboard mounts — before the user has clicked Join Voice Chat. */}
+        <JitsiPreloader />
+
         <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-6 text-white">
 
           {/* ── Zone 1: Create Match + Rules (equal columns) ─────────────── */}
