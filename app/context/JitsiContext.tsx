@@ -36,6 +36,7 @@ export type RoomNotification = {
   targetRoom:  string;
   countdown:   number;
   isLoserRoom: boolean;
+  isDraftRoom: boolean;
 };
 
 export type RoomType = 'main' | 'loser' | 'draft';
@@ -50,7 +51,7 @@ type JitsiContextType = {
   hasJoined:           boolean;
   isMinimized:         boolean;
   currentRoom:         string;
-  pendingRoom:         string | null;  // room being pre-loaded during countdown
+  pendingRoom:         string | null;
   notification:        RoomNotification | null;
   joinChat:            () => void;
   leaveChat:           () => void;
@@ -142,12 +143,14 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
 
       if (intervalRef.current) clearInterval(intervalRef.current);
 
-      const isLoserRoom = getRoomType(room) !== 'main';
+      const roomType    = getRoomType(room);
+      const isLoserRoom = roomType === 'loser';
+      const isDraftRoom = roomType === 'draft';
       let remaining     = COUNTDOWN_SECS;
 
       // Signal ChatWidget to start pre-connecting immediately
       setPendingRoom(room);
-      setNotification({ targetRoom: room, countdown: remaining, isLoserRoom });
+      setNotification({ targetRoom: room, countdown: remaining, isLoserRoom, isDraftRoom });
       playRoomSwitchBeep(isLoserRoom);
 
       intervalRef.current = setInterval(() => {
