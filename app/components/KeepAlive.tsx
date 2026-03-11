@@ -11,7 +11,7 @@ import { useEffect } from 'react';
 //   DURATION_MS   2 hours    — enough to cover a full Dota match
 
 const INTERVAL_MS = 10 * 60 * 1000;  // 10 minutes
-const DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+const DURATION_MS = 5 * 60 * 60 * 1000; // 2 hours
 
 export default function KeepAlive() {
   useEffect(() => {
