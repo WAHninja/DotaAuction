@@ -163,6 +163,7 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
           store={store}
           // inferDarkMode reads prefers-color-scheme. Since DotA always uses
           // a dark background, we force dark mode explicitly.
+          licenseKey={process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY}
           forceMobile={false}
           className="tldraw-full"
         />
