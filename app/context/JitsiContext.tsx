@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { loadJitsiScript, getJaasToken } from '@/app/components/ChatWidget';
 
 // ---------------------------------------------------------------------------
 // Room naming
@@ -126,6 +127,11 @@ export function JitsiProvider({ children }: { children: ReactNode }) {
 
   const joinChat = useCallback(() => {
     clearCountdown();
+    // Pre-warm before the join effect fires — both calls are idempotent.
+    // loadJitsiScript uses a module-level promise so repeated calls are free.
+    // getJaasToken populates the cache so createJitsiInstance skips the fetch.
+    loadJitsiScript().catch(() => {});
+    getJaasToken(MAIN_ROOM).catch(() => {});
     setHasJoined(true);
     setCurrentRoom(MAIN_ROOM);
     setIsMinimized(false);
