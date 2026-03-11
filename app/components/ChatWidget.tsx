@@ -20,7 +20,7 @@ const JAAS_DOMAIN = '8x8.vc';
 
 let scriptPromise: Promise<void> | null = null;
 
-function loadJitsiScript(): Promise<void> {
+export function loadJitsiScript(): Promise<void> {
   if (scriptPromise) return scriptPromise;
   scriptPromise = new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return resolve();
@@ -36,6 +36,27 @@ function loadJitsiScript(): Promise<void> {
     document.head.appendChild(script);
   });
   return scriptPromise;
+}
+
+// ---------------------------------------------------------------------------
+// Token cache — module-level, persists for the session
+// Token grants room: '*' so it's valid for any room switch.
+// TTL is 7200s per /api/jaas/token; we expire 5 min early to avoid edges.
+// ---------------------------------------------------------------------------
+
+type CachedToken = { token: string; expiresAt: number };
+let tokenCache: CachedToken | null = null;
+
+export async function getJaasToken(room: string): Promise<string> {
+  const now = Date.now();
+  if (tokenCache && tokenCache.expiresAt - 300_000 > now) {
+    return tokenCache.token;
+  }
+  const res = await fetch(`/api/jaas/token?room=${encodeURIComponent(room)}`);
+  if (!res.ok) throw new Error('Failed to get meeting token');
+  const { token } = await res.json();
+  tokenCache = { token, expiresAt: now + 7_200_000 };
+  return token;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,9 +98,7 @@ async function createJitsiInstance(
   onError:  () => void,
 ): Promise<any> {
   await loadJitsiScript();
-  const tokenRes = await fetch(`/api/jaas/token?room=${encodeURIComponent(room)}`);
-  if (!tokenRes.ok) throw new Error('Failed to get meeting token');
-  const { token } = await tokenRes.json();
+  const token = await getJaasToken(room);
 
   const api = new (window as any).JitsiMeetExternalAPI(JAAS_DOMAIN, {
     roomName:   `${JAAS_APP_ID}/${room}`,
@@ -102,13 +121,24 @@ async function createJitsiInstance(
 
 // ---------------------------------------------------------------------------
 // Join button
+// Pre-warms both the Jitsi script and token cache on click, before the join
+// effect fires, so the first createJitsiInstance call has less work to do.
 // ---------------------------------------------------------------------------
 
 function JoinButton({ onJoin }: { onJoin: () => void }) {
+  function handleClick() {
+    // Fire-and-forget — both are idempotent and safe to call multiple times.
+    // By the time the join effect fires after setState, these may already
+    // be resolved (script loaded, token cached).
+    loadJitsiScript().catch(() => {});
+    getJaasToken(MAIN_ROOM).catch(() => {});
+    onJoin();
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-40">
       <button
-        onClick={onJoin}
+        onClick={handleClick}
         className="
           group flex items-center gap-2.5
           px-4 py-3 rounded-xl
