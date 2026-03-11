@@ -100,9 +100,6 @@ export default function WhiteboardClient({ roomId, username, userId }: Props) {
           licenseKey={process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY}
           forceMobile={false}
           className="w-full h-full"
-          // forceDarkMode tells tldraw to use its built-in dark theme
-          // rather than relying on prefers-color-scheme
-          forceDarkMode
         />
       </div>
     </div>
