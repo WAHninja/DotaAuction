@@ -136,14 +136,16 @@ function RoomNotificationToast() {
   const { notification, dismissNotification } = useJitsi();
   if (!notification) return null;
 
-  const { countdown, isLoserRoom } = notification;
-  const destination = isLoserRoom ? "Loser's Lounge" : 'Main Chat';
+  const { countdown, isLoserRoom, isDraftRoom } = notification;
+  const destination = isLoserRoom ? "Loser's Lounge"
+                    : isDraftRoom ? 'Team Draft Channel'
+                    :               'Main Chat';
   const progress    = (countdown / COUNTDOWN_SECS) * 100;
 
-  const bg         = isLoserRoom ? '#3d0f0f' : '#1a1508';
-  const border     = isLoserRoom ? '#7f1d1d' : '#92400e';
-  const titleColor = isLoserRoom ? '#fca5a5' : '#fcd34d';
-  const barColor   = isLoserRoom ? '#ef4444' : '#f59e0b';
+  const bg         = isLoserRoom ? '#3d0f0f' : isDraftRoom ? '#0f1f3d' : '#1a1508';
+  const border     = isLoserRoom ? '#7f1d1d' : isDraftRoom ? '#1d3a7f' : '#92400e';
+  const titleColor = isLoserRoom ? '#fca5a5' : isDraftRoom ? '#93c5fd' : '#fcd34d';
+  const barColor   = isLoserRoom ? '#ef4444' : isDraftRoom ? '#3b82f6' : '#f59e0b';
 
   return (
     <div
