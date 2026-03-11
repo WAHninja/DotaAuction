@@ -23,7 +23,8 @@
     "react-confetti": "^6.1.0",
     "react-use": "^17.4.0",
     "recharts": "^2.7.2",
-    "@excalidraw/excalidraw": "latest"
+    "tldraw": "latest",
+    "@tldraw/sync": "latest"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
