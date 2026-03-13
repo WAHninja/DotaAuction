@@ -400,7 +400,7 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
                 className={mobileNavLink('/whiteboard', pathname)}
               >
                 <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-                Whiteboard
+                Draw
               </Link>
 
               <Link
