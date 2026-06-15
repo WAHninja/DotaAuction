@@ -34,6 +34,11 @@ export default function TeamCard({
   const youBg       = isRadiant ? 'bg-dota-radiant/15 border border-dota-radiant/40' : 'bg-dota-dire/15 border border-dota-dire/40';
   const youText     = isRadiant ? 'text-dota-radiant-light' : 'text-dota-dire-light';
 
+  // Sum gold across all players currently on this team.
+  // gold ?? 0 guards against null/undefined in case a player row is missing
+  // the field (e.g. a spectator-only view with partial data).
+  const teamGoldTotal = players.reduce((sum, p) => sum + (p.gold ?? 0), 0);
+
   return (
     <div className={isRadiant ? 'team-radiant-panel p-6 rounded-xl shadow-panel' : 'team-dire-panel p-6 rounded-xl shadow-panel'}>
 
@@ -52,6 +57,24 @@ export default function TeamCard({
       </div>
 
       <div className="divider mb-3" />
+
+      {/* ── Team gold total ─────────────────────────────────────────────────
+          Shown between the divider and the player list so it's immediately
+          visible without scanning individual rows. Uses the same gold colour
+          and GoldIcon as every other gold display in the app for consistency.
+
+          The label changes to "Final total" when the match is finished so it
+          reads coherently alongside the "Final gold standings" label below.
+      ── */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <span className="stat-label">
+          {matchFinished ? 'Final total' : 'Team gold'}
+        </span>
+        <span className="inline-flex items-center gap-1.5 font-barlow font-bold tabular-nums text-dota-gold text-base">
+          {teamGoldTotal.toLocaleString()}
+          <GoldIcon size={16} />
+        </span>
+      </div>
 
       {/*
         When the match is finished, label the gold column so it's clear these
