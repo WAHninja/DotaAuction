@@ -58,24 +58,6 @@ export default function TeamCard({
 
       <div className="divider mb-3" />
 
-      {/* ── Team gold total ─────────────────────────────────────────────────
-          Shown between the divider and the player list so it's immediately
-          visible without scanning individual rows. Uses the same gold colour
-          and GoldIcon as every other gold display in the app for consistency.
-
-          The label changes to "Final total" when the match is finished so it
-          reads coherently alongside the "Final gold standings" label below.
-      ── */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <span className="stat-label">
-          {matchFinished ? 'Final total' : 'Team gold'}
-        </span>
-        <span className="inline-flex items-center gap-1.5 font-barlow font-bold tabular-nums text-dota-gold text-base">
-          {teamGoldTotal.toLocaleString()}
-          <GoldIcon size={16} />
-        </span>
-      </div>
-
       {/*
         When the match is finished, label the gold column so it's clear these
         are end-of-match standings rather than mid-game values. The label sits
@@ -118,6 +100,24 @@ export default function TeamCard({
           );
         })}
       </ul>
+
+      {/* ── Team gold total ─────────────────────────────────────────────────
+          Placed below the player list and separated by a divider so it reads
+          as a team-level summary rather than another player row. Uses a larger,
+          bolder gold figure than the per-player rows to reinforce that it's a
+          total. The label changes to "Final total" when the match is finished
+          so it reads coherently alongside the "Final gold standings" label.
+      ── */}
+      <div className="divider mt-4 mb-3" />
+      <div className="flex items-center justify-between px-1">
+        <span className="stat-label uppercase tracking-wide">
+          {matchFinished ? 'Final total' : 'Team gold'}
+        </span>
+        <span className="inline-flex items-center gap-1.5 font-barlow font-extrabold tabular-nums text-dota-gold text-lg">
+          {teamGoldTotal.toLocaleString()}
+          <GoldIcon size={18} />
+        </span>
+      </div>
     </div>
   );
 }
