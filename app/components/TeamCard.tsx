@@ -103,19 +103,19 @@ export default function TeamCard({
 
       {/* ── Team gold total ─────────────────────────────────────────────────
           Placed below the player list and separated by a divider so it reads
-          as a team-level summary rather than another player row. Uses a larger,
-          bolder gold figure than the per-player rows to reinforce that it's a
-          total. The label changes to "Final total" when the match is finished
-          so it reads coherently alongside the "Final gold standings" label.
+          as a team-level summary rather than another player row. Wrapped in a
+          gold-tinted panel with a brighter label so it stands out clearly from
+          the per-player rows. The label changes to "Final total" when the match
+          is finished so it reads coherently alongside "Final gold standings".
       ── */}
       <div className="divider mt-4 mb-3" />
-      <div className="flex items-center justify-between px-1">
-        <span className="stat-label uppercase tracking-wide">
+      <div className="flex items-center justify-between rounded-lg bg-dota-gold/10 border border-dota-gold/25 px-3 py-2.5">
+        <span className="font-barlow font-bold uppercase tracking-wider text-dota-gold/90 text-sm">
           {matchFinished ? 'Final total' : 'Team gold'}
         </span>
-        <span className="inline-flex items-center gap-1.5 font-barlow font-extrabold tabular-nums text-dota-gold text-lg">
+        <span className="inline-flex items-center gap-1.5 font-barlow font-extrabold tabular-nums text-dota-gold text-xl">
           {teamGoldTotal.toLocaleString()}
-          <GoldIcon size={18} />
+          <GoldIcon size={20} />
         </span>
       </div>
     </div>
