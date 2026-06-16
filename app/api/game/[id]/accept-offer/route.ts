@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { broadcastEvent } from '@/lib/supabase-server';
+import { checkGoldThresholdWin } from '@/lib/gold-win';
 
 export async function POST(
   req: NextRequest,
@@ -190,7 +191,48 @@ export async function POST(
       [gameId]
     );
 
-    // ---- Create the next game ----------------------------------------------
+    // ---- Gold threshold win check ------------------------------------------
+    // The seller just received offer_amount gold. If they (or anyone else —
+    // though in practice only the seller's gold changed) has now crossed
+    // 100,000, the match ends here and no new game is created.
+    // If two players somehow cross simultaneously, the one with the higher
+    // gold total wins; user_id ASC breaks exact ties deterministically.
+    const goldWin = await checkGoldThresholdWin(game.match_id, client);
+
+    if (goldWin) {
+      await client.query(
+        `UPDATE matches SET status = 'finished', winner_id = $1 WHERE id = $2`,
+        [goldWin.winnerId, game.match_id]
+      );
+
+      await client.query('COMMIT');
+
+      // Broadcast offer resolution first so the auction UI settles cleanly,
+      // then broadcast the match-over event so the page transitions to the
+      // winner banner. The client handles these independently so order is not
+      // strictly required, but offer-accepted first is more natural.
+      await broadcastEvent(
+        `match-${game.match_id}-offers`,
+        'offer-accepted',
+        {
+          acceptedOfferId: offerId,
+          acceptedAmount:  offer_amount,
+        }
+      );
+
+      await broadcastEvent(
+        `match-${game.match_id}`,
+        'game-winner-selected',
+        {
+          matchId:  game.match_id,
+          winnerId: goldWin.winnerId,
+        }
+      );
+
+      return NextResponse.json({ ok: true });
+    }
+
+    // ---- No threshold win: create the next game ----------------------------
     await client.query(
       `INSERT INTO games (match_id, team_a_members, team_1_members, status)
        VALUES ($1, $2, $3, 'in progress')`,
