@@ -17,8 +17,6 @@ export async function POST(
   }
 
   // ---- Parse + validate body -----------------------------------------------
-  // Number() is too permissive — Number("1.5") passes isNaN but is not a
-  // valid integer ID. We require a positive integer throughout.
   let offerId: number;
   try {
     const body = await req.json();
@@ -41,8 +39,6 @@ export async function POST(
     await client.query('BEGIN');
 
     // ---- Lock game row ------------------------------------------------------
-    // FOR UPDATE prevents concurrent accept-offer requests from reading the
-    // same game state simultaneously and both proceeding past the status check.
     const { rows: gameRows } = await client.query<{
       id: number;
       match_id: number;
@@ -71,11 +67,6 @@ export async function POST(
       return NextResponse.json({ error: 'Game is not in auction phase.' }, { status: 400 });
     }
 
-    // Note: the winning_team null-check that previously appeared here has been
-    // removed. The select-winner route sets status and winning_team atomically
-    // in a single UPDATE, so winning_team is guaranteed non-null whenever
-    // status = 'auction pending'. The check was unreachable dead code.
-
     // ---- Authorise: caller must be on the losing team ----------------------
     const {
       team_a_members: teamA,
@@ -94,9 +85,6 @@ export async function POST(
     }
 
     // ---- Atomically claim the offer ----------------------------------------
-    // UPDATE ... WHERE status = 'pending' RETURNING is a single atomic
-    // operation. If two requests race, only one gets rows back — the other
-    // gets zero rows and a 409 with no side effects, even at READ COMMITTED.
     const { rows: offerRows } = await client.query<{
       id: number;
       from_player_id: number;
@@ -122,14 +110,11 @@ export async function POST(
 
     const { from_player_id, target_player_id, offer_amount } = offerRows[0];
 
-    // ---- Validate target player + build new teams before any further writes --
+    // ---- Validate target player + build new teams --------------------------
     const inTeamA = teamA.includes(target_player_id);
     const inTeam1 = team1.includes(target_player_id);
 
     if (!inTeamA && !inTeam1) {
-      // Defensive only — submit-offer already validates the target is a
-      // winning team member, so this path should never be reached with
-      // consistent data.
       await client.query('ROLLBACK');
       return NextResponse.json(
         { error: 'Target player not found in current game.' },
@@ -137,7 +122,6 @@ export async function POST(
       );
     }
 
-    // Build the new team composition before writing anything
     const newTeamA = [...teamA];
     const newTeam1 = [...team1];
 
@@ -149,8 +133,6 @@ export async function POST(
       newTeamA.push(target_player_id);
     }
 
-    // Guard before any further writes — ROLLBACK here only undoes the offer
-    // claim above. Previously this check ran after 5 downstream writes.
     if (newTeamA.length === 0 || newTeam1.length === 0) {
       await client.query('ROLLBACK');
       return NextResponse.json(
@@ -159,7 +141,7 @@ export async function POST(
       );
     }
 
-    // ---- Reject all other pending offers for this game ----------------------
+    // ---- Reject all other pending offers ------------------------------------
     await client.query(
       `UPDATE offers
        SET status = 'rejected'
@@ -192,25 +174,20 @@ export async function POST(
     );
 
     // ---- Gold threshold win check ------------------------------------------
-    // The seller just received offer_amount gold. If they (or anyone else —
-    // though in practice only the seller's gold changed) has now crossed
-    // 100,000, the match ends here and no new game is created.
-    // If two players somehow cross simultaneously, the one with the higher
-    // gold total wins; user_id ASC breaks exact ties deterministically.
+    // The seller just received gold. If they (or anyone) now has ≥ 100,000,
+    // the match ends here — no next game is created.
     const goldWin = await checkGoldThresholdWin(game.match_id, client);
 
     if (goldWin) {
       await client.query(
-        `UPDATE matches SET status = 'finished', winner_id = $1 WHERE id = $2`,
+        `UPDATE matches
+         SET status = 'finished', winner_id = $1, win_type = 'gold_threshold'
+         WHERE id = $2`,
         [goldWin.winnerId, game.match_id]
       );
 
       await client.query('COMMIT');
 
-      // Broadcast offer resolution first so the auction UI settles cleanly,
-      // then broadcast the match-over event so the page transitions to the
-      // winner banner. The client handles these independently so order is not
-      // strictly required, but offer-accepted first is more natural.
       await broadcastEvent(
         `match-${game.match_id}-offers`,
         'offer-accepted',
@@ -226,6 +203,7 @@ export async function POST(
         {
           matchId:  game.match_id,
           winnerId: goldWin.winnerId,
+          winType:  'gold_threshold',
         }
       );
 
@@ -241,11 +219,6 @@ export async function POST(
 
     await client.query('COMMIT');
 
-    // ---- Notify clients (outside transaction) ------------------------------
-    // newGame is intentionally excluded from this payload. The match page
-    // calls fetchMatchData() on offer-accepted, which re-fetches the full
-    // match state including the new game. Sending newGame here was dead weight
-    // — the client never read it from the broadcast payload.
     await broadcastEvent(
       `match-${game.match_id}-offers`,
       'offer-accepted',
