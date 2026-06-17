@@ -8,8 +8,7 @@
 //
 // If two players cross the threshold simultaneously (e.g. both receive
 // win-reward gold in the same distribution pass), the one with the higher
-// gold total is declared the winner. user_id ASC is used as a deterministic
-// tiebreaker in the unlikely event they land on exactly the same amount.
+// gold total wins. user_id ASC breaks exact ties deterministically.
 
 import type { PoolClient } from 'pg';
 
