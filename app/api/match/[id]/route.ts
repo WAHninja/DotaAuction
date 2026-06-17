@@ -6,14 +6,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // ---- Auth ----------------------------------------------------------------
   const session = await getSession();
   if (!session?.userId) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
   const currentUserId = session.userId;
 
-  // ---- Validate route param ------------------------------------------------
   const { id } = await params;
   const matchId = Number(id);
   if (!Number.isInteger(matchId) || matchId <= 0) {
@@ -26,9 +24,10 @@ export async function GET(
         id: number;
         status: string;
         winner_id: number | null;
+        win_type: string | null;
         created_at: string;
       }>(
-        `SELECT id, status, winner_id, created_at
+        `SELECT id, status, winner_id, win_type, created_at
          FROM matches
          WHERE id = $1`,
         [matchId]
@@ -64,14 +63,9 @@ export async function GET(
       ),
     ]);
 
-    // ---- Existence check ---------------------------------------------------
     if (matchRes.rowCount === 0) {
       return NextResponse.json({ error: 'Match not found.' }, { status: 404 });
     }
-    // No membership check — any authenticated user can view any match as a
-    // spectator. Action routes (submit-offer, accept-offer, select-winner)
-    // enforce membership independently. The UI already hides all action
-    // buttons when currentUserId doesn't match any player in the match.
 
     const match      = matchRes.rows[0];
     const players    = playersRes.rows;
@@ -80,7 +74,6 @@ export async function GET(
       ? { ...games[games.length - 1], gameNumber: games.length }
       : null;
 
-    // ---- Conditionally fetch offers ----------------------------------------
     let offers: unknown[] = [];
     if (latestGame?.status === 'auction pending') {
       const offersRes = await db.query(
