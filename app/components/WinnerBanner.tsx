@@ -1,28 +1,22 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, Swords, Hash, Calendar, Repeat2, Eye } from 'lucide-react';
+import { Trophy, Swords, Hash, Calendar, Repeat2, Eye, Coins } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import Link from 'next/link';
-import type { ViewerState } from '@/types';
+import type { ViewerState, WinType } from '@/types';
 
 type WinnerBannerProps = {
   winnerName?: string;
   viewerState: ViewerState;
+  winType?: WinType | null;
   totalGames?: number;
   matchCreatedAt?: string;
-  // How many games the winner won/lost across the match
   winnerRecord?: { wins: number; losses: number };
-  // How many games the viewing loser won/lost (only meaningful for 'loser')
   viewerRecord?: { wins: number; losses: number };
-  // How many times the winner was traded during the match (hidden when 0)
   winnerTimesTraded?: number;
 };
-
-// ---------------------------------------------------------------------------
-// StatItem
-// ---------------------------------------------------------------------------
 
 function StatItem({
   icon: Icon,
@@ -50,13 +44,33 @@ function StatItem({
   );
 }
 
-// ---------------------------------------------------------------------------
-// WinnerBanner
-// ---------------------------------------------------------------------------
+// ── Win type badge ────────────────────────────────────────────────────────────
+// Shown on all variants so spectators and losers also see how the match ended.
+
+function WinTypeBadge({ winType }: { winType: WinType | null | undefined }) {
+  if (!winType) return null;
+
+  if (winType === 'gold_threshold') {
+    return (
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded border font-barlow text-xs font-semibold bg-dota-gold/15 border-dota-gold/40 text-dota-gold">
+        <Coins className="w-3 h-3" aria-hidden="true" />
+        Gold Threshold Victory — 100,000 gold reached
+      </div>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded border font-barlow text-xs font-semibold bg-dota-radiant/15 border-dota-radiant/40 text-dota-radiant-light">
+      <Swords className="w-3 h-3" aria-hidden="true" />
+      Last Standing Victory
+    </div>
+  );
+}
 
 export default function WinnerBanner({
   winnerName,
   viewerState,
+  winType,
   totalGames,
   matchCreatedAt,
   winnerRecord,
@@ -73,6 +87,12 @@ export default function WinnerBanner({
       })
     : null;
 
+  // Gold threshold wins get a gold confetti palette; last-standing gets the
+  // standard Dota palette.
+  const confettiColors = winType === 'gold_threshold'
+    ? ['#c8a951', '#dfc06a', '#9a7d35', '#e8d5a0', '#f5e87a']
+    : ['#c8a951', '#dfc06a', '#4a9b3c', '#c0392b', '#e8e0d0'];
+
   // ── Victory variant ────────────────────────────────────────────────────────
   if (viewerState === 'winner') {
     return (
@@ -82,16 +102,16 @@ export default function WinnerBanner({
           height={height}
           numberOfPieces={300}
           recycle={false}
-          colors={['#c8a951', '#dfc06a', '#4a9b3c', '#c0392b', '#e8e0d0']}
+          colors={confettiColors}
         />
 
-        {/* Screen reader announcement — confetti conveys nothing to AT */}
         <p className="sr-only" aria-live="assertive" aria-atomic="true">
           Victory!{winnerName ? ` ${winnerName} wins` : ''} the match
           {totalGames != null ? ` after ${totalGames} games` : ''}.
+          {winType === 'gold_threshold' ? ' Won by reaching 100,000 gold.' : ''}
         </p>
 
-        <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/40 min-h-[260px]">
+        <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/40 min-h-[280px]">
           <Image
             src="/rewards_aegis2024.png"
             alt=""
@@ -127,17 +147,22 @@ export default function WinnerBanner({
                   <span className="text-dota-gold font-semibold not-italic">
                     {winnerName}
                   </span>{' '}
-                  claims the Aegis. Glory is yours.
+                  {winType === 'gold_threshold'
+                    ? 'amassed a fortune and claimed the Aegis.'
+                    : 'claims the Aegis. Glory is yours.'}
                 </>
               ) : (
                 'A champion rises. Glory is yours.'
               )}
             </p>
 
+            <div className="flex justify-center">
+              <WinTypeBadge winType={winType} />
+            </div>
+
             <div className="divider-gold w-32 mx-auto" />
 
             <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
-              {/* Personal record — most meaningful stat for the winner */}
               {winnerRecord && (
                 <StatItem
                   icon={Swords}
@@ -160,7 +185,6 @@ export default function WinnerBanner({
                   value={formattedDate}
                 />
               )}
-              {/* Only show if actually traded — "Traded 0 times" is meaningless */}
               {winnerTimesTraded != null && winnerTimesTraded > 0 && (
                 <StatItem
                   icon={Repeat2}
@@ -186,7 +210,7 @@ export default function WinnerBanner({
   // ── Defeat variant ─────────────────────────────────────────────────────────
   if (viewerState === 'loser') {
     return (
-      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[260px]">
+      <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[280px]">
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
@@ -209,13 +233,18 @@ export default function WinnerBanner({
             <span className="text-dota-gold font-semibold not-italic">
               {winnerName ?? 'A champion'}
             </span>{' '}
-            has claimed the Aegis.
+            {winType === 'gold_threshold'
+              ? 'accumulated 100,000 gold and claimed the Aegis.'
+              : 'has claimed the Aegis.'}
           </p>
+
+          <div className="flex justify-center">
+            <WinTypeBadge winType={winType} />
+          </div>
 
           <div className="divider w-32 mx-auto" />
 
           <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
-            {/* Champion — header badge removed so this is now the only mention */}
             {winnerName && (
               <StatItem
                 icon={Trophy}
@@ -224,7 +253,6 @@ export default function WinnerBanner({
                 valueClass="text-dota-gold"
               />
             )}
-            {/* Viewer's own record — gives the loser something personal */}
             {viewerRecord && (
               <StatItem
                 icon={Swords}
@@ -261,11 +289,8 @@ export default function WinnerBanner({
   }
 
   // ── Spectator variant ──────────────────────────────────────────────────────
-  // Neutral — no confetti, no Defeated, no personal stats.
-  // Shows Champion + Total Games + Started since all three are informative
-  // to someone watching from outside the match.
   return (
-    <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/20 min-h-[260px]">
+    <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/20 min-h-[280px]">
       <Image
         src="/rewards_aegis2024.png"
         alt=""
@@ -299,8 +324,14 @@ export default function WinnerBanner({
           <span className="text-dota-gold font-semibold not-italic">
             {winnerName ?? 'A champion'}
           </span>{' '}
-          has claimed the Aegis.
+          {winType === 'gold_threshold'
+            ? 'accumulated 100,000 gold and claimed the Aegis.'
+            : 'has claimed the Aegis.'}
         </p>
+
+        <div className="flex justify-center">
+          <WinTypeBadge winType={winType} />
+        </div>
 
         <div className="divider w-32 mx-auto" />
 
