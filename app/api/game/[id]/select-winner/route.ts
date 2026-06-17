@@ -11,9 +11,6 @@ export async function POST(
   // ---- Auth ----------------------------------------------------------------
   // Accepts either a valid user session (normal web flow) or an internal
   // secret header (Supabase Edge Function / Dota plugin flow).
-  // The internal secret bypasses membership checks since the request is
-  // server-to-server and the game ID + winning team are already validated
-  // by the Edge Function before it calls here.
   const internalSecret = req.headers.get('x-internal-secret');
   const isInternalCall =
     !!internalSecret &&
@@ -112,10 +109,6 @@ export async function POST(
 
     const matchId = game.match_id;
 
-    // Derive winning/losing member arrays via explicit conditionals rather
-    // than dynamic property access (game[`${teamId}_members`]). The dynamic
-    // version required `as number[]` casts that strict mode rightly flags —
-    // TypeScript can't verify a computed key maps to a known property type.
     const winningMembers: number[] =
       winningTeamId === 'team_1' ? game.team_1_members : game.team_a_members;
     const losingTeamId: 'team_1' | 'team_a' =
@@ -123,10 +116,8 @@ export async function POST(
     const losingMembers: number[] =
       losingTeamId === 'team_1' ? game.team_1_members : game.team_a_members;
 
-    // ---- Single-player win: existing match-end condition -------------------
-    // If the winning team is down to one player, they win the match outright
-    // regardless of gold. This is the original win condition and takes
-    // priority — no gold distribution happens for the final game.
+    // ---- Single-player win: original last-standing condition ---------------
+    // No gold distribution on the final game — match ends immediately.
     const isSinglePlayerWin = winningMembers.length === 1;
 
     if (isSinglePlayerWin) {
@@ -140,7 +131,9 @@ export async function POST(
       );
 
       await client.query(
-        `UPDATE matches SET status = 'finished', winner_id = $1 WHERE id = $2`,
+        `UPDATE matches
+         SET status = 'finished', winner_id = $1, win_type = 'last_standing'
+         WHERE id = $2`,
         [winningPlayerId, matchId]
       );
 
@@ -149,21 +142,19 @@ export async function POST(
       await broadcastEvent(
         `match-${matchId}`,
         'game-winner-selected',
-        { gameId, matchId, winnerId: winningPlayerId }
+        { gameId, matchId, winnerId: winningPlayerId, winType: 'last_standing' }
       );
 
       return NextResponse.json({
         success: true,
-        message: 'Match finished with single winner.',
+        message: 'Match finished — last player standing.',
       });
     }
 
-    // ---- Multi-player winning team: apply gold and check for threshold win -
-
-    // Set game to auction pending now. If the gold threshold fires below,
-    // a second UPDATE corrects this to 'finished' within the same transaction
-    // — the client never sees the intermediate 'auction pending' state because
-    // nothing is committed until we know which path we're on.
+    // ---- Multi-player path: distribute gold then check threshold -----------
+    // Set to 'auction pending' now. If gold threshold fires below, a second
+    // UPDATE corrects this to 'finished' within the same transaction — the
+    // intermediate state is never visible to clients.
     await client.query(
       `UPDATE games
        SET status = 'auction pending', winning_team = $1
@@ -171,8 +162,6 @@ export async function POST(
       [winningTeamId, gameId]
     );
 
-    // Type parameter ensures r is { user_id: number; gold: number } — no
-    // implicit any, no cast needed on the .map() callback below.
     const loserGoldRes = await client.query<{ user_id: number; gold: number }>(
       `SELECT user_id, gold
        FROM match_players
@@ -223,22 +212,20 @@ export async function POST(
     );
 
     // ---- Gold threshold win check ------------------------------------------
-    // All gold has been distributed. If any player is now at or above
-    // 100,000 gold, the match ends immediately — the auction never opens.
-    // If two players cross simultaneously, the one with the higher gold
-    // total wins; user_id ASC breaks exact ties deterministically.
+    // All gold distributed. If any player is now at or above 100,000,
+    // the match ends — no auction opens. Highest gold wins the tie.
     const goldWin = await checkGoldThresholdWin(matchId, client);
 
     if (goldWin) {
-      // Override the 'auction pending' status set above — same transaction
-      // so the intermediate value is never visible to clients.
       await client.query(
         `UPDATE games SET status = 'finished' WHERE id = $1`,
         [gameId]
       );
 
       await client.query(
-        `UPDATE matches SET status = 'finished', winner_id = $1 WHERE id = $2`,
+        `UPDATE matches
+         SET status = 'finished', winner_id = $1, win_type = 'gold_threshold'
+         WHERE id = $2`,
         [goldWin.winnerId, matchId]
       );
 
@@ -247,12 +234,12 @@ export async function POST(
       await broadcastEvent(
         `match-${matchId}`,
         'game-winner-selected',
-        { gameId, matchId, winnerId: goldWin.winnerId }
+        { gameId, matchId, winnerId: goldWin.winnerId, winType: 'gold_threshold' }
       );
 
       return NextResponse.json({
         success: true,
-        message: 'Match finished via gold threshold win.',
+        message: 'Match finished — gold threshold reached.',
       });
     }
 
