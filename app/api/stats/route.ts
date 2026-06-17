@@ -2,31 +2,13 @@ import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
 
-// ---------------------------------------------------------------------------
-// Module-level cache
-//
-// Stats are entirely global — the response is identical for every authenticated
-// user. A module-level cache with a 60-second TTL means the 8 DB queries (3 of
-// which are complex CTEs) run at most once per minute regardless of how many
-// users are hitting the Stats tab simultaneously.
-//
-// This is safe because:
-//   • No user-specific data appears in the response
-//   • Stats don't need to be real-time — a 60-second lag is imperceptible
-//   • The cache is invalidated automatically when the server restarts
-//
-// If you ever add per-user data to this endpoint, move to a browser-side
-// Cache-Control header instead: NextResponse.json(data, {
-//   headers: { 'Cache-Control': 'private, max-age=60' }
-// })
-// ---------------------------------------------------------------------------
-
 type StatsPayload = {
   players: PlayerRow[];
   topWinningCombos: TeamComboRow[];
   acquisitionImpact: AcquisitionRow[];
   winStreaks: WinStreakRow[];
   headToHead: HeadToHeadRow[];
+  winTypeStats: WinTypeStatsRow[];
 };
 
 type StatsCache = {
@@ -76,7 +58,14 @@ type HeadToHeadRow = {
   playerBWins: number;
 };
 
-const CACHE_TTL_MS = 60 * 1_000; // 60 seconds
+type WinTypeStatsRow = {
+  username: string;
+  lastStandingWins: number;
+  goldThresholdWins: number;
+  totalWins: number;
+};
+
+const CACHE_TTL_MS = 60 * 1_000;
 let statsCache: StatsCache | null = null;
 
 export async function GET() {
@@ -85,21 +74,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  // Serve from cache if still fresh
   if (statsCache && Date.now() - statsCache.cachedAt < CACHE_TTL_MS) {
     return NextResponse.json(statsCache.data);
   }
 
   try {
-    // -------------------------------------------------------------------------
-    // Run all 8 queries in parallel
-    //
-    // Previously steps 1–5 were sequential awaits, each blocking the next
-    // despite having no dependency on each other at the DB level. Combined with
-    // the existing Promise.all for the 3 CTE queries, we now issue all 8 in one
-    // round trip. On a connection-pooled PG instance this typically cuts the
-    // total DB wait time from ~(sum of all query times) to ~(slowest query time).
-    // -------------------------------------------------------------------------
     const [
       usersResult,
       matchPlayersResult,
@@ -109,19 +88,17 @@ export async function GET() {
       acquisitionResult,
       winStreakResult,
       headToHeadResult,
+      winTypeResult,
     ] = await Promise.all([
 
-      // 1. All users — builds the base playersMap
       db.query<{ id: number; username: string }>(
         `SELECT id, username FROM users`
       ),
 
-      // 2. All match participation rows — for matchesPlayed count
       db.query<{ match_id: number; user_id: number }>(
         `SELECT match_id, user_id FROM match_players`
       ),
 
-      // 3. All finished games — for win/loss counts and team combo tracking
       db.query<{
         id: number;
         team_1_members: number[];
@@ -133,7 +110,6 @@ export async function GET() {
          WHERE status = 'finished'`
       ),
 
-      // 4. All offers — for offer/sold counts and average bid value
       db.query<{
         from_player_id: number;
         target_player_id: number;
@@ -144,14 +120,12 @@ export async function GET() {
          FROM offers`
       ),
 
-      // 5. Net gold per player — sum of all gold_change entries
       db.query<{ player_id: number; net_gold: string }>(
         `SELECT player_id, SUM(gold_change) AS net_gold
          FROM game_player_stats
          GROUP BY player_id`
       ),
 
-      // 6. Acquisition impact CTE
       db.query<{
         username: string;
         total_acquisitions: string;
@@ -195,7 +169,6 @@ export async function GET() {
         ORDER BY win_rate DESC, total_acquisitions DESC
       `),
 
-      // 7. Win streaks CTE
       db.query<{
         username: string;
         longest_streak: string;
@@ -257,7 +230,6 @@ export async function GET() {
         LIMIT  10
       `),
 
-      // 8. Head-to-head records CTE
       db.query<{
         player_a_id: string;
         player_a: string;
@@ -296,15 +268,31 @@ export async function GET() {
         GROUP  BY player_a_id, ua.username, player_b_id, ub.username
         ORDER  BY total_games DESC
       `),
+
+      // Win type breakdown — how each player's match wins are distributed
+      // between the two win conditions. Only players with at least one win
+      // are included.
+      db.query<{
+        username: string;
+        last_standing_wins: string;
+        gold_threshold_wins: string;
+        total_wins: string;
+      }>(`
+        SELECT
+          u.username,
+          COUNT(*) FILTER (WHERE m.win_type = 'last_standing')  AS last_standing_wins,
+          COUNT(*) FILTER (WHERE m.win_type = 'gold_threshold') AS gold_threshold_wins,
+          COUNT(*)                                               AS total_wins
+        FROM matches m
+        JOIN users u ON u.id = m.winner_id
+        WHERE m.winner_id IS NOT NULL
+        GROUP BY u.id, u.username
+        ORDER BY total_wins DESC, u.username ASC
+      `),
     ]);
 
-    // -------------------------------------------------------------------------
-    // Process query results
-    // The logic below is unchanged from the original — we just receive all
-    // results at once now rather than building the map incrementally.
-    // -------------------------------------------------------------------------
+    // ---- Process results (unchanged from original except winTypeResult) ----
 
-    // 1. Build base player map
     const playersMap = new Map<number, {
       username: string;
       matchesPlayed: Set<number>;
@@ -335,12 +323,10 @@ export async function GET() {
       });
     }
 
-    // 2. Matches played
     for (const row of matchPlayersResult.rows) {
       playersMap.get(row.user_id)?.matchesPlayed.add(row.match_id);
     }
 
-    // 3. Games played / won + team combo tracking
     const teamComboWins  = new Map<string, number>();
     const teamComboGames = new Map<string, number>();
 
@@ -375,7 +361,6 @@ export async function GET() {
       }
     }
 
-    // 4. Offers
     for (const offer of offersResult.rows) {
       if (offer.from_player_id != null) {
         const fromStats = playersMap.get(offer.from_player_id);
@@ -395,15 +380,10 @@ export async function GET() {
       }
     }
 
-    // 5. Net gold
     for (const row of netGoldResult.rows) {
       const stats = playersMap.get(row.player_id);
       if (stats) stats.netGold = parseInt(row.net_gold, 10);
     }
-
-    // -------------------------------------------------------------------------
-    // Build response payload
-    // -------------------------------------------------------------------------
 
     const players: PlayerRow[] = Array.from(playersMap.values()).map(p => ({
       username:          p.username,
@@ -452,24 +432,27 @@ export async function GET() {
       playerBWins: Number(r.player_b_wins),
     }));
 
+    const winTypeStats: WinTypeStatsRow[] = winTypeResult.rows.map(r => ({
+      username:          r.username,
+      lastStandingWins:  Number(r.last_standing_wins),
+      goldThresholdWins: Number(r.gold_threshold_wins),
+      totalWins:         Number(r.total_wins),
+    }));
+
     const data: StatsPayload = {
       players,
       topWinningCombos,
       acquisitionImpact,
       winStreaks,
       headToHead,
+      winTypeStats,
     };
 
-    // Store in cache
     statsCache = { data, cachedAt: Date.now() };
-
     return NextResponse.json(data);
 
   } catch (error) {
     console.error('[STATS_ERROR]', error);
-    return NextResponse.json(
-      { error: 'Failed to build stats' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to build stats' }, { status: 500 });
   }
 }
