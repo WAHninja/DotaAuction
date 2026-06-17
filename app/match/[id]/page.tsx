@@ -334,6 +334,7 @@ export default function MatchPage() {
         <WinnerBanner
           winnerName={winnerName}
           viewerState={viewerState}
+          winType={match.win_type}
           totalGames={history.length}
           matchCreatedAt={match.created_at}
           winnerRecord={winnerRecord}
