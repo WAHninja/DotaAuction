@@ -247,62 +247,67 @@ export default function GameRulesCard() {
 
         <ul className="space-y-2.5">
 
-          <Rule>
-            Requires <strong className="text-dota-text">3 or more players</strong>.
-          </Rule>
+  <Rule>
+    Requires <strong className="text-dota-text">3 or more players</strong>.
+  </Rule>
 
-          <Rule>
-            After each game, members of the losing team lose <strong className="text-dota-text">half their gold</strong>.
-            Winners each receive <strong className="text-dota-text">1,000 gold</strong>{' '}
-            plus a share of half the loser pool.{' '}
-            <HelpButton
-              ref={goldTriggerRef}
-              onClick={() => openModal('gold')}
-              label="How gold is calculated"
-            />
-          </Rule>
+  <Rule>
+    After each game, members of the losing team lose <strong className="text-dota-text">half their gold</strong>.
+    Winners each receive <strong className="text-dota-text">1,000 gold</strong>{' '}
+    plus a share of half the loser pool.{' '}
+    <HelpButton
+      ref={goldTriggerRef}
+      onClick={() => openModal('gold')}
+      label="How gold is calculated"
+    />
+  </Rule>
 
-          {/* Point 2 fixed: "one offer each" made explicit */}
-          <Rule>
-            The auction then starts and every <strong className="text-dota-text">winner</strong> secretly
-            submits <strong className="text-dota-text">one offer</strong> — picking a teammate
-            to sell and naming their own price within the current game's allowed range, which
-            increases every game.{' '}
-            <HelpButton
-              ref={offerTriggerRef}
-              onClick={() => openModal('offer')}
-              label="How offers work"
-            />
-          </Rule>
+  <Rule>
+    The auction then starts and every <strong className="text-dota-text">winner</strong> secretly
+    submits <strong className="text-dota-text">one offer</strong> — picking a teammate
+    to sell and naming their own price within the current game's allowed range, which
+    increases every game.{' '}
+    <HelpButton
+      ref={offerTriggerRef}
+      onClick={() => openModal('offer')}
+      label="How offers work"
+    />
+  </Rule>
 
-          {/* Point 1 fixed: hidden-until-all-submitted surfaced in main rules */}
-          <Rule>
-            Offers — including who is being sold — are{' '}
-            <strong className="text-dota-text">hidden from everyone</strong> until all winners
-            have submitted. Once all offers are in,{' '}
-            <strong className="text-dota-text">losers</strong> see only{' '}
-            <span className="tier-low mx-0.5">Low</span>,{' '}
-            <span className="tier-medium mx-0.5">Medium</span>, or{' '}
-            <span className="tier-high mx-0.5">High</span> for each — tiers{' '}
-            <strong className="text-dota-text">overlap</strong>, so a Low offer can be worth
-            more than a Medium.
-          </Rule>
+  <Rule>
+    Offers — including who is being sold — are{' '}
+    <strong className="text-dota-text">hidden from everyone</strong> until all winners
+    have submitted. Once all offers are in,{' '}
+    <strong className="text-dota-text">losers</strong> see only{' '}
+    <span className="tier-low mx-0.5">Low</span>,{' '}
+    <span className="tier-medium mx-0.5">Medium</span>, or{' '}
+    <span className="tier-high mx-0.5">High</span> for each — tiers{' '}
+    <strong className="text-dota-text">overlap</strong>, so a Low offer can be worth
+    more than a Medium.
+  </Rule>
 
-          {/* Point 4 fixed: "the winner who made that offer" instead of "the seller" */}
-          <Rule>
-            Losers accept one offer: the winner who made that offer{' '}
-            <strong className="text-dota-text">receives the gold</strong> and the sold player{' '}
-            <strong className="text-dota-text">switches teams</strong>. All other offers are
-            rejected.
-          </Rule>
+  <Rule>
+    Losers accept one offer: the winner who made that offer{' '}
+    <strong className="text-dota-text">receives the gold</strong> and the sold player{' '}
+    <strong className="text-dota-text">switches teams</strong>. All other offers are
+    rejected.
+  </Rule>
 
-          {/* Minor phrasing fix: "alone on their team" → clearer phrasing */}
-          <Rule>
-            The match ends when a team is down to{' '}
-            <strong className="text-dota-text">one player and wins a game</strong>.
-          </Rule>
+  <Rule>
+    The match ends when a team is down to{' '}
+    <strong className="text-dota-text">one player and wins a game</strong>.
+  </Rule>
 
-        </ul>
+  <Rule>
+    The match also ends immediately if any player reaches{' '}
+    <strong className="text-dota-text">100,000 gold</strong> — either from post-game
+    distribution or from receiving auction proceeds. If this happens before
+    an auction opens, the auction is cancelled. The player with the most gold
+    wins; if two players cross the threshold simultaneously, the higher total
+    takes the match.
+  </Rule>
+
+</ul>
       </div>
 
       {/* ── Gold modal ───────────────────────────────────────────────────────── */}
