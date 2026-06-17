@@ -295,16 +295,9 @@ export default function GameRulesCard() {
 
   <Rule>
     The match ends when a team is down to{' '}
-    <strong className="text-dota-text">one player and wins a game</strong>.
-  </Rule>
-
-  <Rule>
-    The match also ends immediately if any player reaches{' '}
-    <strong className="text-dota-text">100,000 gold</strong> — either from post-game
-    distribution or from receiving auction proceeds. If this happens before
-    an auction opens, the auction is cancelled. The player with the most gold
-    wins; if two players cross the threshold simultaneously, the higher total
-    takes the match.
+    <strong className="text-dota-text">one player and wins a game</strong> or if any player reaches{' '}
+    <strong className="text-dota-text">100,000 gold</strong> (if two players cross the threshold simultaneously, the higher total
+    takes the match.)
   </Rule>
 
 </ul>
