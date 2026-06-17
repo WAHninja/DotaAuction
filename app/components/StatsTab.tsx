@@ -4,10 +4,17 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   ChevronUp, ChevronDown, ChevronsUpDown,
   Zap, Swords, ShoppingCart, ChevronDown as SelectChevron,
+  Coins,
 } from 'lucide-react'
 import GoldIcon from '@/app/components/GoldIcon';
-import type { PlayerStats, TeamCombo, AcquisitionImpact, WinStreak, HeadToHead, WinTypeStats } from '@/types';
-import { Coins } from 'lucide-react';
+import type {
+  PlayerStats,
+  TeamCombo,
+  AcquisitionImpact,
+  WinStreak,
+  HeadToHead,
+  WinTypeStats,
+} from '@/types';
 
 // =============================================================================
 // Constants
@@ -28,7 +35,6 @@ type Column = {
   sublabel?: string;
   key: LocalSortKey;
   tooltip: string;
-  /** Tooltip anchor. 'right' for the last column to prevent overflow. */
   tooltipAlign?: 'center' | 'right';
 };
 
@@ -64,7 +70,6 @@ const COLUMNS: Column[] = [
     tooltip: 'How many times you have been sold to the other team.',
     tooltipAlign: 'right',
   },
-
 ];
 
 const RANK_EMOJIS = ['🥇', '🥈', '🥉'];
@@ -94,21 +99,16 @@ function pctColour(value: number): string {
 // one axis with overflow: visible on the other — the browser promotes visible
 // to auto, clipping any absolutely-positioned child that escapes upward.
 // Pointing downward keeps the tooltip within the scroll container's bounds.
-//
-// align='center' (default) — centres the bubble on the trigger.
-// align='right'            — anchors the bubble to the right edge of the trigger.
-//   Used for the last table column (Net Gold) so the tooltip doesn't extend
-//   beyond the right edge of the table and widen the scroll container.
 function Tooltip({ id, content, children, align = 'center' }: {
   id: string;
   content: string;
   children: ReactNode;
   align?: 'center' | 'right';
 }) {
-  const bubblePos  = align === 'right'
+  const bubblePos = align === 'right'
     ? 'right-0'
     : 'left-1/2 -translate-x-1/2';
-  const arrowPos   = align === 'right'
+  const arrowPos = align === 'right'
     ? 'right-4'
     : 'left-1/2 -translate-x-1/2';
 
@@ -129,7 +129,6 @@ function Tooltip({ id, content, children, align = 'center' }: {
           text-left whitespace-normal
         `}
       >
-        {/* Arrow points up toward the trigger */}
         <span
           aria-hidden="true"
           className={`absolute bottom-full ${arrowPos} border-4 border-transparent border-b-dota-border-bright`}
@@ -168,8 +167,6 @@ function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
 }
 
 // ── RankedList ────────────────────────────────────────────────────────────────
-// Reusable ranked list used by both Acquisition Impact and Win Streaks.
-// Each row: rank emoji | name | primary value | optional sub-value
 function RankedList({ items, emptyMessage }: {
   items: { name: string; primary: string; sub?: string }[];
   emptyMessage: string;
@@ -242,13 +239,13 @@ export default function StatsTab(_props: StatsTabProps) {
   const [acquisitionImpact, setAcquisition] = useState<AcquisitionImpact[]>([]);
   const [winStreaks, setWinStreaks]          = useState<WinStreak[]>([]);
   const [headToHead, setHeadToHead]         = useState<HeadToHead[]>([]);
+  const [winTypeStats, setWinTypeStats]     = useState<WinTypeStats[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
   const [sortKey, setSortKey]               = useState<LocalSortKey>('gamesWinRate');
   const [sortDir, setSortDir]               = useState<'asc' | 'desc'>('desc');
   const [showAllCombos, setShowAllCombos]   = useState(false);
-  // Head-to-head player selector — defaults to the signed-in user once /api/me resolves
-  const [h2hSelected, setH2hSelected] = useState<string>('');
+  const [h2hSelected, setH2hSelected]       = useState<string>('');
 
   useEffect(() => {
     Promise.all([
@@ -261,7 +258,7 @@ export default function StatsTab(_props: StatsTabProps) {
         setAcquisition(statsData.acquisitionImpact ?? []);
         setWinStreaks(statsData.winStreaks ?? []);
         setHeadToHead(statsData.headToHead ?? []);
-        // Pre-select the signed-in user in the H2H picker if they exist in the data
+        setWinTypeStats(statsData.winTypeStats ?? []);
         if (meData.user?.username) {
           setH2hSelected(meData.user.username);
         }
@@ -310,15 +307,12 @@ export default function StatsTab(_props: StatsTabProps) {
   const visibleCombos = showAllCombos ? combos : combos.slice(0, 5);
 
   // ── Head-to-Head derived data ───────────────────────────────────────────────
-  // Collect all unique player names that appear in the H2H data, sorted alpha.
   const h2hPlayers = useMemo<string[]>(() => {
     const names = new Set<string>();
     headToHead.forEach(r => { names.add(r.playerA); names.add(r.playerB); });
     return [...names].sort();
   }, [headToHead]);
 
-  // For the selected player, build their record against each opponent they've
-  // faced, normalised from their perspective regardless of canonical ordering.
   type H2HRow = {
     opponent: string;
     wins: number;
@@ -333,9 +327,9 @@ export default function StatsTab(_props: StatsTabProps) {
     return headToHead
       .filter(r => r.playerA === h2hSelected || r.playerB === h2hSelected)
       .map(r => {
-        const isA     = r.playerA === h2hSelected;
-        const wins    = isA ? r.playerAWins : r.playerBWins;
-        const losses  = isA ? r.playerBWins : r.playerAWins;
+        const isA      = r.playerA === h2hSelected;
+        const wins     = isA ? r.playerAWins : r.playerBWins;
+        const losses   = isA ? r.playerBWins : r.playerAWins;
         const opponent = isA ? r.playerB : r.playerA;
         return {
           opponent,
@@ -345,11 +339,22 @@ export default function StatsTab(_props: StatsTabProps) {
           winRate: pct(wins, r.totalGames),
         };
       })
-      // Most-played rivalries first, then win rate as tiebreak
       .sort((a, b) => b.totalGames - a.totalGames || b.winRate - a.winRate);
   }, [headToHead, h2hSelected]);
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
+  // ── Win type derived data ───────────────────────────────────────────────────
+  // Total wins across all players for the summary line
+  const winTypeTotals = useMemo(() => {
+    return winTypeStats.reduce(
+      (acc, row) => ({
+        lastStanding:   acc.lastStanding + row.lastStandingWins,
+        goldThreshold:  acc.goldThreshold + row.goldThresholdWins,
+      }),
+      { lastStanding: 0, goldThreshold: 0 }
+    );
+  }, [winTypeStats]);
+
+  // ── Loading / error guards ─────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="panel p-8 text-center font-barlow text-dota-text-muted">
@@ -386,7 +391,6 @@ export default function StatsTab(_props: StatsTabProps) {
           </p>
         </div>
 
-        {/* overflow-x-auto clips upward tooltips — see Tooltip comment above */}
         <div className="relative">
           <div
             aria-hidden="true"
@@ -499,7 +503,6 @@ export default function StatsTab(_props: StatsTabProps) {
                         : <span className="text-dota-text-dim text-xs">—</span>
                       }
                     </td>
-
                   </tr>
                 ))}
               </tbody>
@@ -573,160 +576,310 @@ export default function StatsTab(_props: StatsTabProps) {
 
       </div>
 
-      {/* ── Row 3 + 4: Head-to-Head and Top Combinations side by side ────────── */}
+      {/* ── Row 3: Win Methods ───────────────────────────────────────────────── */}
+      {winTypeStats.length > 0 && (
+        <div className="panel overflow-hidden">
+          <div className="px-5 py-4 border-b border-dota-border flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Coins className="w-4 h-4 shrink-0 text-dota-gold" aria-hidden="true" />
+              <div>
+                <h3 className="font-cinzel text-lg font-bold text-dota-gold">Win Methods</h3>
+                <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
+                  How each player's match wins were achieved
+                </p>
+              </div>
+            </div>
+            {/* Summary pills — give a quick at-a-glance breakdown across all matches */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 font-barlow text-xs font-semibold px-2.5 py-1 rounded border bg-dota-radiant/10 border-dota-radiant/30 text-dota-radiant-light">
+                <Swords className="w-3 h-3" aria-hidden="true" />
+                {winTypeTotals.lastStanding} last standing
+              </div>
+              <div className="flex items-center gap-1.5 font-barlow text-xs font-semibold px-2.5 py-1 rounded border bg-dota-gold/10 border-dota-gold/30 text-dota-gold">
+                <Coins className="w-3 h-3" aria-hidden="true" />
+                {winTypeTotals.goldThreshold} gold threshold
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table
+              className="min-w-full font-barlow text-sm"
+              aria-label="Win method breakdown by player"
+            >
+              <thead>
+                <tr className="bg-dota-deep border-b border-dota-border">
+                  <th scope="col" className="px-5 py-3 text-left font-semibold text-xs text-dota-text-muted uppercase tracking-widest">
+                    Player
+                  </th>
+                  <th scope="col" className="px-5 py-3 text-center font-semibold text-xs text-dota-radiant-light uppercase tracking-widest">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Swords className="w-3 h-3" aria-hidden="true" />
+                      Last Standing
+                    </span>
+                  </th>
+                  <th scope="col" className="px-5 py-3 text-center font-semibold text-xs text-dota-gold uppercase tracking-widest">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Coins className="w-3 h-3" aria-hidden="true" />
+                      Gold Threshold
+                    </span>
+                  </th>
+                  <th scope="col" className="px-5 py-3 text-right font-semibold text-xs text-dota-text-muted uppercase tracking-widest">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dota-border/50">
+                {winTypeStats.map((row, i) => {
+                  const total = row.totalWins;
+                  const lsPct = total > 0 ? Math.round((row.lastStandingWins / total) * 100) : 0;
+                  const gtPct = total > 0 ? Math.round((row.goldThresholdWins / total) * 100) : 0;
+
+                  return (
+                    <tr
+                      key={row.username}
+                      className={`transition-colors hover:bg-dota-overlay/40 ${i === 0 ? 'bg-dota-gold/5' : ''}`}
+                    >
+                      {/* Player name + rank medal for top winner */}
+                      <td className="px-5 py-3">
+                        <span className="flex items-center gap-2">
+                          {i === 0 && <span aria-hidden="true">🥇</span>}
+                          {i === 1 && <span aria-hidden="true">🥈</span>}
+                          {i === 2 && <span aria-hidden="true">🥉</span>}
+                          <span className={`font-semibold ${i === 0 ? 'text-dota-gold' : 'text-dota-text'}`}>
+                            {row.username}
+                          </span>
+                        </span>
+                      </td>
+
+                      {/* Last standing column */}
+                      <td className="px-5 py-3 text-center">
+                        {row.lastStandingWins > 0 ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="font-bold tabular-nums text-dota-radiant-light">
+                              {row.lastStandingWins}
+                            </span>
+                            {total > 1 && (
+                              <span className="text-[10px] text-dota-text-dim tabular-nums">
+                                {lsPct}%
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-dota-text-dim text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Gold threshold column */}
+                      <td className="px-5 py-3 text-center">
+                        {row.goldThresholdWins > 0 ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="font-bold tabular-nums text-dota-gold">
+                              {row.goldThresholdWins}
+                            </span>
+                            {total > 1 && (
+                              <span className="text-[10px] text-dota-text-dim tabular-nums">
+                                {gtPct}%
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-dota-text-dim text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Total with a subtle progress bar showing the split */}
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-bold tabular-nums text-dota-text">
+                            {row.totalWins}
+                          </span>
+                          {/* Split bar — only meaningful if both types exist */}
+                          {row.lastStandingWins > 0 && row.goldThresholdWins > 0 && (
+                            <div
+                              className="w-16 h-1 rounded-full overflow-hidden bg-dota-border"
+                              aria-hidden="true"
+                              title={`${lsPct}% last standing, ${gtPct}% gold threshold`}
+                            >
+                              <div
+                                className="h-full bg-dota-radiant-light rounded-full"
+                                style={{ width: `${lsPct}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="px-5 py-2.5 border-t border-dota-border">
+            <p className="font-barlow text-[11px] text-dota-text-dim leading-snug">
+              <span className="text-dota-radiant-light font-semibold">Last Standing</span>
+              {' '}— won a game as the sole player on their team.{' '}
+              <span className="text-dota-gold font-semibold">Gold Threshold</span>
+              {' '}— reached 100,000 gold. The bar shows the split between the two for players with both types.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Row 4 + 5: Head-to-Head and Top Combinations side by side ─────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
-      {/* ── Head-to-Head ─────────────────────────────────────────────────────── */}
-      <div className="panel overflow-hidden">
-        <CardHeader
-          icon={Swords}
-          iconClass="text-dota-dire-light"
-          title="Head-to-Head"
-          subtitle="Win rate against specific opponents across all games you've faced each other"
-        />
+        {/* ── Head-to-Head ─────────────────────────────────────────────────────── */}
+        <div className="panel overflow-hidden">
+          <CardHeader
+            icon={Swords}
+            iconClass="text-dota-dire-light"
+            title="Head-to-Head"
+            subtitle="Win rate against specific opponents across all games you've faced each other"
+          />
 
-        <div className="p-4 space-y-4">
-          {headToHead.length === 0 ? (
-            <p className="text-center font-barlow text-dota-text-dim py-6">
-              No head-to-head data yet — need finished games with opposing players.
-            </p>
-          ) : (
-            <>
-              {/* Player selector */}
-              <div className="relative max-w-xs">
-                <select
-                  value={h2hSelected}
-                  onChange={e => setH2hSelected(e.target.value)}
-                  aria-label="Select player to view their head-to-head record"
-                  className="input appearance-none pr-8 cursor-pointer"
-                >
-                  <option value="">Select a player…</option>
-                  {h2hPlayers.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-                {/* Decorative chevron — the native select handles interaction */}
-                <SelectChevron
-                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dota-text-muted"
-                  aria-hidden="true"
-                />
-              </div>
-
-              {/* Results */}
-              {!h2hSelected ? (
-                <p className="font-barlow text-sm text-dota-text-dim text-center py-4">
-                  Choose a player above to see their record against each opponent.
-                </p>
-              ) : h2hRows.length === 0 ? (
-                <p className="font-barlow text-sm text-dota-text-dim text-center py-4">
-                  No recorded matchups for {h2hSelected} yet.
-                </p>
-              ) : (
-                <div>
-                  <table className="w-full font-barlow text-sm" aria-label={`Head-to-head record for ${h2hSelected}`}>
-                    <thead>
-                      <tr className="border-b border-dota-border text-left">
-                        <th scope="col" className="pb-2 pr-4 font-semibold text-xs text-dota-text-muted uppercase tracking-widest">
-                          Opponent
-                        </th>
-                        <th scope="col" className="pb-2 px-3 font-semibold text-xs text-dota-radiant-light uppercase tracking-widest text-center">
-                          W
-                        </th>
-                        <th scope="col" className="pb-2 px-3 font-semibold text-xs text-dota-dire-light uppercase tracking-widest text-center">
-                          L
-                        </th>
-                        <th scope="col" className="pb-2 px-3 font-semibold text-xs text-dota-text-muted uppercase tracking-widest text-center">
-                          Games
-                        </th>
-                        <th scope="col" className="pb-2 pl-3 font-semibold text-xs text-dota-text-muted uppercase tracking-widest text-right">
-                          Win Rate
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-dota-border/40">
-                      {h2hRows.map(row => (
-                        <tr key={row.opponent} className="hover:bg-dota-overlay/30 transition-colors">
-                          <td className="py-2.5 pr-4 font-semibold text-dota-text">
-                            {row.opponent}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-bold tabular-nums text-dota-radiant-light">
-                            {row.wins}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-bold tabular-nums text-dota-dire-light">
-                            {row.losses}
-                          </td>
-                          <td className="py-2.5 px-3 text-center tabular-nums text-dota-text-muted">
-                            {row.totalGames}
-                          </td>
-                          <td className="py-2.5 pl-3 text-right">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(row.winRate)}`}>
-                              {row.winRate}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  <p className="font-barlow text-[10px] text-dota-text-dim mt-3 leading-snug">
-                    Records cover all games where {h2hSelected} and the opponent were on opposing teams,
-                    across every match. Sorted by games played — most-played rivalries first.
-                  </p>
+          <div className="p-4 space-y-4">
+            {headToHead.length === 0 ? (
+              <p className="text-center font-barlow text-dota-text-dim py-6">
+                No head-to-head data yet — need finished games with opposing players.
+              </p>
+            ) : (
+              <>
+                {/* Player selector */}
+                <div className="relative max-w-xs">
+                  <select
+                    value={h2hSelected}
+                    onChange={e => setH2hSelected(e.target.value)}
+                    aria-label="Select player to view their head-to-head record"
+                    className="input appearance-none pr-8 cursor-pointer"
+                  >
+                    <option value="">Select a player…</option>
+                    {h2hPlayers.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                  <SelectChevron
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dota-text-muted"
+                    aria-hidden="true"
+                  />
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
 
-      {/* ── Top Winning Combinations ─────────────────────────────────────────── */}
-      <div className="panel overflow-hidden">
-        <div className="px-5 py-4 border-b border-dota-border">
-          <h3 className="font-cinzel text-lg font-bold text-dota-gold">Top Winning Combinations</h3>
-          <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            Most frequent winning team compositions
-          </p>
+                {/* Results */}
+                {!h2hSelected ? (
+                  <p className="font-barlow text-sm text-dota-text-dim text-center py-4">
+                    Choose a player above to see their record against each opponent.
+                  </p>
+                ) : h2hRows.length === 0 ? (
+                  <p className="font-barlow text-sm text-dota-text-dim text-center py-4">
+                    No recorded matchups for {h2hSelected} yet.
+                  </p>
+                ) : (
+                  <div>
+                    <table className="w-full font-barlow text-sm" aria-label={`Head-to-head record for ${h2hSelected}`}>
+                      <thead>
+                        <tr className="border-b border-dota-border text-left">
+                          <th scope="col" className="pb-2 pr-4 font-semibold text-xs text-dota-text-muted uppercase tracking-widest">
+                            Opponent
+                          </th>
+                          <th scope="col" className="pb-2 px-3 font-semibold text-xs text-dota-radiant-light uppercase tracking-widest text-center">
+                            W
+                          </th>
+                          <th scope="col" className="pb-2 px-3 font-semibold text-xs text-dota-dire-light uppercase tracking-widest text-center">
+                            L
+                          </th>
+                          <th scope="col" className="pb-2 px-3 font-semibold text-xs text-dota-text-muted uppercase tracking-widest text-center">
+                            Games
+                          </th>
+                          <th scope="col" className="pb-2 pl-3 font-semibold text-xs text-dota-text-muted uppercase tracking-widest text-right">
+                            Win Rate
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dota-border/40">
+                        {h2hRows.map(row => (
+                          <tr key={row.opponent} className="hover:bg-dota-overlay/30 transition-colors">
+                            <td className="py-2.5 pr-4 font-semibold text-dota-text">
+                              {row.opponent}
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold tabular-nums text-dota-radiant-light">
+                              {row.wins}
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold tabular-nums text-dota-dire-light">
+                              {row.losses}
+                            </td>
+                            <td className="py-2.5 px-3 text-center tabular-nums text-dota-text-muted">
+                              {row.totalGames}
+                            </td>
+                            <td className="py-2.5 pl-3 text-right">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(row.winRate)}`}>
+                                {row.winRate}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <p className="font-barlow text-[10px] text-dota-text-dim mt-3 leading-snug">
+                      Records cover all games where {h2hSelected} and the opponent were on opposing teams,
+                      across every match. Sorted by games played — most-played rivalries first.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="p-4">
-          {combos.length === 0 ? (
-            <p className="text-center font-barlow text-dota-text-dim py-6">No completed games yet.</p>
-          ) : (
-            <>
-              <ul className="space-y-2">
-                {visibleCombos.map((c, i) => (
-                  <li key={c.combo} className="panel-sunken p-3 flex items-center gap-3">
-                    <span className="font-barlow text-sm font-bold w-6 text-center shrink-0">
-                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
-                    </span>
-                    <span className="truncate font-barlow font-semibold text-sm text-dota-text flex-1 min-w-0">
-                      {c.combo}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-barlow text-xs text-dota-text-dim tabular-nums whitespace-nowrap">
-                        {c.wins}W – {c.gamesPlayed - c.wins}L
+        {/* ── Top Winning Combinations ─────────────────────────────────────────── */}
+        <div className="panel overflow-hidden">
+          <div className="px-5 py-4 border-b border-dota-border">
+            <h3 className="font-cinzel text-lg font-bold text-dota-gold">Top Winning Combinations</h3>
+            <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
+              Most frequent winning team compositions
+            </p>
+          </div>
+
+          <div className="p-4">
+            {combos.length === 0 ? (
+              <p className="text-center font-barlow text-dota-text-dim py-6">No completed games yet.</p>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {visibleCombos.map((c, i) => (
+                    <li key={c.combo} className="panel-sunken p-3 flex items-center gap-3">
+                      <span className="font-barlow text-sm font-bold w-6 text-center shrink-0">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
                       </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(c.winRate)}`}>
-                        {c.winRate}%
+                      <span className="truncate font-barlow font-semibold text-sm text-dota-text flex-1 min-w-0">
+                        {c.combo}
                       </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-barlow text-xs text-dota-text-dim tabular-nums whitespace-nowrap">
+                          {c.wins}W – {c.gamesPlayed - c.wins}L
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(c.winRate)}`}>
+                          {c.winRate}%
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
 
-              {combos.length > 5 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllCombos(v => !v)}
-                  className="btn-ghost w-full mt-3 text-xs py-1.5"
-                >
-                  {showAllCombos ? 'Show less' : `Show all ${combos.length}`}
-                </button>
-              )}
-            </>
-          )}
+                {combos.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCombos(v => !v)}
+                    className="btn-ghost w-full mt-3 text-xs py-1.5"
+                  >
+                    {showAllCombos ? 'Show less' : `Show all ${combos.length}`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
       </div>{/* end H2H + Combos grid */}
 
