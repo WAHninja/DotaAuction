@@ -6,7 +6,8 @@ import {
   Zap, Swords, ShoppingCart, ChevronDown as SelectChevron,
 } from 'lucide-react'
 import GoldIcon from '@/app/components/GoldIcon';
-import type { PlayerStats, TeamCombo, AcquisitionImpact, WinStreak, HeadToHead } from '@/types';
+import type { PlayerStats, TeamCombo, AcquisitionImpact, WinStreak, HeadToHead, WinTypeStats } from '@/types';
+import { Coins } from 'lucide-react';
 
 // =============================================================================
 // Constants
