@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Trophy, Swords, Hash, Calendar, Repeat2, Eye, Coins } from 'lucide-react';
+import { Trophy, Swords, Hash, Calendar, CalendarCheck, Repeat2, Eye, Coins } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import Link from 'next/link';
@@ -13,6 +13,13 @@ type WinnerBannerProps = {
   winType?: WinType | null;
   totalGames?: number;
   matchCreatedAt?: string;
+  /**
+   * When the final game of the match finished — i.e. when the match itself
+   * concluded. Pass the last entry in `history`'s finishedAt. Falls back to
+   * not rendering the "Finished" stat at all if unavailable (e.g. older
+   * matches predating the finished_at column).
+   */
+  matchFinishedAt?: string | null;
   winnerRecord?: { wins: number; losses: number };
   viewerRecord?: { wins: number; losses: number };
   winnerTimesTraded?: number;
@@ -67,25 +74,29 @@ function WinTypeBadge({ winType }: { winType: WinType | null | undefined }) {
   );
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export default function WinnerBanner({
   winnerName,
   viewerState,
   winType,
   totalGames,
   matchCreatedAt,
+  matchFinishedAt,
   winnerRecord,
   viewerRecord,
   winnerTimesTraded,
 }: WinnerBannerProps) {
   const { width, height } = useWindowSize();
 
-  const formattedDate = matchCreatedAt
-    ? new Date(matchCreatedAt).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
-    : null;
+  const formattedStartDate  = matchCreatedAt   ? formatDate(matchCreatedAt)   : null;
+  const formattedFinishDate = matchFinishedAt  ? formatDate(matchFinishedAt)  : null;
 
   // Gold threshold wins get a gold confetti palette; last-standing gets the
   // standard Dota palette.
@@ -94,6 +105,10 @@ export default function WinnerBanner({
     : ['#c8a951', '#dfc06a', '#4a9b3c', '#c0392b', '#e8e0d0'];
 
   // ── Victory variant ────────────────────────────────────────────────────────
+  // The winner's own name already appears as the subject of the prose line
+  // below ("X claims the Aegis") — it is intentionally NOT repeated in a
+  // "Champion" stat card here, since that would just echo the headline back
+  // at the person who already knows they won.
   if (viewerState === 'winner') {
     return (
       <>
@@ -163,6 +178,7 @@ export default function WinnerBanner({
             <div className="divider-gold w-32 mx-auto" />
 
             <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
+              {/* Personal record — most meaningful stat for the winner */}
               {winnerRecord && (
                 <StatItem
                   icon={Swords}
@@ -178,13 +194,21 @@ export default function WinnerBanner({
                   value={String(totalGames)}
                 />
               )}
-              {formattedDate && (
+              {formattedStartDate && (
                 <StatItem
                   icon={Calendar}
                   label="Started"
-                  value={formattedDate}
+                  value={formattedStartDate}
                 />
               )}
+              {formattedFinishDate && (
+                <StatItem
+                  icon={CalendarCheck}
+                  label="Finished"
+                  value={formattedFinishDate}
+                />
+              )}
+              {/* Only show if actually traded — "Traded 0 times" is meaningless */}
               {winnerTimesTraded != null && winnerTimesTraded > 0 && (
                 <StatItem
                   icon={Repeat2}
@@ -208,6 +232,9 @@ export default function WinnerBanner({
   }
 
   // ── Defeat variant ─────────────────────────────────────────────────────────
+  // Here the "Champion" stat IS kept — the prose line above names the winner,
+  // but unlike the winner's own view, the loser benefits from also seeing it
+  // surfaced as a structured stat alongside their own record, games, and dates.
   if (viewerState === 'loser') {
     return (
       <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[280px]">
@@ -253,6 +280,7 @@ export default function WinnerBanner({
                 valueClass="text-dota-gold"
               />
             )}
+            {/* Viewer's own record — gives the loser something personal */}
             {viewerRecord && (
               <StatItem
                 icon={Swords}
@@ -268,11 +296,18 @@ export default function WinnerBanner({
                 value={String(totalGames)}
               />
             )}
-            {formattedDate && (
+            {formattedStartDate && (
               <StatItem
                 icon={Calendar}
                 label="Started"
-                value={formattedDate}
+                value={formattedStartDate}
+              />
+            )}
+            {formattedFinishDate && (
+              <StatItem
+                icon={CalendarCheck}
+                label="Finished"
+                value={formattedFinishDate}
               />
             )}
           </div>
@@ -289,6 +324,8 @@ export default function WinnerBanner({
   }
 
   // ── Spectator variant ──────────────────────────────────────────────────────
+  // Same reasoning as the loser variant — the Champion stat is the only place
+  // a spectator sees the winner's name in structured form, so it stays.
   return (
     <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/20 min-h-[280px]">
       <Image
@@ -351,11 +388,18 @@ export default function WinnerBanner({
               value={String(totalGames)}
             />
           )}
-          {formattedDate && (
+          {formattedStartDate && (
             <StatItem
               icon={Calendar}
               label="Started"
-              value={formattedDate}
+              value={formattedStartDate}
+            />
+          )}
+          {formattedFinishDate && (
+            <StatItem
+              icon={CalendarCheck}
+              label="Finished"
+              value={formattedFinishDate}
             />
           )}
         </div>
