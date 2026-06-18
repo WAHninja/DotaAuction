@@ -337,6 +337,7 @@ export default function MatchPage() {
           winType={match.win_type}
           totalGames={history.length}
           matchCreatedAt={match.created_at}
+          matchFinishedAt={history.length > 0 ? history[history.length - 1].finishedAt : null}
           winnerRecord={winnerRecord}
           viewerRecord={viewerRecord}
           winnerTimesTraded={winnerTimesTraded}
