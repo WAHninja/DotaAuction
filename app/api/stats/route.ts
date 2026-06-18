@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
 
+// ---------------------------------------------------------------------------
+// Module-level cache
+//
+// Stats are entirely global — the response is identical for every authenticated
+// user. A module-level cache with a 60-second TTL means the DB queries run at
+// most once per minute regardless of how many users are hitting the Stats tab
+// simultaneously.
+// ---------------------------------------------------------------------------
+
+const MIN_PICKS_FOR_RATE = 3;
+
 type StatsPayload = {
   players: PlayerRow[];
   topWinningCombos: TeamComboRow[];
@@ -9,6 +20,8 @@ type StatsPayload = {
   winStreaks: WinStreakRow[];
   headToHead: HeadToHeadRow[];
   winTypeStats: WinTypeStatsRow[];
+  heroStats: HeroStatRow[];
+  playerDotaStats: PlayerDotaStatRow[];
 };
 
 type StatsCache = {
@@ -65,7 +78,29 @@ type WinTypeStatsRow = {
   totalWins: number;
 };
 
-const CACHE_TTL_MS = 60 * 1_000;
+type HeroStatRow = {
+  hero: string;
+  picks: number;
+  wins: number;
+  winRate: number | null;
+  avgKills: number;
+  avgDeaths: number;
+  avgAssists: number;
+  avgKda: number;
+  avgNetWorth: number;
+};
+
+type PlayerDotaStatRow = {
+  username: string;
+  games: number;
+  avgKills: number;
+  avgDeaths: number;
+  avgAssists: number;
+  avgKda: number;
+  avgNetWorth: number;
+};
+
+const CACHE_TTL_MS = 60 * 1_000; // 60 seconds
 let statsCache: StatsCache | null = null;
 
 export async function GET() {
@@ -74,6 +109,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
+  // Serve from cache if still fresh
   if (statsCache && Date.now() - statsCache.cachedAt < CACHE_TTL_MS) {
     return NextResponse.json(statsCache.data);
   }
@@ -89,16 +125,21 @@ export async function GET() {
       winStreakResult,
       headToHeadResult,
       winTypeResult,
+      heroStatsResult,
+      playerDotaStatsResult,
     ] = await Promise.all([
 
+      // 1. All users — builds the base playersMap
       db.query<{ id: number; username: string }>(
         `SELECT id, username FROM users`
       ),
 
+      // 2. All match participation rows — for matchesPlayed count
       db.query<{ match_id: number; user_id: number }>(
         `SELECT match_id, user_id FROM match_players`
       ),
 
+      // 3. All finished games — for win/loss counts and team combo tracking
       db.query<{
         id: number;
         team_1_members: number[];
@@ -110,6 +151,7 @@ export async function GET() {
          WHERE status = 'finished'`
       ),
 
+      // 4. All offers — for offer/sold counts and average bid value
       db.query<{
         from_player_id: number;
         target_player_id: number;
@@ -120,12 +162,14 @@ export async function GET() {
          FROM offers`
       ),
 
+      // 5. Net gold per player — sum of all gold_change entries
       db.query<{ player_id: number; net_gold: string }>(
         `SELECT player_id, SUM(gold_change) AS net_gold
          FROM game_player_stats
          GROUP BY player_id`
       ),
 
+      // 6. Acquisition impact CTE
       db.query<{
         username: string;
         total_acquisitions: string;
@@ -169,6 +213,7 @@ export async function GET() {
         ORDER BY win_rate DESC, total_acquisitions DESC
       `),
 
+      // 7. Win streaks CTE
       db.query<{
         username: string;
         longest_streak: string;
@@ -230,6 +275,7 @@ export async function GET() {
         LIMIT  10
       `),
 
+      // 8. Head-to-head records CTE
       db.query<{
         player_a_id: string;
         player_a: string;
@@ -269,9 +315,8 @@ export async function GET() {
         ORDER  BY total_games DESC
       `),
 
-      // Win type breakdown — how each player's match wins are distributed
-      // between the two win conditions. Only players with at least one win
-      // are included.
+      // 9. Win type breakdown — how each player's match wins were achieved.
+      // Only players with at least one match win are included.
       db.query<{
         username: string;
         last_standing_wins: string;
@@ -289,9 +334,80 @@ export async function GET() {
         GROUP BY u.id, u.username
         ORDER BY total_wins DESC, u.username ASC
       `),
+
+      // 10. Hero stats — aggregated from dota_game_stats, joined to games to
+      // determine whether the hero's team won. KDA is computed in SQL using
+      // GREATEST(deaths, 1) as the divisor to avoid division by zero, matching
+      // the same floor used in the client-side formula.
+      //
+      // Win logic: a dota_game_stats row's `team` column tells us which side
+      // the player was on; we join to games.winning_team to check if that
+      // side won. Only finished games are counted, consistent with every
+      // other win-rate query in this file.
+      db.query<{
+        hero: string;
+        picks: string;
+        wins: string;
+        avg_kills: string;
+        avg_deaths: string;
+        avg_assists: string;
+        avg_kda: string;
+        avg_net_worth: string;
+      }>(`
+        SELECT
+          dgs.hero,
+          COUNT(*)                                                          AS picks,
+          COUNT(*) FILTER (WHERE dgs.team = g.winning_team)                 AS wins,
+          AVG(dgs.kills)::numeric(10,2)                                     AS avg_kills,
+          AVG(dgs.deaths)::numeric(10,2)                                    AS avg_deaths,
+          AVG(dgs.assists)::numeric(10,2)                                   AS avg_assists,
+          AVG(
+            (dgs.kills + dgs.assists)::numeric / GREATEST(dgs.deaths, 1)
+          )::numeric(10,2)                                                  AS avg_kda,
+          AVG(dgs.net_worth)::numeric(10,0)                                 AS avg_net_worth
+        FROM dota_game_stats dgs
+        JOIN games g ON g.id = dgs.game_id
+        WHERE dgs.hero IS NOT NULL
+          AND g.status = 'finished'
+        GROUP BY dgs.hero
+        ORDER BY picks DESC, dgs.hero ASC
+      `),
+
+      // 11. Per-player average Dota performance across all reported games.
+      // Same KDA formula as the hero query for consistency. Only finished
+      // games are counted — a game still in progress shouldn't contribute
+      // partial/live stats to a season average.
+      db.query<{
+        username: string;
+        games: string;
+        avg_kills: string;
+        avg_deaths: string;
+        avg_assists: string;
+        avg_kda: string;
+        avg_net_worth: string;
+      }>(`
+        SELECT
+          u.username,
+          COUNT(*)                                                          AS games,
+          AVG(dgs.kills)::numeric(10,2)                                     AS avg_kills,
+          AVG(dgs.deaths)::numeric(10,2)                                    AS avg_deaths,
+          AVG(dgs.assists)::numeric(10,2)                                   AS avg_assists,
+          AVG(
+            (dgs.kills + dgs.assists)::numeric / GREATEST(dgs.deaths, 1)
+          )::numeric(10,2)                                                  AS avg_kda,
+          AVG(dgs.net_worth)::numeric(10,0)                                 AS avg_net_worth
+        FROM dota_game_stats dgs
+        JOIN games g ON g.id = dgs.game_id
+        JOIN users u ON u.id = dgs.player_id
+        WHERE g.status = 'finished'
+        GROUP BY u.id, u.username
+        ORDER BY avg_kda DESC, u.username ASC
+      `),
     ]);
 
-    // ---- Process results (unchanged from original except winTypeResult) ----
+    // -------------------------------------------------------------------------
+    // Process query results (unchanged sections 1-8 from the original)
+    // -------------------------------------------------------------------------
 
     const playersMap = new Map<number, {
       username: string;
@@ -385,6 +501,10 @@ export async function GET() {
       if (stats) stats.netGold = parseInt(row.net_gold, 10);
     }
 
+    // -------------------------------------------------------------------------
+    // Build response payload
+    // -------------------------------------------------------------------------
+
     const players: PlayerRow[] = Array.from(playersMap.values()).map(p => ({
       username:          p.username,
       gamesPlayed:       p.gamesPlayed,
@@ -439,6 +559,34 @@ export async function GET() {
       totalWins:         Number(r.total_wins),
     }));
 
+    // Hero stats — winRate is null below MIN_PICKS_FOR_RATE to avoid
+    // misleading small-sample percentages (e.g. 1/1 = "100%").
+    const heroStats: HeroStatRow[] = heroStatsResult.rows.map(r => {
+      const picks = Number(r.picks);
+      const wins  = Number(r.wins);
+      return {
+        hero:        r.hero,
+        picks,
+        wins,
+        winRate:     picks >= MIN_PICKS_FOR_RATE ? +((wins / picks) * 100).toFixed(1) : null,
+        avgKills:    Number(r.avg_kills),
+        avgDeaths:   Number(r.avg_deaths),
+        avgAssists:  Number(r.avg_assists),
+        avgKda:      Number(r.avg_kda),
+        avgNetWorth: Number(r.avg_net_worth),
+      };
+    });
+
+    const playerDotaStats: PlayerDotaStatRow[] = playerDotaStatsResult.rows.map(r => ({
+      username:    r.username,
+      games:       Number(r.games),
+      avgKills:    Number(r.avg_kills),
+      avgDeaths:   Number(r.avg_deaths),
+      avgAssists:  Number(r.avg_assists),
+      avgKda:      Number(r.avg_kda),
+      avgNetWorth: Number(r.avg_net_worth),
+    }));
+
     const data: StatsPayload = {
       players,
       topWinningCombos,
@@ -446,13 +594,20 @@ export async function GET() {
       winStreaks,
       headToHead,
       winTypeStats,
+      heroStats,
+      playerDotaStats,
     };
 
+    // Store in cache
     statsCache = { data, cachedAt: Date.now() };
+
     return NextResponse.json(data);
 
   } catch (error) {
     console.error('[STATS_ERROR]', error);
-    return NextResponse.json({ error: 'Failed to build stats' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to build stats' },
+      { status: 500 }
+    );
   }
 }
