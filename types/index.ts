@@ -202,6 +202,37 @@ export type WinTypeStats = {
   totalWins: number;
 };
 
+/**
+ * Aggregated stats for a single hero across all games in dota_game_stats.
+ * winRate is null when picks < MIN_PICKS_FOR_RATE (3) to avoid misleading
+ * small-sample percentages. wins/picks are always present for the raw numbers.
+ */
+export type HeroStat = {
+  hero:         string;   // raw npc_dota_hero_* string — display name computed client-side
+  picks:        number;
+  wins:         number;
+  winRate:      number | null; // null when picks < threshold
+  avgKills:     number;
+  avgDeaths:    number;
+  avgAssists:   number;
+  avgKda:       number;   // (kills + assists) / max(deaths, 1), averaged per game
+  avgNetWorth:  number;
+};
+ 
+/**
+ * Per-player average Dota in-game performance across all reported games.
+ * `games` may be fewer than total games played if the plugin wasn't running.
+ */
+export type PlayerDotaStat = {
+  username:    string;
+  games:       number;
+  avgKills:    number;
+  avgDeaths:   number;
+  avgAssists:  number;
+  avgKda:      number;
+  avgNetWorth: number;
+};
+
 // ---------------------------------------------------------------------------
 // Hall of Fame
 // ---------------------------------------------------------------------------
