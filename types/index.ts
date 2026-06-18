@@ -131,6 +131,7 @@ export type HistoryGame = {
   gameId: number;
   matchId: number;
   createdAt: string;
+  finishedAt: string | null;
   status: GameStatus;
   winningTeam: TeamId | null;
   teamAMembers: string[];
