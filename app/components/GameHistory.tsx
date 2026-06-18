@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Trophy } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trophy, Calendar } from 'lucide-react';
 import GoldIcon from '@/app/components/GoldIcon';
 import type {
   HistoryGame,
@@ -100,6 +100,27 @@ function formatNW(val: number): string {
     return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
   }
   return `${val}`;
+}
+
+// Formats a game's played date for the card header.
+// Short form (e.g. "12 Jun") in the collapsed/inline header — long form with
+// time is reserved for anywhere more detail is warranted, but the cards stay
+// compact so we keep this terse throughout.
+function formatGameDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day:   'numeric',
+    month: 'short',
+  });
+}
+
+function formatGameDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-GB', {
+    day:    'numeric',
+    month:  'short',
+    year:   'numeric',
+    hour:   '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function TierBadge({ tier }: { tier: TierLabel | null }) {
@@ -281,6 +302,13 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
   const winnerIsTeam1 = game.winningTeam === 'team_1';
   const winningTeamLabel = game.winningTeam === 'team_1' ? 'Team 1' : 'Team A';
 
+  // Prefer finishedAt (when the game actually concluded) for display; fall
+  // back to createdAt for games finished before the column existed, or for
+  // games still in progress where createdAt is the only timestamp available.
+  // Games with neither relevant date (shouldn't happen, but defensive) simply
+  // omit the date pill rather than showing something misleading.
+  const displayDate = game.finishedAt ?? (game.status === 'finished' ? null : game.createdAt);
+
   const team1 = (
     <TeamScoreboard key="t1" teamId="team_1" label="Team 1"
       players={buildUnifiedPlayers(game.team1Members, game.dotaStats, game.playerStats, game.offers)}
@@ -312,6 +340,19 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
 
             {isFinalGame && (
               <span className="badge-gold text-xs py-0.5">Final Game</span>
+            )}
+
+            {/* Date pill — sits next to the game number/badge so it reads as
+                metadata about the game itself, not buried in the prose line
+                below. title gives the full date+time on hover for precision. */}
+            {displayDate && (
+              <span
+                className="flex items-center gap-1 font-barlow text-[11px] text-dota-text-dim"
+                title={formatGameDateTime(displayDate)}
+              >
+                <Calendar className="w-3 h-3 shrink-0" aria-hidden="true" />
+                {formatGameDate(displayDate)}
+              </span>
             )}
           </div>
 
