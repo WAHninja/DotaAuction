@@ -20,6 +20,10 @@
 //   dota_game_stats rows only exist for games played after the automated
 //   reporting feature shipped. For older games the query returns 0 rows and
 //   dotaStats will be an empty array — the client renders nothing for that zone.
+//
+//   finished_at only exists for games finished after the column was added.
+//   Older finished games will have finishedAt: null — the client should
+//   simply omit the date rather than guessing at it.
 
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
@@ -47,6 +51,7 @@ type GameRow = {
   winning_team: TeamId | null;
   status: GameStatus;
   created_at: string;
+  finished_at: string | null;
 };
 
 type OfferRow = {
@@ -106,9 +111,6 @@ export async function GET(
 
   try {
     // ---- Verify match exists + build username lookup map -------------------
-    // No membership check — any authenticated user can view any match page
-    // as a spectator. Action routes (submit-offer, accept-offer etc.) enforce
-    // membership separately, so read-only data is safe to expose here.
     const usersRes = await db.query<{ id: number; username: string }>(
       `SELECT u.id, u.username
        FROM users u
@@ -117,7 +119,6 @@ export async function GET(
       [matchId]
     );
 
-    // If no rows, the match simply doesn't exist.
     if (usersRes.rows.length === 0) {
       return NextResponse.json({ error: 'Match not found.' }, { status: 404 });
     }
@@ -138,7 +139,8 @@ export async function GET(
          g.team_1_members,
          g.winning_team,
          g.status,
-         g.created_at
+         g.created_at,
+         g.finished_at
        FROM games g
        WHERE g.match_id = $1
        ORDER BY g.id ASC`,
@@ -155,7 +157,6 @@ export async function GET(
 
     // ---- Offers + stats + dota stats in parallel ---------------------------
     const [offersRes, statsRes, dotaStatsRes] = await Promise.all([
-      // offer_amount is stripped server-side for pending offers.
       db.query<OfferRow>(
         `SELECT
            o.id,
@@ -191,9 +192,6 @@ export async function GET(
         [gameIds]
       ),
 
-      // dota_game_stats — only exists for games played after automated
-      // reporting was introduced. Returns 0 rows for older games, which is
-      // handled gracefully by producing an empty dotaStats array below.
       db.query<DotaStatRow>(
         `SELECT
            dgs.game_id,
@@ -267,6 +265,7 @@ export async function GET(
       gameId:       game.game_id,
       matchId:      game.match_id,
       createdAt:    game.created_at,
+      finishedAt:   game.finished_at,
       status:       game.status,
       winningTeam:  game.winning_team,
       teamAMembers: game.team_a_members.map(usernameOf),
