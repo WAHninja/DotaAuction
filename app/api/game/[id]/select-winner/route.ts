@@ -118,6 +118,8 @@ export async function POST(
 
     // ---- Single-player win: original last-standing condition ---------------
     // No gold distribution on the final game — match ends immediately.
+    // finished_at is set here (rather than left to a trigger) since this is
+    // the single place that transitions this row to 'finished'.
     const isSinglePlayerWin = winningMembers.length === 1;
 
     if (isSinglePlayerWin) {
@@ -125,7 +127,7 @@ export async function POST(
 
       await client.query(
         `UPDATE games
-         SET status = 'finished', winning_team = $1
+         SET status = 'finished', winning_team = $1, finished_at = NOW()
          WHERE id = $2`,
         [winningTeamId, gameId]
       );
@@ -153,8 +155,8 @@ export async function POST(
 
     // ---- Multi-player path: distribute gold then check threshold -----------
     // Set to 'auction pending' now. If gold threshold fires below, a second
-    // UPDATE corrects this to 'finished' within the same transaction — the
-    // intermediate state is never visible to clients.
+    // UPDATE corrects this to 'finished' (and sets finished_at) within the
+    // same transaction — the intermediate state is never visible to clients.
     await client.query(
       `UPDATE games
        SET status = 'auction pending', winning_team = $1
@@ -217,8 +219,11 @@ export async function POST(
     const goldWin = await checkGoldThresholdWin(matchId, client);
 
     if (goldWin) {
+      // Override the 'auction pending' status set above — same transaction
+      // so the intermediate value is never visible to clients. finished_at
+      // is set here since this is the moment the game actually finishes.
       await client.query(
-        `UPDATE games SET status = 'finished' WHERE id = $1`,
+        `UPDATE games SET status = 'finished', finished_at = NOW() WHERE id = $1`,
         [gameId]
       );
 
@@ -244,6 +249,9 @@ export async function POST(
     }
 
     // ---- No threshold win: proceed to auction ------------------------------
+    // Note: the game stays 'auction pending' here, not 'finished' — it only
+    // becomes 'finished' once an offer is accepted (see accept-offer route),
+    // which is also where finished_at gets set for this path.
     await client.query('COMMIT');
 
     await broadcastEvent(
