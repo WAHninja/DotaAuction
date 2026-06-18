@@ -110,7 +110,7 @@ export async function POST(
 
     const { from_player_id, target_player_id, offer_amount } = offerRows[0];
 
-    // ---- Validate target player + build new teams --------------------------
+    // ---- Validate target player + build new teams ---------------------------
     const inTeamA = teamA.includes(target_player_id);
     const inTeam1 = team1.includes(target_player_id);
 
@@ -168,8 +168,10 @@ export async function POST(
     );
 
     // ---- Mark current game as finished -------------------------------------
+    // finished_at is set here — this is the moment the auction resolves and
+    // the game is genuinely over, regardless of which branch follows below.
     await client.query(
-      `UPDATE games SET status = 'finished' WHERE id = $1`,
+      `UPDATE games SET status = 'finished', finished_at = NOW() WHERE id = $1`,
       [gameId]
     );
 
@@ -219,6 +221,7 @@ export async function POST(
 
     await client.query('COMMIT');
 
+    // ---- Notify clients (outside transaction) ------------------------------
     await broadcastEvent(
       `match-${game.match_id}-offers`,
       'offer-accepted',
