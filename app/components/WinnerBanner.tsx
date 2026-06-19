@@ -232,9 +232,10 @@ export default function WinnerBanner({
   }
 
   // ── Defeat variant ─────────────────────────────────────────────────────────
-  // Here the "Champion" stat IS kept — the prose line above names the winner,
-  // but unlike the winner's own view, the loser benefits from also seeing it
-  // surfaced as a structured stat alongside their own record, games, and dates.
+  // The winner's name already appears as the subject of the prose line above
+  // ("X has claimed the Aegis") — the "Champion" stat card is dropped here
+  // for the same reason as the winner's own view: it would just repeat that
+  // same name a second time immediately below the prose.
   if (viewerState === 'loser') {
     return (
       <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-dire/40 min-h-[280px]">
@@ -272,14 +273,6 @@ export default function WinnerBanner({
           <div className="divider w-32 mx-auto" />
 
           <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
-            {winnerName && (
-              <StatItem
-                icon={Trophy}
-                label="Champion"
-                value={winnerName}
-                valueClass="text-dota-gold"
-              />
-            )}
             {/* Viewer's own record — gives the loser something personal */}
             {viewerRecord && (
               <StatItem
@@ -324,8 +317,9 @@ export default function WinnerBanner({
   }
 
   // ── Spectator variant ──────────────────────────────────────────────────────
-  // Same reasoning as the loser variant — the Champion stat is the only place
-  // a spectator sees the winner's name in structured form, so it stays.
+  // Same reasoning as the other two variants — the winner's name is already
+  // the subject of the prose line above, so the "Champion" stat card is
+  // dropped to avoid repeating it a second time directly underneath.
   return (
     <div className="relative flex flex-col items-center justify-center mt-6 mb-10 rounded-xl overflow-hidden panel border-dota-gold/20 min-h-[280px]">
       <Image
@@ -373,14 +367,6 @@ export default function WinnerBanner({
         <div className="divider w-32 mx-auto" />
 
         <div className="flex flex-wrap items-center justify-center gap-6 pt-1 pb-0.5">
-          {winnerName && (
-            <StatItem
-              icon={Trophy}
-              label="Champion"
-              value={winnerName}
-              valueClass="text-dota-gold"
-            />
-          )}
           {totalGames != null && (
             <StatItem
               icon={Hash}
