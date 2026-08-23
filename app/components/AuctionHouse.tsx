@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2, Star } from 'lucide-react';
 import GoldIcon from '@/app/components/GoldIcon';
+import PlayerAvatar from '@/app/components/PlayerAvatar';
 import type { Player, Offer } from '@/types';
 
 type AuctionHouseProps = {
@@ -16,12 +17,18 @@ type AuctionHouseProps = {
   players: Player[];
   currentUserId: number;
   offers: Offer[];
-  // Number of games fully finished BEFORE the current auction.
-  // Game 1 auction → 0, game 2 auction → 1, game N auction → N-1.
-  // Pass as: completedGames={data.games.length - 1}
   completedGames: number;
-  onOfferSubmitted: (offer: Offer) => void; // was `any` — #11
+  onOfferSubmitted: (offer: Offer) => void;
   onOfferAccepted: () => void;
+  // userId -> offerId. What each losing-team member is currently leaning
+  // towards — a live, non-binding signal, only ever shown to other losing-team
+  // members. Omit / leave empty outside the live (non-finalized) auction.
+  selections?: Record<number, number | null>;
+  onSelectOffer?: (offerId: number | null) => void;
+  // When true, this is the read-only "just resolved" snapshot shown for a
+  // short window after an offer was accepted — no submit form, no accept
+  // buttons, no selection affordance, just the final outcome.
+  finalized?: boolean;
 };
 
 // ── Tier badge — delegates to globals CSS classes ────────────────────────────
@@ -51,6 +58,9 @@ export default function AuctionHouse({
   completedGames: rawCompletedGames,
   onOfferSubmitted,
   onOfferAccepted,
+  selections = {},
+  onSelectOffer,
+  finalized = false,
 }: AuctionHouseProps) {
   const [offerAmount, setOfferAmount]         = useState('');
   const [selectedPlayer, setSelectedPlayer]   = useState('');
@@ -64,25 +74,15 @@ export default function AuctionHouse({
 
   const { winning_team: winningTeam, team_1_members: team1, team_a_members: teamA } = latestGame;
 
-  // Renamed from `myWinTeam` — this is the winning team, not "my" team. (#6)
   const winningTeamMembers = winningTeam === 'team_1' ? team1 : teamA;
   const losingTeamMembers  = winningTeam === 'team_1' ? teamA : team1;
 
-  // Explicit membership checks on both teams so observers/spectators don't
-  // accidentally fall through as losers via `!isOnWinningTeam`. (#8, #12)
   const isOnWinningTeam = winningTeamMembers.includes(currentUserId);
   const isOnLosingTeam  = losingTeamMembers.includes(currentUserId);
 
-  // Candidates are winning teammates the current user can offer — i.e. everyone
-  // on the winning team except themselves. (#6 — variable renamed for clarity)
   const candidates = winningTeamMembers.filter(id => id !== currentUserId);
 
-  // ── Winner-specific derived state (#9) ──────────────────────────────────────
-
-  // Only meaningful when isOnWinningTeam; computed here to keep JSX readable.
   const alreadySubmitted = offers.some(o => o.from_player_id === currentUserId);
-
-  // ── Shared offer state ───────────────────────────────────────────────────────
 
   const submittedCount = winningTeamMembers.filter(
     pid => offers.some(o => o.from_player_id === pid)
@@ -94,16 +94,11 @@ export default function AuctionHouse({
 
   // ── Offer range ──────────────────────────────────────────────────────────────
 
-  // Guard against negative values if caller passes `data.games.length - 1`
-  // before any games exist. (#4)
   const completedGames = Math.max(0, rawCompletedGames);
-
-  // Game 1 auction (completedGames=0): min=450, max=2500
-  // Each subsequent game: min += 200, max += 500
   const minOffer = 450 + completedGames * 200;
   const maxOffer = 2500 + completedGames * 500;
 
-  // ── Player lookup — memoised Map avoids O(n) find() in render loops (#10) ───
+  // ── Player lookup ─────────────────────────────────────────────────────────────
 
   const playerById = useMemo(
     () => new Map(players.map(p => [p.id, p])),
@@ -113,7 +108,6 @@ export default function AuctionHouse({
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmitOffer = async () => {
-    // Guard against double-submit if disabled state is bypassed (#13)
     if (submitting || alreadySubmitted) return;
 
     setSubmitError(null);
@@ -134,7 +128,7 @@ export default function AuctionHouse({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          target_player_id: parseInt(selectedPlayer, 10), // radix added (#3)
+          target_player_id: parseInt(selectedPlayer, 10),
           offer_amount: parsed,
         }),
       });
@@ -167,9 +161,6 @@ export default function AuctionHouse({
       });
       const data = await res.json();
       if (!res.ok && res.status !== 409) {
-        // 409 = another player accepted first. We still call onOfferAccepted()
-        // because the auction is over either way — the loser should be moved
-        // on regardless of who triggered the resolution. (#5)
         setAcceptedOfferId(null);
         setAcceptError(data.error || 'Failed to accept offer.');
         return;
@@ -183,6 +174,13 @@ export default function AuctionHouse({
     }
   };
 
+  // ── Select (non-binding "leaning towards" signal) ────────────────────────────
+  const handleToggleSelect = (offerId: number) => {
+    if (!onSelectOffer) return;
+    const alreadySelected = selections[currentUserId] === offerId;
+    onSelectOffer(alreadySelected ? null : offerId);
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="panel p-6 mb-8 space-y-6">
@@ -193,44 +191,51 @@ export default function AuctionHouse({
         <div className="divider-gold w-40 mx-auto" />
       </div>
 
+      {/* ── Resolved banner ────────────────────────────────────────────────── */}
+      {finalized && (
+        <p className="text-center font-barlow text-sm font-semibold text-dota-gold flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4" /> Auction resolved — next game underway
+        </p>
+      )}
+
       {/* ── Offer counter ──────────────────────────────────────────────────── */}
-      <div className="flex justify-center">
-        <div className="panel-sunken flex items-center gap-4 px-5 py-3 rounded-lg">
-          <span className="stat-label">Offers in</span>
-          <div className="flex gap-1.5" role="group" aria-label="Offer submission status">
-            {winningTeamMembers.map(pid => {
-              const hasSubmitted = offers.some(o => o.from_player_id === pid);
-              const name = getPlayer(pid)?.username ?? `Player #${pid}`;
-              return (
-                <span
-                  key={pid}
-                  // title kept for sighted hover; aria-label for screen readers (#15)
-                  title={name}
-                  aria-label={`${name}: ${hasSubmitted ? 'submitted' : 'pending'}`}
-                  className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                    hasSubmitted ? 'bg-dota-radiant' : 'bg-dota-border'
-                  }`}
-                />
-              );
-            })}
-          </div>
-          <span className={`font-barlow font-bold text-sm tabular-nums ${
-            allSubmitted ? 'text-dota-radiant-light' : 'text-dota-gold'
-          }`}>
-            {submittedCount} / {winningTeamMembers.length}
-          </span>
-          {allSubmitted && (
-            <span className="flex items-center gap-1 text-dota-radiant-light text-xs font-barlow font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5" /> All in!
+      {!finalized && (
+        <div className="flex justify-center">
+          <div className="panel-sunken flex items-center gap-4 px-5 py-3 rounded-lg">
+            <span className="stat-label">Offers in</span>
+            <div className="flex gap-1.5" role="group" aria-label="Offer submission status">
+              {winningTeamMembers.map(pid => {
+                const hasSubmitted = offers.some(o => o.from_player_id === pid);
+                const name = getPlayer(pid)?.username ?? `Player #${pid}`;
+                return (
+                  <span
+                    key={pid}
+                    title={name}
+                    aria-label={`${name}: ${hasSubmitted ? 'submitted' : 'pending'}`}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                      hasSubmitted ? 'bg-dota-radiant' : 'bg-dota-border'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <span className={`font-barlow font-bold text-sm tabular-nums ${
+              allSubmitted ? 'text-dota-radiant-light' : 'text-dota-gold'
+            }`}>
+              {submittedCount} / {winningTeamMembers.length}
             </span>
-          )}
+            {allSubmitted && (
+              <span className="flex items-center gap-1 text-dota-radiant-light text-xs font-barlow font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5" /> All in!
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Winner: submit form ─────────────────────────────────────────────── */}
-      {isOnWinningTeam && !alreadySubmitted && (
+      {!finalized && isOnWinningTeam && !alreadySubmitted && (
         <div className="relative rounded-lg overflow-hidden">
-          {/* Background image */}
           <Image
             src="/match_predictions_bg.png"
             alt=""
@@ -238,7 +243,6 @@ export default function AuctionHouse({
             quality={85}
             className="object-cover object-right pointer-events-none select-none"
           />
-          {/* Gradient overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
@@ -246,7 +250,6 @@ export default function AuctionHouse({
             }}
           />
 
-          {/* Form */}
           <div className="relative z-10 max-w-md py-8 px-6 space-y-4">
             <div className="space-y-1">
               <p className="font-cinzel font-bold text-dota-gold text-lg">Make an Offer</p>
@@ -267,7 +270,7 @@ export default function AuctionHouse({
                 value={selectedPlayer}
                 onChange={e => {
                   setSelectedPlayer(e.target.value);
-                  setSubmitError(null); // clear stale error on change (#14)
+                  setSubmitError(null);
                 }}
                 className="input"
               >
@@ -283,9 +286,9 @@ export default function AuctionHouse({
                 value={offerAmount}
                 onChange={e => {
                   setOfferAmount(e.target.value);
-                  setSubmitError(null); // clear stale error on change (#14)
+                  setSubmitError(null);
                 }}
-                onKeyDown={e => e.key === 'Enter' && handleSubmitOffer()} // keyboard submit (#16)
+                onKeyDown={e => e.key === 'Enter' && handleSubmitOffer()}
                 placeholder={`${minOffer}–${maxOffer}`}
                 min={minOffer}
                 max={maxOffer}
@@ -293,7 +296,6 @@ export default function AuctionHouse({
               />
             </div>
 
-            {/* role="alert" so screen readers announce the error immediately (#17) */}
             {submitError && (
               <p role="alert" className="font-barlow text-sm text-dota-dire-light">
                 {submitError}
@@ -313,16 +315,24 @@ export default function AuctionHouse({
       )}
 
       {/* ── Winner: already submitted ───────────────────────────────────────── */}
-      {isOnWinningTeam && alreadySubmitted && (
+      {!finalized && isOnWinningTeam && alreadySubmitted && (
         <p className="text-center font-barlow text-sm font-semibold text-dota-radiant-light flex items-center justify-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> Your offer is in.
         </p>
       )}
 
       {/* ── Loser: waiting message ──────────────────────────────────────────── */}
-      {isOnLosingTeam && !allSubmitted && (
+      {!finalized && isOnLosingTeam && !allSubmitted && (
         <p className="text-center font-barlow text-sm text-dota-text-muted">
           Waiting for all offers before you can accept…
+        </p>
+      )}
+
+      {/* ── Loser: silent coordination hint ─────────────────────────────────── */}
+      {!finalized && isOnLosingTeam && allSubmitted && hasPending && (
+        <p className="text-center font-barlow text-xs text-dota-text-dim">
+          Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to show your
+          team which one you're leaning towards — only your team sees it.
         </p>
       )}
 
@@ -336,7 +346,7 @@ export default function AuctionHouse({
           </p>
         )}
 
-        {!allSubmitted && (
+        {!allSubmitted && !finalized && (
           <p className="text-center font-barlow text-xs text-dota-text-dim mb-4">
             Offer details are revealed once everyone has submitted.
           </p>
@@ -353,24 +363,48 @@ export default function AuctionHouse({
               const isRejected = offer.status === 'rejected';
               const isPending  = offer.status === 'pending';
 
-              // canAccept uses isOnLosingTeam — explicit membership rather
-              // than the old `isLoser = !isWinner` alias. (#8, #12)
-              const canAccept  = isOnLosingTeam && isPending && acceptedOfferId === null && allSubmitted;
+              const canAccept = isOnLosingTeam && isPending && acceptedOfferId === null && allSubmitted && !finalized;
+              const canSelect = isOnLosingTeam && isPending && allSubmitted && !finalized && acceptedOfferId === null;
               const showAmount = !isPending;
+
+              const isSelectedByMe = isOnLosingTeam && selections[currentUserId] === offer.id;
+              const selectingTeammates = isOnLosingTeam
+                ? losingTeamMembers.filter(pid => pid !== currentUserId && selections[pid] === offer.id)
+                : [];
 
               return (
                 <div
                   key={offer.id}
-                  className={`panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${
+                  className={`relative panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${
                     isAccepted ? 'border-dota-radiant shadow-radiant' :
                     isRejected ? 'opacity-50'                          :
+                    isSelectedByMe ? 'border-dota-gold shadow-gold'     :
                                  'border-dota-border'
                   }`}
                 >
-                  {/* Offer details */}
-                  <div className="space-y-2">
+                  {/* Pick indicator — separate button so it doesn't nest inside
+                      the Accept button below. Only losing-team members see it,
+                      and only their own team ever sees who's picked what. */}
+                  {canSelect && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSelect(offer.id)}
+                      aria-pressed={isSelectedByMe}
+                      aria-label={isSelectedByMe ? 'Unmark as your pick' : 'Mark as your pick'}
+                      title={isSelectedByMe ? 'Unmark as your pick' : "Mark as your pick — only your team sees this"}
+                      className={`absolute top-2.5 right-2.5 p-1.5 rounded-full border transition-colors ${
+                        isSelectedByMe
+                          ? 'bg-dota-gold/20 border-dota-gold text-dota-gold'
+                          : 'bg-dota-deep border-dota-border text-dota-text-dim hover:text-dota-gold hover:border-dota-gold/50'
+                      }`}
+                    >
+                      <Star className="w-3.5 h-3.5" fill={isSelectedByMe ? 'currentColor' : 'none'} />
+                    </button>
+                  )}
 
-                    {/* Status strip — shown once resolved */}
+                  {/* Offer details */}
+                  <div className="space-y-2 pr-6">
+
                     {!isPending && (
                       <div className={isAccepted ? 'badge-radiant self-start' : 'badge-dire self-start'}>
                         {isAccepted ? <CheckCircle2 className="w-3 h-3" /> : null}
@@ -378,7 +412,6 @@ export default function AuctionHouse({
                       </div>
                     )}
 
-                    {/* From → To */}
                     <div className="space-y-1">
                       <div className="flex items-baseline gap-2">
                         <span className="stat-label w-10">From</span>
@@ -400,7 +433,6 @@ export default function AuctionHouse({
                       </div>
                     </div>
 
-                    {/* Amount / tier — hidden for everyone until all submitted */}
                     <div className="flex items-center gap-2">
                       <span className="stat-label w-10">Offer</span>
                       {!allSubmitted ? (
@@ -417,6 +449,27 @@ export default function AuctionHouse({
                           : <span className="text-dota-text-dim text-xs">—</span>
                       )}
                     </div>
+
+                    {/* Who on your team is leaning towards this one */}
+                    {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="stat-label text-[10px]">Leaning</span>
+                        <div className="flex -space-x-1.5">
+                          {selectingTeammates.map(pid => {
+                            const p = getPlayer(pid);
+                            return (
+                              <PlayerAvatar
+                                key={pid}
+                                username={p?.username ?? `Player #${pid}`}
+                                steamAvatar={p?.steam_avatar}
+                                size={18}
+                                className="ring-2 ring-dota-raised"
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Accept button */}
@@ -438,7 +491,6 @@ export default function AuctionHouse({
           </div>
         )}
 
-        {/* role="alert" so screen readers announce accept errors immediately (#17) */}
         {acceptError && (
           <p role="alert" className="mt-3 font-barlow text-sm text-dota-dire-light text-center">
             {acceptError}
@@ -447,7 +499,7 @@ export default function AuctionHouse({
       </div>
 
       {/* ── Tier legend ─────────────────────────────────────────────────────── */}
-      {allSubmitted && hasPending && (
+      {!finalized && allSubmitted && hasPending && (
         <div className="flex justify-center">
           <div className="panel-sunken flex flex-wrap items-center justify-center gap-4 px-5 py-3 rounded-lg">
             <span className="stat-label">Tiers</span>
