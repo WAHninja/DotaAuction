@@ -217,7 +217,7 @@ export type HeroStat = {
   avgDeaths:    number;
   avgAssists:   number;
   avgKda:       number;   // (kills + assists) / max(deaths, 1), averaged per game
-  avgNetWorth:  number;
+  topKillsPlayer: string | null;
 };
  
 /**
@@ -231,7 +231,7 @@ export type PlayerDotaStat = {
   avgDeaths:   number;
   avgAssists:  number;
   avgKda:      number;
-  avgNetWorth: number;
+  topKillsHero: string | null;
 };
 
 // ---------------------------------------------------------------------------
