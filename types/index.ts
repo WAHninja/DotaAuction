@@ -209,29 +209,31 @@ export type WinTypeStats = {
  * small-sample percentages. wins/picks are always present for the raw numbers.
  */
 export type HeroStat = {
-  hero:         string;   // raw npc_dota_hero_* string — display name computed client-side
-  picks:        number;
-  wins:         number;
-  winRate:      number | null; // null when picks < threshold
-  avgKills:     number;
-  avgDeaths:    number;
-  avgAssists:   number;
-  avgKda:       number;   // (kills + assists) / max(deaths, 1), averaged per game
-  topKillsPlayer: string | null;
+  hero:           string;   // raw npc_dota_hero_* string — display name computed client-side
+  picks:          number;
+  wins:           number;
+  winRate:        number | null; // null when picks < threshold
+  avgKills:       number;
+  avgDeaths:      number;
+  avgAssists:     number;
+  avgKda:         number;   // (kills + assists) / max(deaths, 1), averaged per game
+  topKills:       number;   // most kills recorded on this hero in a single game
+  topKillsPlayer: string | null; // who recorded it
 };
- 
+
 /**
  * Per-player average Dota in-game performance across all reported games.
  * `games` may be fewer than total games played if the plugin wasn't running.
  */
 export type PlayerDotaStat = {
-  username:    string;
-  games:       number;
-  avgKills:    number;
-  avgDeaths:   number;
-  avgAssists:  number;
-  avgKda:      number;
-  topKillsHero: string | null;
+  username:     string;
+  games:        number;
+  avgKills:     number;
+  avgDeaths:    number;
+  avgAssists:   number;
+  avgKda:       number;
+  topKills:     number;     // most kills this player has recorded in a single game
+  topKillsHero: string | null; // the hero they were on when they recorded it
 };
 
 // ---------------------------------------------------------------------------
