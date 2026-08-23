@@ -285,7 +285,7 @@ type HeroSortKey =
   | 'avgDeaths'
   | 'avgAssists'
   | 'avgKda'
-  | 'avgNetWorth';
+  | 'topKills';
 
 type PlayerDotaSortKey =
   | 'username'
@@ -294,7 +294,7 @@ type PlayerDotaSortKey =
   | 'avgDeaths'
   | 'avgAssists'
   | 'avgKda'
-  | 'avgNetWorth';
+  | 'topKills';
 
 function DotaStatsTab({
   heroStats,
@@ -329,13 +329,11 @@ function DotaStatsTab({
   // ── Sorted hero rows ───────────────────────────────────────────────────────
   const sortedHeroes = useMemo(() => {
     return [...heroStats].sort((a, b) => {
-      // Hero name — alphabetical
       if (heroSortKey === 'hero') {
         const cmp = heroDisplayName(a.hero).localeCompare(heroDisplayName(b.hero));
         return heroSortDir === 'asc' ? cmp : -cmp;
       }
 
-      // Win rate — nulls (< MIN_PICKS_FOR_RATE) always sort to the bottom
       if (heroSortKey === 'winRate') {
         if (a.winRate === null && b.winRate === null) return 0;
         if (a.winRate === null) return 1;
@@ -345,7 +343,6 @@ function DotaStatsTab({
           : b.winRate - a.winRate;
       }
 
-      // All other numeric columns
       const aVal = a[heroSortKey] as number;
       const bVal = b[heroSortKey] as number;
       return heroSortDir === 'asc' ? aVal - bVal : bVal - aVal;
@@ -376,6 +373,166 @@ function DotaStatsTab({
   return (
     <div className="space-y-8">
 
+      {/* ── Player Performance ───────────────────────────────────────────────── */}
+      {playerDotaStats.length > 0 && (
+        <div className="panel overflow-hidden">
+          <CardHeader
+            icon={TrendingUp}
+            iconClass="text-dota-radiant-light"
+            title="Player Performance"
+            subtitle="Average in-game Dota stats across all reported games"
+          />
+
+          <div className="relative">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-dota-surface to-transparent z-10 lg:hidden"
+            />
+            <div className="overflow-x-auto">
+              <table className="min-w-full font-barlow text-sm text-dota-text">
+                <thead>
+                  <tr className="bg-dota-deep border-b border-dota-border">
+
+                    <th
+                      scope="col"
+                      aria-sort={playerSortKey === 'username' ? (playerSortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      className="px-3 py-3 text-left"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handlePlayerSort('username')}
+                        className={`
+                          flex items-center gap-1 font-barlow font-semibold text-xs whitespace-nowrap
+                          transition-colors focus-visible:outline-none focus-visible:ring-2
+                          focus-visible:ring-dota-gold focus-visible:ring-offset-1
+                          focus-visible:ring-offset-dota-deep rounded
+                          ${playerSortKey === 'username' ? 'text-dota-gold' : 'text-dota-text-muted hover:text-dota-text'}
+                        `}
+                      >
+                        Player
+                        <SortIcon active={playerSortKey === 'username'} dir={playerSortDir} />
+                      </button>
+                    </th>
+
+                    <SortableThButton
+                      colKey="games" label="Games" sortKey={playerSortKey} sortDir={playerSortDir}
+                      onSort={handlePlayerSort}
+                      tooltip="Number of games with Dota stats reported for this player. May be fewer than total games played if the plugin wasn't running."
+                      tooltipId="pdota-col-games"
+                    />
+                    <SortableThButton
+                      colKey="avgKda" label="Avg KDA" sortKey={playerSortKey} sortDir={playerSortDir}
+                      onSort={handlePlayerSort}
+                      tooltip="Average KDA ratio — (kills + assists) / max(deaths, 1). Default sort column."
+                      tooltipId="pdota-col-kda"
+                    />
+                    <SortableThButton
+                      colKey="avgKills" label="Avg K" sortKey={playerSortKey} sortDir={playerSortDir}
+                      onSort={handlePlayerSort}
+                      tooltip="Average kills per game."
+                      tooltipId="pdota-col-kills"
+                    />
+                    <SortableThButton
+                      colKey="avgDeaths" label="Avg D" sortKey={playerSortKey} sortDir={playerSortDir}
+                      onSort={handlePlayerSort}
+                      tooltip="Average deaths per game."
+                      tooltipId="pdota-col-deaths"
+                    />
+                    <SortableThButton
+                      colKey="avgAssists" label="Avg A" sortKey={playerSortKey} sortDir={playerSortDir}
+                      onSort={handlePlayerSort}
+                      tooltip="Average assists per game."
+                      tooltipId="pdota-col-assists"
+                    />
+                    <SortableThButton
+                      colKey="topKills" label="Top Kills" sublabel="best game" sortKey={playerSortKey} sortDir={playerSortDir}
+                      onSort={handlePlayerSort}
+                      tooltip="Most kills this player has recorded in a single game, and the hero they were playing."
+                      tooltipId="pdota-col-topkills"
+                    />
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {sortedPlayers.map((p, i) => {
+                    const showMedal = playerSortKey === 'avgKda' && playerSortDir === 'desc';
+                    return (
+                      <tr
+                        key={p.username}
+                        className={`border-b border-dota-border/50 transition-colors ${showMedal && i === 0 ? 'bg-dota-gold/5 hover:bg-dota-gold/8' : 'hover:bg-dota-overlay/40'}`}
+                      >
+                        <td className="px-3 py-3">
+                          <span className={`font-semibold ${showMedal && i === 0 ? 'text-dota-gold' : 'text-dota-text'}`}>
+                            {showMedal && i < 3 && (
+                              <span className="mr-1.5" aria-hidden="true">{RANK_EMOJIS[i]}</span>
+                            )}
+                            {p.username}
+                          </span>
+                          <span className="ml-2 text-[10px] text-dota-text-dim">{p.games}g</span>
+                        </td>
+
+                        <td className="px-3 py-3 text-center">
+                          <span className="font-barlow font-semibold tabular-nums text-dota-text-muted">
+                            {p.games}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-3 text-center">
+                          <span className={`font-barlow font-bold tabular-nums text-sm ${kdaColour(p.avgKda)}`}>
+                            {p.avgKda.toFixed(2)}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-3 text-center">
+                          <span className="font-barlow tabular-nums text-sm text-dota-radiant-light">
+                            {p.avgKills.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className="font-barlow tabular-nums text-sm text-dota-dire-light">
+                            {p.avgDeaths.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className="font-barlow tabular-nums text-sm text-[#7aaad4]">
+                            {p.avgAssists.toFixed(1)}
+                          </span>
+                        </td>
+
+                        {/* Top kills — best single-game performance + the hero it was on */}
+                        <td className="px-3 py-3 text-center">
+                          {p.topKills > 0 ? (
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="font-barlow font-bold tabular-nums text-sm text-dota-gold">
+                                {p.topKills}
+                              </span>
+                              {p.topKillsHero && (
+                                <span className="font-barlow text-[10px] text-dota-text-dim capitalize truncate max-w-[100px]">
+                                  {heroDisplayName(p.topKillsHero)}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-dota-text-dim text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="px-5 py-2.5 border-t border-dota-border">
+            <p className="font-barlow text-[11px] text-dota-text-dim">
+              Only games where the plugin reported stats are included — game count may differ from match history.
+              KDA = (kills + assists) / max(deaths, 1). Top Kills shows this player's best single-game kill count and the hero it happened on.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Hero Leaderboard ─────────────────────────────────────────────────── */}
       {heroStats.length > 0 && (
         <div className="panel overflow-hidden">
@@ -395,7 +552,6 @@ function DotaStatsTab({
           </div>
 
           <div className="relative">
-            {/* Fade hint for horizontal scroll on mobile */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-dota-surface to-transparent z-10 lg:hidden"
@@ -405,7 +561,6 @@ function DotaStatsTab({
                 <thead>
                   <tr className="bg-dota-deep border-b border-dota-border">
 
-                    {/* Hero name — left-aligned, manually built to match player table pattern */}
                     <th
                       scope="col"
                       aria-sort={heroSortKey === 'hero' ? (heroSortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -464,11 +619,10 @@ function DotaStatsTab({
                       tooltipId="hero-col-assists"
                     />
                     <SortableThButton
-                      colKey="avgNetWorth" label="Avg Net Worth" sortKey={heroSortKey} sortDir={heroSortDir}
+                      colKey="topKills" label="Top Kills" sublabel="best game" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
-                      tooltip="Average in-game net worth (gold) across all games on this hero."
-                      tooltipId="hero-col-nw"
-                      align="right"
+                      tooltip="Most kills ever recorded on this hero in a single game, and who did it."
+                      tooltipId="hero-col-topkills"
                     />
                   </tr>
                 </thead>
@@ -479,7 +633,6 @@ function DotaStatsTab({
                       key={hero.hero}
                       className="border-b border-dota-border/50 hover:bg-dota-overlay/40 transition-colors"
                     >
-                      {/* Hero icon + name */}
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2.5 min-w-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -499,14 +652,12 @@ function DotaStatsTab({
                         </div>
                       </td>
 
-                      {/* Picks */}
                       <td className="px-3 py-2.5 text-center">
                         <span className="font-barlow font-semibold tabular-nums text-dota-text">
                           {hero.picks}
                         </span>
                       </td>
 
-                      {/* Win rate — hidden under threshold */}
                       <td className="px-3 py-2.5 text-center">
                         {hero.winRate !== null ? (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(hero.winRate)}`}>
@@ -523,14 +674,12 @@ function DotaStatsTab({
                         )}
                       </td>
 
-                      {/* Avg KDA — coloured by ratio */}
                       <td className="px-3 py-2.5 text-center">
                         <span className={`font-barlow font-bold tabular-nums text-sm ${kdaColour(hero.avgKda)}`}>
                           {hero.avgKda.toFixed(2)}
                         </span>
                       </td>
 
-                      {/* K / D / A individual averages — colour-coded to match GameHistory */}
                       <td className="px-3 py-2.5 text-center">
                         <span className="font-barlow tabular-nums text-sm text-dota-radiant-light">
                           {hero.avgKills.toFixed(1)}
@@ -547,12 +696,22 @@ function DotaStatsTab({
                         </span>
                       </td>
 
-                      {/* Avg net worth */}
-                      <td className="px-3 py-2.5 text-right">
-                        <span className="inline-flex items-center justify-end gap-0.5 font-barlow font-bold tabular-nums text-sm text-dota-gold">
-                          {formatNW(hero.avgNetWorth)}
-                          <GoldIcon size={12} />
-                        </span>
+                      {/* Top kills — best single-game performance + who did it */}
+                      <td className="px-3 py-2.5 text-center">
+                        {hero.topKills > 0 ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="font-barlow font-bold tabular-nums text-sm text-dota-gold">
+                              {hero.topKills}
+                            </span>
+                            {hero.topKillsPlayer && (
+                              <span className="font-barlow text-[10px] text-dota-text-dim truncate max-w-[100px]">
+                                {hero.topKillsPlayer}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-dota-text-dim text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -571,163 +730,7 @@ function DotaStatsTab({
               <span className="text-dota-text-muted font-semibold">grey below 2</span>.
               {' '}Win rate hidden until {MIN_PICKS_FOR_RATE}+ picks.
               {' '}Win rate reflects the team that picked this hero, not the player's personal outcome.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Player Performance ───────────────────────────────────────────────── */}
-      {playerDotaStats.length > 0 && (
-        <div className="panel overflow-hidden">
-          <CardHeader
-            icon={TrendingUp}
-            iconClass="text-dota-radiant-light"
-            title="Player Performance"
-            subtitle="Average in-game Dota stats across all reported games"
-          />
-
-          <div className="relative">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-dota-surface to-transparent z-10 lg:hidden"
-            />
-            <div className="overflow-x-auto">
-              <table className="min-w-full font-barlow text-sm text-dota-text">
-                <thead>
-                  <tr className="bg-dota-deep border-b border-dota-border">
-
-                    {/* Player name */}
-                    <th
-                      scope="col"
-                      aria-sort={playerSortKey === 'username' ? (playerSortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                      className="px-3 py-3 text-left"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handlePlayerSort('username')}
-                        className={`
-                          flex items-center gap-1 font-barlow font-semibold text-xs whitespace-nowrap
-                          transition-colors focus-visible:outline-none focus-visible:ring-2
-                          focus-visible:ring-dota-gold focus-visible:ring-offset-1
-                          focus-visible:ring-offset-dota-deep rounded
-                          ${playerSortKey === 'username' ? 'text-dota-gold' : 'text-dota-text-muted hover:text-dota-text'}
-                        `}
-                      >
-                        Player
-                        <SortIcon active={playerSortKey === 'username'} dir={playerSortDir} />
-                      </button>
-                    </th>
-
-                    <SortableThButton
-                      colKey="games" label="Games" sortKey={playerSortKey} sortDir={playerSortDir}
-                      onSort={handlePlayerSort}
-                      tooltip="Number of games with Dota stats reported for this player. May be fewer than total games played if the plugin wasn't running."
-                      tooltipId="pdota-col-games"
-                    />
-                    <SortableThButton
-                      colKey="avgKda" label="Avg KDA" sortKey={playerSortKey} sortDir={playerSortDir}
-                      onSort={handlePlayerSort}
-                      tooltip="Average KDA ratio — (kills + assists) / max(deaths, 1). Default sort column."
-                      tooltipId="pdota-col-kda"
-                    />
-                    <SortableThButton
-                      colKey="avgKills" label="Avg K" sortKey={playerSortKey} sortDir={playerSortDir}
-                      onSort={handlePlayerSort}
-                      tooltip="Average kills per game."
-                      tooltipId="pdota-col-kills"
-                    />
-                    <SortableThButton
-                      colKey="avgDeaths" label="Avg D" sortKey={playerSortKey} sortDir={playerSortDir}
-                      onSort={handlePlayerSort}
-                      tooltip="Average deaths per game."
-                      tooltipId="pdota-col-deaths"
-                    />
-                    <SortableThButton
-                      colKey="avgAssists" label="Avg A" sortKey={playerSortKey} sortDir={playerSortDir}
-                      onSort={handlePlayerSort}
-                      tooltip="Average assists per game."
-                      tooltipId="pdota-col-assists"
-                    />
-                    <SortableThButton
-                      colKey="avgNetWorth" label="Avg Net Worth" sortKey={playerSortKey} sortDir={playerSortDir}
-                      onSort={handlePlayerSort}
-                      tooltip="Average in-game net worth (gold) per game. Proxy for farm quality."
-                      tooltipId="pdota-col-nw"
-                      align="right"
-                    />
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {sortedPlayers.map((p, i) => {
-                    // Medals only when sorted by KDA descending — the most meaningful ranking
-                    const showMedal = playerSortKey === 'avgKda' && playerSortDir === 'desc';
-                    return (
-                      <tr
-                        key={p.username}
-                        className={`border-b border-dota-border/50 transition-colors ${showMedal && i === 0 ? 'bg-dota-gold/5 hover:bg-dota-gold/8' : 'hover:bg-dota-overlay/40'}`}
-                      >
-                        {/* Player name + game count */}
-                        <td className="px-3 py-3">
-                          <span className={`font-semibold ${showMedal && i === 0 ? 'text-dota-gold' : 'text-dota-text'}`}>
-                            {showMedal && i < 3 && (
-                              <span className="mr-1.5" aria-hidden="true">{RANK_EMOJIS[i]}</span>
-                            )}
-                            {p.username}
-                          </span>
-                          <span className="ml-2 text-[10px] text-dota-text-dim">{p.games}g</span>
-                        </td>
-
-                        {/* Games with data */}
-                        <td className="px-3 py-3 text-center">
-                          <span className="font-barlow font-semibold tabular-nums text-dota-text-muted">
-                            {p.games}
-                          </span>
-                        </td>
-
-                        {/* Avg KDA */}
-                        <td className="px-3 py-3 text-center">
-                          <span className={`font-barlow font-bold tabular-nums text-sm ${kdaColour(p.avgKda)}`}>
-                            {p.avgKda.toFixed(2)}
-                          </span>
-                        </td>
-
-                        {/* K / D / A */}
-                        <td className="px-3 py-3 text-center">
-                          <span className="font-barlow tabular-nums text-sm text-dota-radiant-light">
-                            {p.avgKills.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          <span className="font-barlow tabular-nums text-sm text-dota-dire-light">
-                            {p.avgDeaths.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          <span className="font-barlow tabular-nums text-sm text-[#7aaad4]">
-                            {p.avgAssists.toFixed(1)}
-                          </span>
-                        </td>
-
-                        {/* Avg net worth */}
-                        <td className="px-3 py-3 text-right">
-                          <span className="inline-flex items-center justify-end gap-0.5 font-barlow font-bold tabular-nums text-sm text-dota-gold">
-                            {formatNW(p.avgNetWorth)}
-                            <GoldIcon size={12} />
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="px-5 py-2.5 border-t border-dota-border">
-            <p className="font-barlow text-[11px] text-dota-text-dim">
-              Only games where the plugin reported stats are included — game count may differ from match history.
-              KDA = (kills + assists) / max(deaths, 1).
+              {' '}Top Kills shows the best single-game kill count on this hero and who achieved it.
             </p>
           </div>
         </div>
