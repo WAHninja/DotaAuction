@@ -402,6 +402,33 @@ export default function AuctionHouse({
                     </button>
                   )}
 
+                  {/* Avatars of losing-team members currently leaning towards
+                      this offer — stamped over the top-left corner of the
+                      card, like a badge, mirroring the star's top-right spot.
+                      Only ever rendered for losing-team viewers. */}
+                  {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
+                    <div
+                      className="absolute -top-3 left-3 z-10 flex -space-x-2"
+                      role="group"
+                      aria-label={`Leaning towards this offer: ${selectingTeammates
+                        .map(pid => getPlayer(pid)?.username ?? `Player #${pid}`)
+                        .join(', ')}`}
+                    >
+                      {selectingTeammates.map(pid => {
+                        const p = getPlayer(pid);
+                        return (
+                          <PlayerAvatar
+                            key={pid}
+                            username={p?.username ?? `Player #${pid}`}
+                            steamAvatar={p?.steam_avatar}
+                            size={24}
+                            className="ring-2 ring-dota-deep shadow-md"
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Offer details */}
                   <div className="space-y-2 pr-6">
 
@@ -449,27 +476,6 @@ export default function AuctionHouse({
                           : <span className="text-dota-text-dim text-xs">—</span>
                       )}
                     </div>
-
-                    {/* Who on your team is leaning towards this one */}
-                    {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        <span className="stat-label text-[10px]">Leaning</span>
-                        <div className="flex -space-x-1.5">
-                          {selectingTeammates.map(pid => {
-                            const p = getPlayer(pid);
-                            return (
-                              <PlayerAvatar
-                                key={pid}
-                                username={p?.username ?? `Player #${pid}`}
-                                steamAvatar={p?.steam_avatar}
-                                size={18}
-                                className="ring-2 ring-dota-raised"
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Accept button */}
