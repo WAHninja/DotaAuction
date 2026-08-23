@@ -265,3 +265,8 @@ export type OfferAcceptedPayload = {
   acceptedOfferId: number;
   acceptedAmount: number;
 };
+
+export type OfferSelectingPayload = {
+  userId: number;
+  offerId: number | null;
+};
