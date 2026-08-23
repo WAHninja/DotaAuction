@@ -168,28 +168,43 @@ export default function MatchPage() {
     );
   }, []);
 
-    const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
-    // The auction is now fully resolved, so every offer's real amount is
-    // safe to reveal — the server sends the final { id, status, offer_amount }
-    // for each one rather than us guessing/nulling client-side.
-    const updatedOffers = offers.map(o => {
-      const finalState = payload.offers.find(f => f.id === o.id);
-      if (finalState) {
-        return { ...o, status: finalState.status, offer_amount: finalState.offer_amount };
-      }
-      return o;
-    });
+    const handleOfferAccepted = useCallback(async (_payload: OfferAcceptedPayload) => {
+    // Snapshot which game this auction belonged to before the upcoming
+    // refetches move data.latestGame on to the next game.
+    const resolvingGame = data?.latestGame;
+    const resolvingCompletedGames = data ? data.games.length - 1 : 0;
 
-    setOffers(updatedOffers);
+    // Re-pull the offers for this game from the server instead of trusting
+    // only the realtime payload merged into local state. The GET endpoint's
+    // CASE WHEN only hides amounts for status = 'pending' — once an offer is
+    // accepted/rejected it reveals the real amount to any match participant,
+    // regardless of team. Fetching it directly guarantees every client
+    // (winning team, losing team, spectators) ends up with the exact same
+    // data, rather than depending on each client's local `offers` snapshot
+    // having stayed in sync with the broadcast.
+    let finalOffers = offers;
+    if (resolvingGame) {
+      try {
+        const res = await fetch(`/api/game/offers?id=${resolvingGame.id}`);
+        if (res.ok) {
+          const json = await res.json();
+          finalOffers = json.offers || offers;
+        }
+      } catch (err) {
+        console.error('Failed to refresh offers after acceptance:', err);
+      }
+    }
+
+    setOffers(finalOffers);
 
     // Snapshot the resolved auction before the imminent refetch moves
     // data.latestGame on to the next game.
-    if (data?.latestGame) {
+    if (resolvingGame) {
       clearResolvedAuctionTimer();
       setResolvedAuction({
-        game: data.latestGame,
-        offers: updatedOffers,
-        completedGames: data.games.length - 1,
+        game: resolvingGame,
+        offers: finalOffers,
+        completedGames: resolvingCompletedGames,
       });
       resolvedAuctionTimeoutRef.current = setTimeout(() => {
         setResolvedAuction(null);
