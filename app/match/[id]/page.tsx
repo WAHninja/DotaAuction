@@ -169,12 +169,13 @@ export default function MatchPage() {
   }, []);
 
     const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
+    // The auction is now fully resolved, so every offer's real amount is
+    // safe to reveal — the server sends the final { id, status, offer_amount }
+    // for each one rather than us guessing/nulling client-side.
     const updatedOffers = offers.map(o => {
-      if (o.id === payload.acceptedOfferId) {
-        return { ...o, status: 'accepted' as const, offer_amount: payload.acceptedAmount };
-      }
-      if (o.status === 'pending') {
-        return { ...o, status: 'rejected' as const };
+      const finalState = payload.offers.find(f => f.id === o.id);
+      if (finalState) {
+        return { ...o, status: finalState.status, offer_amount: finalState.offer_amount };
       }
       return o;
     });
