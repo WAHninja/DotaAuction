@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useContext, useCallback } from 'react';
+import { useEffect, useState, useContext, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
@@ -348,7 +348,7 @@ export default function MatchPage() {
   const { match, latestGame, players, currentUserId } = data;
   const team1: number[] = latestGame?.team_1_members || [];
   const teamA: number[] = latestGame?.team_a_members || [];
-  const getPlayer = (id: number) => players.find((p) => p.id === id);
+  const getPlayer = (playerId: number) => players.find((p) => p.id === playerId);
 
   const isAuction    = latestGame?.status === 'auction pending';
   const isInProgress = latestGame?.status === 'in progress';
