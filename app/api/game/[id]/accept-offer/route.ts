@@ -151,6 +151,21 @@ export async function POST(
       [gameId, offerId]
     );
 
+    // ---- Snapshot every offer's final state ---------------------------------
+    // All offers for this game are now resolved (one accepted, the rest
+    // rejected), so nothing about them needs to stay hidden anymore. Grab
+    // their real amounts here, inside the transaction, so the broadcast
+    // below reflects a consistent final snapshot rather than racing a
+    // second read against other concurrent requests.
+    const { rows: finalOffers } = await client.query<{
+      id: number;
+      status: 'accepted' | 'rejected';
+      offer_amount: number;
+    }>(
+      `SELECT id, status, offer_amount FROM offers WHERE game_id = $1`,
+      [gameId]
+    );
+
     // ---- Award gold to the seller ------------------------------------------
     await client.query(
       `UPDATE match_players
@@ -196,6 +211,7 @@ export async function POST(
         {
           acceptedOfferId: offerId,
           acceptedAmount:  offer_amount,
+          offers:          finalOffers,
         }
       );
 
@@ -228,6 +244,7 @@ export async function POST(
       {
         acceptedOfferId: offerId,
         acceptedAmount:  offer_amount,
+        offers:          finalOffers,
       }
     );
 
