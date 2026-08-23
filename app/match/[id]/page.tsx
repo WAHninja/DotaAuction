@@ -15,7 +15,8 @@ import { useAuctionListener } from '@/app/hooks/useAuctionListener';
 import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
 import { usePhaseListener } from '@/app/hooks/usePhaseListener';
-import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, ViewerState, Player } from '@/types';
+import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, OfferSelectingPayload, ViewerState, Player, Game } from '@/types';
+
 
 // ---------------------------------------------------------------------------
 // Stat computation helpers
@@ -81,11 +82,41 @@ export default function MatchPage() {
   
   const DRAFT_PHASE = 4;
 
-  const [data, setData] = useState<MatchData | null>(null);
+    const [data, setData] = useState<MatchData | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryGame[]>([]);
+
+  // ── Silent "leaning towards" signals from losing-team members ─────────────
+  // userId -> offerId. Populated from realtime broadcasts, reset each time
+  // the auction game changes.
+  const [selections, setSelections] = useState<Record<number, number | null>>({});
+
+  // ── Frozen snapshot of the just-resolved auction ───────────────────────────
+  // Kept around for a short window after acceptance so the outcome (accepted
+  // vs rejected, revealed amount) stays visible even after data.latestGame has
+  // already moved on to the next game.
+  const [resolvedAuction, setResolvedAuction] = useState<{
+    game: Game;
+    offers: Offer[];
+    completedGames: number;
+  } | null>(null);
+  const resolvedAuctionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearResolvedAuctionTimer = useCallback(() => {
+    if (resolvedAuctionTimeoutRef.current) {
+      clearTimeout(resolvedAuctionTimeoutRef.current);
+      resolvedAuctionTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearResolvedAuctionTimer(), [clearResolvedAuctionTimer]);
+
+  // New auction, new game — clear any leftover selection signals.
+  useEffect(() => {
+    setSelections({});
+  }, [data?.latestGame?.id]);
 
   // ---- Protect route -------------------------------------------------------
   const { loading: authLoading } = useContext(UserContext);
@@ -137,19 +168,40 @@ export default function MatchPage() {
     );
   }, []);
 
-  const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
-    setOffers(prev => prev.map(o => {
+    const handleOfferAccepted = useCallback((payload: OfferAcceptedPayload) => {
+    const updatedOffers = offers.map(o => {
       if (o.id === payload.acceptedOfferId) {
-        return { ...o, status: 'accepted', offer_amount: payload.acceptedAmount };
+        return { ...o, status: 'accepted' as const, offer_amount: payload.acceptedAmount };
       }
       if (o.status === 'pending') {
-        return { ...o, status: 'rejected' };
+        return { ...o, status: 'rejected' as const };
       }
       return o;
-    }));
-    Promise.all([fetchMatchData(), fetchGameHistory()]);
-  }, [fetchMatchData, fetchGameHistory]);
+    });
 
+    setOffers(updatedOffers);
+
+    // Snapshot the resolved auction before the imminent refetch moves
+    // data.latestGame on to the next game.
+    if (data?.latestGame) {
+      clearResolvedAuctionTimer();
+      setResolvedAuction({
+        game: data.latestGame,
+        offers: updatedOffers,
+        completedGames: data.games.length - 1,
+      });
+      resolvedAuctionTimeoutRef.current = setTimeout(() => {
+        setResolvedAuction(null);
+        resolvedAuctionTimeoutRef.current = null;
+      }, 20_000);
+    }
+
+    Promise.all([fetchMatchData(), fetchGameHistory()]);
+  }, [data, offers, fetchMatchData, fetchGameHistory, clearResolvedAuctionTimer]);
+
+  const handleOfferSelecting = useCallback((payload: OfferSelectingPayload) => {
+    setSelections(prev => ({ ...prev, [payload.userId]: payload.offerId }));
+  }, []);
   const handleGameReported = useCallback(() => {
     Promise.all([fetchMatchData(), fetchGameHistory()]);
   }, [fetchMatchData, fetchGameHistory]);
@@ -180,11 +232,12 @@ export default function MatchPage() {
   useGameWinnerListener(matchId, handleWinnerSelected);
   useGameReportedListener(matchId, handleGameReported);
   usePhaseListener(matchId, handlePhaseChanged);
-  useAuctionListener(
+  const { sendSelection } = useAuctionListener(
     matchId,
     data?.latestGame?.id ?? null,
     handleNewOffer,
     handleOfferAccepted,
+    handleOfferSelecting,
   );
 
   // ---- Jitsi room switching ------------------------------------------------
@@ -369,7 +422,7 @@ export default function MatchPage() {
         <SelectGameWinnerForm gameId={latestGame.id} show />
       )}
 
-      {isAuction && latestGame.winning_team && (
+            {isAuction && latestGame.winning_team && (
         <AuctionHouse
           latestGame={latestGame}
           players={players}
@@ -380,6 +433,24 @@ export default function MatchPage() {
           onOfferAccepted={() => {
             Promise.all([fetchMatchData(), fetchGameHistory()]);
           }}
+          selections={selections}
+          onSelectOffer={(offerId) => {
+            setSelections(prev => ({ ...prev, [currentUserId]: offerId }));
+            sendSelection({ userId: currentUserId, offerId });
+          }}
+        />
+      )}
+
+      {!isAuction && resolvedAuction && (
+        <AuctionHouse
+          latestGame={resolvedAuction.game}
+          players={players}
+          currentUserId={currentUserId}
+          offers={resolvedAuction.offers}
+          completedGames={resolvedAuction.completedGames}
+          onOfferSubmitted={() => {}}
+          onOfferAccepted={() => {}}
+          finalized
         />
       )}
 
