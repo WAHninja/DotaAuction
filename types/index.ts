@@ -264,6 +264,10 @@ export type NewOfferPayload = Omit<Offer, 'offer_amount'>;
 export type OfferAcceptedPayload = {
   acceptedOfferId: number;
   acceptedAmount: number;
+  // Every offer for the game, now that the auction has resolved and none of
+  // them need to stay hidden. Used to reveal rejected offers' real amounts
+  // instead of leaving them blank.
+  offers: { id: number; status: 'accepted' | 'rejected'; offer_amount: number }[];
 };
 
 export type OfferSelectingPayload = {
