@@ -87,7 +87,7 @@ type HeroStatRow = {
   avgDeaths: number;
   avgAssists: number;
   avgKda: number;
-  avgNetWorth: number;
+  topKillsPlayer: string | null;
 };
 
 type PlayerDotaStatRow = {
@@ -97,7 +97,7 @@ type PlayerDotaStatRow = {
   avgDeaths: number;
   avgAssists: number;
   avgKda: number;
-  avgNetWorth: number;
+  topKillsHero: string | null;
 };
 
 const CACHE_TTL_MS = 60 * 1_000; // 60 seconds
@@ -127,6 +127,8 @@ export async function GET() {
       winTypeResult,
       heroStatsResult,
       playerDotaStatsResult,
+      heroTopKillsResult,
+      playerTopKillsResult,
     ] = await Promise.all([
 
       // 1. All users — builds the base playersMap
@@ -364,7 +366,6 @@ export async function GET() {
           AVG(
             (dgs.kills + dgs.assists)::numeric / GREATEST(dgs.deaths, 1)
           )::numeric(10,2)                                                  AS avg_kda,
-          AVG(dgs.net_worth)::numeric(10,0)                                 AS avg_net_worth
         FROM dota_game_stats dgs
         JOIN games g ON g.id = dgs.game_id
         WHERE dgs.hero IS NOT NULL
@@ -395,13 +396,41 @@ export async function GET() {
           AVG(
             (dgs.kills + dgs.assists)::numeric / GREATEST(dgs.deaths, 1)
           )::numeric(10,2)                                                  AS avg_kda,
-          AVG(dgs.net_worth)::numeric(10,0)                                 AS avg_net_worth
-        FROM dota_game_stats dgs
+          FROM dota_game_stats dgs
         JOIN games g ON g.id = dgs.game_id
         JOIN users u ON u.id = dgs.player_id
         WHERE g.status = 'finished'
         GROUP BY u.id, u.username
         ORDER BY avg_kda DESC, u.username ASC
+      `),
+    ]);
+
+    // 12. Highest kills recorded on each hero, and who did it.
+      db.query<{ hero: string; kills: string; username: string }>(`
+        SELECT DISTINCT ON (dgs.hero)
+          dgs.hero,
+          dgs.kills,
+          u.username
+        FROM dota_game_stats dgs
+        JOIN games g ON g.id = dgs.game_id
+        JOIN users u ON u.id = dgs.player_id
+        WHERE dgs.hero IS NOT NULL
+          AND g.status = 'finished'
+        ORDER BY dgs.hero, dgs.kills DESC, dgs.game_id ASC
+      `),
+
+      // 13. Highest kills a player has ever recorded in one game, plus the
+      // hero they were on when it happened.
+      db.query<{ username: string; kills: string; hero: string | null }>(`
+        SELECT DISTINCT ON (dgs.player_id)
+          u.username,
+          dgs.kills,
+          dgs.hero
+        FROM dota_game_stats dgs
+        JOIN games g ON g.id = dgs.game_id
+        JOIN users u ON u.id = dgs.player_id
+        WHERE g.status = 'finished'
+        ORDER BY dgs.player_id, dgs.kills DESC, dgs.game_id ASC
       `),
     ]);
 
@@ -501,6 +530,14 @@ export async function GET() {
       if (stats) stats.netGold = parseInt(row.net_gold, 10);
     }
 
+        const heroTopKillsMap = new Map<string, { kills: number; username: string }>(
+      heroTopKillsResult.rows.map(r => [r.hero, { kills: Number(r.kills), username: r.username }])
+    );
+
+    const playerTopKillsMap = new Map<string, { kills: number; hero: string | null }>(
+      playerTopKillsResult.rows.map(r => [r.username, { kills: Number(r.kills), hero: r.hero }])
+    );
+
     // -------------------------------------------------------------------------
     // Build response payload
     // -------------------------------------------------------------------------
@@ -561,31 +598,37 @@ export async function GET() {
 
     // Hero stats — winRate is null below MIN_PICKS_FOR_RATE to avoid
     // misleading small-sample percentages (e.g. 1/1 = "100%").
-    const heroStats: HeroStatRow[] = heroStatsResult.rows.map(r => {
-      const picks = Number(r.picks);
-      const wins  = Number(r.wins);
+        const heroStats: HeroStatRow[] = heroStatsResult.rows.map(r => {
+      const picks   = Number(r.picks);
+      const wins    = Number(r.wins);
+      const topKill = heroTopKillsMap.get(r.hero) ?? null;
       return {
-        hero:        r.hero,
+        hero:           r.hero,
         picks,
         wins,
-        winRate:     picks >= MIN_PICKS_FOR_RATE ? +((wins / picks) * 100).toFixed(1) : null,
-        avgKills:    Number(r.avg_kills),
-        avgDeaths:   Number(r.avg_deaths),
-        avgAssists:  Number(r.avg_assists),
-        avgKda:      Number(r.avg_kda),
-        avgNetWorth: Number(r.avg_net_worth),
+        winRate:        picks >= MIN_PICKS_FOR_RATE ? +((wins / picks) * 100).toFixed(1) : null,
+        avgKills:       Number(r.avg_kills),
+        avgDeaths:      Number(r.avg_deaths),
+        avgAssists:     Number(r.avg_assists),
+        avgKda:         Number(r.avg_kda),
+        topKills:       topKill?.kills ?? 0,
+        topKillsPlayer: topKill?.username ?? null,
       };
     });
 
-    const playerDotaStats: PlayerDotaStatRow[] = playerDotaStatsResult.rows.map(r => ({
-      username:    r.username,
-      games:       Number(r.games),
-      avgKills:    Number(r.avg_kills),
-      avgDeaths:   Number(r.avg_deaths),
-      avgAssists:  Number(r.avg_assists),
-      avgKda:      Number(r.avg_kda),
-      avgNetWorth: Number(r.avg_net_worth),
-    }));
+    const playerDotaStats: PlayerDotaStatRow[] = playerDotaStatsResult.rows.map(r => {
+      const topKill = playerTopKillsMap.get(r.username) ?? null;
+      return {
+        username:     r.username,
+        games:        Number(r.games),
+        avgKills:     Number(r.avg_kills),
+        avgDeaths:    Number(r.avg_deaths),
+        avgAssists:   Number(r.avg_assists),
+        avgKda:       Number(r.avg_kda),
+        topKills:     topKill?.kills ?? 0,
+        topKillsHero: topKill?.hero ?? null,
+      };
+    });
 
     const data: StatsPayload = {
       players,
