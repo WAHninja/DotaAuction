@@ -15,8 +15,8 @@ module.exports = {
       // sans         — body copy, prose (fallback system stack)
       // -----------------------------------------------------------------------
       fontFamily: {
-        cinzel:  ['var(--font-cinzel)'],
-        barlow:  ['var(--font-barlow)'],
+        cinzel: ['var(--font-barlow)', 'sans-serif'], // legacy alias
+        barlow: ['var(--font-barlow)', 'sans-serif'],
       },
 
       // -----------------------------------------------------------------------
