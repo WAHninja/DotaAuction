@@ -184,74 +184,26 @@ export default function AuctionHouse({
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  //
-  // Layout: three full-width zones sharing ONE centre axis with the rest of
-  // the page (team cards, Game History):
-  //
-  //   1. Header  — title + quip + ornate divider, centred to the card.
-  //   2. Status  — offer counter, phase messages, submit form. All content
-  //                is narrow, so it centres to the FULL card while the
-  //                shopkeeper stands in the left margin (lg+ only — below
-  //                lg the margin is too thin and a compact figure joins the
-  //                header row instead). His feet land on the steel rule
-  //                closing the zone: the shop counter.
-  //   3. Offers  — Current Offers grid + legend, full panel width below
-  //                the counter line, where the grid has room to breathe.
-  //
   return (
-    <div className="panel p-6 mb-8 space-y-6">
+    <div className="panel relative p-6 mb-8">
+      <div className="space-y-6">
 
-      {/* ── Zone 1: Header — centred to the full card ─────────────────────── */}
-      <div>
-        <div className="flex items-end justify-center gap-4 lg:block">
-          <Image
-            src="/Shopkeeper.png"
-            alt=""
-            width={84}
-            height={134}
-            className="lg:hidden object-contain shrink-0 drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
-          />
-          <div className="text-left lg:text-center pb-8 lg:pb-0">
-            <h3 className="font-barlow text-2xl sm:text-3xl font-bold uppercase tracking-wider text-dota-gold">
-              Auction House
-            </h3>
-            <p className="font-barlow text-sm text-dota-text-muted italic mt-0.5">
-              &ldquo;Ho ho! You found me!&rdquo;
-            </p>
-          </div>
+        {/* ── Title ─────────────────────────────────────────────────────────── */}
+        <div>
+          <h3 className="font-barlow text-2xl sm:text-3xl font-bold uppercase tracking-wider text-dota-gold text-center">
+            Auction House
+          </h3>
+          <div className="divider-gold w-80 max-w-full mx-auto mt-3" />
         </div>
-        <div className="divider-gold w-80 max-w-full mx-auto mt-1 lg:mt-3" />
-      </div>
 
-      {/* ── Zone 2: Status — keeper in the left margin, content on the card
-          axis. min-height guarantees room for the figure even when the
-          phase content is short; justify-center keeps short content in the
-          vertical middle of the zone. ─────────────────────────────────────── */}
-      <div className="relative lg:min-h-[300px] flex flex-col justify-center gap-6">
-
-        {/* Grounding shadow + standing figure (lg+). Both extend 24px below
-            the zone (-bottom-6) so his feet sit exactly on the steel rule
-            that follows in the space-y-6 flow. */}
-        <div
-          aria-hidden="true"
-          className="hidden lg:block absolute -bottom-5 left-7 w-32 h-3.5 rounded-[50%] bg-black/45 blur-md pointer-events-none"
-        />
-        <Image
-          src="/Shopkeeper.png"
-          alt=""
-          width={398}
-          height={637}
-          className="hidden lg:block absolute -bottom-6 left-2 h-[290px] w-auto object-contain pointer-events-none select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.65)]"
-        />
-
-        {/* Resolved banner */}
+        {/* ── Resolved banner ─────────────────────────────────────────────────── */}
         {finalized && (
           <p className="text-center font-barlow text-sm font-semibold text-dota-gold flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4" /> Auction resolved — next game underway
           </p>
         )}
 
-        {/* Offer counter */}
+        {/* ── Offer counter ───────────────────────────────────────────────────── */}
         {!finalized && (
           <div className="flex justify-center">
             <div className="panel-sunken flex items-center gap-4 px-5 py-3">
@@ -286,15 +238,15 @@ export default function AuctionHouse({
           </div>
         )}
 
-        {/* Winner: submit form — centred and width-capped so it stays on the
-            card axis and clear of the figure. */}
+        {/* ── Winner: submit form ─────────────────────────────────────────────── */}
         {!finalized && isOnWinningTeam && !alreadySubmitted && (
-          <div className="relative chamfer w-full max-w-md mx-auto">
+          <div className="relative chamfer overflow-hidden">
             <Image
               src="/match_predictions_bg.png"
               alt=""
               fill
               quality={85}
+              sizes="(max-width: 768px) 100vw, 1200px"
               className="object-cover object-right pointer-events-none select-none"
             />
             <div
@@ -304,7 +256,7 @@ export default function AuctionHouse({
               }}
             />
 
-            <div className="relative z-10 py-8 px-6 space-y-4">
+            <div className="relative z-10 max-w-md py-8 px-6 space-y-4">
               <div className="space-y-1">
                 <p className="font-barlow font-bold uppercase tracking-wider text-dota-gold text-lg">
                   Make an Offer
@@ -370,220 +322,221 @@ export default function AuctionHouse({
           </div>
         )}
 
-        {/* Winner: already submitted */}
+        {/* ── Winner: already submitted ───────────────────────────────────────── */}
         {!finalized && isOnWinningTeam && alreadySubmitted && (
           <p className="text-center font-barlow text-sm font-semibold text-dota-radiant-light flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4" /> Your offer is in.
           </p>
         )}
 
-        {/* Loser: waiting message */}
+        {/* ── Loser: waiting message ──────────────────────────────────────────── */}
         {!finalized && isOnLosingTeam && !allSubmitted && (
           <p className="text-center font-barlow text-sm text-dota-text-muted">
             Waiting for all offers before you can accept…
           </p>
         )}
 
-        {/* Loser: silent coordination hint */}
+        {/* ── Loser: silent coordination hint ─────────────────────────────────── */}
         {!finalized && isOnLosingTeam && allSubmitted && hasPending && (
           <p className="text-center font-barlow text-xs text-dota-text-muted">
             Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to show your
             team which one you&rsquo;re leaning towards — only your team sees it.
           </p>
         )}
-      </div>
 
-      {/* ── Counter line — the steel rule the shopkeeper stands at ────────── */}
-      <div className="divider" />
+        {/* ── Offer cards ────────────────────────────────────────────────────── */}
+        <div>
+          <h4 className="text-lg text-center text-dota-text mb-1">Current Offers</h4>
 
-      {/* ── Zone 3: Offers — full panel width ─────────────────────────────── */}
-      <div>
-        <h4 className="text-lg text-center text-dota-text mb-1">Current Offers</h4>
+          {allSubmitted && hasPending && (
+            <p className="text-center font-barlow text-xs text-dota-text-muted mb-4">
+              Exact amounts are hidden until an offer is accepted.
+            </p>
+          )}
 
-        {allSubmitted && hasPending && (
-          <p className="text-center font-barlow text-xs text-dota-text-muted mb-4">
-            Exact amounts are hidden until an offer is accepted.
-          </p>
-        )}
+          {!allSubmitted && !finalized && (
+            <p className="text-center font-barlow text-xs text-dota-text-muted mb-4">
+              Offer details are revealed once everyone has submitted.
+            </p>
+          )}
 
-        {!allSubmitted && !finalized && (
-          <p className="text-center font-barlow text-xs text-dota-text-muted mb-4">
-            Offer details are revealed once everyone has submitted.
-          </p>
-        )}
+          {offers.length === 0 ? (
+            <p className="text-center font-barlow text-dota-text-muted py-4">No offers submitted yet.</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {offers.map(offer => {
+                const from       = getPlayer(offer.from_player_id);
+                const to         = getPlayer(offer.target_player_id);
+                const isAccepted = offer.status === 'accepted';
+                const isRejected = offer.status === 'rejected';
+                const isPending  = offer.status === 'pending';
 
-        {offers.length === 0 ? (
-          <p className="text-center font-barlow text-dota-text-muted py-4">No offers submitted yet.</p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {offers.map(offer => {
-              const from       = getPlayer(offer.from_player_id);
-              const to         = getPlayer(offer.target_player_id);
-              const isAccepted = offer.status === 'accepted';
-              const isRejected = offer.status === 'rejected';
-              const isPending  = offer.status === 'pending';
+                const canAccept = isOnLosingTeam && isPending && acceptedOfferId === null && allSubmitted && !finalized;
+                const canSelect = isOnLosingTeam && isPending && allSubmitted && !finalized && acceptedOfferId === null;
+                const showAmount = !isPending;
 
-              const canAccept = isOnLosingTeam && isPending && acceptedOfferId === null && allSubmitted && !finalized;
-              const canSelect = isOnLosingTeam && isPending && allSubmitted && !finalized && acceptedOfferId === null;
-              const showAmount = !isPending;
+                const isSelectedByMe = isOnLosingTeam && selections[currentUserId] === offer.id;
+                const selectingTeammates = isOnLosingTeam
+                  ? losingTeamMembers.filter(pid => pid !== currentUserId && selections[pid] === offer.id)
+                  : [];
 
-              const isSelectedByMe = isOnLosingTeam && selections[currentUserId] === offer.id;
-              const selectingTeammates = isOnLosingTeam
-                ? losingTeamMembers.filter(pid => pid !== currentUserId && selections[pid] === offer.id)
-                : [];
+                /* v2 theme: clip-path eats borders and outer box-shadows, so the
+                   accepted / selected states are expressed as drop-shadow glows
+                   (which follow the chamfered silhouette) instead of the old
+                   border-colour + shadow-* utilities. These override the card's
+                   default elevation shadow — the glow reads as the elevation. */
+                const stateClass =
+                  isAccepted     ? 'drop-shadow-[0_0_14px_rgba(74,155,60,0.45)]' :
+                  isRejected     ? 'opacity-50'                                   :
+                  isSelectedByMe ? 'drop-shadow-[0_0_10px_rgba(200,169,81,0.40)]' :
+                                   '';
 
-              /* clip-path eats borders and outer box-shadows, so the accepted /
-                 selected states are drop-shadow glows (which follow the
-                 chamfered silhouette) instead of border + shadow utilities. */
-              const stateClass =
-                isAccepted     ? 'drop-shadow-[0_0_14px_rgba(74,155,60,0.45)]' :
-                isRejected     ? 'opacity-50'                                   :
-                isSelectedByMe ? 'drop-shadow-[0_0_10px_rgba(200,169,81,0.40)]' :
-                                 '';
-
-              return (
-                <div
-                  key={offer.id}
-                  className={`relative panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${stateClass}`}
-                >
-                  {/* Pick indicator — separate button so it doesn't nest inside
-                      the Accept button below. Only losing-team members see it,
-                      and only their own team ever sees who's picked what. */}
-                  {canSelect && (
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSelect(offer.id)}
-                      aria-pressed={isSelectedByMe}
-                      aria-label={isSelectedByMe ? 'Unmark as your pick' : 'Mark as your pick'}
-                      title={isSelectedByMe ? 'Unmark as your pick' : "Mark as your pick — only your team sees this"}
-                      className={`absolute top-2.5 right-2.5 p-1.5 chamfer-sm transition-colors ${
-                        isSelectedByMe
-                          ? 'bg-dota-gold/20 text-dota-gold'
-                          : 'bg-dota-deep text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay'
-                      }`}
-                    >
-                      <Star className="w-3.5 h-3.5" fill={isSelectedByMe ? 'currentColor' : 'none'} />
-                    </button>
-                  )}
-
-                  {/* Offer details */}
-                  <div className="space-y-2 pr-6">
-
-                    {!isPending && (
-                      <div className={isAccepted ? 'badge-radiant self-start' : 'badge-dire self-start'}>
-                        {isAccepted ? <CheckCircle2 className="w-3 h-3" /> : null}
-                        {offer.status}
-                      </div>
+                return (
+                  <div
+                    key={offer.id}
+                    className={`relative panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${stateClass}`}
+                  >
+                    {/* Pick indicator — separate button so it doesn't nest inside
+                        the Accept button below. Only losing-team members see it,
+                        and only their own team ever sees who's picked what. */}
+                    {canSelect && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSelect(offer.id)}
+                        aria-pressed={isSelectedByMe}
+                        aria-label={isSelectedByMe ? 'Unmark as your pick' : 'Mark as your pick'}
+                        title={isSelectedByMe ? 'Unmark as your pick' : "Mark as your pick — only your team sees this"}
+                        className={`absolute top-2.5 right-2.5 p-1.5 chamfer-sm transition-colors ${
+                          isSelectedByMe
+                            ? 'bg-dota-gold/20 text-dota-gold'
+                            : 'bg-dota-deep text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay'
+                        }`}
+                      >
+                        <Star className="w-3.5 h-3.5" fill={isSelectedByMe ? 'currentColor' : 'none'} />
+                      </button>
                     )}
 
-                    <div className="space-y-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="stat-label w-10">From</span>
-                        <span className="font-barlow font-semibold text-dota-gold">
-                          {from?.username ?? `Player #${offer.from_player_id}`}
-                        </span>
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="stat-label w-10">Selling</span>
-                        {allSubmitted ? (
-                          <span className="font-barlow font-semibold text-dota-info">
-                            {to?.username ?? `Player #${offer.target_player_id}`}
+                    {/* Offer details */}
+                    <div className="space-y-2 pr-6">
+
+                      {!isPending && (
+                        <div className={isAccepted ? 'badge-radiant self-start' : 'badge-dire self-start'}>
+                          {isAccepted ? <CheckCircle2 className="w-3 h-3" /> : null}
+                          {offer.status}
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="stat-label w-10">From</span>
+                          <span className="font-barlow font-semibold text-dota-gold">
+                            {from?.username ?? `Player #${offer.from_player_id}`}
                           </span>
-                        ) : (
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="stat-label w-10">Selling</span>
+                          {allSubmitted ? (
+                            <span className="font-barlow font-semibold text-dota-info">
+                              {to?.username ?? `Player #${offer.target_player_id}`}
+                            </span>
+                          ) : (
+                            <span className="font-barlow text-xs text-dota-text-muted italic">
+                              Hidden until all offers are in…
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="stat-label w-10">Offer</span>
+                        {!allSubmitted ? (
                           <span className="font-barlow text-xs text-dota-text-muted italic">
                             Hidden until all offers are in…
                           </span>
+                        ) : showAmount ? (
+                          offer.offer_amount != null
+                            ? <GoldAmount amount={offer.offer_amount} />
+                            : <span className="text-dota-text-muted text-xs">—</span>
+                        ) : (
+                          offer.tier_label
+                            ? <TierBadge label={offer.tier_label} />
+                            : <span className="text-dota-text-muted text-xs">—</span>
                         )}
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="stat-label w-10">Offer</span>
-                      {!allSubmitted ? (
-                        <span className="font-barlow text-xs text-dota-text-muted italic">
-                          Hidden until all offers are in…
-                        </span>
-                      ) : showAmount ? (
-                        offer.offer_amount != null
-                          ? <GoldAmount amount={offer.offer_amount} />
-                          : <span className="text-dota-text-muted text-xs">—</span>
-                      ) : (
-                        offer.tier_label
-                          ? <TierBadge label={offer.tier_label} />
-                          : <span className="text-dota-text-muted text-xs">—</span>
+                      {/* Teammates leaning towards this offer.
+                          v2: rendered inline instead of the old floating badge at
+                          -top-3 — the chamfer clip would cut off anything hanging
+                          outside the card, and inline it can't collide with the
+                          From/Selling rows either. Only losing-team viewers. */}
+                      {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
+                        <div
+                          className="flex items-center gap-2 pt-1"
+                          role="group"
+                          aria-label={`Leaning towards this offer: ${selectingTeammates
+                            .map(pid => getPlayer(pid)?.username ?? `Player #${pid}`)
+                            .join(', ')}`}
+                        >
+                          <span className="stat-label">Leaning</span>
+                          <div className="flex -space-x-2">
+                            {selectingTeammates.map(pid => {
+                              const p = getPlayer(pid);
+                              return (
+                                <PlayerAvatar
+                                  key={pid}
+                                  username={p?.username ?? `Player #${pid}`}
+                                  steamAvatar={p?.steam_avatar}
+                                  size={22}
+                                  className="ring-2 ring-dota-deep"
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    {/* Teammates leaning towards this offer — inline so the
-                        chamfer clip can't cut it off and it can't collide with
-                        the From/Selling rows. Only losing-team viewers. */}
-                    {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
-                      <div
-                        className="flex items-center gap-2 pt-1"
-                        role="group"
-                        aria-label={`Leaning towards this offer: ${selectingTeammates
-                          .map(pid => getPlayer(pid)?.username ?? `Player #${pid}`)
-                          .join(', ')}`}
+                    {/* Accept button */}
+                    {canAccept && (
+                      <button
+                        onClick={() => handleAcceptOffer(offer.id)}
+                        disabled={accepting}
+                        className="btn-primary w-full mt-auto"
                       >
-                        <span className="stat-label">Leaning</span>
-                        <div className="flex -space-x-2">
-                          {selectingTeammates.map(pid => {
-                            const p = getPlayer(pid);
-                            return (
-                              <PlayerAvatar
-                                key={pid}
-                                username={p?.username ?? `Player #${pid}`}
-                                steamAvatar={p?.steam_avatar}
-                                size={22}
-                                className="ring-2 ring-dota-deep"
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
+                        {accepting && acceptedOfferId === offer.id
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Accepting…</>
+                          : 'Accept Offer'
+                        }
+                      </button>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          )}
 
-                  {/* Accept button */}
-                  {canAccept && (
-                    <button
-                      onClick={() => handleAcceptOffer(offer.id)}
-                      disabled={accepting}
-                      className="btn-primary w-full mt-auto"
-                    >
-                      {accepting && acceptedOfferId === offer.id
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Accepting…</>
-                        : 'Accept Offer'
-                      }
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+          {acceptError && (
+            <p role="alert" className="mt-3 font-barlow text-sm text-dota-dire-light text-center">
+              {acceptError}
+            </p>
+          )}
+        </div>
+
+        {/* ── Tier legend ─────────────────────────────────────────────────────── */}
+        {!finalized && allSubmitted && hasPending && (
+          <div className="flex justify-center">
+            <div className="panel-sunken flex flex-wrap items-center justify-center gap-4 px-5 py-3">
+              <span className="stat-label">Tiers</span>
+              {(['Low', 'Medium', 'High'] as const).map(tier => (
+                <TierBadge key={tier} label={tier} />
+              ))}
+              <span className="font-barlow text-xs text-dota-text-muted">
+                Ranges overlap — same tier can cover different amounts
+              </span>
+            </div>
           </div>
-        )}
-
-        {acceptError && (
-          <p role="alert" className="mt-3 font-barlow text-sm text-dota-dire-light text-center">
-            {acceptError}
-          </p>
         )}
       </div>
-
-      {/* ── Tier legend ─────────────────────────────────────────────────────── */}
-      {!finalized && allSubmitted && hasPending && (
-        <div className="flex justify-center">
-          <div className="panel-sunken flex flex-wrap items-center justify-center gap-4 px-5 py-3">
-            <span className="stat-label">Tiers</span>
-            {(['Low', 'Medium', 'High'] as const).map(tier => (
-              <TierBadge key={tier} label={tier} />
-            ))}
-            <span className="font-barlow text-xs text-dota-text-muted">
-              Ranges overlap — same tier can cover different amounts
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
