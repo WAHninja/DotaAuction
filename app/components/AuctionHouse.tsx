@@ -507,16 +507,6 @@ export default function AuctionHouse({
                         </div>
                       )}
 
-                      {/* The headline signal. The avatar row below says who is
-                          backing what; this says which one is ahead, which is
-                          the thing a teammate scanning the grid actually needs. */}
-                      {isMostBacked && (
-                        <div className="badge-gold self-start">
-                          <Star className="w-3 h-3" fill="currentColor" />
-                          Most backed
-                        </div>
-                      )}
-
                       <div className="space-y-1">
                         <div className="flex items-baseline gap-2">
                           <span className="stat-label w-10">From</span>
@@ -559,20 +549,35 @@ export default function AuctionHouse({
                           Rendered inline rather than as a floating badge — the
                           chamfer clip would cut off anything hanging outside the
                           card, and inline it can't collide with the From/Selling
-                          rows either. Only losing-team viewers see it. */}
-                      {isOnLosingTeam && !finalized && backers.length > 0 && (
+                          rows either. Only losing-team viewers see it.
+
+                          Shown on every pending card, including ones nobody has
+                          backed yet, so the counts can be read against each other
+                          at a glance and the cards don't change height as votes
+                          land. The condition mirrors when backing is actually
+                          possible — all offers in, card still pending — rather
+                          than whether this particular card has any backers. */}
+                      {isOnLosingTeam && !finalized && allSubmitted && isPending && (
                         <div
                           className="flex items-center gap-2 pt-1"
                           role="group"
-                          aria-label={`Backing this offer: ${backers
-                            .map(pid =>
-                              pid === currentUserId
-                                ? 'you'
-                                : getPlayer(pid)?.username ?? `Player #${pid}`,
-                            )
-                            .join(', ')}. ${backers.length} of ${losingTeamMembers.length} teammates.`}
+                          aria-label={
+                            backers.length === 0
+                              ? `No one is backing this offer yet. 0 of ${losingTeamMembers.length} teammates.`
+                              : `Backing this offer: ${backers
+                                  .map(pid =>
+                                    pid === currentUserId
+                                      ? 'you'
+                                      : getPlayer(pid)?.username ?? `Player #${pid}`,
+                                  )
+                                  .join(', ')}. ${backers.length} of ${losingTeamMembers.length} teammates.`
+                          }
                         >
                           <span className="stat-label">Backing</span>
+                          {/* Skipped entirely when empty — an empty flex child
+                              still contributes a gap, which pushed the count
+                              away from its label on unbacked cards. */}
+                          {backers.length > 0 && (
                           <div className="flex -space-x-2">
                             {backers.map(pid => {
                               const p = getPlayer(pid);
@@ -590,10 +595,18 @@ export default function AuctionHouse({
                               );
                             })}
                           </div>
+                          )}
                           {/* Bare avatars don't scale — at five teammates the
                               stack overlaps into an unreadable smear. The count
-                              stays legible regardless. */}
-                          <span className="font-barlow text-xs font-semibold tabular-nums text-dota-text-muted">
+                              stays legible regardless, and now that it appears on
+                              every card it carries the comparison on its own.
+                              Dimmed at zero so a backed card still reads louder
+                              than an unbacked one without needing a badge. */}
+                          <span
+                            className={`font-barlow text-xs font-semibold tabular-nums ${
+                              backers.length > 0 ? 'text-dota-gold' : 'text-dota-text-dim'
+                            }`}
+                          >
                             {backers.length}/{losingTeamMembers.length}
                           </span>
                         </div>
