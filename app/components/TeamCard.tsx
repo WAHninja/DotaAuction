@@ -39,8 +39,17 @@ export default function TeamCard({
   // the field (e.g. a spectator-only view with partial data).
   const teamGoldTotal = players.reduce((sum, p) => sum + (p.gold ?? 0), 0);
 
+  // flex flex-col + h-full is what keeps the two cards' gold rows on the same
+  // line. The parent match page renders the cards in a grid with the default
+  // align-items: stretch, so both are already as tall as the taller one — but
+  // their content was top-aligned, which left the gold block sitting directly
+  // under the last player. Making the card a column and letting the player list
+  // absorb the slack (flex-1 below) pins the gold block to the bottom of both.
+  //
+  // h-full is belt-and-braces: grid stretch already sizes the card, but it keeps
+  // this working if the parent is ever switched to flex or plain block layout.
   return (
-    <div className={isRadiant ? 'team-radiant-panel p-6 rounded-xl shadow-panel' : 'team-dire-panel p-6 rounded-xl shadow-panel'}>
+    <div className={`flex flex-col h-full p-6 rounded-xl shadow-panel ${isRadiant ? 'team-radiant-panel' : 'team-dire-panel'}`}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center gap-4 mb-5">
@@ -71,7 +80,12 @@ export default function TeamCard({
       )}
 
       {/* ── Player list ────────────────────────────────────────────────────── */}
-      <ul className="space-y-2">
+      {/*
+        flex-1 — the list absorbs the height difference between a 1-player team
+        and a 5-player team. Without it the card stretches but the content
+        doesn't, and the gold rows sit at different heights.
+      */}
+      <ul className="space-y-2 flex-1">
         {players.map((p) => {
           const isYou = currentUserId !== undefined && p.id === currentUserId;
           return (
