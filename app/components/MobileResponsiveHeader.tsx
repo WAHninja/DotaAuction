@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import { usePathname }  from 'next/navigation';
-import { Menu, X, ScrollText, User, LayoutDashboard, PenLine, ChevronDown } from 'lucide-react';
+import { Menu, X, ScrollText, User, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { UserContext }          from '@/app/context/UserContext';
 import LogoutButton             from './LogoutButton';
 import PlayerAvatar             from './PlayerAvatar';
@@ -115,7 +115,7 @@ function AccentBar({ pathname }: { pathname: string }) {
 type NavUser = { username: string; steam_avatar?: string | null } | null;
 
 // =============================================================================
-// DesktopPrimaryLinks — Dashboard + Whiteboard
+// DesktopPrimaryLinks — Dashboard
 // =============================================================================
 
 type DesktopPrimaryLinksProps = {
@@ -131,14 +131,6 @@ function DesktopPrimaryLinks({ pathname }: DesktopPrimaryLinksProps) {
       >
         <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
         Dashboard
-      </Link>
-
-      <Link
-        href="/whiteboard"
-        className={`${navLink('/whiteboard', pathname)} flex items-center gap-1.5`}
-      >
-        <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-        Draw
       </Link>
     </>
   );
@@ -392,15 +384,6 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
               >
                 <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
                 Dashboard
-              </Link>
-
-              <Link
-                href="/whiteboard"
-                onClick={onClose}
-                className={mobileNavLink('/whiteboard', pathname)}
-              >
-                <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-                Draw
               </Link>
 
               <Link
