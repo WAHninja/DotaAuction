@@ -80,16 +80,24 @@ function heroIconUrl(hero: string): string {
 }
 
 function HeroIcon({ hero }: { hero: string }) {
+  // Hiding the element on error collapsed the row's leading column, so every
+  // failed portrait shifted that player's name left and broke alignment with
+  // the rows around it. Swapping to visibility keeps the box in the layout.
+  //
+  // Still a raw <img> rather than next/image: the CDN host is
+  // cdn.cloudflare.steamstatic.com, and next.config.js allows
+  // '*.steamstatic.com', whose single wildcard matches one subdomain label
+  // only. Switching to next/image needs '**.steamstatic.com' there first.
   // eslint-disable-next-line @next/next/no-img-element
   return (
     <img
       src={heroIconUrl(hero)}
       alt={hero.replace(/^npc_dota_hero_/, '').replace(/_/g, ' ')}
-      width={59}
-      height={33}
+      width={44}
+      height={25}
       className="rounded object-cover shrink-0"
       style={{ width: 44, height: 25 }}
-      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+      onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
     />
   );
 }
@@ -102,15 +110,15 @@ function formatNW(val: number): string {
   return `${val}`;
 }
 
-// Formats a game's played date for the card header.
-// Short form (e.g. "12 Jun") in the collapsed/inline header — long form with
-// time is reserved for anywhere more detail is warranted, but the cards stay
-// compact so we keep this terse throughout.
+// Formats a game's played date and time for the card header.
+//
+// Time is included because games within a single match usually share a date —
+// three cards all reading "9 Sept" convey nothing, whereas the time separates
+// them and shows the pacing of the match. The date is kept because a match can
+// be played across days. Full date + year remains on the title tooltip.
 function formatGameDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day:   'numeric',
-    month: 'short',
-  });
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 function formatGameDateTime(iso: string): string {
@@ -139,6 +147,12 @@ function TeamScoreboard({
   hasDotaStats: boolean;
   hasAuction:   boolean;
 }) {
+  // Offers are submitted by one side only, so a game-level hasAuction rendered
+  // an entirely empty column on the other team's board — roughly a quarter of
+  // the table width showing nothing but em-dashes. Narrow it to "does anyone on
+  // THIS team have an offer". The caller's game-level flag is still respected
+  // as an outer gate so the column can be suppressed globally.
+  const teamHasAuction = hasAuction && players.some(p => p.sellerInfo !== null);
   const r = teamId === 'team_1';
   const f = r
     ? { header: 'from-dota-radiant/20', border: 'border-dota-radiant/35', text: 'text-dota-radiant-light', hover: 'hover:bg-dota-radiant/5' }
@@ -151,8 +165,8 @@ function TeamScoreboard({
     hasDotaStats ? '90px' : null,
     hasDotaStats ? '68px' : null,
     '76px',
-    hasAuction   ? 'minmax(100px,0.7fr)' : null,
-  ].filter(Boolean).join(' '), [hasDotaStats, hasAuction]);
+    teamHasAuction ? 'minmax(100px,0.7fr)' : null,
+  ].filter(Boolean).join(' '), [hasDotaStats, teamHasAuction]);
 
   return (
     <div className={`border ${f.border} rounded-lg overflow-hidden`}>
@@ -183,7 +197,7 @@ function TeamScoreboard({
         <span className="stat-label text-right">GOLD CHANGE</span>
         {/* "OFFER SUBMITTED" clarifies this shows what the player offered outbound,
             not what was offered for them. */}
-        {hasAuction && <span className="stat-label">OFFER SUBMITTED</span>}
+        {teamHasAuction && <span className="stat-label">OFFER SUBMITTED</span>}
       </div>
 
       {/* Rows */}
@@ -255,7 +269,7 @@ function TeamScoreboard({
           </div>
 
           {/* Offer submitted by this player — shows who they tried to sell and for how much */}
-          {hasAuction && (
+          {teamHasAuction && (
             <div className="min-w-0">
               {p.sellerInfo ? (
                 <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-0.5 ${p.sellerInfo.status === 'rejected' ? 'opacity-55' : ''}`}>
@@ -292,8 +306,16 @@ function TeamScoreboard({
   );
 }
 
-function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+function GameCard({
+  game,
+  isFinalGame,
+  defaultExpanded = false,
+}: {
+  game: HistoryGame;
+  isFinalGame: boolean;
+  defaultExpanded?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const accepted     = game.offers.find(o => o.status === 'accepted');
   const hasDotaStats = game.dotaStats.length > 0;
   const hasAuction   = game.offers.length > 0;
@@ -307,7 +329,11 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
   // games still in progress where createdAt is the only timestamp available.
   // Games with neither relevant date (shouldn't happen, but defensive) simply
   // omit the date pill rather than showing something misleading.
-  const displayDate = game.finishedAt ?? (game.status === 'finished' ? null : game.createdAt);
+  // Only finished games reach this component (see the filter in GameHistory),
+  // so finishedAt is the correct timestamp and there is no in-progress case to
+  // fall back to. Legacy rows predating the finished_at column have null here
+  // and simply render without a date rather than showing a misleading one.
+  const displayDate = game.finishedAt;
 
   const team1 = (
     <TeamScoreboard key="t1" teamId="team_1" label="Team 1"
@@ -342,6 +368,25 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
               <span className="badge-gold text-xs py-0.5">Final Game</span>
             )}
 
+            {/* Who won, in the header rather than the prose line below.
+                The prose only rendered for the final game or for a game with an
+                accepted offer, so an ordinary game with no trade showed nothing
+                at all — the single most important fact about a game required
+                expanding the card to find. This renders for every game that has
+                a winner, which also keeps collapsed cards a consistent height. */}
+            {hasWinner && (
+              <span
+                className={`flex items-center gap-1 font-barlow text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                  winnerIsTeam1
+                    ? 'text-dota-radiant-light bg-dota-radiant/10 border-dota-radiant/30'
+                    : 'text-dota-dire-light bg-dota-dire/10 border-dota-dire/30'
+                }`}
+              >
+                <Trophy className="w-3 h-3 shrink-0" aria-hidden="true" />
+                {winningTeamLabel}
+              </span>
+            )}
+
             {/* Date pill — sits next to the game number/badge so it reads as
                 metadata about the game itself, not buried in the prose line
                 below. title gives the full date+time on hover for precision. */}
@@ -358,13 +403,12 @@ function GameCard({ game, isFinalGame }: { game: HistoryGame; isFinalGame: boole
 
           {!expanded && (
             <>
+              {/* The winner chip above already names the team, so this line
+                  carries only what the chip can't: that it ended the match and
+                  that no auction followed. */}
               {isFinalGame && game.winningTeam && (
                 <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1.5 flex-wrap">
-                  <Trophy className="w-3.5 h-3.5 text-dota-gold shrink-0" aria-hidden="true" />
-                  <span className="text-dota-gold font-semibold">{winningTeamLabel}</span>
-                  clinched the match
-                  {/* Surface the no-auction fact in the collapsed row so users
-                      don't need to expand to understand why gold looks different */}
+                  Clinched the match
                   <span className="text-dota-text-dim text-xs">· No auction followed</span>
                 </p>
               )}
@@ -431,27 +475,68 @@ export default function GameHistory({
   history: HistoryGame[];
   matchFinished?: boolean;
 }) {
-  if (history.length === 0) return null;
-
   // history arrives ordered ASC by game id from the API — the last element
   // is always the highest game number, so no need to spread into Math.max.
-  const maxGameNumber = history[history.length - 1].gameNumber;
+  // Computed from the unfiltered list so the "Final Game" badge still lands on
+  // the right card regardless of what the filter below removes.
+  const maxGameNumber = history.length > 0 ? history[history.length - 1].gameNumber : 0;
 
-  // Memoised to avoid allocating a new reversed array on every re-render.
-  const reversedHistory = useMemo(() => [...history].reverse(), [history]);
+  // The in-progress game is excluded. Everything it would show — the live
+  // scoreboard, the current auction, each side's gold — is already rendered at
+  // the top of the match page, so its card is an empty shell: no winner, no
+  // gold changes, no resolved offers. It appears here once it finishes.
+  //
+  // 'auction pending' is filtered too: the result is known but the gold hasn't
+  // moved yet, so the card would show a winner beside a column of zeroes while
+  // the live Auction House above shows the real state.
+  //
+  // Reversed for newest-first. Memoised to avoid allocating on every render.
+  const visibleHistory = useMemo(
+    () => history.filter(g => g.status === 'finished').reverse(),
+    [history],
+  );
+
+  // Not `history.length === 0` — a match whose only game is still in progress
+  // filters down to nothing, and the heading with an empty list below it reads
+  // as a bug rather than as "nothing has finished yet".
+  if (visibleHistory.length === 0) return null;
+
+  // Series score. The heading alone answers "what games happened"; this answers
+  // "who is winning", which is usually the actual question. Counts finished
+  // games only, so it agrees with the cards listed beneath it.
+  const team1Wins = visibleHistory.filter(g => g.winningTeam === 'team_1').length;
+  const teamAWins = visibleHistory.filter(g => g.winningTeam === 'team_a').length;
+  const leader    = team1Wins === teamAWins ? null : team1Wins > teamAWins ? 'Team 1' : 'Team A';
+  const scoreline = `${Math.max(team1Wins, teamAWins)}–${Math.min(team1Wins, teamAWins)}`;
 
   return (
     <section className="mt-12 space-y-4">
       <div className="text-center space-y-2">
         <h2 className="font-cinzel text-3xl font-bold text-dota-gold">Game History</h2>
         <div className="divider-gold w-48 mx-auto" />
+        <p className="font-barlow text-sm text-dota-text-muted">
+          {leader === null
+            ? <>Series level at <span className="font-bold text-dota-text tabular-nums">{team1Wins}–{teamAWins}</span></>
+            : (
+              <>
+                <span className={`font-bold ${leader === 'Team 1' ? 'text-dota-radiant-light' : 'text-dota-dire-light'}`}>
+                  {leader}
+                </span>
+                {' '}{matchFinished ? 'won' : 'leads'}{' '}
+                <span className="font-bold text-dota-text tabular-nums">{scoreline}</span>
+              </>
+            )
+          }
+        </p>
       </div>
       <div className="space-y-3">
-        {reversedHistory.map(game => (
+        {visibleHistory.map((game, i) => (
           <GameCard
             key={game.gameNumber}
             game={game}
             isFinalGame={matchFinished && game.gameNumber === maxGameNumber}
+            // Newest game open on arrival — the one people came to read.
+            defaultExpanded={i === 0}
           />
         ))}
       </div>
