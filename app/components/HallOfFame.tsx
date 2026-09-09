@@ -1,4 +1,5 @@
 import { Trophy, Zap, Scale, Swords } from 'lucide-react';
+import RankMedal from '@/app/components/RankMedal';
 import type { HallOfFameEntry, HallOfFameRecord, HallOfFameProps } from '@/types';
 
 // Re-export so any existing import from this file doesn't break while
@@ -9,19 +10,17 @@ export type { HallOfFameEntry, HallOfFameRecord, HallOfFameProps };
 // Constants
 // ---------------------------------------------------------------------------
 
-// Entries are capped at 3 for rendering regardless of how many the API
-// returns. This guards against RANK_STYLES / RANK_LABELS index going out of
-// bounds — accessing index 3 on a length-3 tuple gives undefined, which
-// Tailwind silently drops (className) or renders as the string "undefined" (text).
+// Entries are capped at 3 for rendering regardless of how many the API returns.
+// This is now purely an editorial choice — the cards are narrow and a fourth
+// line makes them overflow the 4-column dashboard grid. The old out-of-bounds
+// hazard is gone: RankMedal handles ranks 1–8 and degrades to a plain number
+// beyond that, so raising this cap is safe if the layout ever allows it.
 const MAX_RANK = 3;
 
-const RANK_STYLES = [
-  'text-dota-gold',
-  'text-dota-text-muted',
-  'text-amber-600',
-] as const;
-
-const RANK_LABELS = ['🥇', '🥈', '🥉'] as const;
+// Medal box size in px. Deliberately at the low end of what stays legible —
+// these cards sit three-to-a-column on the dashboard, and each extra pixel
+// here multiplies across three rows and four cards.
+const MEDAL_SIZE = 20;
 
 // ---------------------------------------------------------------------------
 // Tooltip
@@ -80,17 +79,19 @@ function Tooltip({ id, content, label }: { id: string; content: string; label: s
 // ---------------------------------------------------------------------------
 
 function RecordEntry({ entry, rank }: { entry: HallOfFameEntry; rank: number }) {
-  // rank is guaranteed 0–2 at call site (entries sliced to MAX_RANK before mapping)
-  const rankStyle = RANK_STYLES[rank];
-  const rankLabel = RANK_LABELS[rank];
-  const isFirst   = rank === 0;
+  // rank is 0-based here; RankMedal takes 1-based positions.
+  const isFirst = rank === 0;
 
   return (
     <div className="flex items-start justify-between gap-2 min-w-0">
-      <div className="flex items-baseline gap-1.5 min-w-0">
-        <span className={`text-xs shrink-0 ${rankStyle}`}>
-          {rankLabel}
-        </span>
+      {/*
+        items-center, not items-baseline. An inline-flex image box has no text
+        baseline of its own, so baseline alignment hangs the medal off the
+        bottom of the name. Centring is also what the medal art expects — it is
+        a symmetrical badge, not a glyph that sits on a line.
+      */}
+      <div className="flex items-center gap-1.5 min-w-0">
+        <RankMedal rank={rank + 1} size={MEDAL_SIZE} />
         <span className={`font-cinzel font-bold text-sm leading-tight truncate ${isFirst ? 'text-inherit' : 'text-dota-text'}`}>
           {entry.holder}
         </span>
@@ -114,6 +115,8 @@ function RecordEntry({ entry, rank }: { entry: HallOfFameEntry; rank: number }) 
 // PlaceholderSkeleton
 //
 // Matches the actual RecordEntry layout: rank badge | name bar | stat bar.
+// The badge placeholder tracks MEDAL_SIZE so the card does not resize when
+// real data replaces the skeleton.
 // aria-hidden so screen readers skip decorative loading chrome entirely.
 // ---------------------------------------------------------------------------
 
@@ -126,7 +129,10 @@ function PlaceholderSkeleton() {
         <div key={i} className="flex items-center justify-between gap-2">
           {/* rank badge placeholder */}
           <div className="flex items-center gap-1.5">
-            <div className="h-3 w-4 rounded bg-dota-border/40 shrink-0" />
+            <div
+              className="rounded bg-dota-border/40 shrink-0"
+              style={{ width: MEDAL_SIZE, height: MEDAL_SIZE }}
+            />
             {/* name placeholder — different widths to feel natural */}
             <div className={`h-3 rounded bg-dota-border/30 ${i === 0 ? 'w-20' : i === 1 ? 'w-16' : 'w-12'}`} />
           </div>
@@ -159,8 +165,9 @@ function RecordCard({
   accentClass: string;
   iconBgClass: string;
 }) {
-  // Clamp to MAX_RANK so RANK_STYLES / RANK_LABELS are never accessed
-  // out of bounds, even if the API is ever changed to return more entries.
+  // Clamp to MAX_RANK so a card stays three lines tall even if the API is
+  // changed to return more entries. See MAX_RANK for why the cap is editorial
+  // rather than a safety measure now.
   const entries = record ? record.slice(0, MAX_RANK) : null;
 
   return (
