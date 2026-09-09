@@ -7,6 +7,7 @@ import {
   Coins, TrendingUp, Shield,
 } from 'lucide-react'
 import GoldIcon from '@/app/components/GoldIcon';
+import RankMedal, { MAX_MEDAL_RANK } from '@/app/components/RankMedal';
 import type {
   PlayerStats,
   TeamCombo,
@@ -137,7 +138,6 @@ function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
 }
 
 // ── RankedList ────────────────────────────────────────────────────────────────
-const RANK_EMOJIS = ['🥇', '🥈', '🥉'];
 
 function RankedList({ items, emptyMessage }: {
   items: { name: string; primary: string; sub?: string }[];
@@ -150,9 +150,7 @@ function RankedList({ items, emptyMessage }: {
     <ul className="space-y-2">
       {items.map((item, i) => (
         <li key={`${item.name}-${i}`} className="panel-sunken px-3 py-2.5 flex items-center gap-3">
-          <span className="shrink-0 w-5 text-center text-sm" aria-hidden="true">
-            {RANK_EMOJIS[i] ?? `${i + 1}.`}
-          </span>
+          <RankMedal rank={i + 1} size={24} />
           <span className="font-barlow font-semibold text-sm text-dota-text truncate flex-1 min-w-0">
             {item.name}
           </span>
@@ -463,8 +461,8 @@ function DotaStatsTab({
                       >
                         <td className="px-3 py-3">
                           <span className={`font-semibold ${showMedal && i === 0 ? 'text-dota-gold' : 'text-dota-text'}`}>
-                            {showMedal && i < 3 && (
-                              <span className="mr-1.5" aria-hidden="true">{RANK_EMOJIS[i]}</span>
+                            {showMedal && i < MAX_MEDAL_RANK && (
+                              <RankMedal rank={i + 1} size={20} className="mr-1.5" label={false} />
                             )}
                             {p.username}
                           </span>
@@ -965,9 +963,7 @@ function MatchStatsTab({
                   >
                     <td className="px-3 py-3 text-center text-xs font-bold">
                       {showMedals
-                        ? <span className={i === 0 ? 'text-dota-gold' : i === 1 ? 'text-dota-text-muted' : i === 2 ? 'text-amber-600' : 'text-dota-text-dim'}>
-                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                          </span>
+                        ? <RankMedal rank={i + 1} size={22} label={false} />
                         : <span className="text-dota-text-dim">{i + 1}</span>
                       }
                     </td>
@@ -1117,9 +1113,7 @@ function MatchStatsTab({
                     <tr key={row.username} className={`transition-colors hover:bg-dota-overlay/40 ${i === 0 ? 'bg-dota-gold/5' : ''}`}>
                       <td className="px-5 py-3">
                         <span className="flex items-center gap-2">
-                          {i === 0 && <span aria-hidden="true">🥇</span>}
-                          {i === 1 && <span aria-hidden="true">🥈</span>}
-                          {i === 2 && <span aria-hidden="true">🥉</span>}
+                          {i < MAX_MEDAL_RANK && <RankMedal rank={i + 1} size={20} label={false} />}
                           <span className={`font-semibold ${i === 0 ? 'text-dota-gold' : 'text-dota-text'}`}>{row.username}</span>
                         </span>
                       </td>
@@ -1260,9 +1254,7 @@ function MatchStatsTab({
                 <ul className="space-y-2">
                   {visibleCombos.map((c, i) => (
                     <li key={c.combo} className="panel-sunken p-3 flex items-center gap-3">
-                      <span className="font-barlow text-sm font-bold w-6 text-center shrink-0">
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
-                      </span>
+                      <RankMedal rank={i + 1} size={24} />
                       <span className="truncate font-barlow font-semibold text-sm text-dota-text flex-1 min-w-0">
                         {c.combo}
                       </span>
