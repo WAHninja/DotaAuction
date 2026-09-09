@@ -28,6 +28,14 @@
    ============================================================================= */
 
 :root {
+  /* The app is dark-only, so declare it. This is what makes the browser draw
+     native chrome — select popups, number-input spinners, date pickers,
+     scrollbars, autofill backgrounds — in their dark variant. Without it those
+     are drawn in the OS light theme and sit on the page as white rectangles.
+     It is also the only lever that works on macOS, where the select option
+     list is a real native menu that ignores CSS on option{} entirely. */
+  color-scheme: dark;
+
   /* RGB channels for opacity variants — mirror tailwind.config hex values */
   --ch-gold:    200 169 81;
   --ch-radiant: 74  155 60;
@@ -413,6 +421,38 @@
   }
   .input:disabled {
     @apply opacity-40 cursor-not-allowed;
+  }
+
+  /* ── Select ───────────────────────────────────────────────────────────────
+     The closed control is just .input. The open option list is drawn by the
+     OS rather than the page, so it needs separate handling:
+
+       • color-scheme (set on :root above) is what darkens the popup itself.
+         On macOS it is the whole fix — the list is a native menu there and
+         the option rules below are ignored.
+       • The option rules do apply in Chrome and Firefox on Windows and Linux,
+         where they give the list the app's own palette rather than the
+         browser's generic dark grey.
+
+     Both are needed; neither covers every platform alone.
+
+     appearance-none removes the OS arrow. Pair this class with an absolutely
+     positioned chevron — the arrow cannot be a background-image here because
+     .input already uses `background` for the --metal-sunken gradient, and a
+     background-image would clobber it. */
+  .select {
+    @apply input appearance-none cursor-pointer pr-9;
+  }
+  .select option {
+    background-color: theme('colors.dota-deep');
+    color: theme('colors.dota-text');
+  }
+  .select option:checked {
+    background-color: theme('colors.dota-gold-dark');
+    color: theme('colors.dota-base');
+  }
+  .select option:disabled {
+    color: theme('colors.dota-text-dim');
   }
 
   /* ── Status badges — angular tags, not tinted pills ─────────────────────
