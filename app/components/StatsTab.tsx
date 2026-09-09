@@ -1181,7 +1181,7 @@ function MatchStatsTab({
                     value={h2hSelected}
                     onChange={e => setH2hSelected(e.target.value)}
                     aria-label="Select player to view their head-to-head record"
-                    className="input appearance-none pr-8 cursor-pointer"
+                    className="select"
                   >
                     <option value="">Select a player…</option>
                     {h2hPlayers.map(name => (
@@ -1189,7 +1189,7 @@ function MatchStatsTab({
                     ))}
                   </select>
                   <SelectChevron
-                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dota-text-muted"
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dota-text-muted"
                     aria-hidden="true"
                   />
                 </div>
