@@ -185,33 +185,49 @@ export default function AuctionHouse({
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="panel p-6 mb-8 space-y-6">
+    <div className="panel relative p-6 mb-8">
 
-      {/* ── Title — the shopkeeper's stall ─────────────────────────────────
-          Full-body art (398×637, transparent) used at scale rather than as an
-          icon: he stands with his feet on the divider line — his counter —
-          open palm presenting the title beside him. The text block is
-          bottom-padded so the title sits at the height of the gesture. */}
-      <div>
-        <div className="flex items-end justify-center gap-5">
-          <Image
-            src="/Shopkeeper.png"
-            alt=""
-            width={100}
-            height={160}
-            className="object-contain shrink-0 drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
-          />
-          <div className="text-left pb-10">
-            <h3 className="font-barlow text-2xl sm:text-3xl font-bold uppercase tracking-wider text-dota-gold">
-              Auction House
-            </h3>
-            <p className="font-barlow text-sm text-dota-text-muted italic mt-0.5">
-              &ldquo;Ho ho! You found me!&rdquo;
-            </p>
+      {/* ── Standing shopkeeper (md+) ──────────────────────────────────────
+          Full-body figure anchored to the panel floor, left side — the panel
+          is his shop, the content column is what he's presenting (his open
+          palm gestures right, toward it). 80% of panel height, capped: his
+          width tracks his height (~0.62:1), so uncapped he'd swallow the
+          offers grid on tall states. Hidden on mobile, where the compact
+          header figure below takes over. */}
+      <Image
+        src="/Shopkeeper.png"
+        alt=""
+        width={398}
+        height={637}
+        className="hidden md:block absolute bottom-0 left-4 h-[80%] max-h-[420px] w-auto object-contain pointer-events-none select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.65)]"
+      />
+
+      {/* ── Content column — clears the shopkeeper's rail on md+ ─────────── */}
+      <div className="md:pl-[300px] space-y-6">
+
+        {/* ── Title — the stall's signboard ────────────────────────────────
+            Left-aligned beside the keeper on md+; on mobile it reverts to a
+            centred row with a small bottom-aligned figure. */}
+        <div>
+          <div className="flex items-end justify-center md:justify-start gap-4">
+            <Image
+              src="/Shopkeeper.png"
+              alt=""
+              width={84}
+              height={134}
+              className="md:hidden object-contain shrink-0 drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
+            />
+            <div className="text-left pb-8 md:pb-0">
+              <h3 className="font-barlow text-2xl sm:text-3xl font-bold uppercase tracking-wider text-dota-gold">
+                Auction House
+              </h3>
+              <p className="font-barlow text-sm text-dota-text-muted italic mt-0.5">
+                &ldquo;Ho ho! You found me!&rdquo;
+              </p>
+            </div>
           </div>
+          <div className="divider-gold w-80 max-w-full mx-auto md:mx-0 mt-1 md:mt-3" />
         </div>
-        <div className="divider-gold w-80 max-w-full mx-auto" />
-      </div>
 
       {/* ── Resolved banner ────────────────────────────────────────────────── */}
       {finalized && (
@@ -552,6 +568,7 @@ export default function AuctionHouse({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
