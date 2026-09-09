@@ -1,5 +1,6 @@
 import './globals.css';
-import { Cinzel, Barlow_Condensed } from 'next/font/google';
+import type { Metadata } from 'next';
+import { Barlow_Condensed } from 'next/font/google';
 import PageBackground           from '@/app/components/PageBackground';
 import MobileResponsiveHeader   from '@/app/components/MobileResponsiveHeader';
 import UserProvider             from './context/UserContext';
@@ -10,15 +11,24 @@ import KeepAlive                from '@/app/components/KeepAlive';
 
 export const dynamic = 'force-dynamic';
 
-// ── Display font — Dota title cards, match headings, section labels ──────────
-const cinzel = Cinzel({
-  subsets: ['latin'],
-  weight: ['400', '700', '900'],
-  variable: '--font-cinzel',
-  display: 'swap',
-});
+// ── Metadata ─────────────────────────────────────────────────────────────────
+// Browser tabs previously showed the bare URL. The template lets each page
+// contribute its own title (e.g. export metadata = { title: 'Match #42' }
+// from a page/layout) while falling back to the app name.
+export const metadata: Metadata = {
+  title: {
+    default: 'Defence of the Auctions',
+    template: '%s — Defence of the Auctions',
+  },
+  description: 'Draft, bid, and betray. A player-auction league for Dota 2.',
+};
 
-// ── UI font — buttons, stats, labels, table headers, body copy ───────────────
+// ── UI font — everything: headings, buttons, stats, labels, body copy ────────
+// Cinzel is retired: the v2 theme uses Barlow Condensed (bold, uppercase,
+// tracked) for display type as well, matching the actual Dota client's
+// condensed-grotesque register. A `font-cinzel` shim in globals.css maps any
+// remaining `font-cinzel` classes in components to this face, so nothing
+// breaks while those classes are migrated.
 const barlowCondensed = Barlow_Condensed({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
@@ -30,7 +40,7 @@ type RootLayoutProps = { children: React.ReactNode };
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className={`${cinzel.variable} ${barlowCondensed.variable}`}>
+    <html lang="en" className={barlowCondensed.variable}>
       <head>
         <link rel="preload" href="/Gold_symbol.webp" as="image" type="image/webp" />
         <link rel="preload" href="/logo.png"  as="image" type="image/png" />
@@ -42,10 +52,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
           className="
             sr-only focus:not-sr-only
             focus:fixed focus:top-4 focus:left-4 focus:z-50
-            focus:px-4 focus:py-2 focus:rounded
+            focus:px-4 focus:py-2
             focus:bg-dota-gold focus:text-dota-base
             focus:font-barlow focus:font-bold focus:text-sm
-            focus:shadow-raised
+            focus:outline focus:outline-2 focus:outline-dota-gold-dark
           "
         >
           Skip to main content
