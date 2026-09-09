@@ -1,58 +1,154 @@
 /* app/globals.css */
+/* =============================================================================
+   DEFENCE OF THE AUCTIONS — Dota-client theme layer, v2
+   -----------------------------------------------------------------------------
+   Design language: Valve client, not web dashboard.
+     • Chamfered (cut) corners everywhere — no border-radius on themed surfaces
+     • Metallic vertical sheen + bevel highlights instead of flat fills
+     • Grain + vignette over the whole viewport (the "game client" feel)
+     • Barlow Condensed carries ALL type, headings included — Cinzel retired
+     • Glow is a reward: reserved for the primary CTA sweep and winner moments
+
+   Technical notes (read before editing):
+     • clip-path clips OUTER box-shadows and outlines. Chamfered surfaces
+       therefore use `filter: drop-shadow(...)` (follows the cut silhouette)
+       for elevation, and inset shadows for bevels. Inputs stay rectangular
+       so their focus outline is never clipped.
+     • clip-path also clips children that overflow the box (e.g. badges
+       positioned at -top-*). See THEME_NOTES.md for the one JSX fix needed.
+     • All class names from v1 are preserved — this file is drop-in.
+   ============================================================================= */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* =============================================================================
-   DESIGN TOKENS — RGB channel values for opacity-variant colours
-   Using channel variables (R G B) lets us write rgb(var(--ch-gold) / 0.15)
-   everywhere instead of repeating hardcoded rgba() literals. The hex source of
-   truth stays in tailwind.config; only the channels are mirrored here.
+   DESIGN TOKENS
    ============================================================================= */
 
 :root {
+  /* RGB channels for opacity variants — mirror tailwind.config hex values */
   --ch-gold:    200 169 81;
   --ch-radiant: 74  155 60;
   --ch-dire:    192 57  43;
   --ch-info:    77  123 181;
+
+  /* Chamfer cut sizes */
+  --cut:    8px;   /* panels */
+  --cut-sm: 5px;   /* buttons, badges */
+  --cut-lg: 16px;  /* team-card feature corner */
+
+  /* Full 8-corner chamfer (octagon) — panels */
+  --clip-chamfer: polygon(
+    var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut),
+    100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%,
+    var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut)
+  );
+
+  /* Asymmetric cut (top-left + bottom-right only) — buttons, badges.
+     The signature Dota HUD shape. */
+  --clip-chamfer-sm: polygon(
+    var(--cut-sm) 0, 100% 0, 100% calc(100% - var(--cut-sm)),
+    calc(100% - var(--cut-sm)) 100%, 0 100%, 0 var(--cut-sm)
+  );
+
+  /* Mirrored asymmetric cut (top-right + bottom-left) — Dire-side elements */
+  --clip-chamfer-sm-mirror: polygon(
+    0 0, calc(100% - var(--cut-sm)) 0, 100% var(--cut-sm),
+    100% 100%, var(--cut-sm) 100%, 0 calc(100% - var(--cut-sm))
+  );
+
+  /* Team panels: one oversized cut on the map-facing top corner,
+     standard cuts elsewhere. Radiant cuts top-left, Dire cuts top-right —
+     mirrored, echoing the map diagonal. */
+  --clip-team-radiant: polygon(
+    var(--cut-lg) 0, calc(100% - var(--cut)) 0, 100% var(--cut),
+    100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%,
+    var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut-lg)
+  );
+  --clip-team-dire: polygon(
+    var(--cut) 0, calc(100% - var(--cut-lg)) 0, 100% var(--cut-lg),
+    100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%,
+    var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut)
+  );
+
+  /* Metallic surface gradients — top-lit, like brushed plates */
+  --metal-surface: linear-gradient(180deg, #1a1f28 0%, #14181f 55%, #10141b 100%);
+  --metal-raised:  linear-gradient(180deg, #232936 0%, #1a1f28 60%, #171b23 100%);
+  --metal-sunken:  linear-gradient(180deg, #0a0d12 0%, #0d1117 100%);
+
+  /* Bevel shadow stacks (inset only — outer elevation is drop-shadow) */
+  --bevel:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+  --bevel-bright:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+
+  /* Grain tile — 64px monochrome noise, ~3.6 KB inline */
+  --noise: url('data:image/png;base64,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');
 }
 
 /* =============================================================================
-   BASE — default element styles
-   Applied globally. Scoped overrides should live in the component.
+   BASE
    ============================================================================= */
 
 @layer base {
 
-  /* ── Document ─────────────────────────────────────────────────────────────── */
   html {
     @apply scroll-smooth antialiased;
   }
 
   body {
-    /* Deep cool-black base — matches Dota 2 client background */
     background-color: theme('colors.dota-base');
     color: theme('colors.dota-text');
     @apply font-barlow;
   }
 
-  /* ── Typography hierarchy ─────────────────────────────────────────────────── */
-  /* Cinzel for display headings — evokes the Dota title card / fantasy-epic feel */
-  h1, h2, h3 {
-    @apply font-cinzel tracking-wide;
-    color: theme('colors.dota-text');
+  /* ── Vignette — darkened viewport edges, always beneath content ──────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 120% 90% at 50% 40%,
+      transparent 55%,
+      rgba(0, 0, 0, 0.45) 100%
+    );
   }
 
-  /* Barlow Condensed for sub-headings — readable, compact, UI-native */
+  /* ── Film grain — above content, non-interactive, the "client" texture ──── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    background-image: var(--noise);
+    background-repeat: repeat;
+    opacity: 0.04;
+    mix-blend-mode: soft-light;
+  }
+
+  /* ── Typography — one family, weight and case do the hierarchy work ──────
+     Cinzel is retired. Display type is Barlow Condensed 700, uppercase,
+     tracked — the Radiance/Reaver register of the actual client. */
+  h1, h2, h3 {
+    @apply font-barlow font-bold uppercase;
+    color: theme('colors.dota-text');
+    letter-spacing: 0.06em;
+  }
+
   h4, h5, h6 {
-    /* tracking-wide = 0.025em in Tailwind; letter-spacing: 0.08em is intentionally
-       wider than that, so we set it directly and skip the @apply to avoid conflict. */
     @apply font-barlow font-semibold uppercase;
     color: theme('colors.dota-text-muted');
     letter-spacing: 0.08em;
   }
 
-  /* ── Links ────────────────────────────────────────────────────────────────── */
+  /* ── Links ──────────────────────────────────────────────────────────────── */
   a {
     color: theme('colors.dota-gold');
     @apply transition-colors duration-150;
@@ -61,187 +157,258 @@
     color: theme('colors.dota-gold-light');
   }
 
-  /* ── Form elements ────────────────────────────────────────────────────────── */
-  /*
-    Remove the global button reset from the old system — it was overriding
-    component-level styles and causing inconsistency. Buttons are now styled
-    entirely at the component level using the .btn-* utilities below.
-  */
-  input[type="checkbox"] {
+  /* ── Form elements ──────────────────────────────────────────────────────── */
+  input[type='checkbox'] {
     accent-color: theme('colors.dota-gold');
   }
 
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
 
-  /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+  /* ── Scrollbar — squared off; rounded thumbs are a web tell ─────────────── */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     background: theme('colors.dota-base');
   }
   ::-webkit-scrollbar-thumb {
-    background: theme('colors.dota-border');
-    border-radius: 3px;
+    background: linear-gradient(180deg, #2c3340, #1e242e);
+    border: 1px solid #0a0d12;
+    border-radius: 0;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: theme('colors.dota-border-bright');
+    background: linear-gradient(180deg, #39414f, #262d38);
   }
 
+  /* ── Reduced motion ─────────────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 /* =============================================================================
-   COMPONENTS — reusable utility classes
-   Build the design vocabulary here so components don't drift.
+   COMPONENTS
    ============================================================================= */
 
 @layer components {
 
-  /* ── Panels ───────────────────────────────────────────────────────────────── */
-  /*
-    Three panel levels matching Dota's layered UI depth.
-    Use panel for most cards, panel-raised for modals/overlays, panel-sunken for insets.
-  */
+  /* ── Chamfered frame — for surfaces that need a real 1px metal border ────
+     clip-path eats borders, so a true edge takes two layers:
+
+       <div class="frame">            outer: edge colour, clipped
+         <div class="frame-inner">    inner: fill, clipped 1px smaller
+           …content…
+         </div>
+       </div>
+
+     Use sparingly — the gold frame is for surfaces that matter (live offer
+     cards, the winner banner). Everyday panels rely on bevels instead. */
+  .frame {
+    clip-path: var(--clip-chamfer);
+    background: linear-gradient(
+      180deg,
+      rgb(var(--ch-gold) / 0.55) 0%,
+      rgb(var(--ch-gold) / 0.22) 55%,
+      rgb(var(--ch-gold) / 0.4) 100%
+    );
+    padding: 1px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
+  }
+  .frame-inner {
+    clip-path: var(--clip-chamfer);
+    background: var(--metal-raised);
+    box-shadow: var(--bevel-bright);
+    height: 100%;
+  }
+  /* Neutral steel edge variant */
+  .frame-steel {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0.05) 55%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
+  }
+
+  /* ── Panels — three depths, all metallic, all chamfered ─────────────────── */
   .panel {
-    /* Fully opaque — panels must read cleanly over both the CSS gradient
-       backgrounds (match/auth) and the stone texture (dashboard).
-       Semi-transparent panels look fine on flat backgrounds but create muddy
-       contrast issues when the background has texture or colour. */
-    background-color: theme('colors.dota-surface');
-    border: 1px solid theme('colors.dota-border');
-    border-radius: theme('borderRadius.lg');
-    box-shadow: theme('boxShadow.panel');
+    clip-path: var(--clip-chamfer);
+    background:
+      var(--noise),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 28%),
+      var(--metal-surface);
+    background-blend-mode: soft-light, normal, normal;
+    box-shadow: var(--bevel);
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
   }
 
   .panel-raised {
-    background-color: theme('colors.dota-raised');
-    border: 1px solid theme('colors.dota-border-bright');
-    border-radius: theme('borderRadius.lg');
-    box-shadow: theme('boxShadow.raised');
+    clip-path: var(--clip-chamfer);
+    background:
+      var(--noise),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 30%),
+      var(--metal-raised);
+    background-blend-mode: soft-light, normal, normal;
+    box-shadow: var(--bevel-bright);
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.55));
   }
 
   .panel-sunken {
-    background-color: theme('colors.dota-deep');
-    border: 1px solid theme('colors.dota-border');
-    border-radius: theme('borderRadius.md');
-    box-shadow: theme('boxShadow.inset');
+    clip-path: var(--clip-chamfer-sm);
+    background: var(--metal-sunken);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(0, 0, 0, 0.8),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.03);
   }
 
-  /* ── Buttons ──────────────────────────────────────────────────────────────── */
-  /*
-    Primary: gold — main CTAs (Submit Offer, Create Match, Submit Winner)
-    Secondary: surface — secondary actions (View, cancel)
-    Danger: dire red — destructive actions
-    Ghost: transparent with border — low-emphasis actions
-    Radiant: green — team/win affirmation actions
-  */
+  /* ── Buttons — forged, not printed ──────────────────────────────────────
+     Top-lit gradient + letterpress label + bevel. Chamfered small cut.
+     Elevation and glow via drop-shadow so they survive the clip. */
   .btn {
     @apply inline-flex items-center justify-center gap-2;
-    @apply font-barlow font-semibold;
-    @apply px-5 py-2.5 rounded-md;
+    @apply font-barlow font-semibold uppercase;
+    @apply px-5 py-2.5;
     @apply transition-all duration-150;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
-    /* 0.06em doesn't map to a Tailwind tracking step, set directly */
+    clip-path: var(--clip-chamfer-sm);
     letter-spacing: 0.06em;
+    position: relative;
+    overflow: hidden;
   }
 
   .btn-primary {
     @apply btn;
-    background-color: theme('colors.dota-gold');
-    /* dota-base matches the dark background the label sits over */
+    background: linear-gradient(
+      180deg,
+      theme('colors.dota-gold-light') 0%,
+      theme('colors.dota-gold') 45%,
+      theme('colors.dota-gold-dark') 100%
+    );
     color: theme('colors.dota-base');
-    border: 1px solid theme('colors.dota-gold-dark');
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   }
   .btn-primary:hover:not(:disabled) {
-    background-color: theme('colors.dota-gold-light');
-    box-shadow: theme('boxShadow.gold');
+    filter: brightness(1.08) drop-shadow(0 0 10px rgb(var(--ch-gold) / 0.35));
   }
   .btn-primary:active:not(:disabled) {
-    background-color: theme('colors.dota-gold-dark');
+    filter: brightness(0.92);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.35),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  }
+  /* Light sweep on hover — the store-button pass. One pass, not a loop. */
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 65%
+    );
+    transform: translateX(-110%);
+    pointer-events: none;
+  }
+  .btn-primary:hover:not(:disabled)::after {
+    transition: transform 0.55s ease;
+    transform: translateX(110%);
   }
 
   .btn-secondary {
     @apply btn;
-    background-color: theme('colors.dota-overlay');
+    background: var(--metal-raised);
     color: theme('colors.dota-text');
-    border: 1px solid theme('colors.dota-border-bright');
+    box-shadow: var(--bevel-bright);
   }
   .btn-secondary:hover:not(:disabled) {
-    background-color: theme('colors.dota-raised');
-    border-color: theme('colors.dota-gold-dark');
+    filter: brightness(1.15);
   }
   .btn-secondary:active:not(:disabled) {
-    background-color: theme('colors.dota-deep');
+    filter: brightness(0.9);
   }
 
   .btn-danger {
     @apply btn;
-    background-color: theme('colors.dota-dire');
+    background: linear-gradient(180deg, #d64533 0%, theme('colors.dota-dire') 50%, #8f2b1f 100%);
     color: theme('colors.dota-text');
-    border: 1px solid theme('colors.dota-dire-border');
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
   }
   .btn-danger:hover:not(:disabled) {
-    background-color: theme('colors.dota-dire-light');
-    box-shadow: theme('boxShadow.dire');
+    filter: brightness(1.1) drop-shadow(0 0 10px rgb(var(--ch-dire) / 0.35));
   }
   .btn-danger:active:not(:disabled) {
-    background-color: theme('colors.dota-dire');
     filter: brightness(0.85);
   }
 
   .btn-ghost {
     @apply btn;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.03);
     color: theme('colors.dota-text-muted');
-    border: 1px solid theme('colors.dota-border');
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .btn-ghost:hover:not(:disabled) {
     color: theme('colors.dota-text');
-    border-color: theme('colors.dota-border-bright');
+    background: rgba(255, 255, 255, 0.06);
   }
   .btn-ghost:active:not(:disabled) {
-    background-color: theme('colors.dota-overlay');
+    background: rgba(0, 0, 0, 0.25);
   }
 
   .btn-radiant {
     @apply btn;
-    background-color: theme('colors.dota-radiant');
+    background: linear-gradient(180deg, #5cb54a 0%, theme('colors.dota-radiant') 50%, #35702b 100%);
     color: theme('colors.dota-text');
-    border: 1px solid theme('colors.dota-radiant-border');
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4);
   }
   .btn-radiant:hover:not(:disabled) {
-    background-color: theme('colors.dota-radiant-light');
-    box-shadow: theme('boxShadow.radiant');
+    filter: brightness(1.1) drop-shadow(0 0 10px rgb(var(--ch-radiant) / 0.35));
   }
   .btn-radiant:active:not(:disabled) {
-    background-color: theme('colors.dota-radiant');
     filter: brightness(0.85);
   }
 
-  /* ── Inputs ───────────────────────────────────────────────────────────────── */
+  /* ── Inputs — deliberately rectangular ──────────────────────────────────
+     Native focus outlines and clip-path don't mix (the outline gets cut),
+     and legible focus beats a themed corner. Sharp 2px corners still read
+     as client chrome, not web chrome. */
   .input {
     @apply w-full font-barlow;
-    background-color: theme('colors.dota-deep');
+    background: var(--metal-sunken);
     color: theme('colors.dota-text');
     border: 1px solid theme('colors.dota-border');
-    border-radius: theme('borderRadius.md');
+    border-radius: 2px;
     @apply px-4 py-2.5;
     @apply transition-all duration-150;
     @apply outline-none;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
   }
   .input::placeholder {
     color: theme('colors.dota-text-dim');
   }
   .input:focus {
     border-color: theme('colors.dota-gold-dark');
-    box-shadow: theme('boxShadow.gold');
-    /* Explicit outline ensures focus is visible in high-contrast mode and
-       when box-shadow is suppressed by OS accessibility settings. */
     outline: 2px solid theme('colors.dota-gold-dark');
     outline-offset: 1px;
   }
@@ -249,96 +416,108 @@
     @apply opacity-40 cursor-not-allowed;
   }
 
-  /* ── Status badges ────────────────────────────────────────────────────────── */
-  /*
-    Used for game status pills in MatchHeader and anywhere else a status needs
-    to be communicated at a glance.
-  */
+  /* ── Status badges — angular tags, not tinted pills ─────────────────────
+     Near-solid dark fill, 3px accent edge on the left, chamfered.
+     The accent edge carries the colour; the fill stays quiet. */
   .badge {
     @apply inline-flex items-center gap-1.5;
-    @apply font-barlow font-semibold;
-    @apply px-3 py-1 rounded-sm text-sm;
+    @apply font-barlow font-semibold uppercase;
+    @apply px-3 py-1 text-sm;
+    clip-path: var(--clip-chamfer-sm);
     letter-spacing: 0.06em;
+    background: var(--metal-sunken);
+    border-left: 3px solid theme('colors.dota-border-bright');
+    color: theme('colors.dota-text-muted');
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .badge-gold {
     @apply badge;
-    background-color: rgb(var(--ch-gold) / 0.15);
+    border-left-color: theme('colors.dota-gold');
+    background:
+      linear-gradient(90deg, rgb(var(--ch-gold) / 0.14) 0%, transparent 60%),
+      var(--metal-sunken);
     color: theme('colors.dota-gold');
-    border: 1px solid rgb(var(--ch-gold) / 0.35);
   }
 
   .badge-radiant {
     @apply badge;
-    background-color: rgb(var(--ch-radiant) / 0.15);
+    border-left-color: theme('colors.dota-radiant');
+    background:
+      linear-gradient(90deg, rgb(var(--ch-radiant) / 0.16) 0%, transparent 60%),
+      var(--metal-sunken);
     color: theme('colors.dota-radiant-light');
-    border: 1px solid rgb(var(--ch-radiant) / 0.35);
   }
 
   .badge-dire {
     @apply badge;
-    background-color: rgb(var(--ch-dire) / 0.15);
+    border-left-color: theme('colors.dota-dire');
+    background:
+      linear-gradient(90deg, rgb(var(--ch-dire) / 0.16) 0%, transparent 60%),
+      var(--metal-sunken);
     color: theme('colors.dota-dire-light');
-    border: 1px solid rgb(var(--ch-dire) / 0.35);
   }
 
   .badge-info {
     @apply badge;
-    background-color: rgb(var(--ch-info) / 0.15);
+    border-left-color: theme('colors.dota-info');
+    background:
+      linear-gradient(90deg, rgb(var(--ch-info) / 0.16) 0%, transparent 60%),
+      var(--metal-sunken);
     color: theme('colors.dota-info');
-    border: 1px solid rgb(var(--ch-info) / 0.35);
   }
 
-  /* ── Offer tier badges ────────────────────────────────────────────────────── */
-  /*
-    Distinct from team/status badges: these are the Low/Medium/High labels
-    shown in AuctionHouse and GameHistory.
-    Unified with .badge — same shape, same font, same rounded-sm radius.
-
-    Colour scale communicates ascending value:
-      Low    = blue  (informational / low-stakes)
-      Medium = gold  (moderate value)
-      High   = green (premium / radiant — intentionally NOT red to avoid
-                      collision with the Dire/danger colour palette)
-  */
+  /* ── Offer tier badges — same tag language, tighter fit ─────────────────
+     Colour scale unchanged: Low = blue, Medium = gold, High = green
+     (green, not red — red is Dire/danger and would read as a warning). */
   .tier-badge {
     @apply inline-flex items-center;
-    @apply font-barlow font-bold;
-    @apply px-2 py-0.5 rounded-sm text-sm;
+    @apply font-barlow font-bold uppercase;
+    @apply px-2 py-0.5 text-sm;
+    clip-path: var(--clip-chamfer-sm);
     letter-spacing: 0.05em;
+    background: var(--metal-sunken);
+    border-left: 3px solid;
   }
 
   .tier-low {
     @apply tier-badge;
-    background-color: rgb(var(--ch-info) / 0.2);
+    border-left-color: theme('colors.dota-info');
     color: theme('colors.dota-info');
-    border: 1px solid rgb(var(--ch-info) / 0.4);
   }
 
   .tier-medium {
     @apply tier-badge;
-    background-color: rgb(var(--ch-gold) / 0.2);
+    border-left-color: theme('colors.dota-gold');
     color: theme('colors.dota-gold-light');
-    border: 1px solid rgb(var(--ch-gold) / 0.4);
   }
 
   .tier-high {
     @apply tier-badge;
-    /* Green — signals premium/high value. Red was misleading here because it
-       matched the Dire/danger palette and implied something negative. */
-    background-color: rgb(var(--ch-radiant) / 0.2);
+    border-left-color: theme('colors.dota-radiant');
     color: theme('colors.dota-radiant-light');
-    border: 1px solid rgb(var(--ch-radiant) / 0.4);
   }
 
-  /* ── Dividers ─────────────────────────────────────────────────────────────── */
-  /*
-    Both dividers share the same fade stop positions (30%/70%).
-    The only difference is the colour, driven by a CSS custom property
-    so the stop logic lives in one place.
-  */
+  /* ── Gold chip — in-game currency counter ───────────────────────────────
+     Dark recessed chip, gold tabular numerals. Wrap any gold amount:
+       <span class="gold-chip">1,250 <GoldIcon /></span> */
+  .gold-chip {
+    @apply inline-flex items-center gap-1;
+    @apply font-barlow font-bold tabular-nums;
+    @apply px-2 py-0.5 text-sm;
+    clip-path: var(--clip-chamfer-sm);
+    background: var(--metal-sunken);
+    color: theme('colors.dota-gold');
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+
+  /* ── Dividers ───────────────────────────────────────────────────────────
+     .divider       — plain fade rule
+     .divider-gold  — fade rule with a centred ✦ ornament (needs no markup
+                      change; the glyph sits in a gap in the gradient) */
   .divider, .divider-gold {
     height: 1px;
+    position: relative;
     background: linear-gradient(
       to right,
       transparent,
@@ -347,40 +526,69 @@
       transparent
     );
   }
-  .divider      { --divider-color: theme('colors.dota-border-bright'); }
-  .divider-gold { --divider-color: rgb(var(--ch-gold) / 0.5); }
+  .divider { --divider-color: theme('colors.dota-border-bright'); }
 
-  /* ── Team card backgrounds ────────────────────────────────────────────────── */
-  /*
-    Named so team identity is clear in JSX without needing to remember hex values.
-  */
+  .divider-gold {
+    --divider-color: rgb(var(--ch-gold) / 0.5);
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--divider-color) 30%,
+      var(--divider-color) 43%,
+      transparent 45%,
+      transparent 55%,
+      var(--divider-color) 57%,
+      var(--divider-color) 70%,
+      transparent 100%
+    );
+  }
+  .divider-gold::after {
+    content: '✦';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 9px;
+    line-height: 1;
+    color: rgb(var(--ch-gold) / 0.75);
+  }
+
+  /* ── Team panels — mirrored plates with a faction feature corner ────────
+     Radiant cuts deep on the top-left, Dire on the top-right, echoing the
+     map diagonal. A faction light source bleeds in from the feature corner. */
   .team-radiant-panel {
-    background: linear-gradient(135deg, theme('colors.dota-radiant-subtle') 0%, theme('colors.dota-surface') 100%);
-    border: 1px solid theme('colors.dota-radiant-border');
+    clip-path: var(--clip-team-radiant);
+    background:
+      radial-gradient(ellipse 90% 70% at 0% 0%, rgb(var(--ch-radiant) / 0.14) 0%, transparent 60%),
+      var(--metal-surface);
+    box-shadow:
+      var(--bevel),
+      inset 3px 0 0 rgb(var(--ch-radiant) / 0.45);
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
   }
 
   .team-dire-panel {
-    background: linear-gradient(135deg, theme('colors.dota-dire-subtle') 0%, theme('colors.dota-surface') 100%);
-    border: 1px solid theme('colors.dota-dire-border');
+    clip-path: var(--clip-team-dire);
+    background:
+      radial-gradient(ellipse 90% 70% at 100% 0%, rgb(var(--ch-dire) / 0.14) 0%, transparent 60%),
+      var(--metal-surface);
+    box-shadow:
+      var(--bevel),
+      inset -3px 0 0 rgb(var(--ch-dire) / 0.45);
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
   }
 
-  /* ── Section heading style ────────────────────────────────────────────────── */
-  /*
-    Can be applied to any element, not just h1-h3, so font-cinzel is kept here
-    even though it's redundant when applied to headings that already inherit it
-    from the base layer above.
-  */
+  /* ── Section heading — gold, uppercase, no ambient glow ─────────────────
+     Glow is earned, not ambient: winner moments get .text-glow-gold,
+     everyday headings don't. */
   .section-heading {
-    @apply font-cinzel text-3xl font-bold text-center;
+    @apply font-barlow text-3xl font-bold uppercase text-center;
     color: theme('colors.dota-gold');
-    text-shadow: 0 0 20px rgb(var(--ch-gold) / 0.2);
+    letter-spacing: 0.08em;
   }
 
-  /* ── Stat label + value pair ──────────────────────────────────────────────── */
+  /* ── Stat label + value pair ────────────────────────────────────────────── */
   .stat-label {
-    /* 0.1em doesn't map to a Tailwind tracking step, set directly.
-       Previously this also had @apply tracking-widest which resolves to the same
-       0.1em — the duplicate has been removed. */
     @apply font-barlow text-xs font-semibold uppercase;
     color: theme('colors.dota-text-muted');
     letter-spacing: 0.1em;
@@ -390,18 +598,13 @@
     @apply font-barlow font-bold tabular-nums;
     color: theme('colors.dota-text');
   }
-
 }
 
 /* =============================================================================
-   UTILITIES — one-off helpers that don't warrant a component class
+   UTILITIES
    ============================================================================= */
 
-/*
-  @keyframes are always global scope regardless of @layer — wrapping them in
-  @layer utilities has no scoping effect and is misleading. Defined here,
-  outside any layer, to make the global nature explicit.
-*/
+/* @keyframes are global regardless of @layer — kept outside for clarity */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -409,30 +612,38 @@
 
 @layer utilities {
 
-  /* ── Animations ───────────────────────────────────────────────────────────── */
+  /* ── Cinzel retirement shim ─────────────────────────────────────────────
+     Every existing `font-cinzel` in JSX now resolves to Barlow Condensed.
+     Declared here (after the @tailwind utilities directive) so it wins the
+     source-order tie against Tailwind's own .font-cinzel utility.
+     Remove this once components migrate and Cinzel is dropped from
+     layout.tsx / tailwind.config — see THEME_NOTES.md. */
+  .font-cinzel {
+    font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Chamfer utilities — cut any element ────────────────────────────────── */
+  .chamfer        { clip-path: var(--clip-chamfer); }
+  .chamfer-sm     { clip-path: var(--clip-chamfer-sm); }
+  .chamfer-mirror { clip-path: var(--clip-chamfer-sm-mirror); }
+
+  /* ── Animations ─────────────────────────────────────────────────────────── */
   .animate-fadeIn {
     animation: fadeIn 0.4s ease-out forwards;
   }
 
-  /* ── Text glow ────────────────────────────────────────────────────────────── */
-  .text-glow-gold {
-    text-shadow: 0 0 12px rgb(var(--ch-gold) / 0.5);
-  }
+  /* ── Text glow — reserved for earned moments (winner banner, match end) ── */
+  .text-glow-gold    { text-shadow: 0 0 12px rgb(var(--ch-gold) / 0.5); }
+  .text-glow-radiant { text-shadow: 0 0 12px rgb(var(--ch-radiant) / 0.5); }
+  .text-glow-dire    { text-shadow: 0 0 12px rgb(var(--ch-dire) / 0.5); }
 
-  .text-glow-radiant {
-    text-shadow: 0 0 12px rgb(var(--ch-radiant) / 0.5);
-  }
-
-  .text-glow-dire {
-    text-shadow: 0 0 12px rgb(var(--ch-dire) / 0.5);
-  }
-
-  /* ── Truncation ───────────────────────────────────────────────────────────── */
+  /* ── Truncation ─────────────────────────────────────────────────────────── */
   .truncate-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-
 }
