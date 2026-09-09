@@ -240,19 +240,54 @@ export default function AuctionHouse({
 
         {/* ── Winner: submit form ─────────────────────────────────────────────── */}
         {!finalized && isOnWinningTeam && !alreadySubmitted && (
-          <div className="relative chamfer overflow-hidden">
-            <Image
-              src="/match_predictions_bg.png"
-              alt=""
-              fill
-              quality={85}
-              sizes="(max-width: 768px) 100vw, 1200px"
-              className="object-cover object-right pointer-events-none select-none"
-            />
+          /*
+            Artwork handling — read before changing any of this.
+
+            match_predictions_bg.png is 1440x620 and already carries its own
+            alpha fade: the left ~25% is fully transparent, it ramps in across
+            the middle, and it softens out at the top and bottom edges. The
+            asset is built to dissolve into a dark panel on its own.
+
+            The previous version used `fill` + `object-cover object-right`,
+            which broke that in two ways. The panel's height is set by the form
+            (~300px) while its width follows the viewport, so its aspect ratio
+            swings from roughly 1.9:1 to 3.75:1 — and every ratio past the
+            source's own 2.32:1 crops vertically. That crop removes the top and
+            bottom fades, so the soft edge becomes a hard cut straight through
+            her head, and the exact crop changes with every screen width.
+
+            object-contain fixes both: the whole image is always shown, so the
+            built-in fades survive and the composition is identical at every
+            width — only the scale changes. Nothing is ever cut off.
+
+            The width cap keeps it off the form. Because object-contain
+            letterboxes rather than fills, a right-anchored box wider than the
+            form's own column would slide the art under the text at narrow
+            widths; 68% leaves the max-w-md form clear down to the md
+            breakpoint, below which the art is hidden entirely.
+          */
+          <div className="relative chamfer overflow-hidden panel-sunken min-h-[300px]">
+            <div className="hidden md:block absolute inset-y-0 right-0 w-[68%] pointer-events-none select-none">
+              <Image
+                src="/match_predictions_bg.png"
+                alt=""
+                fill
+                quality={85}
+                sizes="(max-width: 768px) 0px, 60vw"
+                className="object-contain object-right"
+              />
+            </div>
+            {/*
+              A light scrim only — the asset's own alpha does most of the
+              blending. This exists purely to hold text contrast over the faint
+              equation glyphs on the left, and stops at 65% so it never dims the
+              subject herself. The old version ran to 100% at 0.35 opacity,
+              which greyed out the artwork it was sitting on.
+            */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: 'linear-gradient(to right, rgba(13,17,23,0.92) 0%, rgba(13,17,23,0.80) 50%, rgba(13,17,23,0.35) 100%)',
+                background: 'linear-gradient(to right, rgba(13,17,23,0.70) 0%, rgba(13,17,23,0.30) 45%, transparent 65%)',
               }}
             />
 
