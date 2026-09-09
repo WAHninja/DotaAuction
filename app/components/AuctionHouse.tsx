@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
-import { CheckCircle2, Loader2, Star } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Loader2, Star } from 'lucide-react';
 import GoldIcon from '@/app/components/GoldIcon';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 import type { Player, Offer } from '@/types';
@@ -274,20 +274,29 @@ export default function AuctionHouse({
               </div>
 
               <div className="flex flex-col gap-3">
-                <select
-                  value={selectedPlayer}
-                  onChange={e => {
-                    setSelectedPlayer(e.target.value);
-                    setSubmitError(null);
-                  }}
-                  className="input"
-                >
-                  <option value="">Select player to offer…</option>
-                  {candidates.map(pid => {
-                    const p = getPlayer(pid);
-                    return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
-                  })}
-                </select>
+                {/* relative wrapper hosts the chevron, since .select strips
+                    the OS arrow with appearance-none. */}
+                <div className="relative">
+                  <select
+                    value={selectedPlayer}
+                    onChange={e => {
+                      setSelectedPlayer(e.target.value);
+                      setSubmitError(null);
+                    }}
+                    aria-label="Select player to make an offer on"
+                    className="select"
+                  >
+                    <option value="">Select player to offer…</option>
+                    {candidates.map(pid => {
+                      const p = getPlayer(pid);
+                      return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
+                    })}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dota-text-muted"
+                    aria-hidden="true"
+                  />
+                </div>
 
                 <input
                   type="number"
