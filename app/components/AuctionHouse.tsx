@@ -41,11 +41,13 @@ function TierBadge({ label }: { label: 'Low' | 'Medium' | 'High' }) {
 }
 
 // ── Gold amount display ───────────────────────────────────────────────────────
+// v2 theme: rendered as a recessed in-game counter (.gold-chip), icon on the
+// left like the HUD, instead of bare gold text.
 function GoldAmount({ amount }: { amount: number }) {
   return (
-    <span className="inline-flex items-center gap-1 font-barlow font-bold text-dota-gold tabular-nums">
-      {amount}
-      <GoldIcon size={14} />
+    <span className="gold-chip">
+      <GoldIcon size={13} />
+      {amount.toLocaleString()}
     </span>
   );
 }
@@ -185,10 +187,28 @@ export default function AuctionHouse({
   return (
     <div className="panel p-6 mb-8 space-y-6">
 
-      {/* ── Title ──────────────────────────────────────────────────────────── */}
-      <div className="text-center space-y-1">
-        <h3 className="font-cinzel text-2xl font-bold text-dota-gold">Auction House</h3>
-        <div className="divider-gold w-40 mx-auto" />
+      {/* ── Title — the shopkeeper's stall ─────────────────────────────────
+          The one screen in the app that gets a character. Portrait breaks the
+          plain-title pattern; everything below stays disciplined. */}
+      <div>
+        <div className="flex items-center justify-center gap-4">
+          <Image
+            src="/Shopkeeper.png"
+            alt=""
+            width={72}
+            height={72}
+            className="object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)] shrink-0"
+          />
+          <div className="text-left space-y-0.5">
+            <h3 className="font-barlow text-2xl font-bold uppercase tracking-wider text-dota-gold">
+              Auction House
+            </h3>
+            <p className="font-barlow text-sm text-dota-text-muted italic">
+              &ldquo;Ah, a customer!&rdquo;
+            </p>
+          </div>
+        </div>
+        <div className="divider-gold w-48 mx-auto mt-4" />
       </div>
 
       {/* ── Resolved banner ────────────────────────────────────────────────── */}
@@ -201,7 +221,7 @@ export default function AuctionHouse({
       {/* ── Offer counter ──────────────────────────────────────────────────── */}
       {!finalized && (
         <div className="flex justify-center">
-          <div className="panel-sunken flex items-center gap-4 px-5 py-3 rounded-lg">
+          <div className="panel-sunken flex items-center gap-4 px-5 py-3">
             <span className="stat-label">Offers in</span>
             <div className="flex gap-1.5" role="group" aria-label="Offer submission status">
               {winningTeamMembers.map(pid => {
@@ -235,7 +255,7 @@ export default function AuctionHouse({
 
       {/* ── Winner: submit form ─────────────────────────────────────────────── */}
       {!finalized && isOnWinningTeam && !alreadySubmitted && (
-        <div className="relative rounded-lg overflow-hidden">
+        <div className="relative chamfer">
           <Image
             src="/match_predictions_bg.png"
             alt=""
@@ -252,7 +272,9 @@ export default function AuctionHouse({
 
           <div className="relative z-10 max-w-md py-8 px-6 space-y-4">
             <div className="space-y-1">
-              <p className="font-cinzel font-bold text-dota-gold text-lg">Make an Offer</p>
+              <p className="font-barlow font-bold uppercase tracking-wider text-dota-gold text-lg">
+                Make an Offer
+              </p>
               <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1 flex-wrap">
                 Amount between{' '}
                 <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
@@ -330,30 +352,30 @@ export default function AuctionHouse({
 
       {/* ── Loser: silent coordination hint ─────────────────────────────────── */}
       {!finalized && isOnLosingTeam && allSubmitted && hasPending && (
-        <p className="text-center font-barlow text-xs text-dota-text-dim">
+        <p className="text-center font-barlow text-xs text-dota-text-muted">
           Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to show your
-          team which one you're leaning towards — only your team sees it.
+          team which one you&rsquo;re leaning towards — only your team sees it.
         </p>
       )}
 
       {/* ── Offer cards ────────────────────────────────────────────────────── */}
       <div>
-        <h4 className="font-cinzel text-lg font-bold text-center text-dota-text mb-1">Current Offers</h4>
+        <h4 className="text-lg text-center text-dota-text mb-1">Current Offers</h4>
 
         {allSubmitted && hasPending && (
-          <p className="text-center font-barlow text-xs text-dota-text-dim mb-4">
+          <p className="text-center font-barlow text-xs text-dota-text-muted mb-4">
             Exact amounts are hidden until an offer is accepted.
           </p>
         )}
 
         {!allSubmitted && !finalized && (
-          <p className="text-center font-barlow text-xs text-dota-text-dim mb-4">
+          <p className="text-center font-barlow text-xs text-dota-text-muted mb-4">
             Offer details are revealed once everyone has submitted.
           </p>
         )}
 
         {offers.length === 0 ? (
-          <p className="text-center font-barlow text-dota-text-dim py-4">No offers submitted yet.</p>
+          <p className="text-center font-barlow text-dota-text-muted py-4">No offers submitted yet.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {offers.map(offer => {
@@ -372,15 +394,21 @@ export default function AuctionHouse({
                 ? losingTeamMembers.filter(pid => pid !== currentUserId && selections[pid] === offer.id)
                 : [];
 
+              /* v2 theme: clip-path eats borders and outer box-shadows, so the
+                 accepted / selected states are expressed as drop-shadow glows
+                 (which follow the chamfered silhouette) instead of the old
+                 border-colour + shadow-* utilities. These override the card's
+                 default elevation shadow — the glow reads as the elevation. */
+              const stateClass =
+                isAccepted     ? 'drop-shadow-[0_0_14px_rgba(74,155,60,0.45)]' :
+                isRejected     ? 'opacity-50'                                   :
+                isSelectedByMe ? 'drop-shadow-[0_0_10px_rgba(200,169,81,0.40)]' :
+                                 '';
+
               return (
                 <div
                   key={offer.id}
-                  className={`relative panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${
-                    isAccepted ? 'border-dota-radiant shadow-radiant' :
-                    isRejected ? 'opacity-50'                          :
-                    isSelectedByMe ? 'border-dota-gold shadow-gold'     :
-                                 'border-dota-border'
-                  }`}
+                  className={`relative panel-raised p-4 flex flex-col justify-between gap-3 transition-all ${stateClass}`}
                 >
                   {/* Pick indicator — separate button so it doesn't nest inside
                       the Accept button below. Only losing-team members see it,
@@ -392,41 +420,14 @@ export default function AuctionHouse({
                       aria-pressed={isSelectedByMe}
                       aria-label={isSelectedByMe ? 'Unmark as your pick' : 'Mark as your pick'}
                       title={isSelectedByMe ? 'Unmark as your pick' : "Mark as your pick — only your team sees this"}
-                      className={`absolute top-2.5 right-2.5 p-1.5 rounded-full border transition-colors ${
+                      className={`absolute top-2.5 right-2.5 p-1.5 chamfer-sm transition-colors ${
                         isSelectedByMe
-                          ? 'bg-dota-gold/20 border-dota-gold text-dota-gold'
-                          : 'bg-dota-deep border-dota-border text-dota-text-dim hover:text-dota-gold hover:border-dota-gold/50'
+                          ? 'bg-dota-gold/20 text-dota-gold'
+                          : 'bg-dota-deep text-dota-text-muted hover:text-dota-gold hover:bg-dota-overlay'
                       }`}
                     >
                       <Star className="w-3.5 h-3.5" fill={isSelectedByMe ? 'currentColor' : 'none'} />
                     </button>
-                  )}
-
-                  {/* Avatars of losing-team members currently leaning towards
-                      this offer — stamped over the top-left corner of the
-                      card, like a badge, mirroring the star's top-right spot.
-                      Only ever rendered for losing-team viewers. */}
-                  {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
-                    <div
-                      className="absolute -top-3 left-3 z-10 flex -space-x-2"
-                      role="group"
-                      aria-label={`Leaning towards this offer: ${selectingTeammates
-                        .map(pid => getPlayer(pid)?.username ?? `Player #${pid}`)
-                        .join(', ')}`}
-                    >
-                      {selectingTeammates.map(pid => {
-                        const p = getPlayer(pid);
-                        return (
-                          <PlayerAvatar
-                            key={pid}
-                            username={p?.username ?? `Player #${pid}`}
-                            steamAvatar={p?.steam_avatar}
-                            size={24}
-                            className="ring-2 ring-dota-deep shadow-md"
-                          />
-                        );
-                      })}
-                    </div>
                   )}
 
                   {/* Offer details */}
@@ -453,7 +454,7 @@ export default function AuctionHouse({
                             {to?.username ?? `Player #${offer.target_player_id}`}
                           </span>
                         ) : (
-                          <span className="font-barlow text-xs text-dota-text-dim italic">
+                          <span className="font-barlow text-xs text-dota-text-muted italic">
                             Hidden until all offers are in…
                           </span>
                         )}
@@ -463,19 +464,50 @@ export default function AuctionHouse({
                     <div className="flex items-center gap-2">
                       <span className="stat-label w-10">Offer</span>
                       {!allSubmitted ? (
-                        <span className="font-barlow text-xs text-dota-text-dim italic">
+                        <span className="font-barlow text-xs text-dota-text-muted italic">
                           Hidden until all offers are in…
                         </span>
                       ) : showAmount ? (
                         offer.offer_amount != null
                           ? <GoldAmount amount={offer.offer_amount} />
-                          : <span className="text-dota-text-dim text-xs">—</span>
+                          : <span className="text-dota-text-muted text-xs">—</span>
                       ) : (
                         offer.tier_label
                           ? <TierBadge label={offer.tier_label} />
-                          : <span className="text-dota-text-dim text-xs">—</span>
+                          : <span className="text-dota-text-muted text-xs">—</span>
                       )}
                     </div>
+
+                    {/* Teammates leaning towards this offer.
+                        v2: rendered inline instead of the old floating badge at
+                        -top-3 — the chamfer clip would cut off anything hanging
+                        outside the card, and inline it can't collide with the
+                        From/Selling rows either. Only losing-team viewers. */}
+                    {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
+                      <div
+                        className="flex items-center gap-2 pt-1"
+                        role="group"
+                        aria-label={`Leaning towards this offer: ${selectingTeammates
+                          .map(pid => getPlayer(pid)?.username ?? `Player #${pid}`)
+                          .join(', ')}`}
+                      >
+                        <span className="stat-label">Leaning</span>
+                        <div className="flex -space-x-2">
+                          {selectingTeammates.map(pid => {
+                            const p = getPlayer(pid);
+                            return (
+                              <PlayerAvatar
+                                key={pid}
+                                username={p?.username ?? `Player #${pid}`}
+                                steamAvatar={p?.steam_avatar}
+                                size={22}
+                                className="ring-2 ring-dota-deep"
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Accept button */}
@@ -507,12 +539,12 @@ export default function AuctionHouse({
       {/* ── Tier legend ─────────────────────────────────────────────────────── */}
       {!finalized && allSubmitted && hasPending && (
         <div className="flex justify-center">
-          <div className="panel-sunken flex flex-wrap items-center justify-center gap-4 px-5 py-3 rounded-lg">
+          <div className="panel-sunken flex flex-wrap items-center justify-center gap-4 px-5 py-3">
             <span className="stat-label">Tiers</span>
             {(['Low', 'Medium', 'High'] as const).map(tier => (
               <TierBadge key={tier} label={tier} />
             ))}
-            <span className="font-barlow text-xs text-dota-text-dim">
+            <span className="font-barlow text-xs text-dota-text-muted">
               Ranges overlap — same tier can cover different amounts
             </span>
           </div>
