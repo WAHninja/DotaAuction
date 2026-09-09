@@ -22,9 +22,7 @@
     "ws": "^8.7.0",
     "react-confetti": "^6.1.0",
     "react-use": "^17.4.0",
-    "recharts": "^2.7.2",
-    "tldraw": "latest",
-    "@tldraw/sync": "latest"
+    "recharts": "^2.7.2"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
