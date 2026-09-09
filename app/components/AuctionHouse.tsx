@@ -184,199 +184,219 @@ export default function AuctionHouse({
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+  //
+  // Layout: three full-width zones sharing ONE centre axis with the rest of
+  // the page (team cards, Game History):
+  //
+  //   1. Header  — title + quip + ornate divider, centred to the card.
+  //   2. Status  — offer counter, phase messages, submit form. All content
+  //                is narrow, so it centres to the FULL card while the
+  //                shopkeeper stands in the left margin (lg+ only — below
+  //                lg the margin is too thin and a compact figure joins the
+  //                header row instead). His feet land on the steel rule
+  //                closing the zone: the shop counter.
+  //   3. Offers  — Current Offers grid + legend, full panel width below
+  //                the counter line, where the grid has room to breathe.
+  //
   return (
-    <div className="panel relative p-6 mb-8">
+    <div className="panel p-6 mb-8 space-y-6">
 
-      {/* ── Standing shopkeeper (md+) ──────────────────────────────────────
-          Full-body figure anchored to the panel floor, left side — the panel
-          is his shop, the content column is what he's presenting (his open
-          palm gestures right, toward it). 80% of panel height, capped: his
-          width tracks his height (~0.62:1), so uncapped he'd swallow the
-          offers grid on tall states. Hidden on mobile, where the compact
-          header figure below takes over. */}
-      <Image
-        src="/Shopkeeper.png"
-        alt=""
-        width={398}
-        height={637}
-        className="hidden md:block absolute bottom-0 left-4 h-[80%] max-h-[420px] w-auto object-contain pointer-events-none select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.65)]"
-      />
-
-      {/* ── Content column — clears the shopkeeper's rail on md+ ─────────── */}
-      <div className="md:pl-[300px] space-y-6">
-
-        {/* ── Title — the stall's signboard ────────────────────────────────
-            Left-aligned beside the keeper on md+; on mobile it reverts to a
-            centred row with a small bottom-aligned figure. */}
-        <div>
-          <div className="flex items-end justify-center md:justify-start gap-4">
-            <Image
-              src="/Shopkeeper.png"
-              alt=""
-              width={84}
-              height={134}
-              className="md:hidden object-contain shrink-0 drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
-            />
-            <div className="text-left pb-8 md:pb-0">
-              <h3 className="font-barlow text-2xl sm:text-3xl font-bold uppercase tracking-wider text-dota-gold">
-                Auction House
-              </h3>
-              <p className="font-barlow text-sm text-dota-text-muted italic mt-0.5">
-                &ldquo;Ah, a customer!&rdquo;
-              </p>
-            </div>
-          </div>
-          <div className="divider-gold w-80 max-w-full mx-auto md:mx-0 mt-1 md:mt-3" />
-        </div>
-
-      {/* ── Resolved banner ────────────────────────────────────────────────── */}
-      {finalized && (
-        <p className="text-center font-barlow text-sm font-semibold text-dota-gold flex items-center justify-center gap-2">
-          <CheckCircle2 className="w-4 h-4" /> Auction resolved — next game underway
-        </p>
-      )}
-
-      {/* ── Offer counter ──────────────────────────────────────────────────── */}
-      {!finalized && (
-        <div className="flex justify-center">
-          <div className="panel-sunken flex items-center gap-4 px-5 py-3">
-            <span className="stat-label">Offers in</span>
-            <div className="flex gap-1.5" role="group" aria-label="Offer submission status">
-              {winningTeamMembers.map(pid => {
-                const hasSubmitted = offers.some(o => o.from_player_id === pid);
-                const name = getPlayer(pid)?.username ?? `Player #${pid}`;
-                return (
-                  <span
-                    key={pid}
-                    title={name}
-                    aria-label={`${name}: ${hasSubmitted ? 'submitted' : 'pending'}`}
-                    className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                      hasSubmitted ? 'bg-dota-radiant' : 'bg-dota-border'
-                    }`}
-                  />
-                );
-              })}
-            </div>
-            <span className={`font-barlow font-bold text-sm tabular-nums ${
-              allSubmitted ? 'text-dota-radiant-light' : 'text-dota-gold'
-            }`}>
-              {submittedCount} / {winningTeamMembers.length}
-            </span>
-            {allSubmitted && (
-              <span className="flex items-center gap-1 text-dota-radiant-light text-xs font-barlow font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" /> All in!
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Winner: submit form ─────────────────────────────────────────────── */}
-      {!finalized && isOnWinningTeam && !alreadySubmitted && (
-        <div className="relative chamfer">
+      {/* ── Zone 1: Header — centred to the full card ─────────────────────── */}
+      <div>
+        <div className="flex items-end justify-center gap-4 lg:block">
           <Image
-            src="/match_predictions_bg.png"
+            src="/Shopkeeper.png"
             alt=""
-            fill
-            quality={85}
-            className="object-cover object-right pointer-events-none select-none"
+            width={84}
+            height={134}
+            className="lg:hidden object-contain shrink-0 drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
           />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(to right, rgba(13,17,23,0.92) 0%, rgba(13,17,23,0.80) 50%, rgba(13,17,23,0.35) 100%)',
-            }}
-          />
-
-          <div className="relative z-10 max-w-md py-8 px-6 space-y-4">
-            <div className="space-y-1">
-              <p className="font-barlow font-bold uppercase tracking-wider text-dota-gold text-lg">
-                Make an Offer
-              </p>
-              <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1 flex-wrap">
-                Amount between{' '}
-                <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
-                {' '}–{' '}
-                <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
-                <GoldIcon size={14} />
-              </p>
-              <p className="font-barlow text-xs text-dota-text-dim">
-                Details are hidden from everyone until all offers are submitted
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <select
-                value={selectedPlayer}
-                onChange={e => {
-                  setSelectedPlayer(e.target.value);
-                  setSubmitError(null);
-                }}
-                className="input"
-              >
-                <option value="">Select player to offer…</option>
-                {candidates.map(pid => {
-                  const p = getPlayer(pid);
-                  return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
-                })}
-              </select>
-
-              <input
-                type="number"
-                value={offerAmount}
-                onChange={e => {
-                  setOfferAmount(e.target.value);
-                  setSubmitError(null);
-                }}
-                onKeyDown={e => e.key === 'Enter' && handleSubmitOffer()}
-                placeholder={`${minOffer}–${maxOffer}`}
-                min={minOffer}
-                max={maxOffer}
-                className="input"
-              />
-            </div>
-
-            {submitError && (
-              <p role="alert" className="font-barlow text-sm text-dota-dire-light">
-                {submitError}
-              </p>
-            )}
-
-            <button
-              onClick={handleSubmitOffer}
-              disabled={submitting}
-              className="btn-primary"
-            >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {submitting ? 'Submitting…' : 'Submit Offer'}
-            </button>
+          <div className="text-left lg:text-center pb-8 lg:pb-0">
+            <h3 className="font-barlow text-2xl sm:text-3xl font-bold uppercase tracking-wider text-dota-gold">
+              Auction House
+            </h3>
+            <p className="font-barlow text-sm text-dota-text-muted italic mt-0.5">
+              &ldquo;Ho ho! You found me!&rdquo;
+            </p>
           </div>
         </div>
-      )}
+        <div className="divider-gold w-80 max-w-full mx-auto mt-1 lg:mt-3" />
+      </div>
 
-      {/* ── Winner: already submitted ───────────────────────────────────────── */}
-      {!finalized && isOnWinningTeam && alreadySubmitted && (
-        <p className="text-center font-barlow text-sm font-semibold text-dota-radiant-light flex items-center justify-center gap-2">
-          <CheckCircle2 className="w-4 h-4" /> Your offer is in.
-        </p>
-      )}
+      {/* ── Zone 2: Status — keeper in the left margin, content on the card
+          axis. min-height guarantees room for the figure even when the
+          phase content is short; justify-center keeps short content in the
+          vertical middle of the zone. ─────────────────────────────────────── */}
+      <div className="relative lg:min-h-[300px] flex flex-col justify-center gap-6">
 
-      {/* ── Loser: waiting message ──────────────────────────────────────────── */}
-      {!finalized && isOnLosingTeam && !allSubmitted && (
-        <p className="text-center font-barlow text-sm text-dota-text-muted">
-          Waiting for all offers before you can accept…
-        </p>
-      )}
+        {/* Grounding shadow + standing figure (lg+). Both extend 24px below
+            the zone (-bottom-6) so his feet sit exactly on the steel rule
+            that follows in the space-y-6 flow. */}
+        <div
+          aria-hidden="true"
+          className="hidden lg:block absolute -bottom-5 left-7 w-32 h-3.5 rounded-[50%] bg-black/45 blur-md pointer-events-none"
+        />
+        <Image
+          src="/Shopkeeper.png"
+          alt=""
+          width={398}
+          height={637}
+          className="hidden lg:block absolute -bottom-6 left-2 h-[290px] w-auto object-contain pointer-events-none select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.65)]"
+        />
 
-      {/* ── Loser: silent coordination hint ─────────────────────────────────── */}
-      {!finalized && isOnLosingTeam && allSubmitted && hasPending && (
-        <p className="text-center font-barlow text-xs text-dota-text-muted">
-          Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to show your
-          team which one you&rsquo;re leaning towards — only your team sees it.
-        </p>
-      )}
+        {/* Resolved banner */}
+        {finalized && (
+          <p className="text-center font-barlow text-sm font-semibold text-dota-gold flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4" /> Auction resolved — next game underway
+          </p>
+        )}
 
-      {/* ── Offer cards ────────────────────────────────────────────────────── */}
+        {/* Offer counter */}
+        {!finalized && (
+          <div className="flex justify-center">
+            <div className="panel-sunken flex items-center gap-4 px-5 py-3">
+              <span className="stat-label">Offers in</span>
+              <div className="flex gap-1.5" role="group" aria-label="Offer submission status">
+                {winningTeamMembers.map(pid => {
+                  const hasSubmitted = offers.some(o => o.from_player_id === pid);
+                  const name = getPlayer(pid)?.username ?? `Player #${pid}`;
+                  return (
+                    <span
+                      key={pid}
+                      title={name}
+                      aria-label={`${name}: ${hasSubmitted ? 'submitted' : 'pending'}`}
+                      className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                        hasSubmitted ? 'bg-dota-radiant' : 'bg-dota-border'
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+              <span className={`font-barlow font-bold text-sm tabular-nums ${
+                allSubmitted ? 'text-dota-radiant-light' : 'text-dota-gold'
+              }`}>
+                {submittedCount} / {winningTeamMembers.length}
+              </span>
+              {allSubmitted && (
+                <span className="flex items-center gap-1 text-dota-radiant-light text-xs font-barlow font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> All in!
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Winner: submit form — centred and width-capped so it stays on the
+            card axis and clear of the figure. */}
+        {!finalized && isOnWinningTeam && !alreadySubmitted && (
+          <div className="relative chamfer w-full max-w-md mx-auto">
+            <Image
+              src="/match_predictions_bg.png"
+              alt=""
+              fill
+              quality={85}
+              className="object-cover object-right pointer-events-none select-none"
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to right, rgba(13,17,23,0.92) 0%, rgba(13,17,23,0.80) 50%, rgba(13,17,23,0.35) 100%)',
+              }}
+            />
+
+            <div className="relative z-10 py-8 px-6 space-y-4">
+              <div className="space-y-1">
+                <p className="font-barlow font-bold uppercase tracking-wider text-dota-gold text-lg">
+                  Make an Offer
+                </p>
+                <p className="font-barlow text-sm text-dota-text-muted flex items-center gap-1 flex-wrap">
+                  Amount between{' '}
+                  <span className="font-bold text-dota-text">{minOffer.toLocaleString()}</span>
+                  {' '}–{' '}
+                  <span className="font-bold text-dota-text">{maxOffer.toLocaleString()}</span>
+                  <GoldIcon size={14} />
+                </p>
+                <p className="font-barlow text-xs text-dota-text-dim">
+                  Details are hidden from everyone until all offers are submitted
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <select
+                  value={selectedPlayer}
+                  onChange={e => {
+                    setSelectedPlayer(e.target.value);
+                    setSubmitError(null);
+                  }}
+                  className="input"
+                >
+                  <option value="">Select player to offer…</option>
+                  {candidates.map(pid => {
+                    const p = getPlayer(pid);
+                    return <option key={pid} value={pid}>{p?.username ?? `Player #${pid}`}</option>;
+                  })}
+                </select>
+
+                <input
+                  type="number"
+                  value={offerAmount}
+                  onChange={e => {
+                    setOfferAmount(e.target.value);
+                    setSubmitError(null);
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && handleSubmitOffer()}
+                  placeholder={`${minOffer}–${maxOffer}`}
+                  min={minOffer}
+                  max={maxOffer}
+                  className="input"
+                />
+              </div>
+
+              {submitError && (
+                <p role="alert" className="font-barlow text-sm text-dota-dire-light">
+                  {submitError}
+                </p>
+              )}
+
+              <button
+                onClick={handleSubmitOffer}
+                disabled={submitting}
+                className="btn-primary"
+              >
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {submitting ? 'Submitting…' : 'Submit Offer'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Winner: already submitted */}
+        {!finalized && isOnWinningTeam && alreadySubmitted && (
+          <p className="text-center font-barlow text-sm font-semibold text-dota-radiant-light flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4" /> Your offer is in.
+          </p>
+        )}
+
+        {/* Loser: waiting message */}
+        {!finalized && isOnLosingTeam && !allSubmitted && (
+          <p className="text-center font-barlow text-sm text-dota-text-muted">
+            Waiting for all offers before you can accept…
+          </p>
+        )}
+
+        {/* Loser: silent coordination hint */}
+        {!finalized && isOnLosingTeam && allSubmitted && hasPending && (
+          <p className="text-center font-barlow text-xs text-dota-text-muted">
+            Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to show your
+            team which one you&rsquo;re leaning towards — only your team sees it.
+          </p>
+        )}
+      </div>
+
+      {/* ── Counter line — the steel rule the shopkeeper stands at ────────── */}
+      <div className="divider" />
+
+      {/* ── Zone 3: Offers — full panel width ─────────────────────────────── */}
       <div>
         <h4 className="text-lg text-center text-dota-text mb-1">Current Offers</h4>
 
@@ -412,11 +432,9 @@ export default function AuctionHouse({
                 ? losingTeamMembers.filter(pid => pid !== currentUserId && selections[pid] === offer.id)
                 : [];
 
-              /* v2 theme: clip-path eats borders and outer box-shadows, so the
-                 accepted / selected states are expressed as drop-shadow glows
-                 (which follow the chamfered silhouette) instead of the old
-                 border-colour + shadow-* utilities. These override the card's
-                 default elevation shadow — the glow reads as the elevation. */
+              /* clip-path eats borders and outer box-shadows, so the accepted /
+                 selected states are drop-shadow glows (which follow the
+                 chamfered silhouette) instead of border + shadow utilities. */
               const stateClass =
                 isAccepted     ? 'drop-shadow-[0_0_14px_rgba(74,155,60,0.45)]' :
                 isRejected     ? 'opacity-50'                                   :
@@ -496,11 +514,9 @@ export default function AuctionHouse({
                       )}
                     </div>
 
-                    {/* Teammates leaning towards this offer.
-                        v2: rendered inline instead of the old floating badge at
-                        -top-3 — the chamfer clip would cut off anything hanging
-                        outside the card, and inline it can't collide with the
-                        From/Selling rows either. Only losing-team viewers. */}
+                    {/* Teammates leaning towards this offer — inline so the
+                        chamfer clip can't cut it off and it can't collide with
+                        the From/Selling rows. Only losing-team viewers. */}
                     {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
                       <div
                         className="flex items-center gap-2 pt-1"
@@ -568,7 +584,6 @@ export default function AuctionHouse({
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
