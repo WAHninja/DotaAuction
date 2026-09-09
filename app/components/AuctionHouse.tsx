@@ -20,8 +20,8 @@ type AuctionHouseProps = {
   completedGames: number;
   onOfferSubmitted: (offer: Offer) => void;
   onOfferAccepted: () => void;
-  // userId -> offerId. What each losing-team member is currently leaning
-  // towards — a live, non-binding signal, only ever shown to other losing-team
+  // userId -> offerId. Which offer each losing-team member is currently
+  // backing — a live, non-binding signal, only ever shown to other losing-team
   // members. Omit / leave empty outside the live (non-finalized) auction.
   selections?: Record<number, number | null>;
   onSelectOffer?: (offerId: number | null) => void;
@@ -176,7 +176,30 @@ export default function AuctionHouse({
     }
   };
 
-  // ── Select (non-binding "leaning towards" signal) ────────────────────────────
+  // ── Backing tally ───────────────────────────────────────────────────────────
+  //
+  // Which offer the losing team is converging on. Computed once here rather
+  // than per-card so "most backed" can be decided by comparing offers against
+  // each other — a card cannot know it is winning by looking only at itself.
+  //
+  // A leader is only declared when one offer is strictly ahead. On a tie
+  // (the common 1–1 case with two voters) nothing is highlighted, because
+  // flagging both as "most backed" tells the team nothing and flagging an
+  // arbitrary one of them is actively misleading.
+  const leadingOfferId = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const pid of losingTeamMembers) {
+      const offerId = selections[pid];
+      if (offerId != null) counts[offerId] = (counts[offerId] ?? 0) + 1;
+    }
+    const max = Math.max(0, ...Object.values(counts));
+    const top = Object.keys(counts)
+      .filter(id => counts[Number(id)] === max)
+      .map(Number);
+    return max > 0 && top.length === 1 ? top[0] : null;
+  }, [losingTeamMembers, selections]);
+
+  // ── Select (non-binding backing signal) ──────────────────────────────────────
   const handleToggleSelect = (offerId: number) => {
     if (!onSelectOffer) return;
     const alreadySelected = selections[currentUserId] === offerId;
@@ -383,8 +406,8 @@ export default function AuctionHouse({
         {/* ── Loser: silent coordination hint ─────────────────────────────────── */}
         {!finalized && isOnLosingTeam && allSubmitted && hasPending && (
           <p className="text-center font-barlow text-xs text-dota-text-muted">
-            Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to show your
-            team which one you&rsquo;re leaning towards — only your team sees it.
+            Tap the <Star className="w-3 h-3 inline align-text-bottom" /> on an offer to back it.
+            Your team sees who&rsquo;s backing what — nobody else does.
           </p>
         )}
 
@@ -420,9 +443,19 @@ export default function AuctionHouse({
                 const showAmount = !isPending;
 
                 const isSelectedByMe = isOnLosingTeam && selections[currentUserId] === offer.id;
-                const selectingTeammates = isOnLosingTeam
-                  ? losingTeamMembers.filter(pid => pid !== currentUserId && selections[pid] === offer.id)
+
+                // Includes the current user — previously filtered out, which meant
+                // starring an offer gave no feedback in the row itself and the
+                // count silently under-reported the team by one. Self is sorted
+                // first so you can find yourself without reading every avatar.
+                const backers = isOnLosingTeam
+                  ? losingTeamMembers
+                      .filter(pid => selections[pid] === offer.id)
+                      .sort((a, b) => (a === currentUserId ? -1 : b === currentUserId ? 1 : 0))
                   : [];
+
+                const isMostBacked =
+                  isOnLosingTeam && !finalized && leadingOfferId === offer.id;
 
                 /* v2 theme: clip-path eats borders and outer box-shadows, so the
                    accepted / selected states are expressed as drop-shadow glows
@@ -432,6 +465,10 @@ export default function AuctionHouse({
                 const stateClass =
                   isAccepted     ? 'drop-shadow-[0_0_14px_rgba(74,155,60,0.45)]' :
                   isRejected     ? 'opacity-50'                                   :
+                  // Team consensus outranks your own pick: a card you starred
+                  // that the team has moved away from should not out-shout the
+                  // one they have converged on.
+                  isMostBacked   ? 'drop-shadow-[0_0_16px_rgba(200,169,81,0.55)]' :
                   isSelectedByMe ? 'drop-shadow-[0_0_10px_rgba(200,169,81,0.40)]' :
                                    '';
 
@@ -467,6 +504,16 @@ export default function AuctionHouse({
                         <div className={isAccepted ? 'badge-radiant self-start' : 'badge-dire self-start'}>
                           {isAccepted ? <CheckCircle2 className="w-3 h-3" /> : null}
                           {offer.status}
+                        </div>
+                      )}
+
+                      {/* The headline signal. The avatar row below says who is
+                          backing what; this says which one is ahead, which is
+                          the thing a teammate scanning the grid actually needs. */}
+                      {isMostBacked && (
+                        <div className="badge-gold self-start">
+                          <Star className="w-3 h-3" fill="currentColor" />
+                          Most backed
                         </div>
                       )}
 
@@ -508,34 +555,47 @@ export default function AuctionHouse({
                         )}
                       </div>
 
-                      {/* Teammates leaning towards this offer.
-                          v2: rendered inline instead of the old floating badge at
-                          -top-3 — the chamfer clip would cut off anything hanging
-                          outside the card, and inline it can't collide with the
-                          From/Selling rows either. Only losing-team viewers. */}
-                      {isOnLosingTeam && !finalized && selectingTeammates.length > 0 && (
+                      {/* Who is backing this offer, including you.
+                          Rendered inline rather than as a floating badge — the
+                          chamfer clip would cut off anything hanging outside the
+                          card, and inline it can't collide with the From/Selling
+                          rows either. Only losing-team viewers see it. */}
+                      {isOnLosingTeam && !finalized && backers.length > 0 && (
                         <div
                           className="flex items-center gap-2 pt-1"
                           role="group"
-                          aria-label={`Leaning towards this offer: ${selectingTeammates
-                            .map(pid => getPlayer(pid)?.username ?? `Player #${pid}`)
-                            .join(', ')}`}
+                          aria-label={`Backing this offer: ${backers
+                            .map(pid =>
+                              pid === currentUserId
+                                ? 'you'
+                                : getPlayer(pid)?.username ?? `Player #${pid}`,
+                            )
+                            .join(', ')}. ${backers.length} of ${losingTeamMembers.length} teammates.`}
                         >
-                          <span className="stat-label">Leaning</span>
+                          <span className="stat-label">Backing</span>
                           <div className="flex -space-x-2">
-                            {selectingTeammates.map(pid => {
+                            {backers.map(pid => {
                               const p = getPlayer(pid);
+                              const isYou = pid === currentUserId;
                               return (
                                 <PlayerAvatar
                                   key={pid}
                                   username={p?.username ?? `Player #${pid}`}
                                   steamAvatar={p?.steam_avatar}
                                   size={22}
-                                  className="ring-2 ring-dota-deep"
+                                  // Gold ring picks you out of the stack at a
+                                  // glance; teammates keep the neutral ring.
+                                  className={isYou ? 'ring-2 ring-dota-gold' : 'ring-2 ring-dota-deep'}
                                 />
                               );
                             })}
                           </div>
+                          {/* Bare avatars don't scale — at five teammates the
+                              stack overlaps into an unreadable smear. The count
+                              stays legible regardless. */}
+                          <span className="font-barlow text-xs font-semibold tabular-nums text-dota-text-muted">
+                            {backers.length}/{losingTeamMembers.length}
+                          </span>
                         </div>
                       )}
                     </div>
