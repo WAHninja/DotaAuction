@@ -222,7 +222,7 @@ export default function AuctionHouse({
                 Auction House
               </h3>
               <p className="font-barlow text-sm text-dota-text-muted italic mt-0.5">
-                &ldquo;Ho ho! You found me!&rdquo;
+                &ldquo;Ah, a customer!&rdquo;
               </p>
             </div>
           </div>
