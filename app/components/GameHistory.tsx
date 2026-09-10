@@ -4,7 +4,9 @@ import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Trophy, Calendar } from 'lucide-react';
 import GoldIcon from '@/app/components/GoldIcon';
+import PlayerAvatar from '@/app/components/PlayerAvatar';
 import type {
+  Player,
   HistoryGame,
   TierLabel,
   DotaGameStat,
@@ -14,8 +16,14 @@ import type {
   OfferStatus,
 } from '@/types';
 
+// Maps username -> steam avatar URL. History identifies players by username
+// (the API returns names, not ids), while avatars live on the Player records
+// held by the match page, so the two are joined by name at render time.
+export type AvatarLookup = Map<string, string | null>;
+
 type UnifiedPlayer = {
   username:    string;
+  steamAvatar: string | null;
   hero:        string | null;
   kills:       number | null;
   deaths:      number | null;
@@ -35,6 +43,7 @@ function buildUnifiedPlayers(
   dotaStats:   DotaGameStat[],
   playerStats: HistoryPlayerStat[],
   offers:      HistoryOffer[],
+  avatars:     AvatarLookup,
 ): UnifiedPlayer[] {
   const dotaByName = new Map(dotaStats.map(s => [s.username, s]));
 
@@ -63,6 +72,9 @@ function buildUnifiedPlayers(
     const d = dotaByName.get(name);
     return {
       username:  name,
+      // Missing entries are fine — PlayerAvatar falls back to a coloured
+      // initial derived from the username, which is stable per player.
+      steamAvatar: avatars.get(name) ?? null,
       hero:      d?.hero    ?? null,
       kills:     d != null  ? d.kills    : null,
       deaths:    d != null  ? d.deaths   : null,
@@ -207,8 +219,16 @@ function TeamScoreboard({
           className={`grid gap-x-4 items-center px-4 py-2.5 transition-colors ${f.hover} ${i < players.length - 1 ? `border-b border-dota-border/25` : ''}`}
           style={{ gridTemplateColumns: cols }}
         >
-          {/* Player + hero */}
+          {/* Player + hero.
+              Avatar first: it identifies the person, which is what you scan a
+              team block for. The hero portrait answers a different question and
+              stays next to the hero name it labels. */}
           <div className="flex items-center gap-2 min-w-0">
+            <PlayerAvatar
+              username={p.username}
+              steamAvatar={p.steamAvatar}
+              size={26}
+            />
             {p.hero && <HeroIcon hero={p.hero} />}
             <div className="flex flex-col min-w-0">
               <span className="font-barlow font-semibold text-sm text-dota-text truncate">{p.username}</span>
@@ -309,10 +329,12 @@ function TeamScoreboard({
 function GameCard({
   game,
   isFinalGame,
+  avatars,
   defaultExpanded = false,
 }: {
   game: HistoryGame;
   isFinalGame: boolean;
+  avatars: AvatarLookup;
   defaultExpanded?: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -337,12 +359,12 @@ function GameCard({
 
   const team1 = (
     <TeamScoreboard key="t1" teamId="team_1" label="Team 1"
-      players={buildUnifiedPlayers(game.team1Members, game.dotaStats, game.playerStats, game.offers)}
+      players={buildUnifiedPlayers(game.team1Members, game.dotaStats, game.playerStats, game.offers, avatars)}
       isWinner={hasWinner && winnerIsTeam1} hasDotaStats={hasDotaStats} hasAuction={hasAuction} />
   );
   const teamA = (
     <TeamScoreboard key="tA" teamId="team_a" label="Team A"
-      players={buildUnifiedPlayers(game.teamAMembers, game.dotaStats, game.playerStats, game.offers)}
+      players={buildUnifiedPlayers(game.teamAMembers, game.dotaStats, game.playerStats, game.offers, avatars)}
       isWinner={hasWinner && !winnerIsTeam1} hasDotaStats={hasDotaStats} hasAuction={hasAuction} />
   );
 
@@ -470,9 +492,13 @@ function GameCard({
 
 export default function GameHistory({
   history,
+  players = [],
   matchFinished = false,
 }: {
   history: HistoryGame[];
+  // Optional so the component still renders standalone; without it every row
+  // simply uses PlayerAvatar's coloured-initial fallback rather than breaking.
+  players?: Player[];
   matchFinished?: boolean;
 }) {
   // history arrives ordered ASC by game id from the API — the last element
@@ -480,6 +506,14 @@ export default function GameHistory({
   // Computed from the unfiltered list so the "Final Game" badge still lands on
   // the right card regardless of what the filter below removes.
   const maxGameNumber = history.length > 0 ? history[history.length - 1].gameNumber : 0;
+
+  // Built once for the whole section rather than per row. Every game card
+  // rebuilds its player list on render, and a linear find() per player per game
+  // would be O(games x players x roster) for data that never changes.
+  const avatars = useMemo<AvatarLookup>(
+    () => new Map(players.map(p => [p.username, p.steam_avatar ?? null])),
+    [players],
+  );
 
   // The in-progress game is excluded. Everything it would show — the live
   // scoreboard, the current auction, each side's gold — is already rendered at
@@ -535,6 +569,7 @@ export default function GameHistory({
             key={game.gameNumber}
             game={game}
             isFinalGame={matchFinished && game.gameNumber === maxGameNumber}
+            avatars={avatars}
             // Newest game open on arrival — the one people came to read.
             defaultExpanded={i === 0}
           />
