@@ -2,12 +2,10 @@
 
 import { useContext, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 
-const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
 import type { DashboardMatch as Match } from '@/types';
 
@@ -15,7 +13,8 @@ import type { DashboardMatch as Match } from '@/types';
 // Types
 // =============================================================================
 
-type Tab = 'ongoing' | 'completed' | 'stats';
+// 'stats' retired — stats now live at /stats, reachable from the header nav.
+type Tab = 'ongoing' | 'completed';
 
 type DashboardTabsProps = {
   ongoingMatches: Match[];
@@ -29,7 +28,6 @@ type DashboardTabsProps = {
 const TAB_LABELS: Record<Tab, string> = {
   ongoing:   'Ongoing',
   completed: 'Completed',
-  stats:     'Stats',
 };
 
 // =============================================================================
@@ -269,7 +267,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const router = useRouter();
   const { user } = useContext(UserContext);
 
-  const [activeTab, setActiveTab]           = useState<Tab>('stats');
+  const [activeTab, setActiveTab]           = useState<Tab>('ongoing');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
   const [myMatchesOnly, setMyMatchesOnly]   = useState(true);
@@ -302,10 +300,11 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   // ── Tab switching ────────────────────────────────────────────────────────────
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    if (tab !== 'stats') router.refresh();
+    router.refresh();
   };
 
-  const showFilter = activeTab === 'ongoing' || activeTab === 'completed';
+  // Both remaining tabs are match lists, so the filter always applies.
+  const showFilter = true;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -313,7 +312,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
       {/* Tab bar — toggle lives here so it doesn't add a separate row */}
       <div className="relative flex justify-center gap-3">
-        {(['stats', 'ongoing', 'completed'] as const).map(tab => (
+        {(['ongoing', 'completed'] as const).map(tab => (
           <TabButton
             key={tab}
             tab={tab}
@@ -329,7 +328,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
       <div className="divider" />
 
       {/* Tab content */}
-      {activeTab === 'stats' && <StatsTab />}
       {activeTab === 'ongoing' && (
         <MatchGrid
           matches={filteredOngoing}
