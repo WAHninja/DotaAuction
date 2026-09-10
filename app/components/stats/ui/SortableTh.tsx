@@ -6,9 +6,9 @@ import Tooltip from './Tooltip';
 /**
  * Sort direction indicator. Neutral chevrons when this column isn't active.
  *
- * Exported because several tables in StatsTab build their own header cells
- * rather than using SortableTh below, and still need a matching indicator.
- * Those are candidates for folding into SortableTh later.
+ * Exported because HeroLeaderboard builds its own left-aligned Hero column
+ * header rather than using SortableTh below, and still needs a matching
+ * indicator. A candidate for folding into SortableTh later.
  */
 export function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
   if (!active) return <ChevronsUpDown className="w-3 h-3 opacity-30" aria-hidden="true" />;
