@@ -76,9 +76,12 @@ export default function PlayerStatsPage() {
   return (
     <Shell>
       <div className="panel p-5 flex items-center gap-4">
+        {/* Previously fell back to null for anyone but the signed-in user,
+            because only /api/me carried an avatar. The stats payload now
+            supplies one per player, so every profile shows a real portrait. */}
         <PlayerAvatar
           username={username}
-          steamAvatar={isMe ? me?.steam_avatar : null}
+          steamAvatar={core.steamAvatar}
           size={56}
         />
         <div className="min-w-0">
@@ -185,7 +188,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         className="inline-flex items-center gap-1 font-barlow text-sm text-dota-text-muted hover:text-dota-gold transition-colors"
       >
         <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-        League Stats
+        General Stats
       </Link>
       {children}
     </main>
