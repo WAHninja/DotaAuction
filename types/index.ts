@@ -173,6 +173,10 @@ export type Me = {
 
 export type PlayerStats = {
   username: string;
+  /** Steam avatar URL, null when no Steam profile is linked. Supplied by
+   *  /api/stats so any stats surface can render a real portrait; PlayerAvatar
+   *  falls back to a username-hashed initial when this is null. */
+  steamAvatar: string | null;
   gamesPlayed: number;
   gamesWon: number;
   timesOffered: number;
