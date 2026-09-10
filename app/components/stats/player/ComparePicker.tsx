@@ -85,6 +85,11 @@ export default function ComparePicker({ payload, subject }: {
   const left  = forPlayer(payload, subject);
   const right = other ? forPlayer(payload, other) : null;
 
+  // The payload carries an avatar per player, so both sides get a real
+  // portrait instead of the initials fallback.
+  const leftAvatar  = left.core?.steamAvatar ?? null;
+  const rightAvatar = right?.core?.steamAvatar ?? null;
+
   // Oriented from the subject's side, so wins are always the subject's wins.
   const h2h = other
     ? headToHeadFor(payload.headToHead, subject).find(r => r.opponent === other) ?? null
@@ -128,11 +133,11 @@ export default function ComparePicker({ payload, subject }: {
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4 border-b border-dota-border/40">
             <div className="flex items-center gap-2 min-w-0 justify-end">
               <span className="font-barlow font-bold text-dota-text truncate">{subject}</span>
-              <PlayerAvatar username={subject} size={28} />
+              <PlayerAvatar username={subject} steamAvatar={leftAvatar} size={28} />
             </div>
             <span className="stat-label px-2">vs</span>
             <div className="flex items-center gap-2 min-w-0">
-              <PlayerAvatar username={other} size={28} />
+              <PlayerAvatar username={other} steamAvatar={rightAvatar} size={28} />
               <span className="font-barlow font-bold text-dota-text truncate">{other}</span>
             </div>
           </div>
