@@ -4,6 +4,8 @@ import { useStats } from '@/app/components/stats/StatsProvider';
 import YouCard from '@/app/components/stats/league/YouCard';
 import StandingsTable from '@/app/components/stats/league/StandingsTable';
 import LeagueVitals from '@/app/components/stats/league/LeagueVitals';
+import HeroLeaderboard from '@/app/components/stats/league/HeroLeaderboard';
+import TopCombos from '@/app/components/stats/league/TopCombos';
 
 /**
  * /stats — the league view.
@@ -51,6 +53,12 @@ export default function StatsPage() {
         dotaStats={payload.playerDotaStats}
         highlightUsername={me?.username ?? null}
       />
+
+      {/* Owned by heroes and by pairings rather than by players, so both belong
+          to the league scope and have no equivalent on a player page. */}
+      <HeroLeaderboard heroStats={payload.heroStats} />
+
+      <TopCombos combos={payload.topWinningCombos} />
     </main>
   );
 }
