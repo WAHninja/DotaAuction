@@ -8,7 +8,7 @@ import HeroLeaderboard from '@/app/components/stats/league/HeroLeaderboard';
 import TopCombos from '@/app/components/stats/league/TopCombos';
 
 /**
- * /stats — the league view.
+ * /stats — the general (league-wide) view.
  *
  * Global is the default scope: you land on the whole league, with your own row
  * promoted into YouCard at the top so the personal view costs no navigation.
@@ -40,7 +40,7 @@ export default function StatsPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <header className="text-center space-y-2">
-        <h1 className="font-cinzel text-3xl font-bold text-dota-gold">League Stats</h1>
+        <h1 className="font-cinzel text-3xl font-bold text-dota-gold">General Stats</h1>
         <div className="divider-gold w-48 mx-auto" />
       </header>
 
