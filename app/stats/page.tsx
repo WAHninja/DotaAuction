@@ -1,6 +1,6 @@
 'use client';
 
-import StatsProvider, { useStats } from '@/app/components/stats/StatsProvider';
+import { useStats } from '@/app/components/stats/StatsProvider';
 import YouCard from '@/app/components/stats/league/YouCard';
 import StandingsTable from '@/app/components/stats/league/StandingsTable';
 import LeagueVitals from '@/app/components/stats/league/LeagueVitals';
@@ -12,20 +12,11 @@ import LeagueVitals from '@/app/components/stats/league/LeagueVitals';
  * promoted into YouCard at the top so the personal view costs no navigation.
  * The standings table below is the index you reach individual players through.
  *
- * StatsProvider is mounted here rather than inside each panel, so the payload
- * is fetched once for the page. It is also mounted on the player route; moving
- * it above both in a shared layout would let a click through from the table
- * reuse the fetch entirely, which is worth doing once the player view settles.
+ * StatsProvider is mounted in app/stats/layout.tsx, above both this route and
+ * the player route, so navigating between them reuses the same fetch instead of
+ * re-requesting the payload each time.
  */
 export default function StatsPage() {
-  return (
-    <StatsProvider>
-      <StatsPageInner />
-    </StatsProvider>
-  );
-}
-
-function StatsPageInner() {
   const { payload, me, loading, error } = useStats();
 
   if (loading) {
