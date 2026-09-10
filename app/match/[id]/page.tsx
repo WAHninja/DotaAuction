@@ -472,6 +472,7 @@ export default function MatchPage() {
 
       <GameHistory
         history={history}
+        players={players}
         matchFinished={isFinished}
       />
     </>
