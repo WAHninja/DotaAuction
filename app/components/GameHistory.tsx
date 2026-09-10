@@ -5,6 +5,8 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Trophy, Calendar } from 'lucide-react';
 import GoldIcon from '@/app/components/GoldIcon';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
+// Shared with StatsTab — this helper previously existed verbatim in both files.
+import { heroIconUrl } from '@/lib/stats/format';
 import type {
   Player,
   HistoryGame,
@@ -84,11 +86,6 @@ function buildUnifiedPlayers(
       sellerInfo: sellerByName.get(name) ?? null,
     };
   });
-}
-
-function heroIconUrl(hero: string): string {
-  const name = hero.replace(/^npc_dota_hero_/, '');
-  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/heroes/${name}_sb.png`;
 }
 
 function HeroIcon({ hero }: { hero: string }) {
