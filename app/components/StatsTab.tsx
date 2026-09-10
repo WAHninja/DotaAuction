@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  ChevronUp, ChevronDown, ChevronsUpDown,
   Zap, Swords, ShoppingCart, ChevronDown as SelectChevron,
   Coins, TrendingUp, Shield,
 } from 'lucide-react'
@@ -20,223 +19,26 @@ import type {
 } from '@/types';
 
 // =============================================================================
-// Constants
+// Shared stats primitives
 // =============================================================================
+//
+// Constants, formatters and presentational components were extracted out of
+// this file so the forthcoming league and player views share one definition
+// instead of each growing its own. Nothing below changed behaviour — these are
+// the same implementations, moved.
+//
+// SortableThButton was renamed SortableTh on the way out; SortIcon is now an
+// implementation detail of that module and no longer exported.
 
-const MIN_GAMES_FOR_RATE = 3;
-const MIN_PICKS_FOR_RATE = 3;
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-function pct(success: number, total: number): number {
-  return total > 0 ? +(success / total * 100).toFixed(1) : 0;
-}
-
-function pctColour(value: number): string {
-  if (value >= 60) return 'text-dota-radiant-light bg-dota-radiant/10 border-dota-radiant/30';
-  if (value >= 40) return 'text-dota-gold       bg-dota-gold/10       border-dota-gold/30';
-  return                  'text-dota-dire-light  bg-dota-dire/10       border-dota-dire/30';
-}
-
-function kdaColour(kda: number): string {
-  if (kda >= 4) return 'text-dota-gold';
-  if (kda >= 2) return 'text-dota-radiant-light';
-  return 'text-dota-text-muted';
-}
-
-function formatNW(val: number): string {
-  if (val >= 1000) {
-    const k = val / 1000;
-    return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-  }
-  return `${val}`;
-}
-
-function heroIconUrl(hero: string): string {
-  const name = hero.replace(/^npc_dota_hero_/, '');
-  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/heroes/${name}_sb.png`;
-}
-
-function heroDisplayName(hero: string): string {
-  return hero
-    .replace(/^npc_dota_hero_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase());
-}
-
-// =============================================================================
-// Shared sub-components
-// =============================================================================
-
-// ── Tooltip ───────────────────────────────────────────────────────────────────
-// Downward-facing — avoids clipping inside overflow-x-auto scroll containers.
-// overflow-x-auto promotes overflow: visible to auto on the perpendicular axis,
-// which clips upward-facing tooltips. Pointing down keeps them in-bounds.
-function Tooltip({ id, content, children, align = 'center' }: {
-  id: string;
-  content: string;
-  children: ReactNode;
-  align?: 'center' | 'right';
-}) {
-  const bubblePos = align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2';
-  const arrowPos  = align === 'right' ? 'right-4'  : 'left-1/2 -translate-x-1/2';
-
-  return (
-    <div className="relative group inline-flex justify-center">
-      {children}
-      <div
-        id={id}
-        role="tooltip"
-        className={`
-          pointer-events-none
-          absolute top-full mt-2 z-20 ${bubblePos}
-          w-56 px-3 py-2 rounded
-          bg-dota-raised border border-dota-border-bright
-          font-barlow text-xs text-dota-text-muted leading-snug
-          opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
-          transition-opacity duration-150
-          text-left whitespace-normal
-        `}
-      >
-        <span
-          aria-hidden="true"
-          className={`absolute bottom-full ${arrowPos} border-4 border-transparent border-b-dota-border-bright`}
-        />
-        {content}
-      </div>
-    </div>
-  );
-}
-
-// ── PctBadge ──────────────────────────────────────────────────────────────────
-function PctBadge({ success, total, minGames = 0 }: {
-  success: number; total: number; minGames?: number;
-}) {
-  if (total === 0) return <span className="text-dota-text-dim text-xs">—</span>;
-  if (total < minGames) {
-    return (
-      <span className="text-dota-text-dim text-xs" title={`Need ${minGames} (has ${total})`}>—</span>
-    );
-  }
-  const rate = pct(success, total);
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-barlow text-xs font-semibold ${pctColour(rate)}`}>
-      {rate}%
-      <span className="text-[10px] opacity-50 font-normal">{success}/{total}</span>
-    </span>
-  );
-}
-
-// ── SortIcon ──────────────────────────────────────────────────────────────────
-function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-  if (!active) return <ChevronsUpDown className="w-3 h-3 opacity-30" aria-hidden="true" />;
-  return dir === 'desc'
-    ? <ChevronDown className="w-3 h-3 text-dota-gold" aria-hidden="true" />
-    : <ChevronUp   className="w-3 h-3 text-dota-gold" aria-hidden="true" />;
-}
-
-// ── RankedList ────────────────────────────────────────────────────────────────
-
-function RankedList({ items, emptyMessage }: {
-  items: { name: string; primary: string; sub?: string }[];
-  emptyMessage: string;
-}) {
-  if (items.length === 0) {
-    return <p className="font-barlow text-xs text-dota-text-dim py-4 text-center">{emptyMessage}</p>;
-  }
-  return (
-    <ul className="space-y-2">
-      {items.map((item, i) => (
-        <li key={`${item.name}-${i}`} className="panel-sunken px-3 py-2.5 flex items-center gap-3">
-          <RankMedal rank={i + 1} size={24} />
-          <span className="font-barlow font-semibold text-sm text-dota-text truncate flex-1 min-w-0">
-            {item.name}
-          </span>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="font-barlow font-bold text-sm text-dota-gold tabular-nums">
-              {item.primary}
-            </span>
-            {item.sub && (
-              <span className="font-barlow text-[10px] text-dota-text-dim tabular-nums">
-                {item.sub}
-              </span>
-            )}
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// ── CardHeader ────────────────────────────────────────────────────────────────
-function CardHeader({ icon: Icon, iconClass, title, subtitle }: {
-  icon: React.ElementType;
-  iconClass: string;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
-      <Icon className={`w-4 h-4 shrink-0 ${iconClass}`} aria-hidden="true" />
-      <div>
-        <h3 className="font-cinzel text-lg font-bold text-dota-gold">{title}</h3>
-        <p className="font-barlow text-xs text-dota-text-muted mt-0.5">{subtitle}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── SortableThButton ──────────────────────────────────────────────────────────
-// Generic sortable <th> used in both Dota tables to avoid repetition.
-function SortableThButton<K extends string>({
-  colKey, label, sublabel, tooltip, tooltipId, sortKey, sortDir, onSort, align = 'center',
-}: {
-  colKey: K;
-  label: string;
-  sublabel?: string;
-  tooltip: string;
-  tooltipId: string;
-  sortKey: K;
-  sortDir: 'asc' | 'desc';
-  onSort: (key: K) => void;
-  align?: 'center' | 'right';
-}) {
-  const isActive = sortKey === colKey;
-  return (
-    <th
-      scope="col"
-      aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`px-3 py-3 ${align === 'right' ? 'text-right' : 'text-center'}`}
-    >
-      <Tooltip id={tooltipId} content={tooltip} align={align === 'right' ? 'right' : 'center'}>
-        <button
-          type="button"
-          onClick={() => onSort(colKey)}
-          aria-describedby={tooltipId}
-          className={`
-            flex flex-col ${align === 'right' ? 'items-end' : 'items-center'} gap-0.5 mx-auto
-            font-barlow font-semibold text-xs whitespace-nowrap transition-colors
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dota-gold
-            focus-visible:ring-offset-1 focus-visible:ring-offset-dota-deep rounded
-            ${isActive ? 'text-dota-gold' : 'text-dota-text-muted hover:text-dota-text'}
-          `}
-        >
-          <span className="flex items-center gap-1">
-            {label}
-            <SortIcon active={isActive} dir={sortDir} />
-          </span>
-          {sublabel && (
-            <span className="text-[10px] opacity-40 tracking-normal normal-case font-normal">
-              {sublabel}
-            </span>
-          )}
-        </button>
-      </Tooltip>
-    </th>
-  );
-}
+import { MIN_GAMES_FOR_RATE, MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
+import {
+  pct, pctColour, kdaColour, heroIconUrl, heroDisplayName,
+} from '@/lib/stats/format';
+import Tooltip from '@/app/components/stats/ui/Tooltip';
+import PctBadge from '@/app/components/stats/ui/PctBadge';
+import CardHeader from '@/app/components/stats/ui/CardHeader';
+import RankedList from '@/app/components/stats/ui/RankedList';
+import SortableTh, { SortIcon } from '@/app/components/stats/ui/SortableTh';
 
 // =============================================================================
 // ── Tab toggle ─────────────────────────────────────────────────────────────────
@@ -412,37 +214,37 @@ function DotaStatsTab({
                       </button>
                     </th>
 
-                    <SortableThButton
+                    <SortableTh
                       colKey="games" label="Games" sortKey={playerSortKey} sortDir={playerSortDir}
                       onSort={handlePlayerSort}
                       tooltip="Number of games with Dota stats reported for this player. May be fewer than total games played if the plugin wasn't running."
                       tooltipId="pdota-col-games"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgKda" label="Avg KDA" sortKey={playerSortKey} sortDir={playerSortDir}
                       onSort={handlePlayerSort}
                       tooltip="Average KDA ratio — (kills + assists) / max(deaths, 1). Default sort column."
                       tooltipId="pdota-col-kda"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgKills" label="Avg K" sortKey={playerSortKey} sortDir={playerSortDir}
                       onSort={handlePlayerSort}
                       tooltip="Average kills per game."
                       tooltipId="pdota-col-kills"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgDeaths" label="Avg D" sortKey={playerSortKey} sortDir={playerSortDir}
                       onSort={handlePlayerSort}
                       tooltip="Average deaths per game."
                       tooltipId="pdota-col-deaths"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgAssists" label="Avg A" sortKey={playerSortKey} sortDir={playerSortDir}
                       onSort={handlePlayerSort}
                       tooltip="Average assists per game."
                       tooltipId="pdota-col-assists"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="topKills" label="Top Kills" sublabel="best game" sortKey={playerSortKey} sortDir={playerSortDir}
                       onSort={handlePlayerSort}
                       tooltip="Most kills this player has recorded in a single game, and the hero they were playing."
@@ -580,43 +382,43 @@ function DotaStatsTab({
                       </button>
                     </th>
 
-                    <SortableThButton
+                    <SortableTh
                       colKey="picks" label="Picks" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
                       tooltip="Number of times this hero has been picked across all finished games."
                       tooltipId="hero-col-picks"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="winRate" label="Win Rate" sublabel={`min. ${MIN_PICKS_FOR_RATE} picks`}
                       sortKey={heroSortKey} sortDir={heroSortDir} onSort={handleHeroSort}
                       tooltip={`Win rate of this hero's team. Only shown when the hero has been picked ${MIN_PICKS_FOR_RATE}+ times to avoid small-sample noise.`}
                       tooltipId="hero-col-winrate"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgKda" label="Avg KDA" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
                       tooltip="Average KDA ratio across all games on this hero — (kills + assists) / max(deaths, 1)."
                       tooltipId="hero-col-kda"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgKills" label="Avg K" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
                       tooltip="Average kills per game on this hero."
                       tooltipId="hero-col-kills"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgDeaths" label="Avg D" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
                       tooltip="Average deaths per game on this hero."
                       tooltipId="hero-col-deaths"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="avgAssists" label="Avg A" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
                       tooltip="Average assists per game on this hero."
                       tooltipId="hero-col-assists"
                     />
-                    <SortableThButton
+                    <SortableTh
                       colKey="topKills" label="Top Kills" sublabel="best game" sortKey={heroSortKey} sortDir={heroSortDir}
                       onSort={handleHeroSort}
                       tooltip="Most kills ever recorded on this hero in a single game, and who did it."
