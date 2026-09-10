@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Zap, Swords, ShoppingCart, ChevronDown as SelectChevron,
   Coins, TrendingUp, Shield,
@@ -39,6 +39,7 @@ import PctBadge from '@/app/components/stats/ui/PctBadge';
 import CardHeader from '@/app/components/stats/ui/CardHeader';
 import RankedList from '@/app/components/stats/ui/RankedList';
 import SortableTh, { SortIcon } from '@/app/components/stats/ui/SortableTh';
+import StatsProvider, { useStats } from '@/app/components/stats/StatsProvider';
 
 // =============================================================================
 // ── Tab toggle ─────────────────────────────────────────────────────────────────
@@ -604,7 +605,9 @@ function MatchStatsTab({
   winStreaks,
   headToHead,
   winTypeStats,
+  currentUsername,
 }: {
+  currentUsername: string | null;
   players: PlayerStats[];
   combos: TeamCombo[];
   acquisitionImpact: AcquisitionImpact[];
@@ -615,7 +618,11 @@ function MatchStatsTab({
   const [sortKey, setSortKey]             = useState<MatchSortKey>('gamesWinRate');
   const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('desc');
   const [showAllCombos, setShowAllCombos] = useState(false);
-  const [h2hSelected, setH2hSelected]     = useState<string>('');
+  // Pre-selected to the signed-in user — the thing /api/me was always fetched
+  // for and then discarded. Lazy initialiser so it is read once on mount rather
+  // than on every render, and falls back to the empty "pick a player" state
+  // when nobody is signed in.
+  const [h2hSelected, setH2hSelected]     = useState<string>(() => currentUsername ?? '');
 
   const handleSort = (key: MatchSortKey) => {
     if (sortKey === key) {
@@ -1096,43 +1103,23 @@ function MatchStatsTab({
 
 type StatsTabProps = Record<string, never>;
 
-export default function StatsTab(_props: StatsTabProps) {
-  const [players, setPlayers]                   = useState<PlayerStats[]>([]);
-  const [combos, setCombos]                     = useState<TeamCombo[]>([]);
-  const [acquisitionImpact, setAcquisition]     = useState<AcquisitionImpact[]>([]);
-  const [winStreaks, setWinStreaks]             = useState<WinStreak[]>([]);
-  const [headToHead, setHeadToHead]             = useState<HeadToHead[]>([]);
-  const [winTypeStats, setWinTypeStats]         = useState<WinTypeStats[]>([]);
-  const [heroStats, setHeroStats]               = useState<HeroStat[]>([]);
-  const [playerDotaStats, setPlayerDotaStats]   = useState<PlayerDotaStat[]>([]);
-  const [activeView, setActiveView]             = useState<StatsView>('match');
-  const [loading, setLoading]                   = useState(true);
-  const [error, setError]                       = useState<string | null>(null);
+function StatsTabInner(_props: StatsTabProps) {
+  // Data now comes from StatsProvider (mounted by the default export below)
+  // rather than eight useState calls fed by a fetch in here. The eight were
+  // always written together from one response, and any second stats surface
+  // would have had to duplicate all of them plus the request.
+  const { payload, me, loading, error } = useStats();
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/stats').then(r => r.json()),
-      fetch('/api/me').then(r => r.json()),
-    ])
-      .then(([statsData, meData]) => {
-        setPlayers(statsData.players ?? []);
-        setCombos(statsData.topWinningCombos ?? []);
-        setAcquisition(statsData.acquisitionImpact ?? []);
-        setWinStreaks(statsData.winStreaks ?? []);
-        setHeadToHead(statsData.headToHead ?? []);
-        setWinTypeStats(statsData.winTypeStats ?? []);
-        setHeroStats(statsData.heroStats ?? []);
-        setPlayerDotaStats(statsData.playerDotaStats ?? []);
-        // Pre-select the signed-in user in the H2H picker — passed down to
-        // MatchStatsTab via initial state only; the tab manages it internally.
-        void meData; // meData used for h2hSelected pre-selection below if needed
-      })
-      .catch(err => {
-        console.error(err);
-        setError('Failed to load statistics');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const [activeView, setActiveView] = useState<StatsView>('match');
+
+  const players           = payload?.players           ?? [];
+  const combos            = payload?.topWinningCombos  ?? [];
+  const acquisitionImpact = payload?.acquisitionImpact ?? [];
+  const winStreaks        = payload?.winStreaks        ?? [];
+  const headToHead        = payload?.headToHead        ?? [];
+  const winTypeStats      = payload?.winTypeStats      ?? [];
+  const heroStats         = payload?.heroStats         ?? [];
+  const playerDotaStats   = payload?.playerDotaStats   ?? [];
 
   if (loading) {
     return (
@@ -1173,6 +1160,7 @@ export default function StatsTab(_props: StatsTabProps) {
             winStreaks={winStreaks}
             headToHead={headToHead}
             winTypeStats={winTypeStats}
+            currentUsername={me?.username ?? null}
           />
         ) : (
           <DotaStatsTab
@@ -1183,5 +1171,20 @@ export default function StatsTab(_props: StatsTabProps) {
       </div>
 
     </div>
+  );
+}
+
+/**
+ * Mounts the shared data provider around the tab content.
+ *
+ * Kept as a wrapper here so the provider's lifetime matches the tab today. When
+ * the league and player routes land, StatsProvider moves up to wrap both, and
+ * navigating between them will reuse the same fetch rather than re-requesting.
+ */
+export default function StatsTab(props: StatsTabProps) {
+  return (
+    <StatsProvider>
+      <StatsTabInner {...props} />
+    </StatsProvider>
   );
 }
