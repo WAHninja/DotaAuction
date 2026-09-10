@@ -31,6 +31,10 @@ type StatsCache = {
 
 type PlayerRow = {
   username: string;
+  /** Steam avatar URL, null when the account has no Steam profile linked.
+   *  Included so the standings table and player pages can show real portraits
+   *  rather than falling back to initials for everyone but the signed-in user. */
+  steamAvatar: string | null;
   gamesPlayed: number;
   gamesWon: number;
   timesSold: number;
@@ -134,8 +138,8 @@ export async function GET() {
     ] = await Promise.all([
 
       // 1. All users — builds the base playersMap
-      db.query<{ id: number; username: string }>(
-        `SELECT id, username FROM users`
+      db.query<{ id: number; username: string; steam_avatar: string | null }>(
+        `SELECT id, username, steam_avatar FROM users`
       ),
 
       // 2. All match participation rows — for matchesPlayed count
@@ -439,6 +443,7 @@ export async function GET() {
 
     const playersMap = new Map<number, {
       username: string;
+      steamAvatar: string | null;
       matchesPlayed: Set<number>;
       gamesPlayed: number;
       gamesWon: number;
@@ -454,6 +459,7 @@ export async function GET() {
     for (const user of usersResult.rows) {
       playersMap.set(user.id, {
         username:                user.username,
+        steamAvatar:             user.steam_avatar ?? null,
         matchesPlayed:           new Set<number>(),
         gamesPlayed:             0,
         gamesWon:                0,
@@ -543,6 +549,7 @@ export async function GET() {
 
     const players: PlayerRow[] = Array.from(playersMap.values()).map(p => ({
       username:          p.username,
+      steamAvatar:       p.steamAvatar,
       gamesPlayed:       p.gamesPlayed,
       gamesWon:          p.gamesWon,
       timesSold:         p.timesSold,
