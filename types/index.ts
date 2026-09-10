@@ -145,6 +145,32 @@ export type HistoryGame = {
 // Stats
 // ---------------------------------------------------------------------------
 
+/**
+ * The full /api/stats response, as the client sees it.
+ *
+ * The route has its own internal StatsPayload built from raw DB row types; this
+ * is the client-facing shape, composed of the display types already declared in
+ * this file. Declaring it here means every stats surface shares one definition
+ * instead of each re-listing the eight arrays with its own useState.
+ */
+export type StatsPayload = {
+  players:           PlayerStats[];
+  topWinningCombos:  TeamCombo[];
+  acquisitionImpact: AcquisitionImpact[];
+  winStreaks:        WinStreak[];
+  headToHead:        HeadToHead[];
+  winTypeStats:      WinTypeStats[];
+  heroStats:         HeroStat[];
+  playerDotaStats:   PlayerDotaStat[];
+};
+
+/** The signed-in user, as returned by /api/me under the `user` key. */
+export type Me = {
+  id:           number;
+  username:     string;
+  steam_avatar?: string | null;
+};
+
 export type PlayerStats = {
   username: string;
   gamesPlayed: number;
