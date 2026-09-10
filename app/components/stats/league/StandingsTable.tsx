@@ -162,6 +162,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                     >
                       <PlayerAvatar
                         username={row.username}
+                        steamAvatar={row.steamAvatar}
                         size={24}
                         className={isYou ? 'ring-2 ring-dota-gold' : ''}
                       />
