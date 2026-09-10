@@ -3,13 +3,17 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import StatsProvider, { useStats } from '@/app/components/stats/StatsProvider';
+import { useStats } from '@/app/components/stats/StatsProvider';
 import { forPlayer, rankOf, leagueAverage, headToHeadFor } from '@/lib/stats/select';
-import { pct, formatNW, heroDisplayName } from '@/lib/stats/format';
+import { pct, formatNW } from '@/lib/stats/format';
 import { MIN_GAMES_FOR_RATE } from '@/lib/stats/constants';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
+import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
+import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
+import FormPanel from '@/app/components/stats/player/FormPanel';
+import ComparePicker from '@/app/components/stats/player/ComparePicker';
 
 /**
  * /stats/[username] — the player view.
@@ -25,14 +29,6 @@ import PlayerAvatar from '@/app/components/PlayerAvatar';
  * passes to server pages.
  */
 export default function PlayerStatsPage() {
-  return (
-    <StatsProvider>
-      <PlayerStatsInner />
-    </StatsProvider>
-  );
-}
-
-function PlayerStatsInner() {
   const params = useParams<{ username: string }>();
   // Route segments arrive percent-encoded; usernames may contain characters
   // that were escaped on the way in (the standings table encodes them).
@@ -48,7 +44,8 @@ function PlayerStatsInner() {
     return <Shell><p className="panel p-8 text-center font-barlow text-dota-dire-light">{error ?? 'Failed to load statistics'}</p></Shell>;
   }
 
-  const { core, dota } = forPlayer(payload, username);
+  const player = forPlayer(payload, username);
+  const { core, dota } = player;
 
   // An unknown username is a normal outcome — a stale link, or a player who has
   // not completed a game yet — so it gets a plain message rather than notFound(),
@@ -119,12 +116,17 @@ function PlayerStatsInner() {
         />
       </div>
 
-      {dota?.topKillsHero && (
-        <p className="font-barlow text-sm text-dota-text-muted text-center">
-          Best game: <span className="font-bold text-dota-gold tabular-nums">{dota.topKills} kills</span>
-          {' '}on {heroDisplayName(dota.topKillsHero)}
-        </p>
-      )}
+      <EconomyPanel core={core} />
+
+      <PerformancePanel dota={dota} />
+
+      <FormPanel
+        streak={player.streak}
+        acquisition={player.acquisition}
+        winTypes={player.winTypes}
+      />
+
+      <ComparePicker payload={payload} subject={username} />
 
       <section className="panel overflow-hidden">
         <div className="px-5 py-4 border-b border-dota-border">
