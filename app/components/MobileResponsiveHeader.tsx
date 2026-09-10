@@ -115,7 +115,7 @@ function AccentBar({ pathname }: { pathname: string }) {
 type NavUser = { username: string; steam_avatar?: string | null } | null;
 
 // =============================================================================
-// DesktopPrimaryLinks — Dashboard
+// DesktopPrimaryLinks — Dashboard + Stats
 // =============================================================================
 
 type DesktopPrimaryLinksProps = {
@@ -131,6 +131,17 @@ function DesktopPrimaryLinks({ pathname }: DesktopPrimaryLinksProps) {
       >
         <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
         Dashboard
+      </Link>
+
+      {/* Promoted out of the user dropdown. Stats is a destination people go to
+          directly rather than an account setting, and burying it behind an
+          avatar menu made it effectively undiscoverable. */}
+      <Link
+        href="/stats"
+        className={`${navLink('/stats', pathname)} flex items-center gap-1.5`}
+      >
+        <BarChart3 className="w-3.5 h-3.5" aria-hidden="true" />
+        Stats
       </Link>
     </>
   );
@@ -238,18 +249,6 @@ function UserMenuDropdown({ user, hasUnseen, pathname }: UserMenuDropdownProps) 
             </p>
             <p className="font-barlow font-bold text-dota-gold truncate">{user.username}</p>
           </div>
-
-          {/* Stats moved out of the dashboard tab bar and onto its own route,
-              so it needs a way in from the nav. */}
-          <Link
-            href="/stats"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className={dropdownItemClass('/stats', pathname)}
-          >
-            <BarChart3 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            Stats
-          </Link>
 
           <Link
             href="/profile"
