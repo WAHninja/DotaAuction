@@ -50,16 +50,25 @@ export default function YouCard() {
   return (
     <div className="panel p-5 space-y-4">
       <div className="flex items-center gap-3">
-        <PlayerAvatar username={me.username} steamAvatar={me.steam_avatar} size={44} />
+        <PlayerAvatar
+          username={me.username}
+          steamAvatar={core.steamAvatar ?? me.steam_avatar}
+          size={44}
+        />
         <div className="min-w-0">
           <p className="stat-label">Your record</p>
           <h2 className="font-cinzel text-xl font-bold text-dota-gold truncate">{me.username}</h2>
         </div>
+        {/* A muted text link here read as a caption rather than an action, and
+            it is the primary route from the league view into your own detail —
+            so it takes the gold secondary button treatment used elsewhere for
+            real actions, at full width on narrow screens where the header
+            wraps. */}
         <Link
           href={`/stats/${encodeURIComponent(me.username)}`}
-          className="ml-auto shrink-0 flex items-center gap-1 font-barlow text-xs font-semibold text-dota-text-muted hover:text-dota-gold transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dota-gold"
+          className="btn-secondary ml-auto shrink-0 flex items-center gap-1.5 text-xs py-1.5 px-3"
         >
-          Full breakdown
+          View full breakdown
           <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
         </Link>
       </div>
