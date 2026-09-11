@@ -156,6 +156,7 @@ export type HistoryGame = {
 export type StatsPayload = {
   leagueTotals:      LeagueTotals;
   players:           PlayerStats[];
+  teammateSynergy:   TeammateSynergy[];
   topWinningCombos:  TeamCombo[];
   acquisitionImpact: AcquisitionImpact[];
   winStreaks:        WinStreak[];
@@ -247,6 +248,24 @@ export type WinStreak = {
   username: string;
   longestStreak: number;
   matchId: number;
+};
+
+/**
+ * A pair of players and how they fare on the same side — the companion to
+ * HeadToHead, which records them on opposite sides.
+ *
+ * Stored with an arbitrary A/B orientation, but unlike head-to-head the outcome
+ * is shared, so there is no per-side win column to disambiguate.
+ */
+export type TeammateSynergy = {
+  playerAId: number;
+  playerA: string;
+  playerBId: number;
+  playerB: string;
+  gamesTogether: number;
+  winsTogether: number;
+  /** Percentage to one decimal, computed server-side. */
+  winRate: number;
 };
 
 export type HeadToHead = {
