@@ -6,6 +6,7 @@ import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
 import { computeSynergy } from '@/lib/stats/compute/synergy';
 import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
 import { computeLastStands } from '@/lib/stats/compute/last-stand';
+import { computeLeagueRecords, type LeagueRecord } from '@/lib/stats/compute/records';
 import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 
 // ---------------------------------------------------------------------------
@@ -23,6 +24,7 @@ import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 
 type StatsPayload = {
   leagueTotals: LeagueTotalsRow;
+  leagueRecords: LeagueRecordsRow;
   players: PlayerRow[];
   teammateSynergy: SynergyRow[];
   winStreaks: WinStreakRow[];
@@ -65,6 +67,21 @@ type SynergyRow = {
   winsTogether: number;
   /** Percentage to one decimal. Computed here so every consumer agrees. */
   winRate: number;
+};
+
+/** A league record with its player resolved to a username for display. */
+type NamedRecordRow = {
+  matchId: number;
+  value: number;
+  player: string | null;
+  detail: number | null;
+};
+
+type LeagueRecordsRow = {
+  shortestMatch: NamedRecordRow | null;
+  longestMatch: NamedRecordRow | null;
+  leanestOutrightWin: NamedRecordRow | null;
+  fastestGoldWin: NamedRecordRow | null;
 };
 
 type PlayerRow = {
@@ -175,6 +192,7 @@ export async function GET() {
       usersResult,
       matchPlayersResult,
       matchTotalsResult,
+      matchOutcomesResult,
       gamesResult,
       offersResult,
       winStreakResult,
@@ -191,8 +209,8 @@ export async function GET() {
       ),
 
       // 2. All match participation rows — for matchesPlayed count
-      db.query<{ match_id: number; user_id: number }>(
-        `SELECT match_id, user_id FROM match_players`
+      db.query<{ match_id: number; user_id: number; gold: number }>(
+        `SELECT match_id, user_id, gold FROM match_players`
       ),
 
       // 2b. Match-level totals for the league vitals strip.
@@ -211,6 +229,16 @@ export async function GET() {
            COUNT(*) FILTER (WHERE win_type = 'gold_threshold')::int AS gold_threshold_wins
          FROM matches
          WHERE status = 'finished'`
+      ),
+
+      // 2c. Per-match outcomes, for the league records. The aggregate above
+      // counts them; this needs the individual winner and win type.
+      db.query<{
+        id: number;
+        winner_id: number | null;
+        win_type: 'last_standing' | 'gold_threshold' | null;
+      }>(
+        `SELECT id, winner_id, win_type FROM matches WHERE status = 'finished'`
       ),
 
       // 3. All finished games — for win/loss counts and team combo tracking
@@ -649,8 +677,34 @@ export async function GET() {
       }];
     });
 
+    const records = computeLeagueRecords(
+      matchOutcomesResult.rows,
+      gamesResult.rows,
+      matchPlayersResult.rows,
+    );
+
+    // Names are attached here rather than in the computation, keeping that a
+    // pure function of ids.
+    const nameRecord = (r: LeagueRecord | null): NamedRecordRow | null =>
+      r === null ? null : {
+        matchId: r.matchId,
+        value:   r.value,
+        player:  r.playerId === null
+          ? null
+          : playersMap.get(r.playerId)?.username ?? null,
+        detail:  r.detail,
+      };
+
+    const leagueRecords: LeagueRecordsRow = {
+      shortestMatch:      nameRecord(records.shortestMatch),
+      longestMatch:       nameRecord(records.longestMatch),
+      leanestOutrightWin: nameRecord(records.leanestOutrightWin),
+      fastestGoldWin:     nameRecord(records.fastestGoldWin),
+    };
+
     const data: StatsPayload = {
       leagueTotals,
+      leagueRecords,
       players,
       teammateSynergy,
       winStreaks,
