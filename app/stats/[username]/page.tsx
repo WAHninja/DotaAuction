@@ -11,6 +11,7 @@ import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
+import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
 import FormPanel from '@/app/components/stats/player/FormPanel';
 import ComparePicker from '@/app/components/stats/player/ComparePicker';
@@ -119,11 +120,15 @@ export default function PlayerStatsPage() {
         <StatWithRank
           label="Times sold"
           value={String(core.timesSold)}
-          leagueAvg={`${core.timesOffered} offers received`}
+          // Raw offers received is a misleading companion figure now that
+          // Selection below distinguishes forced offers from real choices.
+          leagueAvg={`${core.selectionCount} picked by choice`}
         />
       </div>
 
       <EconomyPanel core={core} />
+
+      <SelectionPanel core={core} />
 
       <PerformancePanel dota={dota} />
 
