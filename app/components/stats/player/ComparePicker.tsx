@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { ChevronDown as SelectChevron } from 'lucide-react';
 import type { StatsPayload } from '@/types';
 import { forPlayer, headToHeadFor } from '@/lib/stats/select';
-import { pct, kdaColour } from '@/lib/stats/format';
-import { MIN_GAMES_FOR_RATE } from '@/lib/stats/constants';
+import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
+import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 /**
@@ -52,9 +52,15 @@ const METRICS: Metric[] = [
         : null,
   },
   {
-    label: 'Net gold',
-    value:   p => (p.core ? `${p.core.netGold > 0 ? '+' : ''}${p.core.netGold.toLocaleString()}` : null),
-    compare: p => p.core?.netGold ?? null,
+    label: 'Market value',
+    value: p =>
+      p.core && p.core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
+        ? formatStrength(p.core.offerStrengthReceived)
+        : null,
+    compare: p =>
+      p.core && p.core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
+        ? p.core.offerStrengthReceived
+        : null,
   },
   {
     label: 'Avg KDA',
