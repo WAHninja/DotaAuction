@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { broadcastEvent } from '@/lib/supabase-server';
+import { offerRangeForGameIndex } from '@/lib/offer-range'
 
 /* -----------------------------------------------------------------------
    Tier calculation
@@ -188,8 +189,11 @@ export async function POST(
     // Game 1:  min = 450,  max = 2500  (completedGames = 0)
     // Game 2:  min = 650,  max = 3000  (completedGames = 1)
     // Game N:  min = 450 + (N-1)*200,  max = 2500 + (N-1)*500
-    const minOfferAmount = 450 + completedGames * 200;
-    const maxOfferAmount = 2500 + completedGames * 500;
+    //
+    // The formula lives in lib/offer-range so the stats route can reconstruct
+    // the same range for historical offers. Keeping a second copy here would
+    // mean a change to the bounds silently corrupted every market-value figure.
+    const { min: minOfferAmount, max: maxOfferAmount } = offerRangeForGameIndex(completedGames);
 
     if (offer_amount < minOfferAmount || offer_amount > maxOfferAmount) {
       await client.query('ROLLBACK');
