@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Users } from 'lucide-react';
 import type { TeammateSynergy } from '@/types';
+import type { AvatarLookup } from '@/lib/stats/select';
 import { MIN_GAMES_TOGETHER } from '@/lib/stats/constants';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import RankMedal from '@/app/components/RankMedal';
@@ -19,7 +20,11 @@ import PlayerAvatar from '@/app/components/PlayerAvatar';
  * games together as the tie-break so a more established pairing outranks a
  * newer one on the same percentage.
  */
-export default function TopDuos({ synergy }: { synergy: TeammateSynergy[] }) {
+export default function TopDuos({ synergy, avatars }: {
+  synergy: TeammateSynergy[];
+  /** Synergy rows carry usernames only, so avatars are looked up. */
+  avatars: AvatarLookup;
+}) {
   const [showAll, setShowAll] = useState(false);
 
   const qualified = synergy
@@ -56,12 +61,12 @@ export default function TopDuos({ synergy }: { synergy: TeammateSynergy[] }) {
                   <RankMedal rank={i + 1} size={24} />
 
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <PlayerAvatar username={p.playerA} size={22} />
+                    <PlayerAvatar username={p.playerA} steamAvatar={avatars.get(p.playerA) ?? null} size={22} />
                     <span className="font-barlow font-semibold text-sm text-dota-text truncate">
                       {p.playerA}
                     </span>
                     <span className="text-dota-text-dim text-xs shrink-0">+</span>
-                    <PlayerAvatar username={p.playerB} size={22} />
+                    <PlayerAvatar username={p.playerB} steamAvatar={avatars.get(p.playerB) ?? null} size={22} />
                     <span className="font-barlow font-semibold text-sm text-dota-text truncate">
                       {p.playerB}
                     </span>
