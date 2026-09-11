@@ -157,11 +157,8 @@ export type StatsPayload = {
   leagueTotals:      LeagueTotals;
   players:           PlayerStats[];
   teammateSynergy:   TeammateSynergy[];
-  topWinningCombos:  TeamCombo[];
-  acquisitionImpact: AcquisitionImpact[];
   winStreaks:        WinStreak[];
   headToHead:        HeadToHead[];
-  winTypeStats:      WinTypeStats[];
   heroStats:         HeroStat[];
   playerDotaStats:   PlayerDotaStat[];
 };
@@ -212,30 +209,17 @@ export type PlayerStats = {
    *  as random choice, 2.0 = twice as often. null when never in a
    *  discretionary situation, which is distinct from never being picked. */
   selectionIndex: number | null;
+  /** Last 10 results, oldest first, so the rightmost entry is the most recent
+   *  game. Raw results rather than a recent win rate: the shape matters, and a
+   *  percentage over ten games would imply precision the sample cannot carry. */
+  recentForm: ('W' | 'L')[];
   gamesPlayed: number;
   gamesWon: number;
   timesOffered: number;
   timesSold: number;
   offersMade: number;
   offersAccepted: number;
-  averageOfferValue: number;
-  netGold: number;
 };
-
-export type TeamCombo = {
-  combo: string;
-  wins: number;
-  gamesPlayed: number;
-  winRate: number;
-};
-
-export type SortKey =
-  | 'username'
-  | 'gamesWinRate'
-  | 'offerAcceptRate'
-  | 'averageOfferValue'
-  | 'timesOffered'
-  | 'timesSold';
 
 export type AcquisitionImpact = {
   username: string;
@@ -279,13 +263,6 @@ export type HeadToHead = {
 };
 
 // Win type breakdown for a player across all their match wins
-export type WinTypeStats = {
-  username: string;
-  lastStandingWins: number;
-  goldThresholdWins: number;
-  totalWins: number;
-};
-
 /**
  * Aggregated stats for a single hero across all games in dota_game_stats.
  * winRate is null when picks < MIN_PICKS_FOR_RATE (3) to avoid misleading
