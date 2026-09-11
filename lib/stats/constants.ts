@@ -25,3 +25,12 @@ export const MIN_PICKS_FOR_RATE = 3;
  * than the game thresholds for that reason.
  */
 export const MIN_OFFERS_FOR_STRENGTH = 4;
+
+/**
+ * Minimum discretionary opportunities before a selection index is shown.
+ *
+ * The index is a ratio against an expected value, so it is violently unstable
+ * at small n: one pick from two opportunities on a three-player team reads as
+ * "twice as often as chance" on the strength of a single decision.
+ */
+export const MIN_SELECTION_OPPORTUNITIES = 6;
