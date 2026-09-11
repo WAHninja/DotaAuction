@@ -26,7 +26,7 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
   if (lastStandOpportunities === 0) return null;
 
   return (
-    <section className="panel overflow-hidden">
+    <section className="panel overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
         <Shield className="w-4 h-4 shrink-0 text-dota-gold" aria-hidden="true" />
         <div>
@@ -38,7 +38,7 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
       </div>
 
       {(
-        <div className="p-5 space-y-3">
+        <div className="p-5 space-y-3 flex-1">
           <div className="flex flex-wrap items-baseline gap-6">
           <div>
             <p className="stat-label">Converted</p>
