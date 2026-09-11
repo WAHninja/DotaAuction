@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useStats } from '@/app/components/stats/StatsProvider';
-import { forPlayer, rankOf, leagueAverage } from '@/lib/stats/select';
+import { forPlayer, rankOf, leagueAverage, buildAvatarLookup } from '@/lib/stats/select';
 import { pct, formatStrength } from '@/lib/stats/format';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
@@ -13,9 +13,9 @@ import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
 import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
 import LastStandPanel from '@/app/components/stats/player/LastStandPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
-import FormPanel from '@/app/components/stats/player/FormPanel';
 import ComparePicker from '@/app/components/stats/player/ComparePicker';
 import RelationsPanel from '@/app/components/stats/player/RelationsPanel';
+import FormGuide from '@/app/components/stats/ui/FormGuide';
 
 /**
  * /stats/[username] — the player view.
@@ -36,7 +36,7 @@ export default function PlayerStatsPage() {
   // that were escaped on the way in (the standings table encodes them).
   const username = decodeURIComponent(params?.username ?? '');
 
-  const { payload, me, loading, error } = useStats();
+  const { payload, loading, error } = useStats();
 
   if (loading) {
     return <Shell><p className="panel p-8 text-center font-barlow text-dota-text-muted">Loading…</p></Shell>;
@@ -63,7 +63,6 @@ export default function PlayerStatsPage() {
   }
 
   const { players, playerDotaStats, headToHead } = payload;
-  const isMe = me?.username === username;
 
   const winRateRank = rankOf(players, p => p.username === username, p => pct(p.gamesWon, p.gamesPlayed));
   const valued = players.filter(
@@ -80,6 +79,9 @@ export default function PlayerStatsPage() {
 
   // Named for what the reader is waiting on, not for the component that hides
   // it, and derived from the same thresholds the panels apply.
+  const formWins = core.recentForm.filter(r => r === 'W').length;
+  const hasStreak = player.streak !== null && player.streak.longestStreak > 0;
+
   const locked = [
     core.gamesPlayed  >= MIN_GAMES_FOR_RATE        ? null : 'win rate',
     core.timesOffered >= MIN_OFFERS_FOR_STRENGTH   ? null : 'market value',
@@ -87,7 +89,7 @@ export default function PlayerStatsPage() {
 
   return (
     <Shell>
-      <div className="panel p-5 flex items-center gap-4">
+      <div className="panel p-5 flex flex-wrap items-center gap-x-6 gap-y-4">
         {/* Previously fell back to null for anyone but the signed-in user,
             because only /api/me carried an avatar. The stats payload now
             supplies one per player, so every profile shows a real portrait. */}
@@ -102,7 +104,24 @@ export default function PlayerStatsPage() {
             {core.gamesWon}–{core.gamesPlayed - core.gamesWon} across {core.gamesPlayed} games
           </p>
         </div>
-        {isMe && <span className="stat-label ml-auto shrink-0">You</span>}
+        {/* Form moved up here from its own panel. It is the only figure that
+            changes week to week, so it belongs beside the identity rather than
+            below four panels of all-time aggregates.
+
+            The "You" badge that used to sit here is gone — the reader knows
+            who they are, and the league standings already mark their row. */}
+        {core.recentForm.length > 0 && (
+          <div className="ml-auto shrink-0">
+            <p className="stat-label mb-1.5">Recent form</p>
+            <FormGuide form={core.recentForm} />
+            <p className="font-barlow text-xs text-dota-text-dim mt-1.5 tabular-nums">
+              {formWins}–{core.recentForm.length - formWins} in the last {core.recentForm.length}
+              {hasStreak && (
+                <span> · longest streak {player.streak!.longestStreak}</span>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
@@ -150,7 +169,6 @@ export default function PlayerStatsPage() {
           as eight equally important things and the page had no shape. These
           four are each a handful of figures and do not need the width. */}
       <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <FormPanel streak={player.streak} recentForm={core.recentForm} />
         <PerformancePanel dota={dota} />
         <SelectionPanel core={core} />
         <LastStandPanel core={core} />
@@ -164,6 +182,7 @@ export default function PlayerStatsPage() {
         synergy={payload.teammateSynergy}
         headToHead={headToHead}
         username={username}
+        avatars={buildAvatarLookup(players)}
       />
 
       <ComparePicker payload={payload} subject={username} />
@@ -175,7 +194,10 @@ export default function PlayerStatsPage() {
 /** Page chrome shared by the loading, error, unknown-player and loaded states. */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    /* max-w-6xl to match /stats. At 4xl the player page was visibly narrower
+       than the league page it is reached from, so navigating between them
+       shifted the whole layout. */
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <Link
         href="/stats"
         className="inline-flex items-center gap-1 font-barlow text-sm text-dota-text-muted hover:text-dota-gold transition-colors"
