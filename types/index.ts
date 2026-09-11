@@ -246,6 +246,12 @@ export type PlayerStats = {
    *  game. Raw results rather than a recent win rate: the shape matters, and a
    *  percentage over ten games would imply precision the sample cannot carry. */
   recentForm: ('W' | 'L')[];
+  /** Elo-style rating, starting at 1500. Built on team strength rather than a
+   *  team average, so being outnumbered is priced in: beating longer odds is
+   *  worth more, losing against them costs less. */
+  rating: number;
+  /** Games the rating is built from. Below roughly 20 it is still settling. */
+  ratedGames: number;
   /** Games entered as the only player on their side. A single-player win ends
    *  the match immediately, so these are the only games that can be won
    *  outright — and the hardest, since being alone means being outnumbered. */
