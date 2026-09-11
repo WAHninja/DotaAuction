@@ -154,6 +154,7 @@ export type HistoryGame = {
  * instead of each re-listing the eight arrays with its own useState.
  */
 export type StatsPayload = {
+  leagueTotals:      LeagueTotals;
   players:           PlayerStats[];
   topWinningCombos:  TeamCombo[];
   acquisitionImpact: AcquisitionImpact[];
@@ -162,6 +163,21 @@ export type StatsPayload = {
   winTypeStats:      WinTypeStats[];
   heroStats:         HeroStat[];
   playerDotaStats:   PlayerDotaStat[];
+};
+
+/**
+ * League-wide totals — facts about the league rather than about any player.
+ *
+ * Counted from the matches and games tables directly. Summing per-player
+ * figures would count each game once per participant.
+ */
+export type LeagueTotals = {
+  matchesCompleted: number;
+  gamesPlayed: number;
+  /** Matches ended by last player standing. */
+  outrightWins: number;
+  /** Matches ended on the gold threshold. */
+  goldWins: number;
 };
 
 /** The signed-in user, as returned by /api/me under the `user` key. */
