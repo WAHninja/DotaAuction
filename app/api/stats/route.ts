@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
 import { buildGameIndex, computeOfferStrength } from '@/lib/stats/compute/offer-strength';
+import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
 
 // ---------------------------------------------------------------------------
 // Module-level cache
@@ -70,6 +71,14 @@ type PlayerRow = {
   /** Mean position of offers this player submitted, 0–1. A bidding-behaviour
    *  measure. null when they have never made one. */
   offerStrengthMade: number | null;
+  /** Discretionary offers where this player was an available target — that is,
+   *  their team had three or more members so a real choice existed. */
+  selectionOpportunities: number;
+  /** How many of those offers named them. */
+  selectionCount: number;
+  /** Selections against what chance alone would produce. 1.0 = as often as
+   *  random, 2.0 = twice as often. null when never in a discretionary spot. */
+  selectionIndex: number | null;
   /** Retained for now but no longer surfaced: a lifetime sum that grows with
    *  games played, in a currency that resets every match. */
   netGold: number;
@@ -607,6 +616,10 @@ export async function GET() {
     const gameIndex     = buildGameIndex(gamesResult.rows);
     const offerStrength = computeOfferStrength(offersResult.rows, gameIndex);
 
+    // Selection rate — only counts offers where the offering team had a real
+    // alternative. See lib/stats/compute/selection-rate.
+    const selection = computeSelectionRate(gamesResult.rows, offersResult.rows);
+
     // entries(), not values(): the map key is the user id, which is the join
     // key for offer strength and is not repeated inside the value.
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
@@ -624,6 +637,9 @@ export async function GET() {
           : 0,
       offerStrengthReceived: offerStrength.get(id)?.received ?? null,
       offerStrengthMade:     offerStrength.get(id)?.made     ?? null,
+      selectionOpportunities: selection.get(id)?.opportunities ?? 0,
+      selectionCount:         selection.get(id)?.selections    ?? 0,
+      selectionIndex:         selection.get(id)?.index         ?? null,
       netGold: p.netGold,
     }));
 
