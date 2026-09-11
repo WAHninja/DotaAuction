@@ -1,7 +1,10 @@
 'use client';
 
 import type { PlayerStats } from '@/types';
+import { Info } from 'lucide-react';
 import { pct, formatStrength } from '@/lib/stats/format';
+import { GLOSSARY } from '@/lib/stats/glossary';
+import Tooltip from '@/app/components/stats/ui/Tooltip';
 import { MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import GoldIcon from '@/app/components/GoldIcon';
 
@@ -36,7 +39,16 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
   // zeroes would be noise rather than information.
   if (core.offersMade === 0 && core.timesOffered === 0) return null;
 
-  const rows: { label: string; value: string; detail?: string }[] = [
+  // hint/hintId are optional per row: only the invented stats need explaining.
+  // "Offers made" means what it says, and an info icon on every label would
+  // make the ones that genuinely need one harder to notice.
+  const rows: {
+    label: string;
+    value: string;
+    detail?: string;
+    hint?: string;
+    hintId?: string;
+  }[] = [
     {
       label: 'Offers made',
       value: String(core.offersMade),
@@ -56,6 +68,8 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
     },
     {
       label: 'Bid strength',
+      hint: GLOSSARY.bidStrength,
+      hintId: 'tip-bid-strength',
       value: core.offersMade >= MIN_OFFERS_FOR_STRENGTH
         ? formatStrength(core.offerStrengthMade)
         : '—',
@@ -83,7 +97,24 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
       <dl className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-dota-border/40 flex-1">
         {rows.map(r => (
           <div key={r.label} className="px-4 py-3">
-            <dt className="stat-label">{r.label}</dt>
+            <dt className="stat-label">
+              {r.hint && r.hintId ? (
+                <Tooltip id={r.hintId} content={r.hint}>
+                  {/* Whole label is the target, matching StatWithRank — a bare
+                      12px icon is a poor hit area and easy to miss. */}
+                  <span
+                    className="inline-flex items-center gap-1 cursor-help"
+                    tabIndex={0}
+                    aria-describedby={r.hintId}
+                  >
+                    {r.label}
+                    <Info className="w-3 h-3 opacity-50 shrink-0" aria-hidden="true" />
+                  </span>
+                </Tooltip>
+              ) : (
+                r.label
+              )}
+            </dt>
             <dd className="font-barlow text-lg font-bold text-dota-text tabular-nums mt-0.5">
               {r.value}
             </dd>
