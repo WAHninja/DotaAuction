@@ -5,6 +5,7 @@ import { buildGameIndex, computeOfferStrength } from '@/lib/stats/compute/offer-
 import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
 import { computeSynergy } from '@/lib/stats/compute/synergy';
 import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
+import { computeLastStands } from '@/lib/stats/compute/last-stand';
 import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 
 // ---------------------------------------------------------------------------
@@ -95,6 +96,14 @@ type PlayerRow = {
   selectionIndex: number | null;
   /** Last 10 results, oldest first — the rightmost entry is the latest game. */
   recentForm: FormResult[];
+  /** Games entered as the only player on their side — a chance to win the
+   *  whole match outright, since a single-player win ends it. */
+  lastStandOpportunities: number;
+  /** How many of those they converted. */
+  lastStandWins: number;
+  /** Mean opposing team size across those games — how outnumbered they were.
+   *  null when they have never been in that position. */
+  lastStandAvgOpponents: number | null;
   /** Retained for now but no longer surfaced: a lifetime sum that grows with
    *  games played, in a currency that resets every match. */
 };
@@ -531,6 +540,10 @@ export async function GET() {
     // Recent form — the first time-aware figure in the payload.
     const recentForm = computeRecentForm(gamesResult.rows);
 
+    // Last stands — games entered alone, which are the only games that can end
+    // a match outright. See lib/stats/compute/last-stand.
+    const lastStands = computeLastStands(gamesResult.rows);
+
     // entries(), not values(): the map key is the user id, which is the join
     // key for offer strength and is not repeated inside the value.
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
@@ -548,6 +561,9 @@ export async function GET() {
       selectionCount:         selection.get(id)?.selections    ?? 0,
       selectionIndex:         selection.get(id)?.index         ?? null,
       recentForm:             recentForm.get(id) ?? [],
+      lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
+      lastStandWins:          lastStands.get(id)?.wins          ?? 0,
+      lastStandAvgOpponents:  lastStands.get(id)?.avgOpponents  ?? null,
     }));
 
     const winStreaks: WinStreakRow[] = winStreakResult.rows.map(r => ({
