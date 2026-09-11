@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Users } from 'lucide-react';
 import type { TeammateSynergy, HeadToHead } from '@/types';
-import { synergyFor, headToHeadFor } from '@/lib/stats/select';
+import { synergyFor, headToHeadFor, type AvatarLookup } from '@/lib/stats/select';
 import { MIN_GAMES_FOR_RATE, MIN_GAMES_TOGETHER } from '@/lib/stats/constants';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
@@ -27,10 +27,12 @@ import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 type Tab = 'with' | 'against';
 
-export default function RelationsPanel({ synergy, headToHead, username }: {
+export default function RelationsPanel({ synergy, headToHead, username, avatars }: {
   synergy: TeammateSynergy[];
   headToHead: HeadToHead[];
   username: string;
+  /** Relational stats carry usernames only, so avatars are looked up. */
+  avatars: AvatarLookup;
 }) {
   const partners  = synergyFor(synergy, username);
   const opponents = headToHeadFor(headToHead, username);
@@ -96,7 +98,11 @@ export default function RelationsPanel({ synergy, headToHead, username }: {
                     href={`/stats/${encodeURIComponent(r.name)}`}
                     className="flex items-center gap-2 min-w-0 group"
                   >
-                    <PlayerAvatar username={r.name} size={22} />
+                    <PlayerAvatar
+                      username={r.name}
+                      steamAvatar={avatars.get(r.name) ?? null}
+                      size={22}
+                    />
                     <span className="font-semibold text-dota-text group-hover:text-dota-gold transition-colors truncate">
                       {r.name}
                     </span>
