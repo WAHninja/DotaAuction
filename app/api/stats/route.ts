@@ -7,6 +7,7 @@ import { computeSynergy } from '@/lib/stats/compute/synergy';
 import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
 import { computeLastStands } from '@/lib/stats/compute/last-stand';
 import { computeLeagueRecords, type LeagueRecord } from '@/lib/stats/compute/records';
+import { computeRatings, STARTING_RATING } from '@/lib/stats/compute/rating';
 import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +119,11 @@ type PlayerRow = {
   selectionIndex: number | null;
   /** Last 10 results, oldest first — the rightmost entry is the latest game. */
   recentForm: FormResult[];
+  /** Elo-style rating. Accounts for team size, so beating longer odds is worth
+   *  more. Everyone starts at STARTING_RATING. */
+  rating: number;
+  /** Games the rating is built from — how much to trust it. */
+  ratedGames: number;
   /** Games entered as the only player on their side — a chance to win the
    *  whole match outright, since a single-player win ends it. */
   lastStandOpportunities: number;
@@ -577,6 +583,10 @@ export async function GET() {
     // a match outright. See lib/stats/compute/last-stand.
     const lastStands = computeLastStands(gamesResult.rows);
 
+    // Ratings — replays every finished game in order. See
+    // lib/stats/compute/rating for the team-strength model.
+    const ratings = computeRatings(gamesResult.rows);
+
     // entries(), not values(): the map key is the user id, which is the join
     // key for offer strength and is not repeated inside the value.
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
@@ -598,6 +608,8 @@ export async function GET() {
       lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
       lastStandWins:          lastStands.get(id)?.wins          ?? 0,
       lastStandAvgOpponents:  lastStands.get(id)?.avgOpponents  ?? null,
+      rating:                 ratings.get(id)?.rating ?? STARTING_RATING,
+      ratedGames:             ratings.get(id)?.games  ?? 0,
     }));
 
     const winStreaks: WinStreakRow[] = winStreakResult.rows.map(r => ({
