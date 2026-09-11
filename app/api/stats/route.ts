@@ -100,8 +100,9 @@ type PlayerRow = {
    *  0–1. The market's valuation of this player, comparable across matches of
    *  any length. null when never offered. */
   offerStrengthReceived: number | null;
-  /** Mean position of offers this player submitted, 0–1. A bidding-behaviour
-   *  measure. null when they have never made one. */
+  /** Mean position of offers this player sent, 0–1 — their asking price when
+   *  selling a teammate. Not a bid to acquire anyone: the sender of an offer is
+   *  always the seller. null when they have never sent one. */
   offerStrengthMade: number | null;
   /** Discretionary offers where this player was an available target — that is,
    *  their team had three or more members so a real choice existed. */
@@ -256,7 +257,7 @@ export async function GET() {
          WHERE status = 'finished'`
       ),
 
-      // 4. All offers — for offer/sold counts and average bid value
+      // 4. All offers — for offer/sold counts and offer strength
       // game_id ties an offer to the game it was made in, and so to the offer
       // range that applied at the time.
       db.query<{
