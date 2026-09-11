@@ -40,7 +40,7 @@ type Row = PlayerStats & {
   marketValue: number | null;
 };
 
-type SortKey = 'username' | 'gamesPlayed' | 'winRate' | 'marketValue' | 'avgKda';
+type SortKey = 'username' | 'rating' | 'gamesPlayed' | 'winRate' | 'marketValue' | 'avgKda';
 
 export default function StandingsTable({ players, dotaStats, highlightUsername }: {
   players:   PlayerStats[];
@@ -48,7 +48,9 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
   /** Signed-in user, given a gold ring and row tint so you can find yourself. */
   highlightUsername?: string | null;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>('winRate');
+  // Rating, not win rate. Win rate ignores who you were up against and how
+  // many of them; the rating is the actual ladder position.
+  const [sortKey, setSortKey] = useState<SortKey>('rating');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const rows = useMemo<Row[]>(() => {
@@ -122,7 +124,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
         <div>
           <h3 className="font-cinzel text-lg font-bold text-dota-gold">Player Leaderboard</h3>
           <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            Every player, ranked · Select a player for their full breakdown
+            Ranked by rating · Select a player for their full breakdown
           </p>
         </div>
         <span className="ml-auto font-barlow text-[11px] text-dota-text-dim shrink-0 tabular-nums">
@@ -134,7 +136,11 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
         {/* min-width only from sm up. At 640px on a 380px phone this table
             scrolled 1.7x with nothing frozen, so you ended up reading numbers
             with no idea whose row you were on. Below sm the two secondary
-            columns drop out instead and the remaining four fit. */}
+            columns drop out instead and the remaining four fit.
+
+            Market value joined them when the rating column arrived — rating,
+            win rate, name and rank is the most that stays readable at 380px,
+            and rating is the one people came for. */}
         <table className="w-full font-barlow text-sm sm:min-w-[640px]" aria-label="League standings">
           <thead className="bg-dota-deep/60 border-b border-dota-border">
             <tr>
@@ -143,6 +149,12 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                 colKey="username" label="Player" align="center"
                 tooltip="Sort players alphabetically."
                 tooltipId="std-username"
+                sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
+              />
+              <SortableTh<SortKey>
+                colKey="rating" label="Rating"
+                tooltip={GLOSSARY.rating}
+                tooltipId="std-rating"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
               />
               <SortableTh<SortKey>
@@ -163,6 +175,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                 tooltip={GLOSSARY.marketValue}
                 tooltipId="std-market"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
+                className="hidden sm:table-cell"
               />
               <SortableTh<SortKey>
                 colKey="avgKda" label="KDA"
@@ -209,6 +222,21 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
 
                   {/* Hidden with its header, not instead of it — a cell and a
                       header dropping at different breakpoints shears the row. */}
+                  <td className="px-3 py-2.5 text-center tabular-nums">
+                    <span className="font-bold text-dota-text">{row.rating}</span>
+                    {/* Provisional ratings are flagged rather than hidden: with
+                        a threshold they would vanish for anyone new, and an
+                        unqualified number would overstate its own certainty. */}
+                    {row.ratedGames < 20 && (
+                      <span
+                        className="text-dota-text-dim text-[10px] ml-1"
+                        title={`Provisional — ${row.ratedGames} of 20 games`}
+                      >
+                        ?
+                      </span>
+                    )}
+                  </td>
+
                   <td className="hidden sm:table-cell px-3 py-2.5 text-center tabular-nums text-dota-text-muted">
                     {row.gamesPlayed}
                   </td>
@@ -221,7 +249,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                     />
                   </td>
 
-                  <td className="px-3 py-2.5 text-center tabular-nums">
+                  <td className="hidden sm:table-cell px-3 py-2.5 text-center tabular-nums">
                     {row.marketValue === null
                       ? <span className="text-dota-text-dim" title={`Needs ${MIN_OFFERS_FOR_STRENGTH} offers (has ${row.timesOffered})`}>—</span>
                       : <span className="font-semibold text-dota-gold">{formatStrength(row.marketValue)}</span>}
