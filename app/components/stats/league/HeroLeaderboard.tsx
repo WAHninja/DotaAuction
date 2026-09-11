@@ -19,6 +19,15 @@ import SortableTh, { SortIcon } from '@/app/components/stats/ui/SortableTh';
  * any individual on it, and the API nulls it below MIN_PICKS_FOR_RATE picks.
  */
 
+/**
+ * Heroes shown before expanding.
+ *
+ * Dota has 120-odd heroes and most of them get picked eventually, so the full
+ * table ran longer than the rest of the league page combined and buried
+ * everything below it. Ten is enough to see the shape of the meta.
+ */
+const DEFAULT_VISIBLE = 10;
+
 type HeroSortKey =
   | 'hero'
   | 'picks'
@@ -32,6 +41,7 @@ type HeroSortKey =
 export default function HeroLeaderboard({ heroStats }: { heroStats: HeroStat[] }) {
   const [heroSortKey, setHeroSortKey] = useState<HeroSortKey>('picks');
   const [heroSortDir, setHeroSortDir] = useState<'asc' | 'desc'>('desc');
+  const [showAll, setShowAll] = useState(false);
 
   function handleHeroSort(key: HeroSortKey) {
     if (heroSortKey === key) {
@@ -66,6 +76,12 @@ export default function HeroLeaderboard({ heroStats }: { heroStats: HeroStat[] }
     });
   }, [heroStats, heroSortKey, heroSortDir]);
 
+  // Sliced after sorting, not before, so the visible ten are the top ten of
+  // whatever column is active — sort by win rate and you get the ten best, not
+  // the win rates of the ten most-picked.
+  const visibleHeroes = showAll ? sortedHeroes : sortedHeroes.slice(0, DEFAULT_VISIBLE);
+  const isTruncated   = sortedHeroes.length > DEFAULT_VISIBLE;
+
   if (heroStats.length === 0) return null;
 
   return (
@@ -76,7 +92,8 @@ export default function HeroLeaderboard({ heroStats }: { heroStats: HeroStat[] }
             <div>
               <h3 className="font-cinzel text-lg font-bold text-dota-gold">Hero Leaderboard</h3>
               <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-                All heroes picked in finished games · Win rate shown from {MIN_PICKS_FOR_RATE}+ picks
+                {showAll ? 'All heroes' : `Top ${DEFAULT_VISIBLE}`} picked in finished games
+                {' · '}Win rate shown from {MIN_PICKS_FOR_RATE}+ picks
               </p>
             </div>
           </div>
@@ -162,7 +179,7 @@ export default function HeroLeaderboard({ heroStats }: { heroStats: HeroStat[] }
               </thead>
 
               <tbody>
-                {sortedHeroes.map(hero => (
+                {visibleHeroes.map(hero => (
                   <tr
                     key={hero.hero}
                     className="border-b border-dota-border/50 hover:bg-dota-overlay/40 transition-colors"
@@ -253,6 +270,21 @@ export default function HeroLeaderboard({ heroStats }: { heroStats: HeroStat[] }
             </table>
           </div>
         </div>
+
+        {isTruncated && (
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={() => setShowAll(v => !v)}
+              className="btn-ghost w-full text-xs py-1.5"
+              aria-expanded={showAll}
+            >
+              {showAll
+                ? `Show top ${DEFAULT_VISIBLE}`
+                : `Show all ${sortedHeroes.length} heroes`}
+            </button>
+          </div>
+        )}
 
         <div className="px-5 py-2.5 border-t border-dota-border">
           <p className="font-barlow text-[11px] text-dota-text-dim">
