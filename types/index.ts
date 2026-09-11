@@ -200,6 +200,17 @@ export type PlayerStats = {
   /** Mean position of offers this player submitted, 0–1 — how aggressively they
    *  bid. null when they have never made an offer. */
   offerStrengthMade: number | null;
+  /** Discretionary offers where this player was an available target — their
+   *  team had three or more members, so the offerer had a real choice. Offers
+   *  from two-player teams are excluded: with one legal target they record a
+   *  rule being followed, not a judgement. */
+  selectionOpportunities: number;
+  /** How many of those offers named them. */
+  selectionCount: number;
+  /** Selections against what chance alone would produce. 1.0 = picked as often
+   *  as random choice, 2.0 = twice as often. null when never in a
+   *  discretionary situation, which is distinct from never being picked. */
+  selectionIndex: number | null;
   gamesPlayed: number;
   gamesWon: number;
   timesOffered: number;
