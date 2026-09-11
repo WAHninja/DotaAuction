@@ -49,6 +49,8 @@ export default function YouCard() {
     ? rankOf(playerDotaStats, p => p.username === me.username, p => p.avgKda)
     : null;
 
+  const ratingRank = rankOf(players, p => p.username === me.username, p => p.rating);
+
   const avgMarket = leagueAverage(valued, p => p.offerStrengthReceived ?? 0);
   const avgKda  = leagueAverage(playerDotaStats, p => p.avgKda);
 
@@ -88,7 +90,15 @@ export default function YouCard() {
         </div>
       )}
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+        <StatWithRank
+          label="Rating"
+          value={String(core.rating)}
+          rank={ratingRank}
+          tone="gold"
+          hint={GLOSSARY.rating}
+          hintId="you-tip-rating"
+        />
         <StatWithRank
           label="Record"
           value={`${core.gamesWon}–${core.gamesPlayed - core.gamesWon}`}
@@ -99,7 +109,6 @@ export default function YouCard() {
           // shown at all — and without a figure a rank would be meaningless too.
           value={hasRateSample ? `${pct(core.gamesWon, core.gamesPlayed)}%` : '—'}
           rank={hasRateSample ? winRateRank : null}
-          tone="gold"
           hint={GLOSSARY.winRate}
           hintId="you-tip-winrate"
         />
