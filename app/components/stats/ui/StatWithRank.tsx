@@ -28,8 +28,8 @@ export default function StatWithRank({
   /**
    * Explanation of what the figure means, shown on hover or focus.
    *
-   * Several of these stats are invented for this app — market value and bid
-   * strength have no meaning outside it — so a bare label leaves the reader
+   * Several of these stats are invented for this app — market value and asking
+   * price have no meaning outside it — so a bare label leaves the reader
    * guessing. The standings table carries the same explanations on its column
    * headers; this puts them on the player page too, where there are no headers
    * to hang them from.
