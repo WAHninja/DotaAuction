@@ -5,7 +5,7 @@ import YouCard from '@/app/components/stats/league/YouCard';
 import StandingsTable from '@/app/components/stats/league/StandingsTable';
 import LeagueVitals from '@/app/components/stats/league/LeagueVitals';
 import HeroLeaderboard from '@/app/components/stats/league/HeroLeaderboard';
-import TopCombos from '@/app/components/stats/league/TopCombos';
+import TopDuos from '@/app/components/stats/league/TopDuos';
 
 /**
  * /stats — the general (league-wide) view.
@@ -58,7 +58,7 @@ export default function StatsPage() {
           to the league scope and have no equivalent on a player page. */}
       <HeroLeaderboard heroStats={payload.heroStats} />
 
-      <TopCombos combos={payload.topWinningCombos} />
+      <TopDuos synergy={payload.teammateSynergy} />
     </main>
   );
 }
