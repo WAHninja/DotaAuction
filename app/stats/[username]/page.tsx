@@ -185,15 +185,26 @@ export default function PlayerStatsPage() {
         <SelectionPanel core={core} />
       </div>
 
-      {/* Full width below: the tables, which genuinely need the room. */}
-      <RelationsPanel
-        synergy={payload.teammateSynergy}
-        headToHead={headToHead}
-        username={username}
-        avatars={buildAvatarLookup(players)}
-      />
+      {/*
+        Paired rather than stacked full width. Both are narrow-content panels —
+        a three-column table and a centred comparison — so at full page width
+        each was mostly empty gutter, and Compare's 1fr/auto/1fr rows flung the
+        two values so far apart they stopped reading as a comparison.
 
-      <ComparePicker payload={payload} subject={username} />
+        They also belong together: one lists everyone you have played with or
+        against, the other drills into a single one of them. Stacks below lg,
+        where half width would squeeze the table's three columns.
+      */}
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
+        <RelationsPanel
+          synergy={payload.teammateSynergy}
+          headToHead={headToHead}
+          username={username}
+          avatars={buildAvatarLookup(players)}
+        />
+
+        <ComparePicker payload={payload} subject={username} />
+      </div>
 
     </Shell>
   );
