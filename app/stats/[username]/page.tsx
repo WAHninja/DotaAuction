@@ -133,7 +133,7 @@ export default function PlayerStatsPage() {
 
       <PerformancePanel dota={dota} />
 
-      <FormPanel streak={player.streak} acquisition={player.acquisition} />
+      <FormPanel streak={player.streak} recentForm={core.recentForm} />
 
       {/* Partners then opponents — the two halves of the same question. */}
       <PartnersPanel synergy={payload.teammateSynergy} username={username} />
