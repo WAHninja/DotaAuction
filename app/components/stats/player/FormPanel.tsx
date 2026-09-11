@@ -1,24 +1,26 @@
 'use client';
 
 import { TrendingUp } from 'lucide-react';
-import type { AcquisitionImpact, WinStreak, WinTypeStats } from '@/types';
-import { pct } from '@/lib/stats/format';
+import type { AcquisitionImpact, WinStreak } from '@/types';
 
 /**
  * The three small per-player records, gathered into one panel.
  *
- * Each of these — longest win streak, post-transfer win rate, how their wins
- * were achieved — occupied a full-width league table in the dashboard tab for
+ * Each of these occupied a full-width league table in the dashboard tab for
  * what is, per person, a single number. Grouped here they take one row.
  *
- * Every section is independently optional: a player can have a streak without
- * ever having been traded. When none of the three has data the whole panel
+ * "Wins on gold" used to sit here and has been removed. How a match ended is a
+ * property of the match, not of any player in it — attributing "63% of your
+ * wins came on gold" to an individual implies a playstyle they may have had no
+ * hand in. It is now a league fact in the vitals strip.
+ *
+ * Both remaining sections are independently optional: a player can have a
+ * streak without ever having been traded. When neither has data the panel
  * returns null rather than rendering an empty shell.
  */
-export default function FormPanel({ streak, acquisition, winTypes }: {
+export default function FormPanel({ streak, acquisition }: {
   streak:      WinStreak | null;
   acquisition: AcquisitionImpact | null;
-  winTypes:    WinTypeStats | null;
 }) {
   const cards: { label: string; value: string; detail: string }[] = [];
 
@@ -35,14 +37,6 @@ export default function FormPanel({ streak, acquisition, winTypes }: {
       label:  'After being traded',
       value:  `${acquisition.winRate}%`,
       detail: `${acquisition.winsAfterAcquisition} of ${acquisition.totalAcquisitions} games won`,
-    });
-  }
-
-  if (winTypes && winTypes.totalWins > 0) {
-    cards.push({
-      label:  'Wins on gold',
-      value:  `${pct(winTypes.goldThresholdWins, winTypes.totalWins)}%`,
-      detail: `${winTypes.goldThresholdWins} on gold · ${winTypes.lastStandingWins} last standing`,
     });
   }
 
