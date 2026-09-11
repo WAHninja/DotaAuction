@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { useStats } from '@/app/components/stats/StatsProvider';
 import { forPlayer, rankOf, leagueAverage } from '@/lib/stats/select';
-import { pct, formatNW } from '@/lib/stats/format';
-import { MIN_GAMES_FOR_RATE } from '@/lib/stats/constants';
+import { pct, formatStrength } from '@/lib/stats/format';
+import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 
@@ -37,15 +37,21 @@ export default function YouCard() {
     p => p.username === me.username,
     p => pct(p.gamesWon, p.gamesPlayed),
   );
-  const goldRank = rankOf(players, p => p.username === me.username, p => p.netGold);
+  // Ranked only among players who clear the sample threshold — otherwise
+  // someone with one flattering offer outranks a genuinely valued player.
+  const valued = players.filter(
+    p => p.timesOffered >= MIN_OFFERS_FOR_STRENGTH && p.offerStrengthReceived !== null,
+  );
+  const marketRank = rankOf(valued, p => p.username === me.username, p => p.offerStrengthReceived ?? 0);
   const kdaRank  = dota
     ? rankOf(playerDotaStats, p => p.username === me.username, p => p.avgKda)
     : null;
 
-  const avgGold = leagueAverage(players, p => p.netGold);
+  const avgMarket = leagueAverage(valued, p => p.offerStrengthReceived ?? 0);
   const avgKda  = leagueAverage(playerDotaStats, p => p.avgKda);
 
-  const hasRateSample = core.gamesPlayed >= MIN_GAMES_FOR_RATE;
+  const hasRateSample   = core.gamesPlayed  >= MIN_GAMES_FOR_RATE;
+  const hasMarketSample = core.timesOffered >= MIN_OFFERS_FOR_STRENGTH;
 
   return (
     <div className="panel p-5 space-y-4">
@@ -87,10 +93,10 @@ export default function YouCard() {
           tone="gold"
         />
         <StatWithRank
-          label="Net gold"
-          value={`${core.netGold > 0 ? '+' : ''}${core.netGold.toLocaleString()}`}
-          rank={goldRank}
-          leagueAvg={avgGold === null ? null : formatNW(Math.round(avgGold))}
+          label="Market value"
+          value={hasMarketSample ? formatStrength(core.offerStrengthReceived) : '—'}
+          rank={hasMarketSample ? marketRank : null}
+          leagueAvg={avgMarket === null ? null : formatStrength(avgMarket)}
         />
         <StatWithRank
           label="Avg KDA"
