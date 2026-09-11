@@ -205,6 +205,11 @@ export type PlayerStats = {
   selectionOpportunities: number;
   /** How many of those offers named them. */
   selectionCount: number;
+  /** How many selections chance alone would have produced, given the team sizes
+   *  involved. The baseline the actual count should be read against: on a
+   *  three-player side the offerer picks between two teammates, so half is
+   *  unremarkable; on a five-player side a quarter is. */
+  selectionExpected: number;
   /** Selections against what chance alone would produce. 1.0 = picked as often
    *  as random choice, 2.0 = twice as often. null when never in a
    *  discretionary situation, which is distinct from never being picked. */
