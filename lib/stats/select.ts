@@ -15,7 +15,7 @@
  * Formatting of the values these return belongs in lib/stats/format.ts.
  */
 
-import type { StatsPayload, HeadToHead, TeammateSynergy } from '@/types';
+import type { StatsPayload, HeadToHead, TeammateSynergy, PlayerStats } from '@/types';
 
 /** A value's standing within the league, 1-based. */
 export type Rank = {
@@ -161,4 +161,20 @@ export function synergyFor(rows: TeammateSynergy[], username: string): PartnerRe
       winRate: r.winRate,
     }))
     .sort((a, b) => b.games - a.games);
+}
+
+/** username -> steam avatar URL, for surfaces that only have names to work with. */
+export type AvatarLookup = Map<string, string | null>;
+
+/**
+ * Build a username -> avatar map from the players array.
+ *
+ * Several panels — teammate records, head-to-head, top duos — deal in usernames
+ * because that is what the relational stats carry, while the avatar lives on
+ * the player row. Without this they fall back to coloured initials while the
+ * tables beside them show real portraits, which reads as a rendering bug rather
+ * than as missing data.
+ */
+export function buildAvatarLookup(players: PlayerStats[]): AvatarLookup {
+  return new Map(players.map(p => [p.username, p.steamAvatar ?? null]));
 }
