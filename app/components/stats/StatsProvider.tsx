@@ -107,6 +107,7 @@ export default function StatsProvider({ children }: { children: ReactNode }) {
               goldWins:         0,
             },
             players:           statsData.players           ?? [],
+            teammateSynergy:   statsData.teammateSynergy   ?? [],
             topWinningCombos:  statsData.topWinningCombos  ?? [],
             acquisitionImpact: statsData.acquisitionImpact ?? [],
             winStreaks:        statsData.winStreaks        ?? [],
