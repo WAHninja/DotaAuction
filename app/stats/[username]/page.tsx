@@ -174,11 +174,13 @@ export default function PlayerStatsPage() {
         Selection are both about the auction. Grouping them by subject means a
         reader scanning one row is thinking about one thing.
 
-        items-start so a short panel does not stretch to match a tall neighbour
-        — Last Stands is a single row of figures and would otherwise be padded
-        out to Performance's height.
+        Grid items stretch (the default) rather than items-start, so both cards
+        in a row end at the same height. Ragged bottoms made the rows read as
+        broken rather than as panels of differing content. The panels themselves
+        are flex columns with a growing body, so the extra height goes inside
+        the card instead of leaving a gap under a short one.
       */}
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
+      <div className="grid gap-6 lg:grid-cols-2">
         <PerformancePanel dota={dota} />
         <LastStandPanel core={core} />
         <EconomyPanel core={core} />
@@ -195,7 +197,7 @@ export default function PlayerStatsPage() {
         against, the other drills into a single one of them. Stacks below lg,
         where half width would squeeze the table's three columns.
       */}
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
+      <div className="grid gap-6 lg:grid-cols-2">
         <RelationsPanel
           synergy={payload.teammateSynergy}
           headToHead={headToHead}
