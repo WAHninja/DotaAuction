@@ -26,7 +26,7 @@ export default function PerformancePanel({ dota }: { dota: PlayerDotaStat | null
   ];
 
   return (
-    <section className="panel overflow-hidden">
+    <section className="panel overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
         <Swords className="w-4 h-4 shrink-0 text-dota-gold" aria-hidden="true" />
         <div>
@@ -37,7 +37,7 @@ export default function PerformancePanel({ dota }: { dota: PlayerDotaStat | null
         </div>
       </div>
 
-      <div className="p-5 flex flex-wrap items-center gap-6">
+      <div className="p-5 flex flex-1 flex-wrap items-center gap-6">
         {/* The composite KDA figure lives in the ranked strip at the top of the
             page, with its league rank alongside. This panel shows the three
             numbers it is made of — the breakdown, not the headline again. */}
