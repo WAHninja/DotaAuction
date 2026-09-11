@@ -185,7 +185,6 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                       <span className="font-semibold truncate text-dota-text group-hover:text-dota-gold transition-colors">
                         {row.username}
                       </span>
-                      {isYou && <span className="stat-label shrink-0">You</span>}
                     </Link>
                   </td>
 
