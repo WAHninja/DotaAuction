@@ -16,3 +16,12 @@ export const MIN_GAMES_FOR_RATE = 3;
 /** Minimum picks before a hero win rate is shown. Mirrors the API, which
  *  already nulls HeroStat.winRate below this threshold. */
 export const MIN_PICKS_FOR_RATE = 3;
+
+/**
+ * Minimum offers before a market value is shown.
+ *
+ * Offer strength is noisier than win rate: a single offer is one person's
+ * opinion on one night, and averaging two of them is barely better. Set higher
+ * than the game thresholds for that reason.
+ */
+export const MIN_OFFERS_FOR_STRENGTH = 4;
