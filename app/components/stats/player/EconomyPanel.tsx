@@ -46,8 +46,11 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
     {
       label: 'Offers received',
       value: String(core.timesOffered),
+      // Flags how much of the raw count was forced. On two-player teams every
+      // member is offered every game, so the bare number says little on its own
+      // — the Selection panel breaks it down properly.
       detail: core.timesOffered > 0
-        ? `sold ${core.timesSold} time${core.timesSold === 1 ? '' : 's'}`
+        ? `${core.selectionOpportunities} with a real choice`
         : undefined,
     },
     {
