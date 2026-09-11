@@ -1,26 +1,26 @@
 'use client';
 
-import type { LeagueTotals } from '@/types';
+import type { LeagueTotals, LeagueRecords, LeagueRecord } from '@/types';
 import { pct } from '@/lib/stats/format';
+import { GOLD_WIN_THRESHOLD } from '@/lib/gold-win';
 
 /**
- * League-wide totals — the figures that belong to nobody in particular.
+ * League-wide totals, then league records.
  *
- * Now sourced from match- and game-level counts rather than sums of per-player
- * fields. The previous version showed players, offers made and trades
- * completed; all three were dropped deliberately:
+ * Two rows with different characters. The first counts what has happened; the
+ * second names single notable matches, so those tiles carry a player where the
+ * record belongs to someone. That player is picked out in gold — the record is
+ * about them, and a name in the same muted grey as a caption reads as
+ * incidental rather than as the point.
  *
- *   - Player count is a constant for a fixed group of friends, so it carries no
- *     information and occupied a quarter of the strip.
- *   - Trades completed tracks games played almost exactly, since a game
- *     normally resolves one trade — it was a second copy of a number already on
- *     screen.
- *   - Offers made is a function of participation rather than a league fact.
- *
- * What replaced them answers the question the strip should answer: how much has
- * been played, and how do matches actually end.
+ * Records are individually nullable: a league that has never had a gold-
+ * threshold win has no fastest gold win, and the tile says so rather than
+ * showing a zero that would look like a real result.
  */
-export default function LeagueVitals({ totals }: { totals: LeagueTotals }) {
+export default function LeagueVitals({ totals, records }: {
+  totals: LeagueTotals;
+  records: LeagueRecords;
+}) {
   const { matchesCompleted, gamesPlayed, outrightWins, goldWins } = totals;
 
   // Decided matches, not matchesCompleted — a finished match with no recorded
@@ -28,17 +28,8 @@ export default function LeagueVitals({ totals }: { totals: LeagueTotals }) {
   const decided = outrightWins + goldWins;
 
   const vitals: { label: string; value: string; sub?: string }[] = [
-    {
-      label: 'Matches completed',
-      value: matchesCompleted.toLocaleString(),
-    },
-    {
-      label: 'Games played',
-      value: gamesPlayed.toLocaleString(),
-      sub: matchesCompleted > 0
-        ? `${(gamesPlayed / matchesCompleted).toFixed(1)} per match`
-        : undefined,
-    },
+    { label: 'Matches completed', value: matchesCompleted.toLocaleString() },
+    { label: 'Games played',      value: gamesPlayed.toLocaleString() },
     {
       label: 'Won outright',
       value: outrightWins.toLocaleString(),
@@ -52,16 +43,89 @@ export default function LeagueVitals({ totals }: { totals: LeagueTotals }) {
   ];
 
   return (
-    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-      {vitals.map(v => (
-        <div key={v.label} className="panel-sunken px-4 py-3">
-          <p className="stat-label">{v.label}</p>
-          <p className="font-barlow text-xl font-bold text-dota-text tabular-nums mt-0.5">{v.value}</p>
-          {v.sub && (
-            <p className="font-barlow text-[11px] text-dota-text-dim mt-1 tabular-nums">{v.sub}</p>
-          )}
-        </div>
-      ))}
+    <div className="space-y-3">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {vitals.map(v => (
+          <Tile key={v.label} label={v.label} value={v.value} sub={v.sub} />
+        ))}
+      </div>
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <RecordTile
+          label="Shortest match"
+          record={records.shortestMatch}
+          value={r => `${r.value} ${r.value === 1 ? 'game' : 'games'}`}
+          // Ties on game count are broken by opponents beaten, so showing that
+          // figure explains why this match holds the record over another of the
+          // same length.
+          sub={r => (r.detail ? `beat ${r.detail} opponents` : undefined)}
+        />
+        <RecordTile
+          label="Longest match"
+          record={records.longestMatch}
+          value={r => `${r.value} ${r.value === 1 ? 'game' : 'games'}`}
+          showPlayer={false}
+        />
+        <RecordTile
+          label="Leanest outright win"
+          record={records.leanestOutrightWin}
+          value={r => r.value.toLocaleString()}
+          sub={() => 'gold held when winning'}
+        />
+        <RecordTile
+          label="Fastest to 100k"
+          record={records.fastestGoldWin}
+          value={r => `${r.value} ${r.value === 1 ? 'game' : 'games'}`}
+          sub={() => `to ${(GOLD_WIN_THRESHOLD / 1000)}k gold`}
+        />
+      </div>
     </div>
+  );
+}
+
+function Tile({ label, value, sub, player }: {
+  label: string;
+  value: string;
+  sub?: string;
+  player?: string | null;
+}) {
+  return (
+    <div className="panel-sunken px-4 py-3">
+      <p className="stat-label">{label}</p>
+      <p className="font-barlow text-xl font-bold text-dota-text tabular-nums mt-0.5">{value}</p>
+      {player && (
+        <p className="font-barlow text-xs font-bold text-dota-gold mt-0.5 truncate">{player}</p>
+      )}
+      {sub && (
+        <p className="font-barlow text-[11px] text-dota-text-dim mt-0.5 tabular-nums">{sub}</p>
+      )}
+    </div>
+  );
+}
+
+function RecordTile({ label, record, value, sub, showPlayer = true }: {
+  label: string;
+  record: LeagueRecord | null;
+  value: (r: LeagueRecord) => string;
+  sub?: (r: LeagueRecord) => string | undefined;
+  showPlayer?: boolean;
+}) {
+  if (record === null) {
+    return (
+      <div className="panel-sunken px-4 py-3">
+        <p className="stat-label">{label}</p>
+        <p className="font-barlow text-xl font-bold text-dota-text-dim mt-0.5">—</p>
+        <p className="font-barlow text-[11px] text-dota-text-dim mt-0.5">not set yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <Tile
+      label={label}
+      value={value(record)}
+      player={showPlayer ? record.player : null}
+      sub={sub?.(record)}
+    />
   );
 }
