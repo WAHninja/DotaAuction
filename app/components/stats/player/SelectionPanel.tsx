@@ -44,7 +44,7 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
     : { text: 'Teammates pick you about as often as chance would', tone: 'text-dota-text-muted' };
 
   return (
-    <section className="panel overflow-hidden">
+    <section className="panel overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
         <ShoppingCart className="w-4 h-4 shrink-0 text-dota-gold" aria-hidden="true" />
         <div>
@@ -55,7 +55,7 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
         </div>
       </div>
 
-      <div className="p-5 space-y-3">
+      <div className="p-5 space-y-3 flex-1">
         <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
           <div>
             <p className="stat-label">Picked</p>
