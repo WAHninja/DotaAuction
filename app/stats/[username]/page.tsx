@@ -4,11 +4,10 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useStats } from '@/app/components/stats/StatsProvider';
-import { forPlayer, rankOf, leagueAverage, headToHeadFor } from '@/lib/stats/select';
+import { forPlayer, rankOf, leagueAverage } from '@/lib/stats/select';
 import { pct, formatStrength } from '@/lib/stats/format';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
-import PctBadge from '@/app/components/stats/ui/PctBadge';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
 import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
@@ -16,7 +15,7 @@ import LastStandPanel from '@/app/components/stats/player/LastStandPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
 import FormPanel from '@/app/components/stats/player/FormPanel';
 import ComparePicker from '@/app/components/stats/player/ComparePicker';
-import PartnersPanel from '@/app/components/stats/player/PartnersPanel';
+import RelationsPanel from '@/app/components/stats/player/RelationsPanel';
 
 /**
  * /stats/[username] — the player view.
@@ -78,7 +77,13 @@ export default function PlayerStatsPage() {
 
   const hasRateSample   = core.gamesPlayed  >= MIN_GAMES_FOR_RATE;
   const hasMarketSample = core.timesOffered >= MIN_OFFERS_FOR_STRENGTH;
-  const h2h = headToHeadFor(headToHead, username);
+
+  // Named for what the reader is waiting on, not for the component that hides
+  // it, and derived from the same thresholds the panels apply.
+  const locked = [
+    core.gamesPlayed  >= MIN_GAMES_FOR_RATE        ? null : 'win rate',
+    core.timesOffered >= MIN_OFFERS_FOR_STRENGTH   ? null : 'market value',
+  ].filter((x): x is string => x !== null);
 
   return (
     <Shell>
@@ -128,65 +133,41 @@ export default function PlayerStatsPage() {
         />
       </div>
 
+      {/* Not enough games is said once, here, rather than by each panel
+          announcing its own absence. Panels with nothing to show now render
+          nothing at all — seven separate "you have never…" messages read as an
+          accusation rather than as context. */}
+      {locked.length > 0 && (
+        <p className="panel-sunken px-4 py-3 font-barlow text-sm text-dota-text-muted">
+          Still building a record —{' '}
+          <span className="text-dota-text">{locked.join(', ')}</span>{' '}
+          {locked.length === 1 ? 'needs' : 'need'} more games before they mean anything.
+        </p>
+      )}
+
+      {/* Smaller panels share a two-column grid on wide screens. Previously
+          every panel was full width in a single column, so eight of them read
+          as eight equally important things and the page had no shape. These
+          four are each a handful of figures and do not need the width. */}
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
+        <FormPanel streak={player.streak} recentForm={core.recentForm} />
+        <PerformancePanel dota={dota} />
+        <SelectionPanel core={core} />
+        <LastStandPanel core={core} />
+      </div>
+
+      {/* Full width below: the panels that are genuinely wide — a four-column
+          breakdown and two tables. */}
       <EconomyPanel core={core} />
 
-      <SelectionPanel core={core} />
-
-      <LastStandPanel core={core} />
-
-      <PerformancePanel dota={dota} />
-
-      <FormPanel streak={player.streak} recentForm={core.recentForm} />
-
-      {/* Partners then opponents — the two halves of the same question. */}
-      <PartnersPanel synergy={payload.teammateSynergy} username={username} />
+      <RelationsPanel
+        synergy={payload.teammateSynergy}
+        headToHead={headToHead}
+        username={username}
+      />
 
       <ComparePicker payload={payload} subject={username} />
 
-      <section className="panel overflow-hidden">
-        <div className="px-5 py-4 border-b border-dota-border">
-          <h2 className="font-cinzel text-lg font-bold text-dota-gold">Head-to-Head</h2>
-          <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            Record against each opponent, across every game they were on opposing teams
-          </p>
-        </div>
-
-        {h2h.length === 0 ? (
-          <p className="font-barlow text-sm text-dota-text-dim py-8 text-center">
-            No recorded matchups yet.
-          </p>
-        ) : (
-          <table className="w-full font-barlow text-sm" aria-label={`Head-to-head record for ${username}`}>
-            <thead className="bg-dota-deep/60 border-b border-dota-border">
-              <tr className="stat-label">
-                <th scope="col" className="px-4 py-2.5 text-left">Opponent</th>
-                <th scope="col" className="px-4 py-2.5 text-center">Record</th>
-                <th scope="col" className="px-4 py-2.5 text-center">Win rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {h2h.map(r => (
-                <tr key={r.opponent} className="border-b border-dota-border/25 last:border-0">
-                  <td className="px-4 py-2.5">
-                    <Link
-                      href={`/stats/${encodeURIComponent(r.opponent)}`}
-                      className="font-semibold text-dota-text hover:text-dota-gold transition-colors"
-                    >
-                      {r.opponent}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2.5 text-center tabular-nums text-dota-text-muted">
-                    {r.wins}–{r.losses}
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    <PctBadge success={r.wins} total={r.games} minGames={MIN_GAMES_FOR_RATE} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
     </Shell>
   );
 }
