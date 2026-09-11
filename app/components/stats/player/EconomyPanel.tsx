@@ -1,7 +1,8 @@
 'use client';
 
 import type { PlayerStats } from '@/types';
-import { pct } from '@/lib/stats/format';
+import { pct, formatStrength } from '@/lib/stats/format';
+import { MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import GoldIcon from '@/app/components/GoldIcon';
 
 /**
@@ -16,6 +17,13 @@ import GoldIcon from '@/app/components/GoldIcon';
  * acceptance rate is a description of what happened to a known, small number of
  * offers rather than an estimate of underlying skill, so "1 of 2 accepted" is a
  * complete fact rather than a noisy sample — and the raw counts sit beside it.
+ *
+ * Strengths are the exception and are guarded, because they are averages
+ * estimating something ongoing rather than descriptions of what happened.
+ *
+ * Both gold figures that used to sit here are gone. Average offer value and net
+ * gold both scaled with match length — the permitted offer range shifts and
+ * widens every game — so they measured exposure rather than worth.
  */
 export default function EconomyPanel({ core }: { core: PlayerStats }) {
   const rows: { label: string; value: string; detail?: string }[] = [
@@ -27,9 +35,13 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         : undefined,
     },
     {
-      label: 'Average offer',
-      value: core.averageOfferValue > 0 ? Math.round(core.averageOfferValue).toLocaleString() : '—',
-      detail: core.averageOfferValue > 0 ? 'across offers made' : 'no offers yet',
+      label: 'Market value',
+      value: core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
+        ? formatStrength(core.offerStrengthReceived)
+        : '—',
+      detail: core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
+        ? 'avg offer received, share of range'
+        : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`,
     },
     {
       label: 'Offers received',
@@ -39,9 +51,13 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         : undefined,
     },
     {
-      label: 'Net gold',
-      value: `${core.netGold > 0 ? '+' : ''}${core.netGold.toLocaleString()}`,
-      detail: 'wins and sales combined',
+      label: 'Bid strength',
+      value: core.offersMade >= MIN_OFFERS_FOR_STRENGTH
+        ? formatStrength(core.offerStrengthMade)
+        : '—',
+      detail: core.offersMade >= MIN_OFFERS_FOR_STRENGTH
+        ? 'how hard they bid, share of range'
+        : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`,
     },
   ];
 
