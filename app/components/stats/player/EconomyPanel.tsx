@@ -21,6 +21,12 @@ import GoldIcon from '@/app/components/GoldIcon';
  * Strengths are the exception and are guarded, because they are averages
  * estimating something ongoing rather than descriptions of what happened.
  *
+ * Market value used to lead this panel and has moved out. It is already the
+ * headline figure in the ranked strip at the top of the page, where it carries
+ * a league rank and average this panel cannot show. Repeating it here gave the
+ * reader the same number twice with no signal about which was authoritative.
+ * What remains is the activity behind it — what they bid, what came in.
+ *
  * Both gold figures that used to sit here are gone. Average offer value and net
  * gold both scaled with match length — the permitted offer range shifts and
  * widens every game — so they measured exposure rather than worth.
@@ -37,15 +43,6 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
       detail: core.offersMade > 0
         ? `${core.offersAccepted} accepted · ${pct(core.offersAccepted, core.offersMade)}%`
         : undefined,
-    },
-    {
-      label: 'Market value',
-      value: core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
-        ? formatStrength(core.offerStrengthReceived)
-        : '—',
-      detail: core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
-        ? 'avg offer received, share of range'
-        : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`,
     },
     {
       label: 'Offers received',
@@ -80,7 +77,7 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-dota-border/40">
+      <dl className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y lg:divide-y-0 divide-dota-border/40">
         {rows.map(r => (
           <div key={r.label} className="px-4 py-3">
             <dt className="stat-label">{r.label}</dt>
