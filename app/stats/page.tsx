@@ -62,7 +62,7 @@ export default function StatsPage() {
           <div className="h-px flex-1 bg-gradient-to-r from-dota-gold/40 to-transparent" />
         </div>
 
-        <LeagueVitals totals={payload.leagueTotals} />
+        <LeagueVitals totals={payload.leagueTotals} records={payload.leagueRecords} />
       </div>
 
       <StandingsTable
