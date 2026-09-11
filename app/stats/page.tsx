@@ -46,7 +46,7 @@ export default function StatsPage() {
 
       <YouCard />
 
-      <LeagueVitals payload={payload} />
+      <LeagueVitals totals={payload.leagueTotals} />
 
       <StandingsTable
         players={payload.players}
