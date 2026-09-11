@@ -217,12 +217,14 @@ export type PlayerStats = {
    *  /api/stats so any stats surface can render a real portrait; PlayerAvatar
    *  falls back to a username-hashed initial when this is null. */
   steamAvatar: string | null;
-  /** Market value: mean position of offers received within the range permitted
-   *  at the time, 0–1. Comparable across matches of any length, unlike a raw
+  /** Market value: mean position of offers *received* within the range
+   *  permitted at the time, 0–1 — how expensively teammates price this player
+   *  when selling them. Comparable across matches of any length, unlike a raw
    *  offer amount. null when this player has never been offered. */
   offerStrengthReceived: number | null;
-  /** Mean position of offers this player submitted, 0–1 — how aggressively they
-   *  bid. null when they have never made an offer. */
+  /** Asking price: mean position of offers this player *sent*, 0–1 — how
+   *  expensively they price their own teammates. The sender of an offer is the
+   *  seller, never a buyer. null when they have never sent one. */
   offerStrengthMade: number | null;
   /** Discretionary offers where this player was an available target — their
    *  team had three or more members, so the offerer had a real choice. Offers
