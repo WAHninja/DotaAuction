@@ -15,6 +15,7 @@ import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
 import FormPanel from '@/app/components/stats/player/FormPanel';
 import ComparePicker from '@/app/components/stats/player/ComparePicker';
+import PartnersPanel from '@/app/components/stats/player/PartnersPanel';
 
 /**
  * /stats/[username] — the player view.
@@ -133,6 +134,9 @@ export default function PlayerStatsPage() {
       <PerformancePanel dota={dota} />
 
       <FormPanel streak={player.streak} acquisition={player.acquisition} />
+
+      {/* Partners then opponents — the two halves of the same question. */}
+      <PartnersPanel synergy={payload.teammateSynergy} username={username} />
 
       <ComparePicker payload={payload} subject={username} />
 
