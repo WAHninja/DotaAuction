@@ -123,11 +123,7 @@ export default function PlayerStatsPage() {
 
       <PerformancePanel dota={dota} />
 
-      <FormPanel
-        streak={player.streak}
-        acquisition={player.acquisition}
-        winTypes={player.winTypes}
-      />
+      <FormPanel streak={player.streak} acquisition={player.acquisition} />
 
       <ComparePicker payload={payload} subject={username} />
 
