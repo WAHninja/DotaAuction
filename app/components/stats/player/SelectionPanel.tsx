@@ -20,19 +20,11 @@ import { pct } from '@/lib/stats/format';
 export default function SelectionPanel({ core }: { core: PlayerStats }) {
   const { selectionOpportunities, selectionCount, selectionIndex } = core;
 
-  // No discretionary situations at all is a real, common outcome for someone
-  // who has only played two-a-side. Say so rather than showing a zero, which
-  // would read as "never wanted".
-  if (selectionOpportunities === 0) {
-    return (
-      <section className="panel overflow-hidden">
-        <Header />
-        <p className="font-barlow text-sm text-dota-text-dim px-5 py-6 text-center">
-          No games yet where a teammate had a genuine choice of who to offer.
-        </p>
-      </section>
-    );
-  }
+  // Renders nothing at all with no discretionary situations, rather than an
+  // explanatory message. Seven panels each explaining their own absence added
+  // up to a page of negatives for a new player; the page-level notice now says
+  // it once.
+  if (selectionOpportunities === 0) return null;
 
   const hasSample = selectionOpportunities >= MIN_SELECTION_OPPORTUNITIES;
 
@@ -46,7 +38,8 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
     <section className="panel overflow-hidden">
       <Header />
 
-      <div className="p-5 flex flex-wrap items-center gap-6">
+      <div className="p-5 space-y-3">
+        <div className="flex flex-wrap items-baseline gap-6">
         <div>
           <p className="stat-label">Versus chance</p>
           {hasSample && selectionIndex !== null ? (
@@ -73,8 +66,10 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
           </p>
         </div>
 
+        </div>
+
         {hasSample && verdict && (
-          <p className={`font-barlow text-sm ml-auto ${verdict.tone}`}>{verdict.text}</p>
+          <p className={`font-barlow text-sm ${verdict.tone}`}>{verdict.text}</p>
         )}
       </div>
 
