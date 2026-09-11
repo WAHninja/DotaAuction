@@ -60,7 +60,7 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         ? formatStrength(core.offerStrengthMade)
         : '—',
       detail: core.offersMade >= MIN_OFFERS_FOR_STRENGTH
-        ? 'how hard they bid, share of range'
+        ? 'position in the range they were allowed to bid'
         : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`,
     },
   ];
