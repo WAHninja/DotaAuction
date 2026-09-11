@@ -9,7 +9,8 @@ import { MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import GoldIcon from '@/app/components/GoldIcon';
 
 /**
- * A player's auction economy: what they bid, what they were worth, what stuck.
+ * A player's auction economy: what they asked for others, what others asked
+ * for them, and how much of it stuck.
  *
  * The headline figures (net gold, times sold) live in the ranked strip at the
  * top of the page. This panel carries the detail behind them — the activity
@@ -28,14 +29,14 @@ import GoldIcon from '@/app/components/GoldIcon';
  * headline figure in the ranked strip at the top of the page, where it carries
  * a league rank and average this panel cannot show. Repeating it here gave the
  * reader the same number twice with no signal about which was authoritative.
- * What remains is the activity behind it — what they bid, what came in.
+ * What remains is the activity behind it — what they asked, what came in.
  *
  * Both gold figures that used to sit here are gone. Average offer value and net
  * gold both scaled with match length — the permitted offer range shifts and
  * widens every game — so they measured exposure rather than worth.
  */
 export default function EconomyPanel({ core }: { core: PlayerStats }) {
-  // A player who has neither bid nor been bid on has no economy to show — four
+  // A player who has neither made nor received an offer has no economy — four
   // zeroes would be noise rather than information.
   if (core.offersMade === 0 && core.timesOffered === 0) return null;
 
@@ -67,14 +68,14 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         : undefined,
     },
     {
-      label: 'Bid strength',
-      hint: GLOSSARY.bidStrength,
-      hintId: 'tip-bid-strength',
+      label: 'Asking price',
+      hint: GLOSSARY.askingPrice,
+      hintId: 'tip-asking-price',
       value: core.offersMade >= MIN_OFFERS_FOR_STRENGTH
         ? formatStrength(core.offerStrengthMade)
         : '—',
       detail: core.offersMade >= MIN_OFFERS_FOR_STRENGTH
-        ? 'position in the range they were allowed to bid'
+        ? 'what they ask for teammates, share of range'
         : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`,
     },
   ];
