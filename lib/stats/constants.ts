@@ -10,12 +10,21 @@
  * StatsTab, which meant any new stats view would have picked its own number.
  */
 
-/** Minimum games before a player win rate is shown. */
-export const MIN_GAMES_FOR_RATE = 3;
+/**
+ * Minimum games before a player win rate is shown.
+ *
+ * Raised from 3. Three games is two coin flips away from 100% or 0%, and
+ * publishing a rate off it invites exactly the comparisons it cannot support.
+ * Kept deliberately modest rather than statistically respectable: this is a
+ * small group, and a threshold that blanks the whole table teaches people to
+ * ignore the column instead of trusting it.
+ */
+export const MIN_GAMES_FOR_RATE = 6;
 
 /** Minimum picks before a hero win rate is shown. Mirrors the API, which
- *  already nulls HeroStat.winRate below this threshold. */
-export const MIN_PICKS_FOR_RATE = 3;
+ *  already nulls HeroStat.winRate below this threshold — it imports this same
+ *  constant, so the two cannot drift apart. */
+export const MIN_PICKS_FOR_RATE = 5;
 
 /**
  * Minimum offers before a market value is shown.
