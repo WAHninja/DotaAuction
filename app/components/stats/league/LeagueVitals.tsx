@@ -1,46 +1,53 @@
 'use client';
 
-import type { StatsPayload } from '@/types';
+import type { LeagueTotals } from '@/types';
 import { pct } from '@/lib/stats/format';
 
 /**
  * League-wide totals — the figures that belong to nobody in particular.
  *
- * Every number here is a straight sum over fields the payload already exposes.
- * That constraint is deliberate: a total that cannot be derived honestly is
- * left out rather than approximated. Games played, for instance, is not shown —
- * summing players' gamesPlayed counts each game once per participant, and the
- * payload carries no match or game count to divide by.
+ * Now sourced from match- and game-level counts rather than sums of per-player
+ * fields. The previous version showed players, offers made and trades
+ * completed; all three were dropped deliberately:
+ *
+ *   - Player count is a constant for a fixed group of friends, so it carries no
+ *     information and occupied a quarter of the strip.
+ *   - Trades completed tracks games played almost exactly, since a game
+ *     normally resolves one trade — it was a second copy of a number already on
+ *     screen.
+ *   - Offers made is a function of participation rather than a league fact.
+ *
+ * What replaced them answers the question the strip should answer: how much has
+ * been played, and how do matches actually end.
  */
-export default function LeagueVitals({ payload }: { payload: StatsPayload }) {
-  const { players, winTypeStats } = payload;
+export default function LeagueVitals({ totals }: { totals: LeagueTotals }) {
+  const { matchesCompleted, gamesPlayed, outrightWins, goldWins } = totals;
 
-  const offersMade     = players.reduce((n, p) => n + p.offersMade, 0);
-  const offersAccepted = players.reduce((n, p) => n + p.offersAccepted, 0);
-  const goldWins       = winTypeStats.reduce((n, w) => n + w.goldThresholdWins, 0);
-  const standingWins   = winTypeStats.reduce((n, w) => n + w.lastStandingWins, 0);
-  const totalWins      = goldWins + standingWins;
+  // Decided matches, not matchesCompleted — a finished match with no recorded
+  // win_type would otherwise drag the split below 100% with no explanation.
+  const decided = outrightWins + goldWins;
 
   const vitals: { label: string; value: string; sub?: string }[] = [
     {
-      label: 'Players',
-      value: String(players.length),
+      label: 'Matches completed',
+      value: matchesCompleted.toLocaleString(),
     },
     {
-      label: 'Offers made',
-      value: offersMade.toLocaleString(),
-      sub: offersMade > 0 ? `${pct(offersAccepted, offersMade)}% accepted` : undefined,
+      label: 'Games played',
+      value: gamesPlayed.toLocaleString(),
+      sub: matchesCompleted > 0
+        ? `${(gamesPlayed / matchesCompleted).toFixed(1)} per match`
+        : undefined,
     },
     {
-      label: 'Trades completed',
-      value: offersAccepted.toLocaleString(),
+      label: 'Won outright',
+      value: outrightWins.toLocaleString(),
+      sub: decided > 0 ? `${pct(outrightWins, decided)}% of matches` : undefined,
     },
     {
-      label: 'Matches decided',
-      value: String(totalWins),
-      // Only meaningful once something has been won — "0% by gold" on an empty
-      // league is a statistic about nothing.
-      sub: totalWins > 0 ? `${pct(goldWins, totalWins)}% on gold` : undefined,
+      label: 'Won on gold',
+      value: goldWins.toLocaleString(),
+      sub: decided > 0 ? `${pct(goldWins, decided)}% of matches` : undefined,
     },
   ];
 
