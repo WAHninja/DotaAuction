@@ -8,6 +8,7 @@ import { pct, formatStrength } from '@/lib/stats/format';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
+import FormGuide from '@/app/components/stats/ui/FormGuide';
 
 /**
  * The signed-in user's own row, promoted out of the standings table.
@@ -78,6 +79,13 @@ export default function YouCard() {
           <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
         </Link>
       </div>
+
+      {core.recentForm.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="stat-label shrink-0">Recent form</span>
+          <FormGuide form={core.recentForm} />
+        </div>
+      )}
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatWithRank
