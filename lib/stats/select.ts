@@ -15,7 +15,7 @@
  * Formatting of the values these return belongs in lib/stats/format.ts.
  */
 
-import type { StatsPayload, HeadToHead } from '@/types';
+import type { StatsPayload, HeadToHead, TeammateSynergy } from '@/types';
 
 /** A value's standing within the league, 1-based. */
 export type Rank = {
@@ -126,5 +126,40 @@ export function headToHeadFor(rows: HeadToHead[], username: string): H2HRecord[]
         losses:   r.totalGames - wins,
       };
     })
+    .sort((a, b) => b.games - a.games);
+}
+
+/** One partner's record from the subject's perspective. */
+export type PartnerRecord = {
+  partner: string;
+  games: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+};
+
+/**
+ * A player's record alongside every teammate they have played with.
+ *
+ * Mirrors headToHeadFor: synergy rows carry an arbitrary A/B orientation, so
+ * the subject can be on either side and every consumer would otherwise have to
+ * re-derive which column is theirs. Unlike head-to-head the outcome is shared
+ * between both players, so there is no win column to swap — only the partner's
+ * name changes with orientation.
+ *
+ * Sorted by games together, so the partnerships with enough history to mean
+ * something come first rather than whichever pairing happens to sit at 100%
+ * off a single game.
+ */
+export function synergyFor(rows: TeammateSynergy[], username: string): PartnerRecord[] {
+  return rows
+    .filter(r => r.playerA === username || r.playerB === username)
+    .map(r => ({
+      partner: r.playerA === username ? r.playerB : r.playerA,
+      games:   r.gamesTogether,
+      wins:    r.winsTogether,
+      losses:  r.gamesTogether - r.winsTogether,
+      winRate: r.winRate,
+    }))
     .sort((a, b) => b.games - a.games);
 }
