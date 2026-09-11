@@ -2,10 +2,14 @@
 
 import { Swords } from 'lucide-react';
 import type { PlayerDotaStat } from '@/types';
-import { kdaColour, heroIconUrl, heroDisplayName } from '@/lib/stats/format';
+import { heroIconUrl, heroDisplayName } from '@/lib/stats/format';
 
 /**
  * A player's Dota averages, plus their single best recorded game.
+ *
+ * Shows the components of KDA rather than KDA itself — the composite sits in
+ * the ranked strip at the top of the page with its league rank, and repeating
+ * it here was one of three places the same number appeared.
  *
  * Renders nothing when no Dota game has ever been reported for this player.
  * A panel of zeroes would claim they average no kills, which is a different
@@ -15,7 +19,7 @@ import { kdaColour, heroIconUrl, heroDisplayName } from '@/lib/stats/format';
 export default function PerformancePanel({ dota }: { dota: PlayerDotaStat | null }) {
   if (!dota) return null;
 
-  const averages = [
+  const averages: { label: string; value: string; tone?: string }[] = [
     { label: 'Kills',   value: dota.avgKills.toFixed(1) },
     { label: 'Deaths',  value: dota.avgDeaths.toFixed(1) },
     { label: 'Assists', value: dota.avgAssists.toFixed(1) },
@@ -34,18 +38,16 @@ export default function PerformancePanel({ dota }: { dota: PlayerDotaStat | null
       </div>
 
       <div className="p-5 flex flex-wrap items-center gap-6">
-        <div className="flex items-baseline gap-2">
-          <span className={`font-barlow text-3xl font-bold tabular-nums ${kdaColour(dota.avgKda)}`}>
-            {dota.avgKda.toFixed(2)}
-          </span>
-          <span className="stat-label">KDA</span>
-        </div>
-
+        {/* The composite KDA figure lives in the ranked strip at the top of the
+            page, with its league rank alongside. This panel shows the three
+            numbers it is made of — the breakdown, not the headline again. */}
         <div className="flex gap-5">
           {averages.map(a => (
             <div key={a.label}>
               <p className="stat-label">{a.label}</p>
-              <p className="font-barlow text-lg font-bold text-dota-text tabular-nums">{a.value}</p>
+              <p className={`font-barlow text-2xl font-bold tabular-nums ${a.tone ?? 'text-dota-text'}`}>
+                {a.value}
+              </p>
             </div>
           ))}
         </div>
