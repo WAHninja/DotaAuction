@@ -91,6 +91,10 @@ type PlayerRow = {
   selectionOpportunities: number;
   /** How many of those offers named them. */
   selectionCount: number;
+  /** How many selections chance alone would have produced, given the team
+   *  sizes involved. Lets the UI compare two percentages rather than present
+   *  an abstract ratio. */
+  selectionExpected: number;
   /** Selections against what chance alone would produce. 1.0 = as often as
    *  random, 2.0 = twice as often. null when never in a discretionary spot. */
   selectionIndex: number | null;
@@ -559,6 +563,7 @@ export async function GET() {
       offerStrengthMade:     offerStrength.get(id)?.made     ?? null,
       selectionOpportunities: selection.get(id)?.opportunities ?? 0,
       selectionCount:         selection.get(id)?.selections    ?? 0,
+      selectionExpected:      selection.get(id)?.expected      ?? 0,
       selectionIndex:         selection.get(id)?.index         ?? null,
       recentForm:             recentForm.get(id) ?? [],
       lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
