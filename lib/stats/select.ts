@@ -29,7 +29,8 @@ export type Rank = {
  * Rank a player among their peers on one numeric field.
  *
  * `higherIsBetter` is explicit rather than inferred because the payload mixes
- * directions freely — netGold and avgKda rank descending, avgDeaths ascending.
+ * directions freely — market value and avgKda rank descending, avgDeaths
+ * ascending.
  * Getting this wrong produces a plausible-looking number that is exactly
  * backwards, so there is no safe default to guess at.
  *
@@ -89,9 +90,7 @@ export function forPlayer(payload: StatsPayload, username: string) {
   return {
     core:        payload.players.find(p => p.username === username) ?? null,
     dota:        payload.playerDotaStats.find(p => p.username === username) ?? null,
-    acquisition: payload.acquisitionImpact.find(a => a.username === username) ?? null,
     streak:      payload.winStreaks.find(w => w.username === username) ?? null,
-    winTypes:    payload.winTypeStats.find(w => w.username === username) ?? null,
   };
 }
 
