@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { PlayerStats, PlayerDotaStat } from '@/types';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
+import { GLOSSARY } from '@/lib/stats/glossary';
 import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import SortableTh from '@/app/components/stats/ui/SortableTh';
+import { Trophy } from 'lucide-react';
 import RankMedal from '@/app/components/RankMedal';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 
@@ -111,6 +113,23 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
 
   return (
     <div className="panel overflow-hidden">
+      {/* Mirrors HeroLeaderboard's header — icon, title, subtitle, and a count
+          on the right — so the page's two tables present themselves the same
+          way. Previously this one started straight in on column headers with
+          nothing saying what it was. */}
+      <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3 flex-wrap">
+        <Trophy className="w-4 h-4 shrink-0 text-dota-gold" aria-hidden="true" />
+        <div>
+          <h3 className="font-cinzel text-lg font-bold text-dota-gold">Player Leaderboard</h3>
+          <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
+            Every player, ranked · Select a player for their full breakdown
+          </p>
+        </div>
+        <span className="ml-auto font-barlow text-[11px] text-dota-text-dim shrink-0 tabular-nums">
+          {players.length} {players.length === 1 ? 'player' : 'players'}
+        </span>
+      </div>
+
       <div className="overflow-x-auto">
         {/* min-width only from sm up. At 640px on a 380px phone this table
             scrolled 1.7x with nothing frozen, so you ended up reading numbers
@@ -135,19 +154,19 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
               />
               <SortableTh<SortKey>
                 colKey="winRate" label="Win rate" sublabel={`min. ${MIN_GAMES_FOR_RATE}`}
-                tooltip={`Games won as a share of games played. Hidden below ${MIN_GAMES_FOR_RATE} games, where the figure is noise.`}
+                tooltip={GLOSSARY.winRate}
                 tooltipId="std-winrate"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
               />
               <SortableTh<SortKey>
                 colKey="marketValue" label="Market value" sublabel={`min. ${MIN_OFFERS_FOR_STRENGTH}`}
-                tooltip={`Average strength of offers received, as a share of the range allowed at the time. Comparable across matches of any length. Hidden below ${MIN_OFFERS_FOR_STRENGTH} offers.`}
+                tooltip={GLOSSARY.marketValue}
                 tooltipId="std-market"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
               />
               <SortableTh<SortKey>
                 colKey="avgKda" label="KDA"
-                tooltip="Average (kills + assists) / deaths across reported Dota games."
+                tooltip={GLOSSARY.avgKda}
                 tooltipId="std-kda"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
                 className="hidden sm:table-cell"
@@ -218,6 +237,13 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="px-5 py-2.5 border-t border-dota-border">
+        <p className="font-barlow text-[11px] text-dota-text-dim">
+          <span className="text-dota-text-muted font-semibold">Market value:</span>{' '}
+          {GLOSSARY.marketValue}
+        </p>
       </div>
     </div>
   );
