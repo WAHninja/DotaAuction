@@ -65,6 +65,7 @@ export default function PlayerStatsPage() {
 
   const { players, playerDotaStats, headToHead } = payload;
 
+  const ratingRank  = rankOf(players, p => p.username === username, p => p.rating);
   const winRateRank = rankOf(players, p => p.username === username, p => pct(p.gamesWon, p.gamesPlayed));
   const valued = players.filter(
     p => p.timesOffered >= MIN_OFFERS_FOR_STRENGTH && p.offerStrengthReceived !== null,
@@ -125,12 +126,20 @@ export default function PlayerStatsPage() {
         )}
       </div>
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+        <StatWithRank
+          label="Rating"
+          value={String(core.rating)}
+          rank={ratingRank}
+          tone="gold"
+          leagueAvg={core.ratedGames < 20 ? `provisional · ${core.ratedGames}/20 games` : null}
+          hint={GLOSSARY.rating}
+          hintId="tip-rating"
+        />
         <StatWithRank
           label="Win rate"
           value={hasRateSample ? `${pct(core.gamesWon, core.gamesPlayed)}%` : '—'}
           rank={hasRateSample ? winRateRank : null}
-          tone="gold"
           hint={GLOSSARY.winRate}
           hintId="tip-winrate"
         />
