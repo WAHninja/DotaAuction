@@ -66,7 +66,7 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
   ];
 
   return (
-    <section className="panel overflow-hidden">
+    <section className="panel overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
         <GoldIcon className="w-4 h-4 shrink-0" />
         <div>
@@ -80,7 +80,7 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
       {/* Three across at every size above mobile. This panel used to span the
           full page width; it now shares a row, so the old 2-then-3 breakpoint
           left an orphan cell on its own line at half width. */}
-      <dl className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-dota-border/40">
+      <dl className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-dota-border/40 flex-1">
         {rows.map(r => (
           <div key={r.label} className="px-4 py-3">
             <dt className="stat-label">{r.label}</dt>
