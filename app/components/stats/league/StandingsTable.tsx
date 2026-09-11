@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { PlayerStats, PlayerDotaStat } from '@/types';
-import { MIN_GAMES_FOR_RATE } from '@/lib/stats/constants';
-import { pct, kdaColour } from '@/lib/stats/format';
+import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
+import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import SortableTh from '@/app/components/stats/ui/SortableTh';
 import RankMedal from '@/app/components/RankMedal';
@@ -33,9 +33,12 @@ type Row = PlayerStats & {
   winRate: number;
   avgKda:  number | null;
   dotaGames: number;
+  /** Null below the sample threshold as well as when never offered, so the
+   *  column and the sort agree on what counts as "no value". */
+  marketValue: number | null;
 };
 
-type SortKey = 'username' | 'gamesPlayed' | 'winRate' | 'netGold' | 'avgKda';
+type SortKey = 'username' | 'gamesPlayed' | 'winRate' | 'marketValue' | 'avgKda';
 
 export default function StandingsTable({ players, dotaStats, highlightUsername }: {
   players:   PlayerStats[];
@@ -55,6 +58,8 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
         winRate:   pct(p.gamesWon, p.gamesPlayed),
         avgKda:    d?.avgKda ?? null,
         dotaGames: d?.games ?? 0,
+        marketValue:
+          p.timesOffered >= MIN_OFFERS_FOR_STRENGTH ? p.offerStrengthReceived : null,
       };
     });
   }, [players, dotaStats]);
@@ -66,11 +71,16 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
       // Players with no Dota data sort last regardless of direction — they have
       // no value, rather than a value of zero, and floating them to the top of
       // an ascending KDA sort would read as "worst players".
-      if (sortKey === 'avgKda') {
-        if (a.avgKda === null && b.avgKda === null) return 0;
-        if (a.avgKda === null) return 1;
-        if (b.avgKda === null) return -1;
-        return (a.avgKda - b.avgKda) * dir;
+      // Nullable columns sort last in both directions — no value is not a
+      // value of zero, and floating them to the top of an ascending sort would
+      // read as "worst".
+      if (sortKey === 'avgKda' || sortKey === 'marketValue') {
+        const av = a[sortKey];
+        const bv = b[sortKey];
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return (av - bv) * dir;
       }
       return ((a[sortKey] as number) - (b[sortKey] as number)) * dir;
     });
@@ -125,9 +135,9 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
               />
               <SortableTh<SortKey>
-                colKey="netGold" label="Net gold" align="right"
-                tooltip="Gold gained or lost across all matches, including win rewards and sales."
-                tooltipId="std-gold"
+                colKey="marketValue" label="Market value" sublabel={`min. ${MIN_OFFERS_FOR_STRENGTH}`}
+                tooltip={`Average strength of offers received, as a share of the range allowed at the time. Comparable across matches of any length. Hidden below ${MIN_OFFERS_FOR_STRENGTH} offers.`}
+                tooltipId="std-market"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
               />
               <SortableTh<SortKey>
@@ -185,12 +195,10 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                     />
                   </td>
 
-                  <td className={`px-3 py-2.5 text-right font-semibold tabular-nums ${
-                    row.netGold > 0 ? 'text-dota-radiant-light'
-                    : row.netGold < 0 ? 'text-dota-dire-light'
-                    : 'text-dota-text-muted'
-                  }`}>
-                    {row.netGold > 0 ? '+' : ''}{row.netGold.toLocaleString()}
+                  <td className="px-3 py-2.5 text-center tabular-nums">
+                    {row.marketValue === null
+                      ? <span className="text-dota-text-dim" title={`Needs ${MIN_OFFERS_FOR_STRENGTH} offers (has ${row.timesOffered})`}>—</span>
+                      : <span className="font-semibold text-dota-gold">{formatStrength(row.marketValue)}</span>}
                   </td>
 
                   <td className="px-3 py-2.5 text-center tabular-nums">
