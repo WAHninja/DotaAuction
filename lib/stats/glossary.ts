@@ -1,7 +1,7 @@
 /**
  * Plain-English definitions of the stats this app invents.
  *
- * Market value, bid strength and selection have no meaning outside DotaAuction,
+ * Market value, asking price and selection have no meaning outside DotaAuction,
  * so a label alone leaves the reader guessing. These live in one place because
  * the same stat is explained on several surfaces — a standings column header, a
  * player-page tile, a panel subtitle — and three hand-written explanations
@@ -25,16 +25,27 @@ export const GLOSSARY = {
    * the whole reason a raw gold figure could not be used.
    */
   marketValue:
-    'How highly other players bid for you. Offers are scored by where they sit ' +
-    'in the range allowed at the time, not by their gold amount — the allowed ' +
-    'range grows every game of a match, so raw gold would just reward long ' +
-    'matches. 100% is the top of the range, 50% is the middle. ' +
-    `Hidden below ${MIN_OFFERS_FOR_STRENGTH} offers received.`,
+    'How expensively teammates price you when they put you up for sale. Offers ' +
+    'are scored by where they sit in the range allowed at the time, not by ' +
+    'their gold amount — the allowed range grows every game of a match, so raw ' +
+    'gold would just reward long matches. 100% is the top of the range, 50% is ' +
+    `the middle. Hidden below ${MIN_OFFERS_FOR_STRENGTH} offers received.`,
 
-  bidStrength:
-    'How hard this player bids when making offers, scored the same way as ' +
-    'market value: their position in the range allowed at the time, not the ' +
-    'gold amount.',
+  /**
+   * The mirror of market value: what this player asks for others, rather than
+   * what others ask for them.
+   *
+   * Named "asking price", not "bid strength". An offer is the sender selling a
+   * teammate to the losing team — submit-offer says so outright — so the sender
+   * is a seller setting a price, never a buyer bidding. The old name described
+   * the opposite disposition, and someone reading it would have drawn exactly
+   * the wrong conclusion about their own number.
+   */
+  askingPrice:
+    'How expensively this player prices their own teammates when putting them ' +
+    'up for sale. Scored like market value — position in the range allowed at ' +
+    'the time, not the gold amount. A high figure wins more gold when an offer ' +
+    'is accepted, but is less likely to be accepted at all.',
 
   avgKda:
     'Average (kills + assists) divided by deaths, across games with reported ' +
