@@ -77,7 +77,10 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 lg:grid-cols-3 divide-x divide-y lg:divide-y-0 divide-dota-border/40">
+      {/* Three across at every size above mobile. This panel used to span the
+          full page width; it now shares a row, so the old 2-then-3 breakpoint
+          left an orphan cell on its own line at half width. */}
+      <dl className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-dota-border/40">
         {rows.map(r => (
           <div key={r.label} className="px-4 py-3">
             <dt className="stat-label">{r.label}</dt>
