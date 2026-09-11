@@ -213,6 +213,16 @@ export type PlayerStats = {
    *  game. Raw results rather than a recent win rate: the shape matters, and a
    *  percentage over ten games would imply precision the sample cannot carry. */
   recentForm: ('W' | 'L')[];
+  /** Games entered as the only player on their side. A single-player win ends
+   *  the match immediately, so these are the only games that can be won
+   *  outright — and the hardest, since being alone means being outnumbered. */
+  lastStandOpportunities: number;
+  /** How many of those they converted into an outright match win. */
+  lastStandWins: number;
+  /** Mean opposing team size across those games. null when never in that
+   *  position. Context for the conversion rate: alone against two is not the
+   *  same proposition as alone against five. */
+  lastStandAvgOpponents: number | null;
   gamesPlayed: number;
   gamesWon: number;
   timesOffered: number;
