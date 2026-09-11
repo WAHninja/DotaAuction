@@ -12,6 +12,7 @@ import PctBadge from '@/app/components/stats/ui/PctBadge';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
 import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
+import LastStandPanel from '@/app/components/stats/player/LastStandPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
 import FormPanel from '@/app/components/stats/player/FormPanel';
 import ComparePicker from '@/app/components/stats/player/ComparePicker';
@@ -130,6 +131,8 @@ export default function PlayerStatsPage() {
       <EconomyPanel core={core} />
 
       <SelectionPanel core={core} />
+
+      <LastStandPanel core={core} />
 
       <PerformancePanel dota={dota} />
 
