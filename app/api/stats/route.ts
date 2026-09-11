@@ -3,6 +3,7 @@ import db from '@/lib/db'
 import { getSession } from '@/app/session'
 import { buildGameIndex, computeOfferStrength } from '@/lib/stats/compute/offer-strength';
 import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
+import { computeSynergy } from '@/lib/stats/compute/synergy';
 
 // ---------------------------------------------------------------------------
 // Module-level cache
@@ -18,6 +19,7 @@ const MIN_PICKS_FOR_RATE = 3;
 type StatsPayload = {
   leagueTotals: LeagueTotalsRow;
   players: PlayerRow[];
+  teammateSynergy: SynergyRow[];
   topWinningCombos: TeamComboRow[];
   acquisitionImpact: AcquisitionRow[];
   winStreaks: WinStreakRow[];
@@ -49,6 +51,18 @@ type LeagueTotalsRow = {
   outrightWins: number;
   /** Matches ended by a player crossing the gold threshold. */
   goldWins: number;
+};
+
+/** A pair of players and how they fare on the same side. */
+type SynergyRow = {
+  playerAId: number;
+  playerA: string;
+  playerBId: number;
+  playerB: string;
+  gamesTogether: number;
+  winsTogether: number;
+  /** Percentage to one decimal. Computed here so every consumer agrees. */
+  winRate: number;
 };
 
 type PlayerRow = {
@@ -620,6 +634,10 @@ export async function GET() {
     // alternative. See lib/stats/compute/selection-rate.
     const selection = computeSelectionRate(gamesResult.rows, offersResult.rows);
 
+    // Teammate synergy — pairs on the same side. Uses the finished-game rows
+    // already fetched, so no extra query.
+    const synergyPairs = computeSynergy(gamesResult.rows);
+
     // entries(), not values(): the map key is the user id, which is the join
     // key for offer strength and is not repeated inside the value.
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
@@ -727,9 +745,29 @@ export async function GET() {
       goldWins:         totals?.gold_threshold_wins ?? 0,
     };
 
+    // Names are attached here rather than inside the computation so that stays
+    // a pure function of ids. Pairs referencing a deleted user are dropped.
+    const teammateSynergy: SynergyRow[] = synergyPairs.flatMap(p => {
+      const a = playersMap.get(p.playerAId);
+      const b = playersMap.get(p.playerBId);
+      if (!a || !b) return [];
+      return [{
+        playerAId:     p.playerAId,
+        playerA:       a.username,
+        playerBId:     p.playerBId,
+        playerB:       b.username,
+        gamesTogether: p.gamesTogether,
+        winsTogether:  p.winsTogether,
+        winRate:       p.gamesTogether > 0
+          ? +((p.winsTogether / p.gamesTogether) * 100).toFixed(1)
+          : 0,
+      }];
+    });
+
     const data: StatsPayload = {
       leagueTotals,
       players,
+      teammateSynergy,
       topWinningCombos,
       acquisitionImpact,
       winStreaks,
