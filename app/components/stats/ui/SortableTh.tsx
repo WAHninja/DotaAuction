@@ -27,7 +27,8 @@ export function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc'
  * users — both easy to lose if a table hand-rolls its own header.
  */
 export default function SortableTh<K extends string>({
-  colKey, label, sublabel, tooltip, tooltipId, sortKey, sortDir, onSort, align = 'center',
+  colKey, label, sublabel, tooltip, tooltipId, sortKey, sortDir, onSort,
+  align = 'center', className = '',
 }: {
   colKey: K;
   label: string;
@@ -38,6 +39,9 @@ export default function SortableTh<K extends string>({
   sortDir: 'asc' | 'desc';
   onSort: (key: K) => void;
   align?: 'center' | 'right';
+  /** Applied to the <th>. Exists so callers can drop a column responsively —
+   *  the header and its cells must be hidden together or the table misaligns. */
+  className?: string;
 }) {
   const isActive = sortKey === colKey;
 
@@ -45,7 +49,7 @@ export default function SortableTh<K extends string>({
     <th
       scope="col"
       aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`px-3 py-3 ${align === 'right' ? 'text-right' : 'text-center'}`}
+      className={`px-3 py-3 ${align === 'right' ? 'text-right' : 'text-center'} ${className}`}
     >
       <Tooltip id={tooltipId} content={tooltip} align={align === 'right' ? 'right' : 'center'}>
         <button
