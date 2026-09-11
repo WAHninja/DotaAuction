@@ -6,6 +6,7 @@ import { useStats } from '@/app/components/stats/StatsProvider';
 import { forPlayer, rankOf, leagueAverage } from '@/lib/stats/select';
 import { pct, formatStrength } from '@/lib/stats/format';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
+import { GLOSSARY } from '@/lib/stats/glossary';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 import FormGuide from '@/app/components/stats/ui/FormGuide';
@@ -99,18 +100,24 @@ export default function YouCard() {
           value={hasRateSample ? `${pct(core.gamesWon, core.gamesPlayed)}%` : '—'}
           rank={hasRateSample ? winRateRank : null}
           tone="gold"
+          hint={GLOSSARY.winRate}
+          hintId="you-tip-winrate"
         />
         <StatWithRank
           label="Market value"
           value={hasMarketSample ? formatStrength(core.offerStrengthReceived) : '—'}
           rank={hasMarketSample ? marketRank : null}
           leagueAvg={avgMarket === null ? null : formatStrength(avgMarket)}
+          hint={GLOSSARY.marketValue}
+          hintId="you-tip-market"
         />
         <StatWithRank
           label="Avg KDA"
           value={dota ? dota.avgKda.toFixed(2) : '—'}
           rank={kdaRank}
           leagueAvg={avgKda === null ? null : avgKda.toFixed(2)}
+          hint={GLOSSARY.avgKda}
+          hintId="you-tip-kda"
         />
       </div>
     </div>
