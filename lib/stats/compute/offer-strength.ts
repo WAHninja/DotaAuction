@@ -69,14 +69,16 @@ export type PlayerOfferStrength = {
    *  null when they have never been offered. */
   received: number | null;
   receivedCount: number;
-  /** Mean strength of offers this player submitted — bidding behaviour.
-   *  null when they have never made one. */
+  /** Mean strength of offers this player sent — their asking price when
+   *  selling a teammate, not a bid to acquire anyone. null when they have
+   *  never sent one. */
   made: number | null;
   madeCount: number;
 };
 
 /**
- * Mean offer strength per player, both as target and as bidder.
+ * Mean offer strength per player, both as the player being sold and as the
+ * teammate setting their price.
  *
  * Returned as a map keyed by player id so the caller can merge it into whatever
  * per-player structure it already has.
@@ -108,9 +110,12 @@ export function computeOfferStrength(
     target.recv += strength;
     target.recvN += 1;
 
-    const bidder = bucket(o.from_player_id);
-    bidder.made += strength;
-    bidder.madeN += 1;
+    // from_player_id is the seller: submit-offer validates the target as "a
+    // winning teammate, not the caller", so an offer is always someone pricing
+    // a team-mate for the losing side to buy.
+    const seller = bucket(o.from_player_id);
+    seller.made += strength;
+    seller.madeN += 1;
   }
 
   const out = new Map<number, PlayerOfferStrength>();
