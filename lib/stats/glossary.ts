@@ -16,6 +16,18 @@ import {
 } from '@/lib/stats/constants';
 
 export const GLOSSARY = {
+  /**
+   * Deliberately explains the size adjustment, because that is the part that
+   * makes this rating different from a win rate and the part people will
+   * dispute when their rating moves in a direction they did not expect.
+   */
+  rating:
+    'Skill rating, starting at 1500. Every game moves it by how surprising the ' +
+    'result was: beating a side that outnumbers or outranks you is worth more ' +
+    'than beating one you were expected to beat, and losing to long odds costs ' +
+    'little. Because team size is priced in, a low win rate with a high rating ' +
+    'usually means playing from behind a lot.',
+
   winRate: `Games won as a share of games played. Hidden below ${MIN_GAMES_FOR_RATE} games, where the figure is noise.`,
 
   /**
