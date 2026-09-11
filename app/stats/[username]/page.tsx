@@ -168,16 +168,24 @@ export default function PlayerStatsPage() {
           every panel was full width in a single column, so eight of them read
           as eight equally important things and the page had no shape. These
           four are each a handful of figures and do not need the width. */}
+      {/*
+        Row order is deliberate and reads left-to-right, top-to-bottom:
+        Performance and Last Stands are both about playing the game; Economy and
+        Selection are both about the auction. Grouping them by subject means a
+        reader scanning one row is thinking about one thing.
+
+        items-start so a short panel does not stretch to match a tall neighbour
+        — Last Stands is a single row of figures and would otherwise be padded
+        out to Performance's height.
+      */}
       <div className="grid gap-6 lg:grid-cols-2 items-start">
         <PerformancePanel dota={dota} />
-        <SelectionPanel core={core} />
         <LastStandPanel core={core} />
+        <EconomyPanel core={core} />
+        <SelectionPanel core={core} />
       </div>
 
-      {/* Full width below: the panels that are genuinely wide — a four-column
-          breakdown and two tables. */}
-      <EconomyPanel core={core} />
-
+      {/* Full width below: the tables, which genuinely need the room. */}
       <RelationsPanel
         synergy={payload.teammateSynergy}
         headToHead={headToHead}
