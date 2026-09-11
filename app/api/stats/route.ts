@@ -14,6 +14,7 @@ import { getSession } from '@/app/session'
 const MIN_PICKS_FOR_RATE = 3;
 
 type StatsPayload = {
+  leagueTotals: LeagueTotalsRow;
   players: PlayerRow[];
   topWinningCombos: TeamComboRow[];
   acquisitionImpact: AcquisitionRow[];
@@ -27,6 +28,25 @@ type StatsPayload = {
 type StatsCache = {
   data: StatsPayload;
   cachedAt: number;
+};
+
+/**
+ * League-wide totals. Match-level rather than player-level: these describe the
+ * league itself and belong to nobody, which is why they are a single object
+ * rather than another per-player array.
+ *
+ * Counted from `matches`, not by summing player rows. Summing each player's
+ * gamesPlayed counts every game once per participant — a five-a-side game would
+ * register as ten — which is why the previous vitals strip could not show a
+ * games total honestly and omitted it.
+ */
+type LeagueTotalsRow = {
+  matchesCompleted: number;
+  gamesPlayed: number;
+  /** Matches ended by being the last player standing. */
+  outrightWins: number;
+  /** Matches ended by a player crossing the gold threshold. */
+  goldWins: number;
 };
 
 type PlayerRow = {
@@ -124,6 +144,7 @@ export async function GET() {
     const [
       usersResult,
       matchPlayersResult,
+      matchTotalsResult,
       gamesResult,
       offersResult,
       netGoldResult,
@@ -145,6 +166,24 @@ export async function GET() {
       // 2. All match participation rows — for matchesPlayed count
       db.query<{ match_id: number; user_id: number }>(
         `SELECT match_id, user_id FROM match_players`
+      ),
+
+      // 2b. Match-level totals for the league vitals strip.
+      //
+      // COUNT() returns bigint, which node-postgres hands back as a string to
+      // avoid precision loss; ::int narrows to int4 so these arrive as numbers
+      // and do not need parsing at the call site.
+      db.query<{
+        matches_completed: number;
+        last_standing_wins: number;
+        gold_threshold_wins: number;
+      }>(
+        `SELECT
+           COUNT(*)::int                                          AS matches_completed,
+           COUNT(*) FILTER (WHERE win_type = 'last_standing')::int  AS last_standing_wins,
+           COUNT(*) FILTER (WHERE win_type = 'gold_threshold')::int AS gold_threshold_wins
+         FROM matches
+         WHERE status = 'finished'`
       ),
 
       // 3. All finished games — for win/loss counts and team combo tracking
@@ -636,7 +675,19 @@ export async function GET() {
       };
     });
 
+    // gamesPlayed comes from the finished-games rows already fetched for
+    // win/loss counting, so it costs nothing extra and is a true game count
+    // rather than a per-participant sum.
+    const totals = matchTotalsResult.rows[0];
+    const leagueTotals: LeagueTotalsRow = {
+      matchesCompleted: totals?.matches_completed ?? 0,
+      gamesPlayed:      gamesResult.rows.length,
+      outrightWins:     totals?.last_standing_wins ?? 0,
+      goldWins:         totals?.gold_threshold_wins ?? 0,
+    };
+
     const data: StatsPayload = {
+      leagueTotals,
       players,
       topWinningCombos,
       acquisitionImpact,
