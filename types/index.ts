@@ -155,6 +155,7 @@ export type HistoryGame = {
  */
 export type StatsPayload = {
   leagueTotals:      LeagueTotals;
+  leagueRecords:     LeagueRecords;
   players:           PlayerStats[];
   teammateSynergy:   TeammateSynergy[];
   winStreaks:        WinStreak[];
@@ -176,6 +177,31 @@ export type LeagueTotals = {
   outrightWins: number;
   /** Matches ended on the gold threshold. */
   goldWins: number;
+};
+
+/**
+ * A single notable match, rather than an aggregate.
+ *
+ * `player` is null for records that belong to a match rather than a person —
+ * longest match has no owner. `detail` carries whatever secondary figure the
+ * record needs, currently the number of opponents beaten.
+ */
+export type LeagueRecord = {
+  matchId: number;
+  value: number;
+  player: string | null;
+  detail: number | null;
+};
+
+/** The league's notable extremes. Any may be null before enough has been played. */
+export type LeagueRecords = {
+  shortestMatch: LeagueRecord | null;
+  longestMatch: LeagueRecord | null;
+  /** Least gold held while winning outright — only last_standing wins qualify,
+   *  since a gold win is by definition at the threshold. */
+  leanestOutrightWin: LeagueRecord | null;
+  /** Fewest games taken to reach 100,000 gold. */
+  fastestGoldWin: LeagueRecord | null;
 };
 
 /** The signed-in user, as returned by /api/me under the `user` key. */
