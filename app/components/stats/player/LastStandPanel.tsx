@@ -20,6 +20,11 @@ import { pct } from '@/lib/stats/format';
 export default function LastStandPanel({ core }: { core: PlayerStats }) {
   const { lastStandOpportunities, lastStandWins, lastStandAvgOpponents } = core;
 
+  // Never having been alone is ordinary rather than notable, so the panel is
+  // omitted entirely instead of announcing its own absence. See the page-level
+  // notice, which explains the gaps once.
+  if (lastStandOpportunities === 0) return null;
+
   return (
     <section className="panel overflow-hidden">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
@@ -32,15 +37,9 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
         </div>
       </div>
 
-      {/* Never having been alone is a perfectly ordinary outcome, and quite
-          different from having been alone and never converting. Saying so beats
-          a row of zeroes that reads as failure. */}
-      {lastStandOpportunities === 0 ? (
-        <p className="font-barlow text-sm text-dota-text-dim px-5 py-6 text-center">
-          Never been the last player on a team.
-        </p>
-      ) : (
-        <div className="p-5 flex flex-wrap items-center gap-6">
+      {(
+        <div className="p-5 space-y-3">
+          <div className="flex flex-wrap items-baseline gap-6">
           <div>
             <p className="stat-label">Converted</p>
             <p className="font-barlow text-3xl font-bold text-dota-gold tabular-nums">
@@ -77,8 +76,10 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
             </div>
           )}
 
+          </div>
+
           {lastStandWins > 0 && (
-            <p className="font-barlow text-sm text-dota-gold ml-auto">
+            <p className="font-barlow text-sm text-dota-gold">
               {lastStandWins === 1
                 ? 'Won a match outright from here'
                 : `Won ${lastStandWins} matches outright from here`}
