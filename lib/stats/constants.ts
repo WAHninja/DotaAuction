@@ -34,3 +34,12 @@ export const MIN_OFFERS_FOR_STRENGTH = 4;
  * "twice as often as chance" on the strength of a single decision.
  */
 export const MIN_SELECTION_OPPORTUNITIES = 6;
+
+/**
+ * Minimum games together before a pair's win rate is shown.
+ *
+ * Higher than the individual game threshold because pairs accumulate games
+ * faster than they accumulate meaning — two players on a five-a-side team share
+ * every game whether or not they interact.
+ */
+export const MIN_GAMES_TOGETHER = 5;
