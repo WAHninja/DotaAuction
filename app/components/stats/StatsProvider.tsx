@@ -97,6 +97,15 @@ export default function StatsProvider({ children }: { children: ReactNode }) {
           // partial response — should blank one panel, not crash the page on
           // `.map` of undefined.
           payload: {
+            // An object rather than an array, so it needs its own zeroed
+            // default — `?? []` would leave the vitals strip reading
+            // properties off an array and rendering undefined.
+            leagueTotals: statsData.leagueTotals ?? {
+              matchesCompleted: 0,
+              gamesPlayed:      0,
+              outrightWins:     0,
+              goldWins:         0,
+            },
             players:           statsData.players           ?? [],
             topWinningCombos:  statsData.topWinningCombos  ?? [],
             acquisitionImpact: statsData.acquisitionImpact ?? [],
