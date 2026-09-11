@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
+import { buildGameIndex, computeOfferStrength } from '@/lib/stats/compute/offer-strength';
 
 // ---------------------------------------------------------------------------
 // Module-level cache
@@ -62,6 +63,15 @@ type PlayerRow = {
   offersMade: number;
   offersAccepted: number;
   averageOfferValue: number;
+  /** Mean position of offers received within the range permitted at the time,
+   *  0–1. The market's valuation of this player, comparable across matches of
+   *  any length. null when never offered. */
+  offerStrengthReceived: number | null;
+  /** Mean position of offers this player submitted, 0–1. A bidding-behaviour
+   *  measure. null when they have never made one. */
+  offerStrengthMade: number | null;
+  /** Retained for now but no longer surfaced: a lifetime sum that grows with
+   *  games played, in a currency that resets every match. */
   netGold: number;
 };
 
@@ -187,25 +197,31 @@ export async function GET() {
       ),
 
       // 3. All finished games — for win/loss counts and team combo tracking
+      // match_id is needed to work out each game's position within its match,
+      // which is what makes a historical offer amount interpretable.
       db.query<{
         id: number;
+        match_id: number;
         team_1_members: number[];
         team_a_members: number[];
         winning_team: 'team_1' | 'team_a' | null;
       }>(
-        `SELECT id, team_1_members, team_a_members, winning_team
+        `SELECT id, match_id, team_1_members, team_a_members, winning_team
          FROM games
          WHERE status = 'finished'`
       ),
 
       // 4. All offers — for offer/sold counts and average bid value
+      // game_id ties an offer to the game it was made in, and so to the offer
+      // range that applied at the time.
       db.query<{
+        game_id: number;
         from_player_id: number;
         target_player_id: number;
         offer_amount: number;
         status: string;
       }>(
-        `SELECT from_player_id, target_player_id, offer_amount, status
+        `SELECT game_id, from_player_id, target_player_id, offer_amount, status
          FROM offers`
       ),
 
@@ -586,7 +602,14 @@ export async function GET() {
     // Build response payload
     // -------------------------------------------------------------------------
 
-    const players: PlayerRow[] = Array.from(playersMap.values()).map(p => ({
+    // Offer strength — see lib/stats/compute/offer-strength for why raw offer
+    // amounts are not comparable between matches.
+    const gameIndex     = buildGameIndex(gamesResult.rows);
+    const offerStrength = computeOfferStrength(offersResult.rows, gameIndex);
+
+    // entries(), not values(): the map key is the user id, which is the join
+    // key for offer strength and is not repeated inside the value.
+    const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
       username:          p.username,
       steamAvatar:       p.steamAvatar,
       gamesPlayed:       p.gamesPlayed,
@@ -599,6 +622,8 @@ export async function GET() {
         p.offerCountAsTarget > 0
           ? +(p.totalOfferValueAsTarget / p.offerCountAsTarget).toFixed(1)
           : 0,
+      offerStrengthReceived: offerStrength.get(id)?.received ?? null,
+      offerStrengthMade:     offerStrength.get(id)?.made     ?? null,
       netGold: p.netGold,
     }));
 
