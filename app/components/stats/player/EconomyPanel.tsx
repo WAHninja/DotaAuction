@@ -26,6 +26,10 @@ import GoldIcon from '@/app/components/GoldIcon';
  * widens every game — so they measured exposure rather than worth.
  */
 export default function EconomyPanel({ core }: { core: PlayerStats }) {
+  // A player who has neither bid nor been bid on has no economy to show — four
+  // zeroes would be noise rather than information.
+  if (core.offersMade === 0 && core.timesOffered === 0) return null;
+
   const rows: { label: string; value: string; detail?: string }[] = [
     {
       label: 'Offers made',
