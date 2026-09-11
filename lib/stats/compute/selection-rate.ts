@@ -45,6 +45,17 @@ export type PlayerSelection = {
   /** How many of those actually named them. */
   selections: number;
   /**
+   * How many selections pure chance would have produced, given the team sizes
+   * involved. Accumulated as 1/eligible per opportunity rather than assumed,
+   * because team sizes vary — the baseline on a three-player side is 50% and on
+   * a five-player side 25%.
+   *
+   * Exposed so the UI can put a real percentage beside the actual one. It was
+   * previously used only to derive the index and then discarded, which left the
+   * panel with nothing to show but an abstract multiplier.
+   */
+  expected: number;
+  /**
    * Selections divided by the number expected from chance alone.
    *
    * 1.0 means exactly as often as random choice, 2.0 means twice as often,
@@ -110,6 +121,7 @@ export function computeSelectionRate(
     out.set(id, {
       opportunities: b.opps,
       selections:    b.picks,
+      expected:      +b.expected.toFixed(3),
       index:         b.expected > 0 ? +(b.picks / b.expected).toFixed(3) : null,
     });
   }
