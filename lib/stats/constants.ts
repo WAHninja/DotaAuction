@@ -52,3 +52,13 @@ export const MIN_SELECTION_OPPORTUNITIES = 6;
  * every game whether or not they interact.
  */
 export const MIN_GAMES_TOGETHER = 5;
+
+/**
+ * Minimum last stands before a conversion rate is shown.
+ *
+ * Deliberately low. Being alone on a team is rare by nature, so a threshold set
+ * for statistical comfort would hide the stat from everyone — and unlike a win
+ * rate, the raw counts here are interesting on their own ("2 of 5" says
+ * something even when the percentage does not).
+ */
+export const MIN_LAST_STANDS_FOR_RATE = 3;
