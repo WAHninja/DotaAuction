@@ -56,7 +56,7 @@ export default function RelationsPanel({ synergy, headToHead, username, avatars 
       }));
 
   return (
-    <section className="panel overflow-hidden">
+    <section className="panel overflow-hidden flex flex-col">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3 flex-wrap">
         <Users className="w-4 h-4 shrink-0 text-dota-gold" aria-hidden="true" />
         <div className="min-w-0">
@@ -75,7 +75,7 @@ export default function RelationsPanel({ synergy, headToHead, username, avatars 
       </div>
 
       {rows.length === 0 ? (
-        <p className="font-barlow text-sm text-dota-text-dim py-8 text-center">
+        <p className="font-barlow text-sm text-dota-text-dim py-8 text-center flex-1 flex items-center justify-center">
           {tab === 'with' ? 'No shared games yet.' : 'No opposed games yet.'}
         </p>
       ) : (
