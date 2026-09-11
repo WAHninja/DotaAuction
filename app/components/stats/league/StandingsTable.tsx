@@ -112,7 +112,11 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
   return (
     <div className="panel overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full font-barlow text-sm min-w-[640px]" aria-label="League standings">
+        {/* min-width only from sm up. At 640px on a 380px phone this table
+            scrolled 1.7x with nothing frozen, so you ended up reading numbers
+            with no idea whose row you were on. Below sm the two secondary
+            columns drop out instead and the remaining four fit. */}
+        <table className="w-full font-barlow text-sm sm:min-w-[640px]" aria-label="League standings">
           <thead className="bg-dota-deep/60 border-b border-dota-border">
             <tr>
               <th scope="col" className="w-12 px-3 py-3" />
@@ -127,6 +131,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                 tooltip="Total games played across every match."
                 tooltipId="std-games"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
+                className="hidden sm:table-cell"
               />
               <SortableTh<SortKey>
                 colKey="winRate" label="Win rate" sublabel={`min. ${MIN_GAMES_FOR_RATE}`}
@@ -145,6 +150,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                 tooltip="Average (kills + assists) / deaths across reported Dota games."
                 tooltipId="std-kda"
                 sortKey={sortKey} sortDir={sortDir} onSort={handleSort}
+                className="hidden sm:table-cell"
               />
             </tr>
           </thead>
@@ -183,7 +189,9 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                     </Link>
                   </td>
 
-                  <td className="px-3 py-2.5 text-center tabular-nums text-dota-text-muted">
+                  {/* Hidden with its header, not instead of it — a cell and a
+                      header dropping at different breakpoints shears the row. */}
+                  <td className="hidden sm:table-cell px-3 py-2.5 text-center tabular-nums text-dota-text-muted">
                     {row.gamesPlayed}
                   </td>
 
@@ -201,7 +209,7 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
                       : <span className="font-semibold text-dota-gold">{formatStrength(row.marketValue)}</span>}
                   </td>
 
-                  <td className="px-3 py-2.5 text-center tabular-nums">
+                  <td className="hidden sm:table-cell px-3 py-2.5 text-center tabular-nums">
                     {row.avgKda === null
                       ? <span className="text-dota-text-dim" title="No Dota games reported">—</span>
                       : <span className={`font-semibold ${kdaColour(row.avgKda)}`}>{row.avgKda.toFixed(2)}</span>}
