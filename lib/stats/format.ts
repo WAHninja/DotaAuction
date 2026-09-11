@@ -58,3 +58,15 @@ export function heroDisplayName(hero: string): string {
     .replace(/_/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
 }
+
+/**
+ * Renders an offer strength (0–1) as a percentage of the permitted range.
+ *
+ * Deliberately not shown as gold. The whole point of the measure is that it is
+ * a proportion of what was allowed at the time — printing it back as a gold
+ * figure would reintroduce the match-length dependence it exists to remove.
+ */
+export function formatStrength(strength: number | null): string {
+  if (strength === null) return '—';
+  return `${Math.round(strength * 100)}%`;
+}
