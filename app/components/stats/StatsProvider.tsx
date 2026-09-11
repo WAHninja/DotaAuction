@@ -106,6 +106,12 @@ export default function StatsProvider({ children }: { children: ReactNode }) {
               outrightWins:     0,
               goldWins:         0,
             },
+            leagueRecords: statsData.leagueRecords ?? {
+              shortestMatch:      null,
+              longestMatch:       null,
+              leanestOutrightWin: null,
+              fastestGoldWin:     null,
+            },
             players:           statsData.players           ?? [],
             teammateSynergy:   statsData.teammateSynergy   ?? [],
             winStreaks:        statsData.winStreaks        ?? [],
