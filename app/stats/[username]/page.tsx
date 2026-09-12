@@ -13,6 +13,7 @@ import PlayerAvatar from '@/app/components/PlayerAvatar';
 import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
 import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
 import LastStandPanel from '@/app/components/stats/player/LastStandPanel';
+import RatingHistoryPanel from '@/app/components/stats/player/RatingHistoryPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
 import ComparePicker from '@/app/components/stats/player/ComparePicker';
 import RelationsPanel from '@/app/components/stats/player/RelationsPanel';
@@ -200,6 +201,11 @@ export default function PlayerStatsPage() {
         are flex columns with a growing body, so the extra height goes inside
         the card instead of leaving a gap under a short one.
       */}
+      <RatingHistoryPanel
+        history={core.ratingHistory}
+        provisional={core.ratingProvisional}
+      />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <PerformancePanel dota={dota} />
         <LastStandPanel core={core} />
