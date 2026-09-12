@@ -34,6 +34,11 @@ export const GLOSSARY = {
     'a returning player is treated as unproven rather than assumed unchanged. ' +
     'A wide band also means results move your rating further.',
 
+  ratingHistory:
+    'Rating after each game, oldest first. Early games swing further because ' +
+    'the rating starts uncertain and every result teaches it a lot; the line ' +
+    'flattens as it settles. Flat stretches are games you sat out.',
+
   winRate: `Games won as a share of games played. Hidden below ${MIN_GAMES_FOR_RATE} games, where the figure is noise.`,
 
   /**
