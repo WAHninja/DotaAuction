@@ -28,6 +28,12 @@ export const GLOSSARY = {
     'little. Because team size is priced in, a low win rate with a high rating ' +
     'usually means playing from behind a lot.',
 
+  ratingDeviation:
+    'How settled a rating is, shown as a ± band. It narrows as you play games ' +
+    'the model could not call in advance, and widens again if you sit out — so ' +
+    'a returning player is treated as unproven rather than assumed unchanged. ' +
+    'A wide band also means results move your rating further.',
+
   winRate: `Games won as a share of games played. Hidden below ${MIN_GAMES_FOR_RATE} games, where the figure is noise.`,
 
   /**
