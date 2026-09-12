@@ -52,10 +52,46 @@ export const STARTING_RATING = 1500;
  */
 const SCALE = 400 / Math.LN10;
 
-/** Provisional K, and the number of games it applies for. */
-const K_PROVISIONAL = 40;
-const PROVISIONAL_GAMES = 20;
-const K_ESTABLISHED = 20;
+/**
+ * ── Rating deviation ────────────────────────────────────────────────────────
+ *
+ * Every rating carries an uncertainty, Glicko's central idea. It replaces the
+ * two-tier provisional K this file used to have, which treated a player's 19th
+ * game as maximally uncertain and their 21st as fully settled.
+ *
+ * RD does three jobs: it sets how far a result moves a rating, it is displayed
+ * as a ± so an unproven number does not masquerade as a settled one, and it
+ * decides who counts as provisional.
+ *
+ * Two things move it:
+ *
+ *   Playing shrinks it, weighted by how informative the game was. A result the
+ *   model already predicted at 95% teaches almost nothing; a coin-flip game
+ *   teaches the most. That is what the p·(1-p) term is — a game between evenly
+ *   matched sides is worth roughly six times one between mismatched ones.
+ *
+ *   Sitting out inflates it. Measured in league games elapsed rather than
+ *   wall-clock: games.finished_at is null for rows predating that column, so a
+ *   time-based clock would silently treat the league's early history as
+ *   simultaneous. League-game index is always present and always ordered.
+ */
+const RD_MAX = 350;
+const RD_MIN = 50;
+
+/**
+ * Information gained from one maximally uncertain game.
+ *
+ * Tuned so a player reaches roughly RD 60 after 30 even games — settled, but
+ * not so fast that a good week locks a rating in place.
+ */
+const RD_INFO = 3.6e-5;
+
+/** RD regained per league game missed. Full decay takes a few hundred games. */
+const RD_DECAY_PER_GAME = 15;
+
+/** K at maximum and minimum uncertainty, interpolated linearly between. */
+const K_MAX = 48;
+const K_MIN = 12;
 
 /**
  * Replay passes over the full history.
@@ -113,7 +149,25 @@ export type PlayerRating = {
   rating: number;
   /** Games contributing to it — the denominator for how much to trust it. */
   games: number;
+  /**
+   * Rating deviation: roughly a one-sigma band around the rating.
+   *
+   * A player at 1500 ±180 and one at 1500 ±55 are not making the same claim,
+   * and displaying both as "1500" pretends they are.
+   */
+  rd: number;
+  /** True while the rating is still settling and should not be read closely. */
+  provisional: boolean;
 };
+
+/** Above this RD a rating has not yet earned to be taken at face value. */
+export const PROVISIONAL_RD = 110;
+
+/** K-factor for a given uncertainty — more doubt, larger steps. */
+function kFactor(rd: number): number {
+  const t = (rd - RD_MIN) / (RD_MAX - RD_MIN);
+  return K_MIN + (K_MAX - K_MIN) * Math.min(1, Math.max(0, t));
+}
 
 /**
  * Probability the first side beats the second.
@@ -184,9 +238,17 @@ export function replay(
     // so the provisional K applies to a player's first games each time.
     const working = new Map(ratings);
     const played = new Map<number, number>();
+
+    // RD restarts each pass while ratings carry over. Uncertainty is a claim
+    // about how much *this* pass has learned, and inheriting a low RD would let
+    // pass three refuse to move ratings it had every reason to revise.
+    const deviation = new Map<number, number>();
+    const lastSeen  = new Map<number, number>();
+
     predictions = [];
 
-    for (const game of ordered) {
+    for (let gameIndex = 0; gameIndex < ordered.length; gameIndex++) {
+      const game = ordered[gameIndex];
       const team1 = game.team_1_members ?? [];
       const teamA = game.team_a_members ?? [];
       if (team1.length === 0 || teamA.length === 0) continue;
@@ -210,16 +272,36 @@ export function replay(
       const delta1 = (team1Won ? 1 : 0) - p1;
       const deltaA = -delta1;
 
+      // How much this game had to teach. Highest at a coin flip, near zero when
+      // the result was a foregone conclusion.
+      const information = p1 * (1 - p1);
+
       for (const [members, teamDelta] of [
         [team1, delta1] as const,
         [teamA, deltaA] as const,
       ]) {
         const share = teamDelta / members.length;
+
         for (const id of members) {
           const n = played.get(id) ?? 0;
-          const k = n < PROVISIONAL_GAMES ? K_PROVISIONAL : K_ESTABLISHED;
-          working.set(id, ratingOf(id) + k * share);
+
+          // Inflate for absence before using the RD, so a returning player's
+          // first game back moves them further than a regular's would.
+          const missed = gameIndex - (lastSeen.get(id) ?? gameIndex);
+          const carried = deviation.get(id) ?? RD_MAX;
+          const rd = missed > 0
+            ? Math.min(RD_MAX, Math.sqrt(carried ** 2 + missed * RD_DECAY_PER_GAME ** 2))
+            : carried;
+
+          working.set(id, ratingOf(id) + kFactor(rd) * share);
+
+          // Then shrink it for having played. Combining precisions rather than
+          // averaging is what makes repeated informative games converge.
+          const shrunk = 1 / Math.sqrt(1 / rd ** 2 + RD_INFO * information);
+          deviation.set(id, Math.max(RD_MIN, shrunk));
+
           played.set(id, n + 1);
+          lastSeen.set(id, gameIndex);
         }
       }
     }
@@ -230,7 +312,21 @@ export function replay(
     if (pass === passes - 1) {
       const out = new Map<number, PlayerRating>();
       for (const [id, rating] of ratings) {
-        out.set(id, { rating: Math.round(rating), games: played.get(id) ?? 0 });
+        // Final inflation for anyone who has not played recently, so a rating
+        // reported today reflects how stale it actually is.
+        const missed = ordered.length - (lastSeen.get(id) ?? ordered.length);
+        const carried = deviation.get(id) ?? RD_MAX;
+        const rd = Math.min(
+          RD_MAX,
+          Math.sqrt(carried ** 2 + Math.max(0, missed) * RD_DECAY_PER_GAME ** 2),
+        );
+
+        out.set(id, {
+          rating:      Math.round(rating),
+          games:       played.get(id) ?? 0,
+          rd:          Math.round(rd),
+          provisional: rd > PROVISIONAL_RD,
+        });
       }
       return { ratings: out, predictions };
     }
