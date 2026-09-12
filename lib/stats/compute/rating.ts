@@ -1,8 +1,11 @@
 /**
  * Player ratings — Elo adapted for teams of unequal size.
  *
- * Step one of the ranking system: rating and team size only. Gold asymmetry
- * comes later, once there is a way to measure whether it improves prediction.
+ * Rating, team size, and gold asymmetry.
+ *
+ * The gold term is optional and weighted by `goldWeight`, so it can be turned
+ * off entirely by passing 0 — which is how rating-eval measures whether it
+ * earns its place rather than assuming it does.
  *
  * ── Why not a team average ──────────────────────────────────────────────────
  *
@@ -36,6 +39,8 @@
  * something true: when five lose to one, no individual among the five is as
  * responsible as the one who beat them.
  */
+
+import { goldShare } from '@/lib/stats/compute/gold-timeline';
 
 export const STARTING_RATING = 1500;
 
@@ -74,21 +79,65 @@ export type RatingGameRow = {
   winning_team: 'team_1' | 'team_a' | null;
 };
 
+export type RatingOptions = {
+  /**
+   * How much a gold advantage shifts the expected result, in log-odds at
+   * total dominance.
+   *
+   * A side holding every coin has a gold-share difference of 1, so a weight of
+   * 2 makes them roughly an 88% favourite between equally rated, equally sized
+   * teams. 0 disables the term.
+   *
+   * Being ahead on gold is largely earned by winning earlier games in the same
+   * match, and those wins were already rewarded when they happened. Discounting
+   * a win that arrives with a gold lead stops one hot streak inside a single
+   * match being paid for twice.
+   */
+  goldWeight?: number;
+  /** gameId -> playerId -> gold entering that game. Omit to ignore gold. */
+  goldTimeline?: Map<number, Map<number, number>>;
+  /** Replay passes. Evaluation uses 1 so every prediction is made blind. */
+  passes?: number;
+};
+
+/** One game's prediction, kept so accuracy can be scored after the fact. */
+export type RatingPrediction = {
+  gameId: number;
+  /** Modelled probability that team_1 won. */
+  expected: number;
+  /** What actually happened, 1 or 0. */
+  actual: number;
+};
+
 export type PlayerRating = {
   rating: number;
   /** Games contributing to it — the denominator for how much to trust it. */
   games: number;
 };
 
-/** Probability the first side beats the second, given both sides' ratings. */
-export function winProbability(sideA: number[], sideB: number[]): number {
+/**
+ * Probability the first side beats the second.
+ *
+ * `goldAdvantage` is side A's share of the gold in play minus side B's, so it
+ * runs from -1 to 1 and is 0 when the sides are level or no gold exists. It
+ * enters as a log-odds shift, which composes cleanly with the Bradley-Terry
+ * term: ln(strengthA / strengthB) is already a log-odds.
+ */
+export function winProbability(
+  sideA: number[],
+  sideB: number[],
+  goldAdvantage = 0,
+  goldWeight = 0,
+): number {
   const strength = (ratings: number[]) =>
     ratings.reduce((sum, r) => sum + Math.exp(r / SCALE), 0);
 
   const a = strength(sideA);
   const b = strength(sideB);
-  if (a + b === 0) return 0.5;
-  return a / (a + b);
+  if (a === 0 || b === 0) return 0.5;
+
+  const logit = Math.log(a / b) + goldWeight * goldAdvantage;
+  return 1 / (1 + Math.exp(-logit));
 }
 
 /**
@@ -102,18 +151,40 @@ export function winProbability(sideA: number[], sideB: number[]): number {
  * and treating one as a draw would drag both sides toward each other for no
  * reason.
  */
-export function computeRatings(games: RatingGameRow[]): Map<number, PlayerRating> {
+export function computeRatings(
+  games: RatingGameRow[],
+  opts: RatingOptions = {},
+): Map<number, PlayerRating> {
+  return replay(games, opts).ratings;
+}
+
+/**
+ * The replay itself, returning predictions alongside ratings.
+ *
+ * Split out so rating-eval can score the model without duplicating the loop —
+ * an evaluation that ran against a reimplementation of the thing it evaluates
+ * would be measuring the wrong code.
+ */
+export function replay(
+  games: RatingGameRow[],
+  opts: RatingOptions = {},
+): { ratings: Map<number, PlayerRating>; predictions: RatingPrediction[] } {
+  const goldWeight = opts.goldWeight ?? 0;
+  const timeline   = opts.goldTimeline;
+  const passes     = opts.passes ?? PASSES;
   const ordered = [...games]
     .sort((a, b) => a.id - b.id)
     .filter(g => g.winning_team !== null);
 
   let ratings = new Map<number, number>();
+  let predictions: RatingPrediction[] = [];
 
-  for (let pass = 0; pass < PASSES; pass++) {
+  for (let pass = 0; pass < passes; pass++) {
     // Carry the previous pass's ratings forward as priors; games counts restart
     // so the provisional K applies to a player's first games each time.
     const working = new Map(ratings);
     const played = new Map<number, number>();
+    predictions = [];
 
     for (const game of ordered) {
       const team1 = game.team_1_members ?? [];
@@ -124,8 +195,16 @@ export function computeRatings(games: RatingGameRow[]): Map<number, PlayerRating
       const r1 = team1.map(ratingOf);
       const rA = teamA.map(ratingOf);
 
-      const p1 = winProbability(r1, rA);
+      // Gold advantage is measured before the game, from the timeline, so it
+      // reflects the position the teams went in with rather than the one the
+      // result produced.
+      const share1 = timeline ? goldShare(team1, teamA, timeline.get(game.id)) : 0.5;
+      const advantage = share1 * 2 - 1;
+
+      const p1 = winProbability(r1, rA, advantage, goldWeight);
       const team1Won = game.winning_team === 'team_1';
+
+      predictions.push({ gameId: game.id, expected: p1, actual: team1Won ? 1 : 0 });
 
       // One delta per team, then shared out. See the note on zero-sum above.
       const delta1 = (team1Won ? 1 : 0) - p1;
@@ -148,14 +227,14 @@ export function computeRatings(games: RatingGameRow[]): Map<number, PlayerRating
     ratings = working;
 
     // Last pass also records the games counts.
-    if (pass === PASSES - 1) {
+    if (pass === passes - 1) {
       const out = new Map<number, PlayerRating>();
       for (const [id, rating] of ratings) {
         out.set(id, { rating: Math.round(rating), games: played.get(id) ?? 0 });
       }
-      return out;
+      return { ratings: out, predictions };
     }
   }
 
-  return new Map();
+  return { ratings: new Map(), predictions: [] };
 }
