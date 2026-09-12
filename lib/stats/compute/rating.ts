@@ -96,17 +96,24 @@ const K_MIN = 12;
 /**
  * Replay passes over the full history.
  *
- * Ratings are circular — yours depends on your opponents', theirs on yours — so
- * a single chronological pass rates early games against uninformed estimates.
- * Re-running with the previous pass's final ratings as the starting point
- * converges quickly.
+ * Now one, down from three, so that the trajectory a player sees is the one
+ * that actually happened: starting at 1500 and moving with each result.
  *
- * The cost is that intermediate ratings stop being a true history: after pass
- * two, game one was rated as though everyone already had their final strength.
- * That is fine while only the current rating is displayed. If a rating-over-time
- * chart is ever added, it must come from a single pass.
+ * Three passes existed to solve the cold-start problem — early games rated
+ * against uninformed estimates — by re-running with converged priors. Rating
+ * deviation solves the same problem better. A new player starts at maximum
+ * uncertainty and therefore maximum K, so their rating converges within their
+ * first twenty or thirty games rather than needing the whole history replayed
+ * at them. The extra passes were compensating for something that no longer
+ * needs compensating for.
+ *
+ * The cost is a small shift in everyone's current rating, and slightly noisier
+ * numbers for the league's earliest games. The gain is that intermediate
+ * ratings are real: every point on the history chart is what that player's
+ * rating was at that moment, predicted without knowledge of anything that
+ * followed.
  */
-const PASSES = 3;
+const PASSES = 1;
 
 export type RatingGameRow = {
   id: number;
@@ -145,8 +152,25 @@ export type RatingPrediction = {
   actual: number;
 };
 
+/** One point on a player's rating trajectory. */
+export type RatingPoint = {
+  gameId: number;
+  /** Rating immediately after this game. */
+  rating: number;
+  /** Movement from this game, positive or negative. */
+  delta: number;
+};
+
 export type PlayerRating = {
   rating: number;
+  /**
+   * Rating after each game this player took part in, oldest first.
+   *
+   * Only meaningful because the replay is a single chronological pass. If the
+   * multi-pass approach is ever restored, this becomes fiction and should be
+   * removed rather than left to mislead.
+   */
+  history: RatingPoint[];
   /** Games contributing to it — the denominator for how much to trust it. */
   games: number;
   /**
@@ -244,6 +268,7 @@ export function replay(
     // pass three refuse to move ratings it had every reason to revise.
     const deviation = new Map<number, number>();
     const lastSeen  = new Map<number, number>();
+    const history   = new Map<number, RatingPoint[]>();
 
     predictions = [];
 
@@ -293,7 +318,20 @@ export function replay(
             ? Math.min(RD_MAX, Math.sqrt(carried ** 2 + missed * RD_DECAY_PER_GAME ** 2))
             : carried;
 
-          working.set(id, ratingOf(id) + kFactor(rd) * share);
+          const before = ratingOf(id);
+          const after  = before + kFactor(rd) * share;
+          working.set(id, after);
+
+          // Rounded on the way in so the chart and the headline figure agree —
+          // a trajectory ending at 1522.6 beside a card reading 1523 invites
+          // exactly the wrong kind of scrutiny.
+          const points = history.get(id) ?? [];
+          points.push({
+            gameId: game.id,
+            rating: Math.round(after),
+            delta:  Math.round(after) - Math.round(before),
+          });
+          history.set(id, points);
 
           // Then shrink it for having played. Combining precisions rather than
           // averaging is what makes repeated informative games converge.
@@ -323,6 +361,7 @@ export function replay(
 
         out.set(id, {
           rating:      Math.round(rating),
+          history:     history.get(id) ?? [],
           games:       played.get(id) ?? 0,
           rd:          Math.round(rd),
           provisional: rd > PROVISIONAL_RD,
