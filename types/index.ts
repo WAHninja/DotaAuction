@@ -154,6 +154,7 @@ export type HistoryGame = {
  * instead of each re-listing the eight arrays with its own useState.
  */
 export type StatsPayload = {
+  ratingModel:       RatingModel;
   leagueTotals:      LeagueTotals;
   leagueRecords:     LeagueRecords;
   players:           PlayerStats[];
@@ -202,6 +203,25 @@ export type LeagueRecords = {
   leanestOutrightWin: LeagueRecord | null;
   /** Fewest games taken to reach 100,000 gold. */
   fastestGoldWin: LeagueRecord | null;
+};
+
+/**
+ * How the rating model is configured, and how well it actually predicts.
+ *
+ * Surfaced rather than hidden because the rating makes a claim — that it knows
+ * roughly who should win — and that claim is checkable. Accuracy and log loss
+ * are measured on a blind chronological pass, so each game is predicted before
+ * its result is known.
+ */
+export type RatingModel = {
+  /** Fitted weight on gold advantage. 0 means gold did not improve prediction
+   *  and has been switched off. */
+  goldWeight: number;
+  accuracy: number;
+  /** Mean negative log likelihood. 0.693 is a coin flip. */
+  logLoss: number;
+  logLossWithoutGold: number;
+  gamesScored: number;
 };
 
 /** The signed-in user, as returned by /api/me under the `user` key. */
