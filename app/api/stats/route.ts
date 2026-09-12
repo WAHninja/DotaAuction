@@ -146,6 +146,8 @@ type PlayerRow = {
   /** True while the rating is still settling. Driven by deviation, not a games
    *  count, so a returning player is unproven again. */
   ratingProvisional: boolean;
+  /** Rating after each game this player took part in, oldest first. */
+  ratingHistory: { gameId: number; rating: number; delta: number }[];
   /** Games entered as the only player on their side — a chance to win the
    *  whole match outright, since a single-player win ends it. */
   lastStandOpportunities: number;
@@ -654,6 +656,7 @@ export async function GET() {
       ratedGames:             ratings.get(id)?.games  ?? 0,
       ratingRd:               ratings.get(id)?.rd     ?? 350,
       ratingProvisional:      ratings.get(id)?.provisional ?? true,
+      ratingHistory:          ratings.get(id)?.history ?? [],
     }));
 
     const winStreaks: WinStreakRow[] = winStreakResult.rows.map(r => ({
