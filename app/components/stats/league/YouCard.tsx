@@ -96,6 +96,9 @@ export default function YouCard() {
           value={String(core.rating)}
           rank={ratingRank}
           tone="gold"
+          leagueAvg={core.ratingProvisional
+            ? `±${core.ratingRd} · still settling`
+            : `±${core.ratingRd}`}
           hint={GLOSSARY.rating}
           hintId="you-tip-rating"
         />
