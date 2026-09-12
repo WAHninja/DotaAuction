@@ -100,6 +100,10 @@ export default function StatsProvider({ children }: { children: ReactNode }) {
             // An object rather than an array, so it needs its own zeroed
             // default — `?? []` would leave the vitals strip reading
             // properties off an array and rendering undefined.
+            ratingModel: statsData.ratingModel ?? {
+              goldWeight: 0, accuracy: 0, logLoss: 0,
+              logLossWithoutGold: 0, gamesScored: 0,
+            },
             leagueTotals: statsData.leagueTotals ?? {
               matchesCompleted: 0,
               gamesPlayed:      0,
