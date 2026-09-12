@@ -140,6 +140,12 @@ type PlayerRow = {
   rating: number;
   /** Games the rating is built from — how much to trust it. */
   ratedGames: number;
+  /** Rating deviation: roughly a one-sigma band around the rating. Widens with
+   *  absence, narrows with informative games. */
+  ratingRd: number;
+  /** True while the rating is still settling. Driven by deviation, not a games
+   *  count, so a returning player is unproven again. */
+  ratingProvisional: boolean;
   /** Games entered as the only player on their side — a chance to win the
    *  whole match outright, since a single-player win ends it. */
   lastStandOpportunities: number;
@@ -646,6 +652,8 @@ export async function GET() {
       lastStandAvgOpponents:  lastStands.get(id)?.avgOpponents  ?? null,
       rating:                 ratings.get(id)?.rating ?? STARTING_RATING,
       ratedGames:             ratings.get(id)?.games  ?? 0,
+      ratingRd:               ratings.get(id)?.rd     ?? 350,
+      ratingProvisional:      ratings.get(id)?.provisional ?? true,
     }));
 
     const winStreaks: WinStreakRow[] = winStreakResult.rows.map(r => ({
