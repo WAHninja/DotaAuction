@@ -69,6 +69,7 @@ export default function StatsPage() {
         players={payload.players}
         dotaStats={payload.playerDotaStats}
         highlightUsername={me?.username ?? null}
+        model={payload.ratingModel}
       />
 
       {/* Owned by heroes and by pairings rather than by players, so both belong
