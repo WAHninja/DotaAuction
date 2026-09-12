@@ -132,7 +132,9 @@ export default function PlayerStatsPage() {
           value={String(core.rating)}
           rank={ratingRank}
           tone="gold"
-          leagueAvg={core.ratedGames < 20 ? `provisional · ${core.ratedGames}/20 games` : null}
+          leagueAvg={core.ratingProvisional
+            ? `±${core.ratingRd} · still settling`
+            : `±${core.ratingRd}`}
           hint={GLOSSARY.rating}
           hintId="tip-rating"
         />
