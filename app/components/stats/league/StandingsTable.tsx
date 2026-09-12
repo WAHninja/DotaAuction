@@ -225,18 +225,22 @@ export default function StandingsTable({ players, dotaStats, highlightUsername, 
                   {/* Hidden with its header, not instead of it — a cell and a
                       header dropping at different breakpoints shears the row. */}
                   <td className="px-3 py-2.5 text-center tabular-nums">
-                    <span className="font-bold text-dota-text">{row.rating}</span>
-                    {/* Provisional ratings are flagged rather than hidden: with
-                        a threshold they would vanish for anyone new, and an
-                        unqualified number would overstate its own certainty. */}
-                    {row.ratedGames < 20 && (
-                      <span
-                        className="text-dota-text-dim text-[10px] ml-1"
-                        title={`Provisional — ${row.ratedGames} of 20 games`}
-                      >
-                        ?
-                      </span>
-                    )}
+                    <span className={row.ratingProvisional ? 'font-bold text-dota-text-muted' : 'font-bold text-dota-text'}>
+                      {row.rating}
+                    </span>
+                    {/* The ± is the point of tracking deviation: it says how
+                        much of this number to believe. Dimmed and marked while
+                        provisional rather than hidden — a blank column for
+                        anyone new or returning would be worse than a hedged
+                        one. */}
+                    <span
+                      className="text-dota-text-dim text-[10px] ml-1 whitespace-nowrap"
+                      title={row.ratingProvisional
+                        ? `Provisional — still settling (±${row.ratingRd}, ${row.ratedGames} games)`
+                        : `${row.ratedGames} games`}
+                    >
+                      ±{row.ratingRd}
+                    </span>
                   </td>
 
                   <td className="hidden sm:table-cell px-3 py-2.5 text-center tabular-nums text-dota-text-muted">
