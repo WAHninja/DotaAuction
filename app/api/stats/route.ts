@@ -8,6 +8,8 @@ import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
 import { computeLastStands } from '@/lib/stats/compute/last-stand';
 import { computeLeagueRecords, type LeagueRecord } from '@/lib/stats/compute/records';
 import { computeRatings, STARTING_RATING } from '@/lib/stats/compute/rating';
+import { buildGoldTimeline } from '@/lib/stats/compute/gold-timeline';
+import { evaluateModel } from '@/lib/stats/compute/rating-eval';
 import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 
 // ---------------------------------------------------------------------------
@@ -24,6 +26,7 @@ import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 // client and shown a hero rate the table then hid, or vice versa.
 
 type StatsPayload = {
+  ratingModel: RatingModelRow;
   leagueTotals: LeagueTotalsRow;
   leagueRecords: LeagueRecordsRow;
   players: PlayerRow[];
@@ -83,6 +86,19 @@ type LeagueRecordsRow = {
   longestMatch: NamedRecordRow | null;
   leanestOutrightWin: NamedRecordRow | null;
   fastestGoldWin: NamedRecordRow | null;
+};
+
+/** How the rating model is currently configured and how well it predicts. */
+type RatingModelRow = {
+  /** Fitted gold weight, 0 when gold did not earn its place. */
+  goldWeight: number;
+  /** Share of games where the model's favourite won, on a blind pass. */
+  accuracy: number;
+  /** Mean negative log likelihood. 0.693 is a coin flip; lower is better. */
+  logLoss: number;
+  /** The same figure with gold disabled, so the difference is visible. */
+  logLossWithoutGold: number;
+  gamesScored: number;
 };
 
 type PlayerRow = {
@@ -200,6 +216,7 @@ export async function GET() {
       matchPlayersResult,
       matchTotalsResult,
       matchOutcomesResult,
+      goldChangesResult,
       gamesResult,
       offersResult,
       winStreakResult,
@@ -246,6 +263,16 @@ export async function GET() {
         win_type: 'last_standing' | 'gold_threshold' | null;
       }>(
         `SELECT id, winner_id, win_type FROM matches WHERE status = 'finished'`
+      ),
+
+      // 2d. Every gold movement, for reconstructing what each player held
+      // going into each game. No balance is stored per game, but every change
+      // is logged — wins, penalties and accepted trades alike.
+      db.query<{ game_id: number; player_id: number; gold_change: number }>(
+        `SELECT gps.game_id, gps.player_id, gps.gold_change
+         FROM game_player_stats gps
+         JOIN games g ON g.id = gps.game_id
+         WHERE g.status = 'finished'`
       ),
 
       // 3. All finished games — for win/loss counts and team combo tracking
@@ -585,7 +612,16 @@ export async function GET() {
 
     // Ratings — replays every finished game in order. See
     // lib/stats/compute/rating for the team-strength model.
-    const ratings = computeRatings(gamesResult.rows);
+    //
+    // The gold weight is fitted rather than chosen: evaluateModel scores the
+    // model at a range of weights on a single blind pass and reports which
+    // predicts best. If gold does not measurably beat the no-gold control the
+    // term is switched off, so it has to earn its place on every rebuild.
+    const goldTimeline  = buildGoldTimeline(gamesResult.rows, goldChangesResult.rows);
+    const modelEval     = evaluateModel(gamesResult.rows, goldTimeline);
+    const goldWeight    = modelEval.goldHelps ? modelEval.best.goldWeight : 0;
+
+    const ratings = computeRatings(gamesResult.rows, { goldWeight, goldTimeline });
 
     // entries(), not values(): the map key is the user id, which is the join
     // key for offer strength and is not repeated inside the value.
@@ -715,7 +751,16 @@ export async function GET() {
       fastestGoldWin:     nameRecord(records.fastestGoldWin),
     };
 
+    const ratingModel: RatingModelRow = {
+      goldWeight,
+      accuracy:           modelEval.best.accuracy,
+      logLoss:            modelEval.best.logLoss,
+      logLossWithoutGold: modelEval.withoutGold.logLoss,
+      gamesScored:        modelEval.best.gamesScored,
+    };
+
     const data: StatsPayload = {
+      ratingModel,
       leagueTotals,
       leagueRecords,
       players,
