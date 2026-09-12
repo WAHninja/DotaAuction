@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import type { PlayerStats, PlayerDotaStat } from '@/types';
+import type { PlayerStats, PlayerDotaStat, RatingModel } from '@/types';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import { GLOSSARY } from '@/lib/stats/glossary';
 import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
@@ -42,9 +42,11 @@ type Row = PlayerStats & {
 
 type SortKey = 'username' | 'rating' | 'gamesPlayed' | 'winRate' | 'marketValue' | 'avgKda';
 
-export default function StandingsTable({ players, dotaStats, highlightUsername }: {
+export default function StandingsTable({ players, dotaStats, highlightUsername, model }: {
   players:   PlayerStats[];
   dotaStats: PlayerDotaStat[];
+  /** Reported under the table so the rating's accuracy is checkable. */
+  model?: RatingModel;
   /** Signed-in user, given a gold ring and row tint so you can find yourself. */
   highlightUsername?: string | null;
 }) {
@@ -272,6 +274,22 @@ export default function StandingsTable({ players, dotaStats, highlightUsername }
           <span className="text-dota-text-muted font-semibold">Market value:</span>{' '}
           {GLOSSARY.marketValue}
         </p>
+
+        {/* The rating claims to know who should win, and that claim is
+            testable — so the test is printed rather than kept to ourselves.
+            Measured on a blind pass: each game predicted before its result was
+            known, which understates how the settled ratings perform. */}
+        {model && model.gamesScored > 0 && (
+          <p className="font-barlow text-[11px] text-dota-text-dim mt-1.5">
+            <span className="text-dota-text-muted font-semibold">Rating model:</span>{' '}
+            picks the winner in{' '}
+            <span className="tabular-nums">{Math.round(model.accuracy * 100)}%</span>{' '}
+            of {model.gamesScored} games, predicting each before it was played.
+            {model.goldWeight > 0
+              ? ' Gold advantage improves those predictions, so it counts toward the rating.'
+              : ' Gold advantage did not improve predictions, so it is excluded.'}
+          </p>
+        )}
       </div>
     </div>
   );
