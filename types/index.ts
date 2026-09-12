@@ -205,6 +205,15 @@ export type LeagueRecords = {
   fastestGoldWin: LeagueRecord | null;
 };
 
+/** One point on a rating trajectory. */
+export type RatingPoint = {
+  gameId: number;
+  /** Rating immediately after this game. */
+  rating: number;
+  /** Movement caused by this game. */
+  delta: number;
+};
+
 /**
  * How the rating model is configured, and how well it actually predicts.
  *
@@ -279,6 +288,14 @@ export type PlayerStats = {
    *  deviation rather than a games count, so a long absence makes an
    *  established player provisional again. */
   ratingProvisional: boolean;
+  /**
+   * Rating after each game this player took part in, oldest first.
+   *
+   * Real history, not a reconstruction: the replay is a single chronological
+   * pass, so every point is the rating that player actually held at that
+   * moment, calculated without knowledge of anything that came after.
+   */
+  ratingHistory: RatingPoint[];
   /** Games entered as the only player on their side. A single-player win ends
    *  the match immediately, so these are the only games that can be won
    *  outright — and the hardest, since being alone means being outnumbered. */
