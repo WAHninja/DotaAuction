@@ -270,8 +270,15 @@ export type PlayerStats = {
    *  team average, so being outnumbered is priced in: beating longer odds is
    *  worth more, losing against them costs less. */
   rating: number;
-  /** Games the rating is built from. Below roughly 20 it is still settling. */
+  /** Games the rating is built from. */
   ratedGames: number;
+  /** Rating deviation — roughly a one-sigma band. A player at 1500 ±180 and one
+   *  at 1500 ±55 are not making the same claim. */
+  ratingRd: number;
+  /** Still settling, so the rating should not be read closely. Driven by
+   *  deviation rather than a games count, so a long absence makes an
+   *  established player provisional again. */
+  ratingProvisional: boolean;
   /** Games entered as the only player on their side. A single-player win ends
    *  the match immediately, so these are the only games that can be won
    *  outright — and the hardest, since being alone means being outnumbered. */
