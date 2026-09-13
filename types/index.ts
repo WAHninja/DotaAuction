@@ -267,6 +267,20 @@ export type PlayerStats = {
    *  three-player side the offerer picks between two teammates, so half is
    *  unremarkable; on a five-player side a quarter is. */
   selectionExpected: number;
+  /**
+   * The same opportunities split by whether this player was among the richer or
+   * poorer teammates who could have been offered.
+   *
+   * Controls for the confound in the headline figure. Selling a rich player
+   * hands their bank to the opposition, so being passed over may mean "too
+   * expensive to give away" rather than "not rated". If the rate holds across
+   * both buckets the headline means what it says; if it collapses when they are
+   * the expensive option, gold is doing the explaining.
+   */
+  selectionRichOpportunities: number;
+  selectionRichCount: number;
+  selectionPoorOpportunities: number;
+  selectionPoorCount: number;
   /** Selections against what chance alone would produce. 1.0 = picked as often
    *  as random choice, 2.0 = twice as often. null when never in a
    *  discretionary situation, which is distinct from never being picked. */
