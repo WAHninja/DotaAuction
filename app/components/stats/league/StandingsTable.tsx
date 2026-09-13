@@ -289,9 +289,34 @@ export default function StandingsTable({ players, dotaStats, highlightUsername, 
             picks the winner in{' '}
             <span className="tabular-nums">{Math.round(model.accuracy * 100)}%</span>{' '}
             of {model.gamesScored} games, predicting each before it was played.
-            {model.goldWeight > 0
-              ? ' Gold advantage improves those predictions, so it counts toward the rating.'
-              : ' Gold advantage did not improve predictions, so it is excluded.'}
+            {model.goldWeight > 0 ? (
+              <>
+                {' '}Gold advantage improves those predictions, so it counts toward
+                the rating — weight{' '}
+                <span className="tabular-nums">{model.goldWeight}</span>, log loss{' '}
+                <span className="tabular-nums">
+                  {model.logLossWithoutGold.toFixed(3)} → {model.logLoss.toFixed(3)}
+                </span>.
+                {/* ln(5) = 1.61 is where a gold monopoly outweighs a 1-v-5
+                    disadvantage. Past it the term is probably absorbing skill —
+                    a gold lead is mostly earned by winning earlier games — so
+                    the number that should prompt a rethink is called out rather
+                    than left for someone to derive. */}
+                {model.goldWeight > Math.log(5) && (
+                  <span className="text-dota-gold">
+                    {' '}At this weight a gold lead can outweigh being outnumbered
+                    five to one, which is worth a second look.
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                {' '}Gold advantage did not improve predictions, so it is excluded
+                (log loss{' '}
+                <span className="tabular-nums">{model.logLossWithoutGold.toFixed(3)}</span>
+                {' '}either way).
+              </>
+            )}
           </p>
         )}
       </div>
