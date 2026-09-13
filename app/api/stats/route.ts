@@ -126,6 +126,12 @@ type PlayerRow = {
   selectionOpportunities: number;
   /** How many of those offers named them. */
   selectionCount: number;
+  /** Opportunities and selections split by whether they were the richer or the
+   *  poorer option — the control for "too expensive to give away". */
+  selectionRichOpportunities: number;
+  selectionRichCount: number;
+  selectionPoorOpportunities: number;
+  selectionPoorCount: number;
   /** How many selections chance alone would have produced, given the team
    *  sizes involved. Lets the UI compare two percentages rather than present
    *  an abstract ratio. */
@@ -605,7 +611,7 @@ export async function GET() {
 
     // Selection rate — only counts offers where the offering team had a real
     // alternative. See lib/stats/compute/selection-rate.
-    const selection = computeSelectionRate(gamesResult.rows, offersResult.rows);
+
 
     // Teammate synergy — pairs on the same side. Uses the finished-game rows
     // already fetched, so no extra query.
@@ -626,6 +632,15 @@ export async function GET() {
     // predicts best. If gold does not measurably beat the no-gold control the
     // term is switched off, so it has to earn its place on every rebuild.
     const goldTimeline  = buildGoldTimeline(gamesResult.rows, goldChangesResult.rows);
+
+    // Selection rate, with each opportunity bucketed by whether the player was
+    // the expensive or the cheap option at that moment. See the module header
+    // for why a bare selection rate cannot be interpreted without it.
+    const selection = computeSelectionRate(
+      gamesResult.rows,
+      offersResult.rows,
+      goldTimeline,
+    );
     const modelEval     = evaluateModel(gamesResult.rows, goldTimeline);
     const goldWeight    = modelEval.goldHelps ? modelEval.best.goldWeight : 0;
 
@@ -647,6 +662,10 @@ export async function GET() {
       selectionOpportunities: selection.get(id)?.opportunities ?? 0,
       selectionCount:         selection.get(id)?.selections    ?? 0,
       selectionExpected:      selection.get(id)?.expected      ?? 0,
+      selectionRichOpportunities: selection.get(id)?.richOpportunities ?? 0,
+      selectionRichCount:         selection.get(id)?.richSelections    ?? 0,
+      selectionPoorOpportunities: selection.get(id)?.poorOpportunities ?? 0,
+      selectionPoorCount:         selection.get(id)?.poorSelections    ?? 0,
       selectionIndex:         selection.get(id)?.index         ?? null,
       recentForm:             recentForm.get(id) ?? [],
       lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
