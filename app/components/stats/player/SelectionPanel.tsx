@@ -27,7 +27,11 @@ import { pct } from '@/lib/stats/format';
  * judgement at all. Only games with three or more a side are counted.
  */
 export default function SelectionPanel({ core }: { core: PlayerStats }) {
-  const { selectionOpportunities, selectionCount, selectionExpected, selectionIndex } = core;
+  const {
+    selectionOpportunities, selectionCount, selectionExpected, selectionIndex,
+    selectionRichOpportunities, selectionRichCount,
+    selectionPoorOpportunities, selectionPoorCount,
+  } = core;
 
   // Renders nothing with no discretionary situations, rather than explaining
   // its own absence — the page-level notice covers that once.
@@ -36,6 +40,18 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
   const hasSample  = selectionOpportunities >= MIN_SELECTION_OPPORTUNITIES;
   const actualRate = pct(selectionCount, selectionOpportunities);
   const chanceRate = pct(selectionExpected, selectionOpportunities);
+
+  // The control for "too expensive to give away". Both sides need enough
+  // opportunities before a gap between them means anything — with three
+  // apiece, one decision swings it by 33 points.
+  const MIN_PER_BUCKET = 5;
+  const hasSplit =
+    selectionRichOpportunities >= MIN_PER_BUCKET &&
+    selectionPoorOpportunities >= MIN_PER_BUCKET;
+
+  const richRate = pct(selectionRichCount, selectionRichOpportunities);
+  const poorRate = pct(selectionPoorCount, selectionPoorOpportunities);
+  const goldGap  = poorRate - richRate;
 
   const verdict =
     selectionIndex === null ? null
@@ -81,6 +97,38 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
           </div>
         </div>
 
+        {hasSplit && (
+          <div className="pt-3 border-t border-dota-border/40 space-y-2">
+            <p className="stat-label">Controlling for your gold</p>
+
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              <SplitFigure
+                label="When you were the cheaper option"
+                rate={poorRate}
+                count={selectionPoorCount}
+                total={selectionPoorOpportunities}
+              />
+              <SplitFigure
+                label="When you were the pricier option"
+                rate={richRate}
+                count={selectionRichCount}
+                total={selectionRichOpportunities}
+              />
+            </div>
+
+            {/* Selling a rich teammate hands their bank to the opposition, so a
+                large gap means gold is driving the choice rather than opinion.
+                15 points is a judgement call, not a significance test. */}
+            <p className="font-barlow text-[11px] text-dota-text-dim">
+              {goldGap >= 15
+                ? 'Your teammates avoid selling you when you are holding gold — the headline figure above is partly about your bank, not their opinion of you.'
+                : goldGap <= -15
+                  ? 'You get offered more often when you are the expensive option, which is the opposite of what gold alone would predict.'
+                  : 'Your gold makes little difference to how often you are picked, so the figure above reflects their choice rather than the price.'}
+            </p>
+          </div>
+        )}
+
         {hasSample && verdict ? (
           <p className={`font-barlow text-sm ${verdict.tone}`}>{verdict.text}</p>
         ) : (
@@ -91,5 +139,23 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
         )}
       </div>
     </section>
+  );
+}
+
+/** One side of the gold-controlled comparison. */
+function SplitFigure({ label, rate, count, total }: {
+  label: string;
+  rate: number;
+  count: number;
+  total: number;
+}) {
+  return (
+    <div>
+      <p className="font-barlow text-[11px] text-dota-text-muted">{label}</p>
+      <p className="font-barlow text-xl font-bold text-dota-text tabular-nums">
+        {rate}%
+        <span className="text-dota-text-dim text-[11px] font-normal"> {count} of {total}</span>
+      </p>
+    </div>
   );
 }
