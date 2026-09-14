@@ -207,10 +207,6 @@ export type LeagueRecords = {
    *  highest first. One row each so a single prolific player cannot fill the
    *  card with their own near-identical feats. */
   biggestUnderdogWins: LeagueRecord[];
-  /** Largest gold deficits overturned, measured entering the deciding game.
-   *  Negative values are deficits, so the biggest is the most negative. Best
-   *  result per player, largest deficit first. */
-  biggestGoldComebacks: LeagueRecord[];
 };
 
 /** One point on a rating trajectory. */
@@ -250,6 +246,10 @@ export type Me = {
 
 export type PlayerStats = {
   username: string;
+  /** Matches won outright — the whole match, not individual games. */
+  matchesWon: number;
+  /** Matches taken part in, as context for the wins figure. */
+  matchesPlayed: number;
   /** Steam avatar URL, null when no Steam profile is linked. Supplied by
    *  /api/stats so any stats surface can render a real portrait; PlayerAvatar
    *  falls back to a username-hashed initial when this is null. */
