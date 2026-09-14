@@ -653,6 +653,20 @@ export async function GET() {
 
     // entries(), not values(): the map key is the user id, which is the join
     // key for offer strength and is not repeated inside the value.
+    // Match wins per player. matches.winner_id is the single player who took
+    // the match, so this is a straight tally rather than a team lookup.
+    //
+    // Must be declared above the players map below, which reads it. It was
+    // originally placed next to computeLeagueRecords further down, which put it
+    // in the temporal dead zone at the moment the map callback ran — a runtime
+    // ReferenceError that tsc cannot catch, because it has no way to know the
+    // callback is invoked immediately rather than stored for later.
+    const matchWins = new Map<number, number>();
+    for (const m of matchOutcomesResult.rows) {
+      if (m.winner_id === null) continue;
+      matchWins.set(m.winner_id, (matchWins.get(m.winner_id) ?? 0) + 1);
+    }
+
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
       username:          p.username,
       matchesWon:        matchWins.get(id) ?? 0,
@@ -762,14 +776,6 @@ export async function GET() {
           : 0,
       }];
     });
-
-    // Match wins per player. matches.winner_id is the single player who took
-    // the match, so this is a straight tally rather than a team lookup.
-    const matchWins = new Map<number, number>();
-    for (const m of matchOutcomesResult.rows) {
-      if (m.winner_id === null) continue;
-      matchWins.set(m.winner_id, (matchWins.get(m.winner_id) ?? 0) + 1);
-    }
 
     const records = computeLeagueRecords(
       matchOutcomesResult.rows,
