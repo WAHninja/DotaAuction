@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Flame, Scale, Swords, Trophy } from 'lucide-react';
+import { ChevronRight, Crown, Flame, Swords, Trophy } from 'lucide-react';
 import type { ElementType, ReactNode } from 'react';
 import type { LeagueRecord } from '@/types';
 import { buildAvatarLookup } from '@/lib/stats/select';
@@ -63,6 +63,22 @@ function HallOfFameInner() {
   // back to a coloured initial while the tables beside them showed portraits.
   const avatars = buildAvatarLookup(players);
 
+  // Match wins, not game wins — the whole match. Ties are common at this scale
+  // (seven matches completed), so they break on rating and then on name: a
+  // stable order beats whatever the payload happened to arrive in, and a card
+  // that reshuffles between loads looks broken.
+  const byMatchWins = players
+    .filter(p => p.matchesWon > 0)
+    .sort((a, b) =>
+      b.matchesWon - a.matchesWon ||
+      b.rating - a.rating ||
+      a.username.localeCompare(b.username))
+    .slice(0, MAX_RANK)
+    .map(p => ({
+      name: p.username,
+      value: <>{p.matchesWon}<span className="opacity-50 font-normal">/{p.matchesPlayed}</span></>,
+    }));
+
   // Ladder leaders. Provisional ratings are excluded rather than dimmed: this
   // is a four-line summary with no room to explain why the name at the top is
   // hedged, and an unproven rating topping the dashboard would misinform.
@@ -100,12 +116,24 @@ function HallOfFameInner() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <RecordCard
           icon={Trophy}
+          title="Matches Won"
+          tooltip="Matches won outright, against the number entered. A whole match, not individual games."
+          tooltipId="hof-matches"
+          entries={byMatchWins}
+          accentClass="text-dota-gold"
+          iconBgClass="bg-dota-gold/10 border border-dota-gold/20"
+          emptyMessage="No matches finished yet"
+          avatars={avatars}
+        />
+
+        <RecordCard
+          icon={Crown}
           title="Rating Leaders"
           tooltip="Highest skill ratings in the league. Accounts for team sizes and the odds of each game, so beating longer odds counts for more. Players still settling are excluded."
           tooltipId="hof-rating"
           entries={byRating}
-          accentClass="text-dota-gold"
-          iconBgClass="bg-dota-gold/10 border border-dota-gold/20"
+          accentClass="text-dota-info"
+          iconBgClass="bg-dota-info/10 border border-dota-info/20"
           emptyMessage="No settled ratings yet"
           avatars={avatars}
         />
@@ -134,20 +162,6 @@ function HallOfFameInner() {
           avatars={avatars}
         />
 
-        <RecordCard
-          icon={Scale}
-          title="Biggest Comeback"
-          tooltip="The largest gold deficit anyone has overturned, measured against the opposing team going into the deciding game."
-          tooltipId="hof-comeback"
-          entries={recordEntries(
-            leagueRecords.biggestGoldComebacks,
-            r => (r.value < 0 ? `${Math.abs(r.value).toLocaleString()} behind` : 'ahead'),
-          )}
-          accentClass="text-dota-info"
-          iconBgClass="bg-dota-info/10 border border-dota-info/20"
-          emptyMessage="Not set yet"
-          avatars={avatars}
-        />
       </div>
 
       <Link
