@@ -86,6 +86,8 @@ type LeagueRecordsRow = {
   longestMatch: NamedRecordRow | null;
   leanestOutrightWin: NamedRecordRow | null;
   fastestGoldWin: NamedRecordRow | null;
+  biggestUnderdogWin: NamedRecordRow | null;
+  biggestGoldComeback: NamedRecordRow | null;
 };
 
 /** How the rating model is currently configured and how well it predicts. */
@@ -760,6 +762,7 @@ export async function GET() {
       matchOutcomesResult.rows,
       gamesResult.rows,
       matchPlayersResult.rows,
+      goldTimeline,
     );
 
     // Names are attached here rather than in the computation, keeping that a
@@ -779,6 +782,8 @@ export async function GET() {
       longestMatch:       nameRecord(records.longestMatch),
       leanestOutrightWin: nameRecord(records.leanestOutrightWin),
       fastestGoldWin:     nameRecord(records.fastestGoldWin),
+      biggestUnderdogWin:  nameRecord(records.biggestUnderdogWin),
+      biggestGoldComeback: nameRecord(records.biggestGoldComeback),
     };
 
     const ratingModel: RatingModelRow = {
