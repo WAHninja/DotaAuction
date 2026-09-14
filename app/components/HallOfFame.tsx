@@ -76,7 +76,7 @@ function HallOfFameInner() {
     .slice(0, MAX_RANK)
     .map(p => ({
       name: p.username,
-      value: <>{p.matchesWon}<span className="opacity-50 font-normal">/{p.matchesPlayed}</span></>,
+      value: <>{p.matchesWon}</>,
     }));
 
   // Ladder leaders. Provisional ratings are excluded rather than dimmed: this
@@ -117,7 +117,7 @@ function HallOfFameInner() {
         <RecordCard
           icon={Trophy}
           title="Matches Won"
-          tooltip="Matches won outright, against the number entered. A whole match, not individual games."
+          tooltip="Matches won outright. A whole match, not individual games."
           tooltipId="hof-matches"
           entries={byMatchWins}
           accentClass="text-dota-gold"
