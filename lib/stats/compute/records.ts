@@ -62,7 +62,7 @@ export type LeagueRecords = {
    * winning is the moment that ends a match outright — it is the version of
    * this feat that actually means something.
    */
-  biggestUnderdogWin: LeagueRecord | null;
+  biggestUnderdogWins: LeagueRecord[];
   /**
    * The largest gold deficit a player has overturned to take a match.
    *
@@ -70,8 +70,33 @@ export type LeagueRecords = {
    * the combined banks of everyone opposing them. Negative values are deficits,
    * so the record is the most negative.
    */
-  biggestGoldComeback: LeagueRecord | null;
+  biggestGoldComebacks: LeagueRecord[];
 };
+
+/** How many holders to list for the multi-entry records. */
+const RECORD_DEPTH = 3;
+
+/**
+ * Best entry per player, highest first.
+ *
+ * One row per person, deliberately. Ranking raw feats would let whoever plays
+ * most fill all three places with their own near-identical results, which says
+ * less than three different names does.
+ */
+function topPerPlayer(
+  entries: LeagueRecord[],
+  better: (a: LeagueRecord, b: LeagueRecord) => boolean,
+): LeagueRecord[] {
+  const best = new Map<number, LeagueRecord>();
+  for (const e of entries) {
+    if (e.playerId === null) continue;
+    const current = best.get(e.playerId);
+    if (!current || better(e, current)) best.set(e.playerId, e);
+  }
+  return Array.from(best.values())
+    .sort((a, b) => (better(a, b) ? -1 : better(b, a) ? 1 : 0))
+    .slice(0, RECORD_DEPTH);
+}
 
 export { GOLD_WIN_THRESHOLD };
 
@@ -149,22 +174,24 @@ export function computeLeagueRecords(
     }
   }
 
-  // Most outnumbered win. Solo winners only — see the type above.
-  let underdog: LeagueRecord | null = null;
+  // Most outnumbered wins. Solo winners only — see the type above.
+  const underdogs: LeagueRecord[] = [];
   for (const g of games) {
     if (g.winning_team === null) continue;
     const winners = g.winning_team === 'team_1' ? g.team_1_members : g.team_a_members;
     const losers  = g.winning_team === 'team_1' ? g.team_a_members : g.team_1_members;
     if ((winners ?? []).length !== 1) continue;
 
-    const opponents = (losers ?? []).length;
-    if (underdog === null || opponents > underdog.value) {
-      underdog = { matchId: g.match_id, value: opponents, playerId: winners[0], detail: null };
-    }
+    underdogs.push({
+      matchId: g.match_id,
+      value: (losers ?? []).length,
+      playerId: winners[0],
+      detail: null,
+    });
   }
 
   // Largest gold deficit overturned, measured entering the deciding game.
-  let comeback: LeagueRecord | null = null;
+  const comebacks: LeagueRecord[] = [];
   if (goldTimeline) {
     const finalGameOf = new Map<number, RecordGameRow>();
     for (const g of games) {
@@ -191,9 +218,9 @@ export function computeLeagueRecords(
       const theirs = opposition.reduce((sum, id) => sum + Math.max(0, gold.get(id) ?? 0), 0);
       const diff   = mine - theirs;
 
-      if (comeback === null || diff < comeback.value) {
-        comeback = { matchId: m.id, value: diff, playerId: m.winner_id, detail: opposition.length };
-      }
+      comebacks.push({
+        matchId: m.id, value: diff, playerId: m.winner_id, detail: opposition.length,
+      });
     }
   }
 
@@ -202,7 +229,9 @@ export function computeLeagueRecords(
     longestMatch:       longest,
     leanestOutrightWin: leanest,
     fastestGoldWin:     fastestGold,
-    biggestUnderdogWin: underdog,
-    biggestGoldComeback: comeback,
+    // Larger is better for underdog wins; for comebacks the record is the most
+    // negative, since a negative value is a deficit that was overturned.
+    biggestUnderdogWins:  topPerPlayer(underdogs,  (a, b) => a.value > b.value),
+    biggestGoldComebacks: topPerPlayer(comebacks, (a, b) => a.value < b.value),
   };
 }
