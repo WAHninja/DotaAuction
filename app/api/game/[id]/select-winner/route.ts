@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { broadcastEvent } from '@/lib/supabase-server';
+import { broadcastEventSafe } from '@/lib/supabase-server';
 import { checkGoldThresholdWin } from '@/lib/gold-win';
 
 export async function POST(
@@ -45,6 +45,14 @@ export async function POST(
   }
 
   const client = await db.connect();
+
+  // Whether the transaction has already been committed.
+  //
+  // The catch below used to roll back unconditionally, which meant any error
+  // raised *after* COMMIT issued a ROLLBACK against a transaction that no
+  // longer existed. Postgres warns and ignores it, so nothing was undone — but
+  // the request still returned 500 for work that had genuinely succeeded.
+  let committed = false;
 
   try {
     await client.query('BEGIN');
@@ -140,8 +148,9 @@ export async function POST(
       );
 
       await client.query('COMMIT');
+      committed = true;
 
-      await broadcastEvent(
+      await broadcastEventSafe(
         `match-${matchId}`,
         'game-winner-selected',
         { gameId, matchId, winnerId: winningPlayerId, winType: 'last_standing' }
@@ -235,8 +244,9 @@ export async function POST(
       );
 
       await client.query('COMMIT');
+      committed = true;
 
-      await broadcastEvent(
+      await broadcastEventSafe(
         `match-${matchId}`,
         'game-winner-selected',
         { gameId, matchId, winnerId: goldWin.winnerId, winType: 'gold_threshold' }
@@ -253,8 +263,9 @@ export async function POST(
     // becomes 'finished' once an offer is accepted (see accept-offer route),
     // which is also where finished_at gets set for this path.
     await client.query('COMMIT');
+      committed = true;
 
-    await broadcastEvent(
+    await broadcastEventSafe(
       `match-${matchId}`,
       'game-winner-selected',
       { gameId, matchId }
@@ -266,7 +277,16 @@ export async function POST(
     });
 
   } catch (error: unknown) {
-    await client.query('ROLLBACK');
+    // Only roll back work that is still open, and never let the rollback itself
+    // throw: if the connection dropped mid-transaction it will, and that would
+    // mask the original error with a misleading one.
+    if (!committed) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('[SELECT_WINNER_ERROR]_ROLLBACK_FAILED', rollbackErr);
+      }
+    }
     console.error('[SELECT_WINNER_ERROR]', error);
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
 
