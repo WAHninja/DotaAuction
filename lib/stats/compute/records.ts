@@ -63,14 +63,6 @@ export type LeagueRecords = {
    * this feat that actually means something.
    */
   biggestUnderdogWins: LeagueRecord[];
-  /**
-   * The largest gold deficit a player has overturned to take a match.
-   *
-   * Measured at the start of the deciding game: the winner's own bank against
-   * the combined banks of everyone opposing them. Negative values are deficits,
-   * so the record is the most negative.
-   */
-  biggestGoldComebacks: LeagueRecord[];
 };
 
 /** How many holders to list for the multi-entry records. */
@@ -104,9 +96,6 @@ export function computeLeagueRecords(
   matches: RecordMatchRow[],
   games: RecordGameRow[],
   matchPlayers: RecordMatchPlayerRow[],
-  /** gameId -> playerId -> gold entering that game. Omit to skip the comeback
-   *  record, which is the only one that needs it. */
-  goldTimeline?: Map<number, Map<number, number>>,
 ): LeagueRecords {
   const gamesPerMatch = new Map<number, number>();
   for (const g of games) {
@@ -190,48 +179,13 @@ export function computeLeagueRecords(
     });
   }
 
-  // Largest gold deficit overturned, measured entering the deciding game.
-  const comebacks: LeagueRecord[] = [];
-  if (goldTimeline) {
-    const finalGameOf = new Map<number, RecordGameRow>();
-    for (const g of games) {
-      const current = finalGameOf.get(g.match_id);
-      if (!current || g.id > current.id) finalGameOf.set(g.match_id, g);
-    }
-
-    for (const m of played) {
-      if (m.winner_id === null) continue;
-      const decider = finalGameOf.get(m.id);
-      if (!decider) continue;
-
-      const gold = goldTimeline.get(decider.id);
-      if (!gold) continue;
-
-      // Opponents are whoever was not on the winner's side in that game, which
-      // is more reliable than trusting winning_team to agree with winner_id.
-      const onTeam1 = (decider.team_1_members ?? []).includes(m.winner_id);
-      const opposition = onTeam1
-        ? decider.team_a_members ?? []
-        : decider.team_1_members ?? [];
-
-      const mine   = Math.max(0, gold.get(m.winner_id) ?? 0);
-      const theirs = opposition.reduce((sum, id) => sum + Math.max(0, gold.get(id) ?? 0), 0);
-      const diff   = mine - theirs;
-
-      comebacks.push({
-        matchId: m.id, value: diff, playerId: m.winner_id, detail: opposition.length,
-      });
-    }
-  }
 
   return {
     shortestMatch:      shortest,
     longestMatch:       longest,
     leanestOutrightWin: leanest,
     fastestGoldWin:     fastestGold,
-    // Larger is better for underdog wins; for comebacks the record is the most
-    // negative, since a negative value is a deficit that was overturned.
+    // Larger is better: more opponents beaten is the bigger feat.
     biggestUnderdogWins:  topPerPlayer(underdogs,  (a, b) => a.value > b.value),
-    biggestGoldComebacks: topPerPlayer(comebacks, (a, b) => a.value < b.value),
   };
 }
