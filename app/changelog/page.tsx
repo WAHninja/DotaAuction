@@ -52,8 +52,38 @@ function SimpleMarkdown({ content }: { content: string }) {
   );
 }
 
+/**
+ * Escapes the five characters that can break out of HTML text or an attribute.
+ *
+ * Must run before the markdown substitutions below, never after: escaping
+ * afterwards would turn the <strong> tags we just inserted back into visible
+ * text, and escaping nothing leaves the input free to inject whatever it likes.
+ */
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[c] as string));
+}
+
+/**
+ * Renders the tiny markdown subset patch notes use — bold and italic — into
+ * HTML for dangerouslySetInnerHTML.
+ *
+ * The escape is the whole point. This output is injected directly into the DOM,
+ * so without it any HTML in patch_notes.content executes in the browser of
+ * every logged-in reader. The content is admin-authored, which lowers the
+ * likelihood but not the consequence: the payload would run with the reader's
+ * session, and this page is opened by everyone after a release.
+ *
+ * Ampersand is escaped first by virtue of being in the same pass — escaping it
+ * separately afterwards would double-encode the entities produced by the others.
+ */
 function renderInline(text: string): string {
-  return text
+  return escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/_(.+?)_/g, '<em>$1</em>');
 }
