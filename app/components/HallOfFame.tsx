@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { ChevronRight, Flame, Scale, Swords, Trophy } from 'lucide-react';
-import type { ElementType } from 'react';
+import type { ElementType, ReactNode } from 'react';
 import type { LeagueRecord } from '@/types';
+import { buildAvatarLookup } from '@/lib/stats/select';
+import FormGuide from '@/app/components/stats/ui/FormGuide';
 import StatsProvider, { useStats } from '@/app/components/stats/StatsProvider';
 import Tooltip from '@/app/components/stats/ui/Tooltip';
 import RankMedal from '@/app/components/RankMedal';
@@ -37,7 +39,9 @@ import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 const MAX_RANK = 3;
 const MEDAL_SIZE = 20;
-const FORM_WINDOW = 10;
+/** Form pips shown on the card. Fewer than the player page's ten — the card is
+ *  a quarter of the page width and has a name and a medal to fit alongside. */
+const FORM_PIPS = 5;
 
 export default function HallOfFame() {
   return (
@@ -54,6 +58,11 @@ function HallOfFameInner() {
 
   const { players, leagueRecords } = payload;
 
+  // Names in league records are strings, while the avatar lives on the player
+  // row — the same join the stats tables need. Without it every face here fell
+  // back to a coloured initial while the tables beside them showed portraits.
+  const avatars = buildAvatarLookup(players);
+
   // Ladder leaders. Provisional ratings are excluded rather than dimmed: this
   // is a four-line summary with no room to explain why the name at the top is
   // hedged, and an unproven rating topping the dashboard would misinform.
@@ -61,20 +70,30 @@ function HallOfFameInner() {
     .filter(p => !p.ratingProvisional)
     .sort((a, b) => b.rating - a.rating)
     .slice(0, MAX_RANK)
-    .map(p => ({ name: p.username, value: String(p.rating) }));
+    .map(p => ({ name: p.username, value: <>{p.rating}</> }));
 
   // Best recent run. Ties broken by the longer window, so someone 6-0 from six
   // games does not outrank someone 6-1 from ten on the same win count.
+  // Ranked on the same window that is displayed. Ranking on ten games while
+  // showing five would let a card read W W W W W beneath a player sitting
+  // below someone whose visible pips look worse.
   const byForm = players
     .filter(p => p.recentForm.length > 0)
-    .map(p => ({
-      name: p.username,
-      wins: p.recentForm.filter(r => r === 'W').length,
-      played: p.recentForm.length,
-    }))
+    .map(p => {
+      const window = p.recentForm.slice(-FORM_PIPS);
+      return {
+        name: p.username,
+        form: window,
+        wins: window.filter(r => r === 'W').length,
+        played: window.length,
+      };
+    })
     .sort((a, b) => b.wins - a.wins || b.played - a.played)
     .slice(0, MAX_RANK)
-    .map(p => ({ name: p.name, value: `${p.wins}/${p.played}` }));
+    .map(p => ({
+      name: p.name,
+      value: <FormGuide form={p.form} max={FORM_PIPS} compact label="Form" />,
+    }));
 
   return (
     <div className="panel p-3 space-y-3">
@@ -88,17 +107,19 @@ function HallOfFameInner() {
           accentClass="text-dota-gold"
           iconBgClass="bg-dota-gold/10 border border-dota-gold/20"
           emptyMessage="No settled ratings yet"
+          avatars={avatars}
         />
 
         <RecordCard
           icon={Flame}
           title="Best Form"
-          tooltip={`Most wins from the last ${FORM_WINDOW} games played. The one figure here that moves every session.`}
+          tooltip={`Most wins from the last ${FORM_PIPS} games played, newest on the right. The one figure here that moves every session.`}
           tooltipId="hof-form"
           entries={byForm}
           accentClass="text-dota-radiant-light"
           iconBgClass="bg-dota-radiant/10 border border-dota-radiant/20"
           emptyMessage="No games played yet"
+          avatars={avatars}
         />
 
         <RecordCard
@@ -106,10 +127,11 @@ function HallOfFameInner() {
           title="Biggest Underdog"
           tooltip="The most opponents anyone has beaten while alone on their team — which also ends the match outright."
           tooltipId="hof-underdog"
-          entries={singleRecord(leagueRecords.biggestUnderdogWin, r => `vs ${r.value}`)}
+          entries={recordEntries(leagueRecords.biggestUnderdogWins, r => `vs ${r.value}`)}
           accentClass="text-dota-dire-light"
           iconBgClass="bg-dota-dire/10 border border-dota-dire/20"
           emptyMessage="Not set yet"
+          avatars={avatars}
         />
 
         <RecordCard
@@ -117,13 +139,14 @@ function HallOfFameInner() {
           title="Biggest Comeback"
           tooltip="The largest gold deficit anyone has overturned, measured against the opposing team going into the deciding game."
           tooltipId="hof-comeback"
-          entries={singleRecord(
-            leagueRecords.biggestGoldComeback,
+          entries={recordEntries(
+            leagueRecords.biggestGoldComebacks,
             r => (r.value < 0 ? `${Math.abs(r.value).toLocaleString()} behind` : 'ahead'),
           )}
           accentClass="text-dota-info"
           iconBgClass="bg-dota-info/10 border border-dota-info/20"
           emptyMessage="Not set yet"
+          avatars={avatars}
         />
       </div>
 
@@ -138,23 +161,27 @@ function HallOfFameInner() {
   );
 }
 
-/** Wraps a single league record in the entry shape the cards render. */
-function singleRecord(
-  record: LeagueRecord | null,
+/** Converts league records into the entry shape the cards render. */
+function recordEntries(
+  records: LeagueRecord[],
   format: (r: LeagueRecord) => string,
-): { name: string; value: string }[] {
-  if (!record || !record.player) return [];
-  return [{ name: record.player, value: format(record) }];
+): { name: string; value: ReactNode }[] {
+  return records
+    .filter(r => r.player !== null)
+    .map(r => ({ name: r.player as string, value: format(r) }));
 }
 
 function RecordCard({
   icon: Icon, title, tooltip, tooltipId, entries, accentClass, iconBgClass, emptyMessage,
+  avatars,
 }: {
   icon: ElementType;
   title: string;
   tooltip: string;
   tooltipId: string;
-  entries: { name: string; value: string }[];
+  entries: { name: string; value: ReactNode }[];
+  /** username -> avatar URL, so faces match the rest of the app. */
+  avatars: Map<string, string | null>;
   accentClass: string;
   iconBgClass: string;
   emptyMessage: string;
@@ -187,7 +214,11 @@ function RecordCard({
           {entries.map((entry, i) => (
             <li key={entry.name} className="flex items-center gap-1.5 min-w-0">
               {entries.length > 1 && <RankMedal rank={i + 1} size={MEDAL_SIZE} label={false} />}
-              <PlayerAvatar username={entry.name} size={18} />
+              <PlayerAvatar
+                username={entry.name}
+                steamAvatar={avatars.get(entry.name) ?? null}
+                size={18}
+              />
               <Link
                 href={`/stats/${encodeURIComponent(entry.name)}`}
                 className={`font-barlow text-sm truncate hover:text-dota-gold transition-colors ${
