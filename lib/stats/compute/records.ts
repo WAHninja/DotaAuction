@@ -19,7 +19,13 @@ export type RecordMatchRow = {
   win_type: 'last_standing' | 'gold_threshold' | null;
 };
 
-export type RecordGameRow = { match_id: number };
+export type RecordGameRow = {
+  id: number;
+  match_id: number;
+  team_1_members: number[];
+  team_a_members: number[];
+  winning_team: 'team_1' | 'team_a' | null;
+};
 
 export type RecordMatchPlayerRow = {
   match_id: number;
@@ -48,6 +54,23 @@ export type LeagueRecords = {
   leanestOutrightWin: LeagueRecord | null;
   /** Fewest games taken to reach the gold threshold. */
   fastestGoldWin: LeagueRecord | null;
+  /**
+   * The most outnumbered anyone has been while winning a game.
+   *
+   * Restricted to solo wins. A 2-v-5 win belongs to two people and a record
+   * with two names is awkward to display, but more importantly a single player
+   * winning is the moment that ends a match outright — it is the version of
+   * this feat that actually means something.
+   */
+  biggestUnderdogWin: LeagueRecord | null;
+  /**
+   * The largest gold deficit a player has overturned to take a match.
+   *
+   * Measured at the start of the deciding game: the winner's own bank against
+   * the combined banks of everyone opposing them. Negative values are deficits,
+   * so the record is the most negative.
+   */
+  biggestGoldComeback: LeagueRecord | null;
 };
 
 export { GOLD_WIN_THRESHOLD };
@@ -56,6 +79,9 @@ export function computeLeagueRecords(
   matches: RecordMatchRow[],
   games: RecordGameRow[],
   matchPlayers: RecordMatchPlayerRow[],
+  /** gameId -> playerId -> gold entering that game. Omit to skip the comeback
+   *  record, which is the only one that needs it. */
+  goldTimeline?: Map<number, Map<number, number>>,
 ): LeagueRecords {
   const gamesPerMatch = new Map<number, number>();
   for (const g of games) {
@@ -123,10 +149,60 @@ export function computeLeagueRecords(
     }
   }
 
+  // Most outnumbered win. Solo winners only — see the type above.
+  let underdog: LeagueRecord | null = null;
+  for (const g of games) {
+    if (g.winning_team === null) continue;
+    const winners = g.winning_team === 'team_1' ? g.team_1_members : g.team_a_members;
+    const losers  = g.winning_team === 'team_1' ? g.team_a_members : g.team_1_members;
+    if ((winners ?? []).length !== 1) continue;
+
+    const opponents = (losers ?? []).length;
+    if (underdog === null || opponents > underdog.value) {
+      underdog = { matchId: g.match_id, value: opponents, playerId: winners[0], detail: null };
+    }
+  }
+
+  // Largest gold deficit overturned, measured entering the deciding game.
+  let comeback: LeagueRecord | null = null;
+  if (goldTimeline) {
+    const finalGameOf = new Map<number, RecordGameRow>();
+    for (const g of games) {
+      const current = finalGameOf.get(g.match_id);
+      if (!current || g.id > current.id) finalGameOf.set(g.match_id, g);
+    }
+
+    for (const m of played) {
+      if (m.winner_id === null) continue;
+      const decider = finalGameOf.get(m.id);
+      if (!decider) continue;
+
+      const gold = goldTimeline.get(decider.id);
+      if (!gold) continue;
+
+      // Opponents are whoever was not on the winner's side in that game, which
+      // is more reliable than trusting winning_team to agree with winner_id.
+      const onTeam1 = (decider.team_1_members ?? []).includes(m.winner_id);
+      const opposition = onTeam1
+        ? decider.team_a_members ?? []
+        : decider.team_1_members ?? [];
+
+      const mine   = Math.max(0, gold.get(m.winner_id) ?? 0);
+      const theirs = opposition.reduce((sum, id) => sum + Math.max(0, gold.get(id) ?? 0), 0);
+      const diff   = mine - theirs;
+
+      if (comeback === null || diff < comeback.value) {
+        comeback = { matchId: m.id, value: diff, playerId: m.winner_id, detail: opposition.length };
+      }
+    }
+  }
+
   return {
     shortestMatch:      shortest,
     longestMatch:       longest,
     leanestOutrightWin: leanest,
     fastestGoldWin:     fastestGold,
+    biggestUnderdogWin: underdog,
+    biggestGoldComeback: comeback,
   };
 }
