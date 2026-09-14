@@ -87,7 +87,6 @@ type LeagueRecordsRow = {
   leanestOutrightWin: NamedRecordRow | null;
   fastestGoldWin: NamedRecordRow | null;
   biggestUnderdogWins: NamedRecordRow[];
-  biggestGoldComebacks: NamedRecordRow[];
 };
 
 /** How the rating model is currently configured and how well it predicts. */
@@ -105,6 +104,10 @@ type RatingModelRow = {
 
 type PlayerRow = {
   username: string;
+  /** Matches (not games) this player has won outright. */
+  matchesWon: number;
+  /** Matches they took part in — context for the wins figure. */
+  matchesPlayed: number;
   /** Steam avatar URL, null when the account has no Steam profile linked.
    *  Included so the standings table and player pages can show real portraits
    *  rather than falling back to initials for everyone but the signed-in user. */
@@ -652,6 +655,8 @@ export async function GET() {
     // key for offer strength and is not repeated inside the value.
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
       username:          p.username,
+      matchesWon:        matchWins.get(id) ?? 0,
+      matchesPlayed:     p.matchesPlayed.size,
       steamAvatar:       p.steamAvatar,
       gamesPlayed:       p.gamesPlayed,
       gamesWon:          p.gamesWon,
@@ -758,11 +763,18 @@ export async function GET() {
       }];
     });
 
+    // Match wins per player. matches.winner_id is the single player who took
+    // the match, so this is a straight tally rather than a team lookup.
+    const matchWins = new Map<number, number>();
+    for (const m of matchOutcomesResult.rows) {
+      if (m.winner_id === null) continue;
+      matchWins.set(m.winner_id, (matchWins.get(m.winner_id) ?? 0) + 1);
+    }
+
     const records = computeLeagueRecords(
       matchOutcomesResult.rows,
       gamesResult.rows,
       matchPlayersResult.rows,
-      goldTimeline,
     );
 
     // Names are attached here rather than in the computation, keeping that a
@@ -783,9 +795,6 @@ export async function GET() {
       leanestOutrightWin: nameRecord(records.leanestOutrightWin),
       fastestGoldWin:     nameRecord(records.fastestGoldWin),
       biggestUnderdogWins:  records.biggestUnderdogWins
-        .map(nameRecord)
-        .filter((r): r is NamedRecordRow => r !== null),
-      biggestGoldComebacks: records.biggestGoldComebacks
         .map(nameRecord)
         .filter((r): r is NamedRecordRow => r !== null),
     };
