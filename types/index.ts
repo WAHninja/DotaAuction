@@ -203,6 +203,11 @@ export type LeagueRecords = {
   leanestOutrightWin: LeagueRecord | null;
   /** Fewest games taken to reach 100,000 gold. */
   fastestGoldWin: LeagueRecord | null;
+  /** Most opponents anyone has beaten while alone on their team. */
+  biggestUnderdogWin: LeagueRecord | null;
+  /** Largest gold deficit overturned, measured entering the deciding game.
+   *  Negative values are deficits, so the record is the most negative. */
+  biggestGoldComeback: LeagueRecord | null;
 };
 
 /** One point on a rating trajectory. */
