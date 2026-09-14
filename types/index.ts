@@ -203,11 +203,14 @@ export type LeagueRecords = {
   leanestOutrightWin: LeagueRecord | null;
   /** Fewest games taken to reach 100,000 gold. */
   fastestGoldWin: LeagueRecord | null;
-  /** Most opponents anyone has beaten while alone on their team. */
-  biggestUnderdogWin: LeagueRecord | null;
-  /** Largest gold deficit overturned, measured entering the deciding game.
-   *  Negative values are deficits, so the record is the most negative. */
-  biggestGoldComeback: LeagueRecord | null;
+  /** Most opponents beaten while alone on a team — best result per player,
+   *  highest first. One row each so a single prolific player cannot fill the
+   *  card with their own near-identical feats. */
+  biggestUnderdogWins: LeagueRecord[];
+  /** Largest gold deficits overturned, measured entering the deciding game.
+   *  Negative values are deficits, so the biggest is the most negative. Best
+   *  result per player, largest deficit first. */
+  biggestGoldComebacks: LeagueRecord[];
 };
 
 /** One point on a rating trajectory. */
