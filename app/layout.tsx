@@ -80,7 +80,16 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
               <main
                 id="main-content"
-                className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8"
+                /*
+                  One content width for the whole app.
+                  Pages previously set their own — dashboard 5xl, stats 6xl,
+                  match inheriting 7xl — so navigating between them shifted the
+                  layout, and stats pages applied py-8 on top of the py-8 here.
+                  Narrower pages (login, register, changelog, profile) still nest
+                  their own max-width inside this, which is deliberate: forms and
+                  prose want a shorter measure than tables do.
+                */
+                className="flex-grow max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8"
               >
                 {children}
               </main>
