@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { broadcastEventSafe } from '@/lib/supabase-server';
 import { checkGoldThresholdWin } from '@/lib/gold-win';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 export async function POST(
   req: NextRequest,
@@ -149,6 +150,7 @@ export async function POST(
 
       await client.query('COMMIT');
       committed = true;
+      invalidateStatsCache('game finished');
 
       await broadcastEventSafe(
         `match-${matchId}`,
@@ -245,6 +247,7 @@ export async function POST(
 
       await client.query('COMMIT');
       committed = true;
+      invalidateStatsCache('game finished');
 
       await broadcastEventSafe(
         `match-${matchId}`,
@@ -264,6 +267,7 @@ export async function POST(
     // which is also where finished_at gets set for this path.
     await client.query('COMMIT');
       committed = true;
+      invalidateStatsCache('game finished');
 
     await broadcastEventSafe(
       `match-${matchId}`,
