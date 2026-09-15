@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { broadcastEventSafe } from '@/lib/supabase-server';
 import { checkGoldThresholdWin } from '@/lib/gold-win';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 export async function POST(
   req: NextRequest,
@@ -213,6 +214,7 @@ export async function POST(
 
       await client.query('COMMIT');
       committed = true;
+      invalidateStatsCache('offer accepted');
 
       await broadcastEventSafe(
         `match-${game.match_id}-offers`,
@@ -246,6 +248,7 @@ export async function POST(
 
     await client.query('COMMIT');
       committed = true;
+      invalidateStatsCache('offer accepted');
 
     // ---- Notify clients (outside transaction) ------------------------------
     await broadcastEventSafe(
