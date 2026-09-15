@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
+import { cachedStats, rebuildStats } from '@/lib/stats-cache'
 import { buildGameIndex, computeOfferStrength } from '@/lib/stats/compute/offer-strength';
 import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
 import { computeSynergy } from '@/lib/stats/compute/synergy';
@@ -35,11 +36,6 @@ type StatsPayload = {
   headToHead: HeadToHeadRow[];
   heroStats: HeroStatRow[];
   playerDotaStats: PlayerDotaStatRow[];
-};
-
-type StatsCache = {
-  data: StatsPayload;
-  cachedAt: number;
 };
 
 /**
@@ -215,35 +211,6 @@ type PlayerDotaStatRow = {
   topKillsHero: string | null;
 };
 
-const CACHE_TTL_MS = 60 * 1_000; // 60 seconds
-let statsCache: StatsCache | null = null;
-
-/**
- * The rebuild currently running, if any.
- *
- * Without this, a cold or expired cache lets every concurrent request start its
- * own rebuild: thirteen queries and nine full-history replays each, all
- * computing the same answer. That is the normal case rather than an edge case —
- * the service spins down between sessions, so everyone arrives at once and the
- * cache is always cold when they do.
- *
- * Holding the promise means the first caller does the work and the rest await
- * the same result. Cleared in a finally so a failed rebuild does not wedge the
- * endpoint permanently — the next request simply tries again.
- */
-let inFlight: Promise<StatsPayload> | null = null;
-
-function rebuild(): Promise<StatsPayload> {
-  if (!inFlight) {
-    inFlight = buildStats()
-      .then(data => {
-        statsCache = { data, cachedAt: Date.now() };
-        return data;
-      })
-      .finally(() => { inFlight = null; });
-  }
-  return inFlight;
-}
 
 export async function GET() {
   const session = await getSession();
@@ -251,9 +218,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  const fresh = statsCache && Date.now() - statsCache.cachedAt < CACHE_TTL_MS;
-  if (fresh) {
-    return NextResponse.json(statsCache!.data);
+  const cached = cachedStats();
+  if (cached?.fresh) {
+    return NextResponse.json(cached.data);
   }
 
   // Stale but present: serve it immediately and refresh behind the request.
@@ -263,15 +230,16 @@ export async function GET() {
   //
   // The catch is required, not defensive: an unhandled rejection from a
   // background promise takes the whole Node process down.
-  if (statsCache) {
-    void rebuild().catch(err => console.error('[STATS_BACKGROUND_REBUILD]', err));
-    return NextResponse.json(statsCache.data);
+  if (cached) {
+    void rebuildStats(buildStats).catch(err =>
+      console.error('[STATS_BACKGROUND_REBUILD]', err));
+    return NextResponse.json(cached.data);
   }
 
   // Nothing cached at all — the first caller after a deploy or restart has to
   // wait, but only one of them does the work.
   try {
-    const data = await rebuild();
+    const data = await rebuildStats(buildStats);
     return NextResponse.json(data);
   } catch (error) {
     console.error('[STATS_ERROR]', error);
