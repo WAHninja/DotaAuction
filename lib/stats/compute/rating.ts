@@ -115,6 +115,24 @@ const K_MIN = 12;
  */
 const PASSES = 1;
 
+/**
+ * How many recent points of a player's trajectory to keep.
+ *
+ * The full history is computed — every point is needed to arrive at the current
+ * rating — but only the tail is returned. Shipping all of it cost roughly 35KB
+ * of a 48KB payload, and that payload is fetched by the dashboard, which
+ * displays none of it: HallOfFame reads five scalar fields and the landing page
+ * downloaded every player's entire trajectory to get them.
+ *
+ * Forty points still show a trend and the settling of a provisional rating,
+ * which is what the chart is for. Reading a player's whole career from a line
+ * chart was never the use case.
+ *
+ * Consumers must not assume the first point is that player's first game — pair
+ * this with PlayerRating.games to label an axis correctly.
+ */
+export const RATING_HISTORY_LENGTH = 40;
+
 export type RatingGameRow = {
   id: number;
   team_1_members: number[];
@@ -164,11 +182,15 @@ export type RatingPoint = {
 export type PlayerRating = {
   rating: number;
   /**
-   * Rating after each game this player took part in, oldest first.
+   * Rating after each of this player's most recent games, oldest first, capped
+   * at RATING_HISTORY_LENGTH.
    *
    * Only meaningful because the replay is a single chronological pass. If the
    * multi-pass approach is ever restored, this becomes fiction and should be
    * removed rather than left to mislead.
+   *
+   * The first entry is not necessarily their first game — see `games` for the
+   * true total.
    */
   history: RatingPoint[];
   /** Games contributing to it — the denominator for how much to trust it. */
@@ -361,7 +383,9 @@ export function replay(
 
         out.set(id, {
           rating:      Math.round(rating),
-          history:     history.get(id) ?? [],
+          // Trimmed on the way out, not during the replay: every game still
+          // contributes to the rating, only the reported tail is shortened.
+          history:     (history.get(id) ?? []).slice(-RATING_HISTORY_LENGTH),
           games:       played.get(id) ?? 0,
           rd:          Math.round(rd),
           provisional: rd > PROVISIONAL_RD,
