@@ -242,10 +242,10 @@ export default function PlayerStatsPage() {
 /** Page chrome shared by the loading, error, unknown-player and loaded states. */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    /* max-w-6xl to match /stats. At 4xl the player page was visibly narrower
-       than the league page it is reached from, so navigating between them
-       shifted the whole layout. */
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    /* Width and padding come from the root layout, which sets one content
+       width for every page — this file used to set its own and ended up
+       narrower than the league page it is reached from. */
+    <main className="space-y-6">
       <Link
         href="/stats"
         className="inline-flex items-center gap-1 font-barlow text-sm text-dota-text-muted hover:text-dota-gold transition-colors"
