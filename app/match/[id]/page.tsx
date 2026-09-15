@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useContext, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 import { useJitsi, getLoserRoom, MAIN_ROOM, getTeam1DraftRoom, getTeamADraftRoom } from '@/app/context/JitsiContext';
 import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
@@ -16,6 +16,7 @@ import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
 import GameHistory from '@/app/components/GameHistory';
 import { usePhaseListener } from '@/app/hooks/usePhaseListener';
 import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, OfferSelectingPayload, ViewerState, Player, Game } from '@/types';
+import PageLoading from '@/app/components/PageLoading';
 
 
 // ---------------------------------------------------------------------------
@@ -310,26 +311,15 @@ export default function MatchPage() {
   }, []);
 
   // ---- Render guards -------------------------------------------------------
+  // Both states now render the app's shared loading window rather than two
+  // bespoke spinners that differed in size, colour and wording from each other
+  // and from the route-transition one.
   if (!user && authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="flex items-center gap-3 font-barlow text-dota-text-muted">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          Redirecting…
-        </div>
-      </div>
-    );
+    return <PageLoading message="Redirecting…" />;
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-dota-gold" />
-          <span className="font-cinzel text-lg font-bold text-dota-text-muted">Loading match…</span>
-        </div>
-      </div>
-    );
+    return <PageLoading message="Loading match…" />;
   }
 
   if (error) {
