@@ -15,7 +15,8 @@ import { STARTING_RATING } from '@/lib/stats/compute/rating';
  * all-time aggregate, in which a player who has improved sharply is
  * indistinguishable from one who peaked a year ago.
  *
- * Plotted against their own game count rather than game id or date. Ids are
+ * Plotted against their own game count rather than game id or date, offset so
+ * the numbers are real career game numbers even when the series is capped. Ids are
  * league-wide, so a player who sat out fifty games would show a long flat
  * stretch that says nothing about them; dates are unusable because
  * games.finished_at is null on rows predating that column.
@@ -24,21 +25,32 @@ import { STARTING_RATING } from '@/lib/stats/compute/rating';
  * drifted from 1500 to 1530 looks like a dramatic climb, because the y-axis
  * autoscales to whatever range the data occupies.
  */
-export default function RatingHistoryPanel({ history, provisional }: {
+export default function RatingHistoryPanel({ history, provisional, totalGames }: {
   history: RatingPoint[];
   provisional: boolean;
+  /** The player's full rated game count. The history is capped, so without this
+   *  the axis would number a 130-game player's last 40 games as 1 to 40. */
+  totalGames: number;
 }) {
   // One point is a dot, not a trend. Below a handful of games the chart says
   // less than the rating figure above it already does.
   if (history.length < 5) return null;
 
+  // Where this slice sits in the player's career. When the history is capped,
+  // the first point is game (total - kept + 1), not game 1.
+  const offset = Math.max(0, totalGames - history.length);
+  const trimmed = offset > 0;
+
   const data = history.map((point, i) => ({
-    game: i + 1,
+    game: offset + i + 1,
     rating: point.rating,
     delta: point.delta,
   }));
 
   const ratings = data.map(d => d.rating);
+  // The 1500 line is included in the range so it stays visible — otherwise a
+  // player whose recent 40 games all sit above it loses the only reference
+  // point the chart has.
   const low  = Math.min(...ratings, STARTING_RATING);
   const high = Math.max(...ratings, STARTING_RATING);
   const pad  = Math.max(20, Math.round((high - low) * 0.15));
@@ -53,7 +65,9 @@ export default function RatingHistoryPanel({ history, provisional }: {
         <div>
           <h2 className="font-cinzel text-lg font-bold text-dota-gold">Rating History</h2>
           <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            Rating after each game played · starts at {STARTING_RATING}
+            {trimmed
+              ? `Last ${history.length} games · everyone starts at ${STARTING_RATING}`
+              : `Rating after each game played · starts at ${STARTING_RATING}`}
           </p>
         </div>
         <span className="ml-auto shrink-0 font-barlow text-[11px] text-dota-text-dim tabular-nums">
@@ -84,11 +98,16 @@ export default function RatingHistoryPanel({ history, provisional }: {
                 allowDecimals={false}
               />
 
+              {/* Labelled 'start' only when game one is actually on the chart.
+                  On a trimmed view 1500 is still a useful reference line, but
+                  calling it the start would point at a game not shown. */}
               <ReferenceLine
                 y={STARTING_RATING}
                 stroke="#555d6b"
                 strokeDasharray="4 4"
-                label={{ value: 'start', fill: '#555d6b', fontSize: 10, position: 'insideTopLeft' }}
+                label={trimmed
+                  ? undefined
+                  : { value: 'start', fill: '#555d6b', fontSize: 10, position: 'insideTopLeft' }}
               />
 
               <RechartsTooltip
