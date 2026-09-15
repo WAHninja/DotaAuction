@@ -41,7 +41,7 @@ export default function StatsPage() {
   const avatars = buildAvatarLookup(payload.players);
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <main className="space-y-6">
       <header className="text-center space-y-2">
         <h1 className="font-cinzel text-3xl font-bold text-dota-gold">Stats</h1>
         <div className="divider-gold w-48 mx-auto" />
