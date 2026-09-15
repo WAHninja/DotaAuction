@@ -92,6 +92,12 @@ export type DashboardMatch = {
   team_a_usernames?: string[];
   team_1_usernames?: string[];
   games_count?: number;
+  /** When the match was created. Already selected by both dashboard queries —
+   *  it was simply never typed, so the cards could not show it. */
+  created_at?: string;
+  /** Status of the match's latest game. The one field that tells a player
+   *  whether anything is waiting on them. Ongoing matches only. */
+  status?: GameStatus;
 };
 
 export type MatchData = {
