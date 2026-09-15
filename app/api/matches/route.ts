@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '../../../lib/db';
 import { getSession } from '@/app/session';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 export async function POST(req: NextRequest) {
   // ---- Auth first ----------------------------------------------------------
@@ -162,6 +163,7 @@ export async function POST(req: NextRequest) {
     );
 
     await client.query('COMMIT');
+    invalidateStatsCache('match created');
 
     return NextResponse.json({ id: matchId, existing: false });
 
