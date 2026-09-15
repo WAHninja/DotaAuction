@@ -98,7 +98,7 @@ export default async function DashboardPage() {
             dashboard mounts — before the user has clicked Join Voice Chat. */}
         <JitsiPreloader />
 
-        <div className="relative z-10 max-w-5xl mx-auto p-6 space-y-6 text-white">
+        <div className="relative z-10 space-y-6 text-white">
 
           {/* ── Zone 1: Create Match + Rules (equal columns) ─────────────── */}
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
