@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { getSession } from '@/app/session';
 import { broadcastEventSafe } from '@/lib/supabase-server';
 import { offerRangeForGameIndex } from '@/lib/offer-range'
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 /* -----------------------------------------------------------------------
    Tier calculation
@@ -252,6 +253,7 @@ export async function POST(
 
     await client.query('COMMIT');
       committed = true;
+      invalidateStatsCache('offer submitted');
 
     const safeOffer = inserted[0];
 
