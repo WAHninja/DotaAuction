@@ -7,7 +7,7 @@ import { CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 
 
-import type { DashboardMatch as Match } from '@/types';
+import type { DashboardMatch as Match, GameStatus } from '@/types';
 
 // =============================================================================
 // Types
@@ -128,6 +128,31 @@ function TeamRoster({
 }
 
 // ── MatchCard ─────────────────────────────────────────────────────────────────
+/** "12 Jun" — enough to place a match without crowding the card. */
+function shortDate(iso?: string): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+/**
+ * How the latest game is progressing.
+ *
+ * This is the card's most useful line and it was previously not shown at all,
+ * despite `g.status` being selected by the dashboard query. "Auction open" is
+ * the state where a player has something to do; without it the dashboard lists
+ * matches but never says which one is waiting on you.
+ */
+function statusLabel(status?: GameStatus): { text: string; tone: string } | null {
+  switch (status) {
+    case 'auction pending':
+      return { text: 'Auction open', tone: 'text-dota-gold' };
+    case 'in progress':
+      return { text: 'Game in progress', tone: 'text-dota-radiant-light' };
+    default:
+      return null;
+  }
+}
+
 function MatchCard({
   match,
   isCompleted,
@@ -135,19 +160,33 @@ function MatchCard({
   match: Match;
   isCompleted: boolean;
 }) {
+  const played = shortDate(match.created_at);
+  const status = isCompleted ? null : statusLabel(match.status);
   return (
     <div className={`panel p-4 flex flex-col gap-3 hover:border-dota-border-bright transition-colors ${
       !isCompleted ? 'border-dota-gold/30' : ''
     }`}>
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
-          <p className="font-barlow font-bold text-dota-text tracking-wide">
+          <p className="font-barlow font-bold text-dota-text tracking-wide flex items-center gap-2">
             Match #{match.id}
+            {played && (
+              <span className="font-normal text-xs text-dota-text-dim tabular-nums">
+                {played}
+              </span>
+            )}
           </p>
           {isCompleted ? (
             <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-gold">
               <CheckCircle className="w-3.5 h-3.5" />
               Winner: {match.winner_username || 'Not recorded'}
+              {/* How it ended, which the card already had in win_type and never
+                  used. Outright and gold are very different stories. */}
+              {match.win_type && (
+                <span className="text-dota-text-dim font-normal">
+                  · {match.win_type === 'gold_threshold' ? 'on gold' : 'outright'}
+                </span>
+              )}
             </span>
           ) : (
             <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-text-muted">
@@ -156,6 +195,9 @@ function MatchCard({
                 ? <span>Game <strong className="text-dota-text">#{match.games_count}</strong></span>
                 : <span className="text-dota-text-dim">—</span>
               }
+              {status && (
+                <span className={`font-semibold ${status.tone}`}>· {status.text}</span>
+              )}
             </span>
           )}
         </div>
