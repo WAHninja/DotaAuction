@@ -311,11 +311,16 @@ export type PlayerStats = {
    *  established player provisional again. */
   ratingProvisional: boolean;
   /**
-   * Rating after each game this player took part in, oldest first.
+   * Rating after each of this player's most recent games, oldest first.
    *
    * Real history, not a reconstruction: the replay is a single chronological
    * pass, so every point is the rating that player actually held at that
    * moment, calculated without knowledge of anything that came after.
+   *
+   * Capped to the most recent games to keep the payload small — the dashboard
+   * fetches this payload and displays none of it. The first entry is therefore
+   * not necessarily their first ever game; `ratedGames` holds the true total,
+   * and the chart uses it to label the axis with real game numbers.
    */
   ratingHistory: RatingPoint[];
   /** Games entered as the only player on their side. A single-player win ends
