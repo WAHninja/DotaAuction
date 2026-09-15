@@ -204,6 +204,7 @@ export default function PlayerStatsPage() {
       <RatingHistoryPanel
         history={core.ratingHistory}
         provisional={core.ratingProvisional}
+        totalGames={core.ratedGames}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
