@@ -69,10 +69,15 @@ export const GLOSSARY = {
 
   // ── Economy ───────────────────────────────────────────────────────────────
 
-  offersMade:
-    'How many times this player has put a teammate up for sale. Every member ' +
-    'of a winning team must submit an offer each game, so this mostly tracks ' +
-    'games won rather than eagerness to trade.',
+  offerAcceptRate:
+    'How often this player\'s offers to sell a teammate are accepted by the ' +
+    'team. Every winner must submit an offer each game, so the count of offers ' +
+    'means little — whether the team backs the call is the interesting part.',
+
+  acceptedAskingPrice:
+    'The average asking price of only this player\'s accepted offers. Next to ' +
+    'asking price it shows whether their offers are accepted at any price or ' +
+    'only when they come in cheap.',
 
   timesOffered:
     'How many times teammates have put this player up for sale. Excludes ' +
