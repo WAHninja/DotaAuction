@@ -122,6 +122,11 @@ type PlayerRow = {
    *  selling a teammate. Not a bid to acquire anyone: the sender of an offer is
    *  always the seller. null when they have never sent one. */
   offerStrengthMade: number | null;
+  /** Mean position of this player's own offers that were accepted, 0–1 — the
+   *  price the team actually backed, versus offerStrengthMade which includes
+   *  offers that were turned down. null when none of their offers have been
+   *  accepted. */
+  offerStrengthAccepted: number | null;
   /** Discretionary offers where this player was an available target — that is,
    *  their team had three or more members so a real choice existed. */
   selectionOpportunities: number;
@@ -724,8 +729,9 @@ async function buildStats(): Promise<StatsPayload> {
       timesOffered:      p.timesOffered,
       offersMade:        p.offersMade,
       offersAccepted:    p.offersAccepted,
-      offerStrengthReceived: offerStrength.get(id)?.received ?? null,
-      offerStrengthMade:     offerStrength.get(id)?.made     ?? null,
+      offerStrengthReceived: offerStrength.get(id)?.received     ?? null,
+      offerStrengthMade:     offerStrength.get(id)?.made         ?? null,
+      offerStrengthAccepted: offerStrength.get(id)?.madeAccepted ?? null,
       selectionOpportunities: selection.get(id)?.opportunities ?? 0,
       selectionCount:         selection.get(id)?.selections    ?? 0,
       selectionExpected:      selection.get(id)?.expected      ?? 0,
