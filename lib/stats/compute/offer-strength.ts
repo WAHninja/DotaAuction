@@ -34,6 +34,7 @@ export type OfferRow = {
   from_player_id: number;
   target_player_id: number;
   offer_amount: number;
+  status: string;
 };
 
 /**
@@ -74,6 +75,11 @@ export type PlayerOfferStrength = {
    *  never sent one. */
   made: number | null;
   madeCount: number;
+  /** Mean strength of this player's own offers that were accepted — the price
+   *  the team actually backed, as opposed to `made`, which includes offers
+   *  that were turned down. null when none of their offers were accepted. */
+  madeAccepted: number | null;
+  madeAcceptedCount: number;
 };
 
 /**
@@ -92,11 +98,15 @@ export function computeOfferStrength(
   offers: OfferRow[],
   gameIndex: Map<number, number>,
 ): Map<number, PlayerOfferStrength> {
-  const acc = new Map<number, { recv: number; recvN: number; made: number; madeN: number }>();
+  const acc = new Map<number, {
+    recv: number; recvN: number;
+    made: number; madeN: number;
+    madeAcc: number; madeAccN: number;
+  }>();
 
   const bucket = (id: number) => {
     let b = acc.get(id);
-    if (!b) { b = { recv: 0, recvN: 0, made: 0, madeN: 0 }; acc.set(id, b); }
+    if (!b) { b = { recv: 0, recvN: 0, made: 0, madeN: 0, madeAcc: 0, madeAccN: 0 }; acc.set(id, b); }
     return b;
   };
 
@@ -116,6 +126,10 @@ export function computeOfferStrength(
     const seller = bucket(o.from_player_id);
     seller.made += strength;
     seller.madeN += 1;
+    if (o.status === 'accepted') {
+      seller.madeAcc += strength;
+      seller.madeAccN += 1;
+    }
   }
 
   const out = new Map<number, PlayerOfferStrength>();
@@ -125,6 +139,8 @@ export function computeOfferStrength(
       receivedCount: b.recvN,
       made:          b.madeN > 0 ? +(b.made / b.madeN).toFixed(4) : null,
       madeCount:     b.madeN,
+      madeAccepted:      b.madeAccN > 0 ? +(b.madeAcc / b.madeAccN).toFixed(4) : null,
+      madeAcceptedCount: b.madeAccN,
     });
   }
   return out;
