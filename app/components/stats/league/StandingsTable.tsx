@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import type { PlayerStats, PlayerDotaStat, RatingModel } from '@/types';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import { GLOSSARY } from '@/lib/stats/glossary';
+import Tooltip from '@/app/components/stats/ui/Tooltip';
 import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
 import PctBadge from '@/app/components/stats/ui/PctBadge';
 import SortableTh from '@/app/components/stats/ui/SortableTh';
@@ -233,14 +234,15 @@ export default function StandingsTable({ players, dotaStats, highlightUsername, 
                         provisional rather than hidden — a blank column for
                         anyone new or returning would be worse than a hedged
                         one. */}
-                    <span
-                      className="text-dota-text-dim text-[10px] ml-1 whitespace-nowrap"
-                      title={row.ratingProvisional
-                        ? `Provisional — still settling (±${row.ratingRd}, ${row.ratedGames} games)`
-                        : `${row.ratedGames} games`}
-                    >
-                      ±{row.ratingRd}
-                    </span>
+                    <Tooltip id={`rd-${row.username}`} content={GLOSSARY.ratingDeviation}>
+                      <span
+                        className="text-dota-text-dim text-[10px] ml-1 whitespace-nowrap cursor-help"
+                        tabIndex={0}
+                        aria-describedby={`rd-${row.username}`}
+                      >
+                        ±{row.ratingRd}
+                      </span>
+                    </Tooltip>
                   </td>
 
                   <td className="hidden sm:table-cell px-3 py-2.5 text-center tabular-nums text-dota-text-muted">
