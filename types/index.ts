@@ -269,6 +269,11 @@ export type PlayerStats = {
    *  expensively they price their own teammates. The sender of an offer is the
    *  seller, never a buyer. null when they have never sent one. */
   offerStrengthMade: number | null;
+  /** Mean position of this player's own offers that were accepted, 0–1 — the
+   *  price the team actually backed, versus offerStrengthMade which includes
+   *  offers that were turned down. null when none of their offers have been
+   *  accepted. */
+  offerStrengthAccepted: number | null;
   /** Discretionary offers where this player was an available target — their
    *  team had three or more members, so the offerer had a real choice. Offers
    *  from two-player teams are excluded: with one legal target they record a
