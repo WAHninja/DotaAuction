@@ -27,6 +27,11 @@ import { pct } from '@/lib/stats/format';
  * judgement at all. Only games with three or more a side are counted.
  */
 export default function SelectionPanel({ core }: { core: PlayerStats }) {
+  // Named rather than addressed: this panel renders on every player's page, so
+  // second person told a reader looking at a teammate that "teammates pick you
+  // less often than chance" — about someone else entirely.
+  const name = core.username;
+
   const {
     selectionOpportunities, selectionCount, selectionExpected, selectionIndex,
     selectionRichOpportunities, selectionRichCount,
@@ -55,9 +60,9 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
 
   const verdict =
     selectionIndex === null ? null
-    : selectionIndex >= 1.25 ? { text: 'Teammates pick you more often than chance would', tone: 'text-dota-gold' }
-    : selectionIndex <= 0.75 ? { text: 'Teammates pick you less often than chance would', tone: 'text-dota-text-muted' }
-    : { text: 'Teammates pick you about as often as chance would', tone: 'text-dota-text-muted' };
+    : selectionIndex >= 1.25 ? { text: `Teammates pick ${name} more often than chance would`, tone: 'text-dota-gold' }
+    : selectionIndex <= 0.75 ? { text: `Teammates pick ${name} less often than chance would`, tone: 'text-dota-text-muted' }
+    : { text: `Teammates pick ${name} about as often as chance would`, tone: 'text-dota-text-muted' };
 
   return (
     <section className="panel overflow-hidden flex flex-col">
@@ -66,7 +71,8 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
         <div>
           <h2 className="font-cinzel text-lg font-bold text-dota-gold">Selection</h2>
           <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            When a teammate could have offered someone else, how often did they pick you?
+            When a teammate could have offered someone else, how often did they
+            pick {name}?
           </p>
         </div>
       </div>
@@ -99,17 +105,17 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
 
         {hasSplit && (
           <div className="pt-3 border-t border-dota-border/40 space-y-2">
-            <p className="stat-label">Controlling for your gold</p>
+            <p className="stat-label">Controlling for gold held</p>
 
             <div className="flex flex-wrap gap-x-8 gap-y-2">
               <SplitFigure
-                label="When you were the cheaper option"
+                label="When the cheaper option"
                 rate={poorRate}
                 count={selectionPoorCount}
                 total={selectionPoorOpportunities}
               />
               <SplitFigure
-                label="When you were the pricier option"
+                label="When the pricier option"
                 rate={richRate}
                 count={selectionRichCount}
                 total={selectionRichOpportunities}
@@ -121,10 +127,10 @@ export default function SelectionPanel({ core }: { core: PlayerStats }) {
                 15 points is a judgement call, not a significance test. */}
             <p className="font-barlow text-[11px] text-dota-text-dim">
               {goldGap >= 15
-                ? 'Your teammates avoid selling you when you are holding gold — the headline figure above is partly about your bank, not their opinion of you.'
+                ? `Teammates avoid selling ${name} while they are holding gold — the figure above is partly about the bank, not their opinion.`
                 : goldGap <= -15
-                  ? 'You get offered more often when you are the expensive option, which is the opposite of what gold alone would predict.'
-                  : 'Your gold makes little difference to how often you are picked, so the figure above reflects their choice rather than the price.'}
+                  ? `${name} gets offered more often as the expensive option, which is the opposite of what gold alone would predict.`
+                  : `Gold makes little difference to how often ${name} is picked, so the figure above reflects the choice rather than the price.`}
             </p>
           </div>
         )}
