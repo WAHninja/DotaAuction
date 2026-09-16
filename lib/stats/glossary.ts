@@ -10,11 +10,6 @@
  * Written to be readable cold, without reference to the formula.
  */
 
-import {
-  MIN_GAMES_FOR_RATE,
-  MIN_OFFERS_FOR_STRENGTH,
-} from '@/lib/stats/constants';
-
 export const GLOSSARY = {
   /**
    * Deliberately explains the size adjustment, because that is the part that
@@ -35,7 +30,8 @@ export const GLOSSARY = {
   ratingHistory:
     'Rating after each recent game.',
 
-  winRate: `Games won as a share of games played.`,
+  winRate:
+    'Games won as a share of games played.',
 
   /**
    * The one that most needs explaining. Every part of this sentence is load
@@ -46,23 +42,22 @@ export const GLOSSARY = {
   marketValue:
     'How highly teammates price this player when selling them. Each offer is ' +
     'scored by where it sits in the range allowed at the time — 100% is the ' +
-    'top of that range, 50% the middle.`,
+    'top of that range, 50% the middle.',
 
   /**
    * The mirror of market value: what this player asks for others, rather than
    * what others ask for them.
    *
-   * Named "asking price", not "bid strength". An offer is the sender selling a
-   * teammate to the losing team — submit-offer says so outright — so the sender
-   * is a seller setting a price, never a buyer bidding. The old name described
-   * the opposite disposition, and someone reading it would have drawn exactly
-   * the wrong conclusion about their own number.
+   * Named "asking price", not "bid strength". An offer is the sender selling
+   * a teammate to the losing team — submit-offer says so outright — so the
+   * sender is a seller setting a price, never a buyer bidding. The old name
+   * described the opposite disposition, and someone reading it would have
+   * drawn exactly the wrong conclusion about their own number.
    */
-    
   askingPrice:
     'How highly this player prices their own teammates when selling them. ' +
     'Each offer is scored by where it sits in the range allowed at the time ' +
-    '— 100% is the top of that range, 50% the middle.`,
+    '— 100% is the top of that range, 50% the middle.',
 
   avgKda:
     'Average (kills + assists) divided by deaths, across games with reported ' +
@@ -92,17 +87,20 @@ export const GLOSSARY = {
   wonOutright:
     'Matches won by being the last player left on a team.',
 
-  wonOnGold: 'Matches won by reaching 100,000 gold.',
+  wonOnGold:
+    'Matches won by reaching 100,000 gold.',
 
   shortestMatch:
     'Fewest games taken to win a match. Ties go to whoever beat more opponents.',
 
-  longestMatch: 'Most games a single match has run to.',
+  longestMatch:
+    'Most games a single match has run to.',
 
   leanestOutrightWin:
     'The least gold anyone held while winning a match outright.',
 
-  fastestToGold: 'Fewest games taken to reach 100,000 gold and win the match.',
+  fastestToGold:
+    'Fewest games taken to reach 100,000 gold and win the match.',
 
   selection:
     'How often teammates choose to sell this player, counting only games where ' +
