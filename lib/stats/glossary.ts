@@ -58,9 +58,10 @@ export const GLOSSARY = {
    * the opposite disposition, and someone reading it would have drawn exactly
    * the wrong conclusion about their own number.
    */
+    
   askingPrice:
     'How highly this player prices their own teammates when selling them. ' +
-    'Each offer is scored by where it sits in the range allowed at the time '
+    'Each offer is scored by where it sits in the range allowed at the time ' +
     '— 100% is the top of that range, 50% the middle.`,
 
   avgKda:
