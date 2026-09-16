@@ -22,22 +22,21 @@ export const GLOSSARY = {
    * dispute when their rating moves in a direction they did not expect.
    */
   rating:
-    'Skill rating, starting at 1500. Every game moves it by how surprising the ' +
-    'result was: beating a side that outnumbers or outranks you is worth more ' +
-    'than beating one you were expected to beat, and losing to long odds costs ' +
-    'little. Because team size is priced in, a low win rate with a high rating ' +
-    'usually means playing from behind a lot.',
+    'Skill rating, starting at 1500. Each game moves it by how surprising the ' +
+    'result was — beating a bigger or stronger side is worth more, and losing ' +
+    'to one costs little. A high rating with a modest win rate usually means ' +
+    'playing from behind a lot.',
 
   ratingDeviation:
-    'How settled a rating is, shown as a ± band. It narrows as you play games ' +
-    'the model could not call in advance, and widens again if you sit out — so ' +
-    'a returning player is treated as unproven rather than assumed unchanged. ' +
-    'A wide band also means results move your rating further.',
+    'How settled the rating is. 1592 ±64 means it is probably somewhere ' +
+    'between 1528 and 1656. The band narrows with games played and widens ' +
+    'again after a break. Two players whose bands overlap are not meaningfully ' +
+    'apart.',
 
   ratingHistory:
-    'Rating after each game, oldest first. Early games swing further because ' +
-    'the rating starts uncertain and every result teaches it a lot; the line ' +
-    'flattens as it settles. Flat stretches are games you sat out.',
+    'Rating after each recent game, oldest first. Early games swing further ' +
+    'because a new rating is uncertain and moves faster; the line flattens as ' +
+    'it settles.',
 
   winRate: `Games won as a share of games played. Hidden below ${MIN_GAMES_FOR_RATE} games, where the figure is noise.`,
 
@@ -48,11 +47,11 @@ export const GLOSSARY = {
    * the whole reason a raw gold figure could not be used.
    */
   marketValue:
-    'How expensively teammates price you when they put you up for sale. Offers ' +
-    'are scored by where they sit in the range allowed at the time, not by ' +
-    'their gold amount — the allowed range grows every game of a match, so raw ' +
-    'gold would just reward long matches. 100% is the top of the range, 50% is ' +
-    `the middle. Hidden below ${MIN_OFFERS_FOR_STRENGTH} offers received.`,
+    'How highly teammates price this player when selling them. Each offer is ' +
+    'scored by where it sits in the range allowed at the time — 100% is the ' +
+    'top of that range, 50% the middle — rather than by its gold amount, ' +
+    'because the allowed range grows as a match goes on. ' +
+    `Needs ${MIN_OFFERS_FOR_STRENGTH} offers.`,
 
   /**
    * The mirror of market value: what this player asks for others, rather than
@@ -65,10 +64,9 @@ export const GLOSSARY = {
    * the wrong conclusion about their own number.
    */
   askingPrice:
-    'How expensively this player prices their own teammates when putting them ' +
-    'up for sale. Scored like market value — position in the range allowed at ' +
-    'the time, not the gold amount. A high figure wins more gold when an offer ' +
-    'is accepted, but is less likely to be accepted at all.',
+    'How highly this player prices their own teammates when selling them. ' +
+    'Scored like market value. A high price wins more gold when accepted, but ' +
+    'is accepted less often.',
 
   avgKda:
     'Average (kills + assists) divided by deaths, across games with reported ' +
@@ -78,7 +76,42 @@ export const GLOSSARY = {
     'How many times this player has been traded to the other team after an ' +
     'offer was accepted.',
 
+  // ── Economy ───────────────────────────────────────────────────────────────
+
+  offersMade:
+    'How many times this player has put a teammate up for sale. Every member ' +
+    'of a winning team must submit an offer each game, so this mostly tracks ' +
+    'games won rather than eagerness to trade.',
+
+  timesOffered:
+    'How many times teammates have put this player up for sale. On a ' +
+    'two-player team there is only one legal target, so many of these were ' +
+    'forced rather than chosen — Selection counts only the real choices.',
+
+  // ── League ────────────────────────────────────────────────────────────────
+
+  matchesCompleted: 'Matches played through to a winner.',
+
+  gamesPlayed: 'Individual games across all matches. A match runs until someone wins it.',
+
+  wonOutright:
+    'Matches won by being the last player left on a team. Winning a game alone ' +
+    'ends the match immediately.',
+
+  wonOnGold: 'Matches won by reaching 100,000 gold.',
+
+  shortestMatch:
+    'Fewest games taken to win a match. Ties go to whoever beat more opponents.',
+
+  longestMatch: 'Most games a single match has run to.',
+
+  leanestOutrightWin:
+    'The least gold anyone held while winning a match outright. Only ' +
+    'last-player-standing wins count — a gold win is by definition at 100,000.',
+
+  fastestToGold: 'Fewest games taken to reach 100,000 gold and win the match.',
+
   selection:
     'How often teammates choose to sell this player, counting only games where ' +
-    'they had more than one player they could have offered.',
+    'they had someone else they could have offered instead.',
 } as const;
