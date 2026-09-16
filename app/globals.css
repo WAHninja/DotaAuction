@@ -247,6 +247,40 @@
     );
   }
 
+  /* ── Ornate sign-in frame — one deliberate flourish, not part of the
+     chamfer system. border-image wraps the crest artwork itself around
+     the card: the crest and corners stay crisp, the side/bottom bars
+     stretch to fit whatever height the form needs. Reserve this for the
+     sign-in entrance moment — everyday panels should keep using .panel
+     so the chamfer language stays the "default" surface. */
+  .frame-ornate {
+    --fo-top: 86px;
+    --fo-right: 77px;
+    --fo-bottom: 35px;
+    --fo-left: 76px;
+
+    clip-path: none;
+    background: var(--metal-surface);
+    box-shadow: var(--bevel);
+    border-style: solid;
+    border-color: transparent;
+    border-width: var(--fo-top) var(--fo-right) var(--fo-bottom) var(--fo-left);
+    border-image-source: url('/login-frame.png');
+    border-image-slice: 345 306 139 305;
+    border-image-width: var(--fo-top) var(--fo-right) var(--fo-bottom) var(--fo-left);
+    border-image-repeat: stretch;
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+  }
+
+  @media (max-width: 420px) {
+    .frame-ornate {
+      --fo-top: 66px;
+      --fo-right: 59px;
+      --fo-bottom: 27px;
+      --fo-left: 58px;
+    }
+  }
+
   /* ── Panels — three depths, all metallic, all chamfered ─────────────────
      No noise layer here: panel texture comes solely from the global grain
      overlay (body::after), which covers panels at ~3% opacity. Blending the
