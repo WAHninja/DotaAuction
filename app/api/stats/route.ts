@@ -318,15 +318,30 @@ async function buildStats(): Promise<StatsPayload> {
       // going into each game. No balance is stored per game, but every change
       // is logged — wins, penalties and accepted trades alike.
       db.query<{ game_id: number; player_id: number; gold_change: number }>(
+        // Decided games, matching the main games query. A game's gold is
+        // settled once it has a winner; waiting for 'finished' would leave the
+        // newest game of a live match without a reconstructed starting balance.
         `SELECT gps.game_id, gps.player_id, gps.gold_change
          FROM game_player_stats gps
          JOIN games g ON g.id = gps.game_id
-         WHERE g.status = 'finished'`
+         WHERE g.winning_team IS NOT NULL`
       ),
 
       // 3. All finished games — for win/loss counts and team combo tracking
       // match_id is needed to work out each game's position within its match,
       // which is what makes a historical offer amount interpretable.
+      //
+      // Decided games, not finished ones. A game's result is set the moment a
+      // winner is picked; it then sits in 'auction pending' while the winning
+      // team decides who to sell, only becoming 'finished' when that offer is
+      // accepted. Filtering on status = 'finished' therefore dropped the most
+      // recent game of every match with a live auction — which is why a player
+      // who had just lost still showed that loss missing from their form, and
+      // why game counts and rating history ran one game behind mid-session.
+      //
+      // Every consumer of these rows already skips a null winning_team and
+      // treats the rest as decided, so keying on the winner is both the correct
+      // condition and the one they were all assuming.
       db.query<{
         id: number;
         match_id: number;
@@ -336,7 +351,7 @@ async function buildStats(): Promise<StatsPayload> {
       }>(
         `SELECT id, match_id, team_1_members, team_a_members, winning_team
          FROM games
-         WHERE status = 'finished'`
+         WHERE winning_team IS NOT NULL`
       ),
 
       // 4. All offers — for offer/sold counts and offer strength
@@ -379,7 +394,8 @@ async function buildStats(): Promise<StatsPayload> {
           FROM match_players mp
           JOIN users u ON u.id       = mp.user_id
           JOIN games  g ON g.match_id = mp.match_id
-          WHERE g.status = 'finished'
+          -- Decided games, matching the main games query above.
+          WHERE g.winning_team IS NOT NULL
             AND (
               g.team_1_members @> ARRAY[mp.user_id]
               OR g.team_a_members @> ARRAY[mp.user_id]
