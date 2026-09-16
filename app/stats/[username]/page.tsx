@@ -10,8 +10,7 @@ import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constan
 import { GLOSSARY } from '@/lib/stats/glossary';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
-import EconomyPanel from '@/app/components/stats/player/EconomyPanel';
-import SelectionPanel from '@/app/components/stats/player/SelectionPanel';
+import AuctionPanel from '@/app/components/stats/player/AuctionPanel';
 import LastStandPanel from '@/app/components/stats/player/LastStandPanel';
 import RatingHistoryPanel from '@/app/components/stats/player/RatingHistoryPanel';
 import PerformancePanel from '@/app/components/stats/player/PerformancePanel';
@@ -210,9 +209,9 @@ export default function PlayerStatsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <PerformancePanel dota={dota} />
         <LastStandPanel core={core} />
-        <EconomyPanel core={core} />
-        <SelectionPanel core={core} />
       </div>
+
+      <AuctionPanel core={core} />
 
       {/*
         Paired rather than stacked full width. Both are narrow-content panels —
