@@ -51,14 +51,18 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
     hintId?: string;
   }[] = [
     {
-      label: 'Offers made',
+      label: 'Teammates put up for sale',
+      hint: GLOSSARY.offersMade,
+      hintId: 'tip-offers-made',
       value: String(core.offersMade),
       detail: core.offersMade > 0
         ? `${core.offersAccepted} accepted · ${pct(core.offersAccepted, core.offersMade)}%`
         : undefined,
     },
     {
-      label: 'Offers received',
+      label: 'Times put up for sale',
+      hint: GLOSSARY.timesOffered,
+      hintId: 'tip-times-offered',
       value: String(core.timesOffered),
       // Flags how much of the raw count was forced. On two-player teams every
       // member is offered every game, so the bare number says little on its own
@@ -87,7 +91,8 @@ export default function EconomyPanel({ core }: { core: PlayerStats }) {
         <div>
           <h2 className="font-cinzel text-lg font-bold text-dota-gold">Economy</h2>
           <p className="font-barlow text-xs text-dota-text-muted mt-0.5">
-            Auction activity across every match
+            Every offer puts one teammate up for sale — counted both ways, the
+            offers {core.username} made and the ones made about them
           </p>
         </div>
       </div>
