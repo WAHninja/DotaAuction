@@ -24,8 +24,7 @@ export const GLOSSARY = {
   rating:
     'Skill rating, starting at 1500. Each game moves it by how surprising the ' +
     'result was — beating a bigger or stronger side is worth more, and losing ' +
-    'to one costs little. A high rating with a modest win rate usually means ' +
-    'playing from behind a lot.',
+    'to one costs little.',
 
   ratingDeviation:
     'How settled the rating is. 1592 ±64 means it is probably somewhere ' +
@@ -34,11 +33,9 @@ export const GLOSSARY = {
     'apart.',
 
   ratingHistory:
-    'Rating after each recent game, oldest first. Early games swing further ' +
-    'because a new rating is uncertain and moves faster; the line flattens as ' +
-    'it settles.',
+    'Rating after each recent game.',
 
-  winRate: `Games won as a share of games played. Hidden below ${MIN_GAMES_FOR_RATE} games, where the figure is noise.`,
+  winRate: `Games won as a share of games played.`,
 
   /**
    * The one that most needs explaining. Every part of this sentence is load
@@ -49,9 +46,7 @@ export const GLOSSARY = {
   marketValue:
     'How highly teammates price this player when selling them. Each offer is ' +
     'scored by where it sits in the range allowed at the time — 100% is the ' +
-    'top of that range, 50% the middle — rather than by its gold amount, ' +
-    'because the allowed range grows as a match goes on. ' +
-    `Needs ${MIN_OFFERS_FOR_STRENGTH} offers.`,
+    'top of that range, 50% the middle.`,
 
   /**
    * The mirror of market value: what this player asks for others, rather than
@@ -65,8 +60,8 @@ export const GLOSSARY = {
    */
   askingPrice:
     'How highly this player prices their own teammates when selling them. ' +
-    'Scored like market value. A high price wins more gold when accepted, but ' +
-    'is accepted less often.',
+    'Each offer is scored by where it sits in the range allowed at the time '
+    '— 100% is the top of that range, 50% the middle.`,
 
   avgKda:
     'Average (kills + assists) divided by deaths, across games with reported ' +
@@ -84,19 +79,17 @@ export const GLOSSARY = {
     'games won rather than eagerness to trade.',
 
   timesOffered:
-    'How many times teammates have put this player up for sale. On a ' +
-    'two-player team there is only one legal target, so many of these were ' +
-    'forced rather than chosen — Selection counts only the real choices.',
+    'How many times teammates have put this player up for sale. Excludes ' +
+    'two-player team games when there is only one available target.',
 
   // ── League ────────────────────────────────────────────────────────────────
 
   matchesCompleted: 'Matches played through to a winner.',
 
-  gamesPlayed: 'Individual games across all matches. A match runs until someone wins it.',
+  gamesPlayed: 'Individual games across all matches.',
 
   wonOutright:
-    'Matches won by being the last player left on a team. Winning a game alone ' +
-    'ends the match immediately.',
+    'Matches won by being the last player left on a team.',
 
   wonOnGold: 'Matches won by reaching 100,000 gold.',
 
@@ -106,8 +99,7 @@ export const GLOSSARY = {
   longestMatch: 'Most games a single match has run to.',
 
   leanestOutrightWin:
-    'The least gold anyone held while winning a match outright. Only ' +
-    'last-player-standing wins count — a gold win is by definition at 100,000.',
+    'The least gold anyone held while winning a match outright.',
 
   fastestToGold: 'Fewest games taken to reach 100,000 gold and win the match.',
 
