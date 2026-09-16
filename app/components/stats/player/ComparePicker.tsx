@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { ChevronDown as SelectChevron } from 'lucide-react';
 import type { StatsPayload } from '@/types';
 import { forPlayer, headToHeadFor } from '@/lib/stats/select';
+import { Info } from 'lucide-react';
 import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
+import { GLOSSARY } from '@/lib/stats/glossary';
+import Tooltip from '@/app/components/stats/ui/Tooltip';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 
@@ -23,6 +26,10 @@ import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 type Metric = {
   label: string;
+  /** Same wording as the ranked strip above — the reader should not meet two
+   *  different explanations of the same figure on one page. */
+  hint: string;
+  hintId: string;
   /** Formatted for display, or null when the player has no value at all. */
   value: (p: ReturnType<typeof forPlayer>) => string | null;
   /** Numeric for the winner comparison. null means "not comparable". */
@@ -34,11 +41,13 @@ type Metric = {
 const METRICS: Metric[] = [
   {
     label: 'Games',
+    hint: GLOSSARY.gamesPlayed, hintId: 'cmp-games',
     value:   p => (p.core ? String(p.core.gamesPlayed) : null),
     compare: p => p.core?.gamesPlayed ?? null,
   },
   {
     label: 'Win rate',
+    hint: GLOSSARY.winRate, hintId: 'cmp-winrate',
     // Below the sample threshold there is no honest figure to compare, so the
     // row shows a dash for that player and the comparison is skipped entirely
     // rather than crowning someone on three games.
@@ -53,6 +62,7 @@ const METRICS: Metric[] = [
   },
   {
     label: 'Market value',
+    hint: GLOSSARY.marketValue, hintId: 'cmp-market',
     value: p =>
       p.core && p.core.timesOffered >= MIN_OFFERS_FOR_STRENGTH
         ? formatStrength(p.core.offerStrengthReceived)
@@ -64,12 +74,14 @@ const METRICS: Metric[] = [
   },
   {
     label: 'Avg KDA',
+    hint: GLOSSARY.avgKda, hintId: 'cmp-kda',
     value:   p => (p.dota ? p.dota.avgKda.toFixed(2) : null),
     compare: p => p.dota?.avgKda ?? null,
     tone:    n => kdaColour(n),
   },
   {
     label: 'Times sold',
+    hint: GLOSSARY.timesSold, hintId: 'cmp-sold',
     value:   p => (p.core ? String(p.core.timesSold) : null),
     compare: p => p.core?.timesSold ?? null,
   },
@@ -178,7 +190,16 @@ export default function ComparePicker({ payload, subject }: {
                   } ${lv && m.tone && ln !== null ? m.tone(ln) : ''}`}>
                     {lv ?? '—'}
                   </span>
-                  <span className="stat-label whitespace-nowrap px-2">{m.label}</span>
+                  <Tooltip id={m.hintId} content={m.hint}>
+                    <span
+                      className="stat-label whitespace-nowrap px-2 inline-flex items-center gap-1 cursor-help"
+                      tabIndex={0}
+                      aria-describedby={m.hintId}
+                    >
+                      {m.label}
+                      <Info className="w-3 h-3 opacity-40 shrink-0" aria-hidden="true" />
+                    </span>
+                  </Tooltip>
                   <span className={`font-barlow tabular-nums font-semibold ${
                     rightWins ? 'text-dota-gold' : 'text-dota-text-muted'
                   } ${rv && m.tone && rn !== null ? m.tone(rn) : ''}`}>
