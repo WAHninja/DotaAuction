@@ -247,38 +247,68 @@
     );
   }
 
-  /* ── Ornate sign-in frame — one deliberate flourish, not part of the
-     chamfer system. border-image wraps the crest artwork itself around
-     the card: the crest and corners stay crisp, the side/bottom bars
-     stretch to fit whatever height the form needs. Reserve this for the
-     sign-in entrance moment — everyday panels should keep using .panel
-     so the chamfer language stays the "default" surface. */
+  /* ── Ornate frame — corner brackets + a gradient rule, not border-image.
+     The first version tried to stretch the AI-generated crest artwork via
+     border-image; that source art wasn't drawn to tile — its side
+     decoration sits near the corners with a big blank gap between, so
+     stretching a tall card just stretched the gap into a plain rectangle.
+     This version keeps the ornament in four fixed-size corner brackets
+     (crisp at any size, never stretched) and lets a plain gold gradient
+     line carry the edges — a gradient stretches perfectly because it is
+     computed, not a raster crop. Safe to use on a panel of any height.
+     Reserve for entrance moments; .panel + its chamfer stays the everyday
+     surface. */
   .frame-ornate {
-    --fo-top: 86px;
-    --fo-right: 77px;
-    --fo-bottom: 35px;
-    --fo-left: 76px;
-
+    position: relative;
     clip-path: none;
+    border: 1.5px solid transparent;
+    border-image: linear-gradient(135deg, #9a7d35, #dfc06a 30%, #c8a951 70%, #9a7d35) 1;
     background: var(--metal-surface);
     box-shadow: var(--bevel);
-    border-style: solid;
-    border-color: transparent;
-    border-width: var(--fo-top) var(--fo-right) var(--fo-bottom) var(--fo-left);
-    border-image-source: url('/login-frame.png');
-    border-image-slice: 345 306 139 305;
-    border-image-width: var(--fo-top) var(--fo-right) var(--fo-bottom) var(--fo-left);
-    border-image-repeat: stretch;
-    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
   }
 
-  @media (max-width: 420px) {
-    .frame-ornate {
-      --fo-top: 66px;
-      --fo-right: 59px;
-      --fo-bottom: 27px;
-      --fo-left: 58px;
-    }
+  .frame-ornate .fo-corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: url('/frame-corner.svg') no-repeat;
+    background-size: 100% 100%;
+    pointer-events: none;
+  }
+  .frame-ornate .fo-corner--tl { top: -1px;    left: -1px; }
+  .frame-ornate .fo-corner--tr { top: -1px;    right: -1px;  transform: scaleX(-1); }
+  .frame-ornate .fo-corner--bl { bottom: -1px; left: -1px;   transform: scaleY(-1); }
+  .frame-ornate .fo-corner--br { bottom: -1px; right: -1px;  transform: scale(-1, -1); }
+
+  /* ── Crest — the one big flourish, reserved for the sign-in entrance.
+     A separate element (not part of .frame-ornate itself) so ordinary
+     panels that use the corner brackets don't inherit it. Sits on the
+     frame's top edge, poking above it, the way the original artwork's
+     badge did — but as vector art, so it's crisp regardless of card
+     width and never needs slicing. */
+  .frame-crest {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    width: 84px;
+    height: 84px;
+    z-index: 2;
+  }
+  .frame-crest__burst {
+    position: absolute;
+    inset: 0;
+    background: url('/frame-crest-burst.svg') no-repeat center / contain;
+  }
+  .frame-crest img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
   }
 
   /* ── Panels — three depths, all metallic, all chamfered ─────────────────
