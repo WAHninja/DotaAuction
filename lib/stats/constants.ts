@@ -54,6 +54,17 @@ export const MIN_SELECTION_OPPORTUNITIES = 6;
 export const MIN_GAMES_TOGETHER = 5;
 
 /**
+ * Minimum sales before an "impact after being sold" rate is shown.
+ *
+ * Deliberately low, in the same spirit as MIN_LAST_STANDS_FOR_RATE below:
+ * being traded mid-match is rare by nature — most players are never sold, and
+ * the ones who are may only see it happen a handful of times all season — so
+ * a threshold set for statistical comfort would hide the stat from almost
+ * everyone it could say something about.
+ */
+export const MIN_SALES_FOR_IMPACT = 3;
+
+/**
  * Minimum last stands before a conversion rate is shown.
  *
  * Deliberately low. Being alone on a team is rare by nature, so a threshold set
