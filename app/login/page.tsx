@@ -36,7 +36,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-full py-12 px-4 login-ambient">
+    <div className="flex items-center justify-center min-h-full py-12 px-4 auth-ambient">
       <div className="w-full max-w-sm">
 
         {/* ── Card ─────────────────────────────────────────────────────────────
