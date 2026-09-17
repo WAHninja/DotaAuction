@@ -270,8 +270,8 @@
 
   .frame-ornate .fo-corner {
     position: absolute;
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     background: url('/frame-corner.svg') no-repeat;
     background-size: 100% 100%;
     pointer-events: none;
@@ -296,6 +296,14 @@
     height: 80px;
     z-index: 2;
   }
+  .frame-crest::before {
+    content: '';
+    position: absolute;
+    inset: -16px;
+    background: radial-gradient(circle, rgba(223, 192, 106, 0.35), transparent 70%);
+    z-index: -1;
+    pointer-events: none;
+  }
   .frame-crest__burst {
     position: absolute;
     inset: 0;
@@ -309,6 +317,22 @@
     width: 46px;
     height: auto;
     object-fit: contain;
+  }
+
+  /* ── Login ambient glow — a soft radial wash behind the sign-in card,
+     so the entrance reads as lit rather than a bordered box dropped on a
+     flat background. Scoped to whichever wrapper opts in; not global. */
+  .login-ambient {
+    position: relative;
+    isolation: isolate;
+  }
+  .login-ambient::before {
+    content: '';
+    position: absolute;
+    inset: -120px;
+    background: radial-gradient(45% 40% at 50% 34%, rgba(200, 169, 81, 0.14), transparent 70%);
+    z-index: -1;
+    pointer-events: none;
   }
 
   /* ── Panels — three depths, all metallic, all chamfered ─────────────────
