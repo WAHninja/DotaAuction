@@ -304,6 +304,15 @@ export type PlayerStats = {
    *  as random choice, 2.0 = twice as often. null when never in a
    *  discretionary situation, which is distinct from never being picked. */
   selectionIndex: number | null;
+  /** Sales followed by a decided next game — how many times this player was
+   *  traded mid-match and the outcome of that trade is known. Excludes sales
+   *  that ended the match outright (no next game exists) and sales whose next
+   *  game hasn't finished yet. */
+  impactOpportunities: number;
+  /** How many of those `impactOpportunities` the player's new team — the team
+   *  that just bought them — went on to win. The first real test of what a
+   *  trade was worth. */
+  impactWins: number;
   /** Last 10 results, oldest first, so the rightmost entry is the most recent
    *  game. Raw results rather than a recent win rate: the shape matters, and a
    *  percentage over ten games would imply precision the sample cannot carry. */
