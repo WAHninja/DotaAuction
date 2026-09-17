@@ -319,14 +319,14 @@
     object-fit: contain;
   }
 
-  /* ── Login ambient glow — a soft radial wash behind the sign-in card,
-     so the entrance reads as lit rather than a bordered box dropped on a
-     flat background. Scoped to whichever wrapper opts in; not global. */
-  .login-ambient {
+  /* ── Auth ambient glow — a soft radial wash behind the sign-in / register
+     card, so the entrance reads as lit rather than a bordered box dropped on
+     a flat background. Scoped to whichever wrapper opts in; not global. */
+  .auth-ambient {
     position: relative;
     isolation: isolate;
   }
-  .login-ambient::before {
+  .auth-ambient::before {
     content: '';
     position: absolute;
     inset: -120px;
