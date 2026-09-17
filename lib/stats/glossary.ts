@@ -114,4 +114,11 @@ export const GLOSSARY = {
     'that to pure chance — what a random pick would produce given how many ' +
     'teammates were eligible each time. 1.0x is exactly as often as chance, ' +
     '2.0x is twice as often, below 1.0x is less than chance.',
+
+  saleImpact:
+    'How often this player\'s new team wins the very next game after they were ' +
+    'traded to it mid-match — the first real test of what the trade was worth. ' +
+    'Only counts trades where that next game has been decided; a trade that won ' +
+    'the match outright, or whose next game is still unplayed, is left out ' +
+    'rather than counted as a loss.',
 } as const;
