@@ -291,9 +291,9 @@
     position: absolute;
     top: 0;
     left: 50%;
-    transform: translate(-50%, -55%);
-    width: 84px;
-    height: 84px;
+    transform: translate(-50%, -85%);
+    width: 80px;
+    height: 80px;
     z-index: 2;
   }
   .frame-crest__burst {
@@ -303,11 +303,11 @@
   }
   .frame-crest img {
     position: absolute;
-    top: 50%;
+    top: 52%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: auto;
     object-fit: contain;
   }
 
