@@ -347,14 +347,24 @@ async function buildStats(): Promise<StatsPayload> {
       // Every consumer of these rows already skips a null winning_team and
       // treats the rest as decided, so keying on the winner is both the correct
       // condition and the one they were all assuming.
+      //
+      // finished_at is included alongside id: a game's id reflects when it was
+      // *created*, not when it was decided, and those can diverge across match
+      // boundaries. A game can sit unplayed for a long time — waiting on who's
+      // available — while a game created afterwards, in a different match, gets
+      // played and finished first. Any consumer that treats id order as
+      // chronological order (recent form, rating history) needs finished_at to
+      // sort by instead; id is kept only as the tiebreak for the legacy rows
+      // that predate this column.
       db.query<{
         id: number;
         match_id: number;
         team_1_members: number[];
         team_a_members: number[];
         winning_team: 'team_1' | 'team_a' | null;
+        finished_at: string | null;
       }>(
-        `SELECT id, match_id, team_1_members, team_a_members, winning_team
+        `SELECT id, match_id, team_1_members, team_a_members, winning_team, finished_at
          FROM games
          WHERE winning_team IS NOT NULL`
       ),
