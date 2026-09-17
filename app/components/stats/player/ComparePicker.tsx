@@ -8,7 +8,7 @@ import { Info } from 'lucide-react';
 import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
 import { GLOSSARY } from '@/lib/stats/glossary';
 import Tooltip from '@/app/components/stats/ui/Tooltip';
-import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
+import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH, MIN_SALES_FOR_IMPACT } from '@/lib/stats/constants';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
 
 /**
@@ -38,12 +38,26 @@ type Metric = {
   tone?: (n: number) => string;
 };
 
+/**
+ * Deliberately all rate/skill figures, not counts.
+ *
+ * Games and Times sold used to sit here and both were pure volume — whoever
+ * had played more or been sold more simply won that row regardless of skill,
+ * which answers "who's been around longer" rather than "who's better". Every
+ * metric below already normalises for how much someone's played (a rate, an
+ * index, or an Elo-style rating), so the row a player wins is the row they
+ * actually earned.
+ */
 const METRICS: Metric[] = [
   {
-    label: 'Games',
-    hint: GLOSSARY.gamesPlayed, hintId: 'cmp-games',
-    value:   p => (p.core ? String(p.core.gamesPlayed) : null),
-    compare: p => p.core?.gamesPlayed ?? null,
+    label: 'Rating',
+    hint: GLOSSARY.rating, hintId: 'cmp-rating',
+    // Hidden while provisional rather than shown with an asterisk — a rating
+    // that's still settling is exactly the kind of number this comparison
+    // exists to get right, and the same caveat wouldn't survive being crammed
+    // into one row the way it gets room to breathe on the player header.
+    value: p => (p.core && !p.core.ratingProvisional ? String(p.core.rating) : null),
+    compare: p => (p.core && !p.core.ratingProvisional ? p.core.rating : null),
   },
   {
     label: 'Win rate',
@@ -80,10 +94,16 @@ const METRICS: Metric[] = [
     tone:    n => kdaColour(n),
   },
   {
-    label: 'Times sold',
-    hint: GLOSSARY.timesSold, hintId: 'cmp-sold',
-    value:   p => (p.core ? String(p.core.timesSold) : null),
-    compare: p => p.core?.timesSold ?? null,
+    label: 'Impact after being sold',
+    hint: GLOSSARY.saleImpact, hintId: 'cmp-impact',
+    value: p =>
+      p.core && p.core.impactOpportunities >= MIN_SALES_FOR_IMPACT
+        ? `${pct(p.core.impactWins, p.core.impactOpportunities)}%`
+        : null,
+    compare: p =>
+      p.core && p.core.impactOpportunities >= MIN_SALES_FOR_IMPACT
+        ? pct(p.core.impactWins, p.core.impactOpportunities)
+        : null,
   },
 ];
 
