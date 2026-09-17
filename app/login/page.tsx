@@ -43,7 +43,7 @@ export default function LoginPage() {
              frame-ornate gives the four corner brackets + gold edge; the
              crest badge (this card's one hero flourish) carries the coin
              logo, so there's no separate logo block above the card. ─────── */}
-        <div className="frame-ornate p-4 mt-10">
+        <div className="frame-ornate pt-9 px-4 pb-4 mt-10">
           <span className="fo-corner fo-corner--tl" aria-hidden="true" />
           <span className="fo-corner fo-corner--tr" aria-hidden="true" />
           <span className="fo-corner fo-corner--bl" aria-hidden="true" />
@@ -51,7 +51,7 @@ export default function LoginPage() {
 
           <div className="frame-crest" aria-hidden="true">
             <span className="frame-crest__burst" />
-            <img src="/Gold_symbol.webp" alt="" />
+            <img src="/logo.png" alt="" />
           </div>
 
           <h1 className="font-barlow text-2xl font-bold text-dota-gold tracking-wide text-center mb-1">
