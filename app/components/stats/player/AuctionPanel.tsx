@@ -107,6 +107,14 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
         <p className="stat-label mb-2">Being sold</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <Figure
+            label="Times sold"
+            value={String(core.timesSold)}
+            sub={`from ${core.timesOffered} offers received`}
+            hint={GLOSSARY.timesSold}
+            hintId="au-sold"
+          />
+
+          <Figure
             label="Market value"
             value={hasStrengthSample ? formatStrength(core.offerStrengthReceived) : '—'}
             sub={hasStrengthSample ? 'how highly others price you' : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
@@ -126,14 +134,6 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
             context={hasSelectionSample ? contextLine(selectionRank, selectionAvg, pctText) : undefined}
             hint={GLOSSARY.selection}
             hintId="au-selection"
-          />
-
-          <Figure
-            label="Times sold"
-            value={String(core.timesSold)}
-            sub={`from ${core.timesOffered} offers received`}
-            hint={GLOSSARY.timesSold}
-            hintId="au-sold"
           />
         </div>
 
