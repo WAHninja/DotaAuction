@@ -111,7 +111,7 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
       {/* ── As the goods ─────────────────────────────────────────────────── */}
       <div className="px-5 pt-4 pb-3">
         <p className="stat-label mb-2">Being sold</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Figure
             label="Times sold"
             value={String(core.timesSold)}
@@ -173,7 +173,13 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
       {/* ── As the trader ───────────────────────────────────────────────── */}
       <div className="px-5 pt-2 pb-4 border-t border-dota-border/40">
         <p className="stat-label mb-2 mt-2">Selling teammates</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {/* grid-cols-4, not -3, even though there are only three tiles here —
+            matching Being sold's column count is what keeps Offers accepted
+            under Times sold, Asking price under Market value, and Accepted at
+            under Picked when a choice. A -3 grid would still show three tiles
+            correctly but at different widths than the row above, breaking
+            that alignment. The fourth column is simply left empty. */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Figure
             label="Offers accepted"
             value={core.offersMade > 0 ? `${pct(core.offersAccepted, core.offersMade)}%` : '—'}
