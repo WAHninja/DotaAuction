@@ -80,8 +80,9 @@ export const GLOSSARY = {
     'only when they come in cheap.',
 
   timesOffered:
-    'How many times teammates have put this player up for sale. Excludes ' +
-    'two-player team games when there is only one available target.',
+    'How many times teammates have put this player up for sale, including ' +
+    'games with only one available target. Selection, below, looks only at ' +
+    'games where there was a real choice.',
 
   // ── League ────────────────────────────────────────────────────────────────
 
@@ -109,5 +110,8 @@ export const GLOSSARY = {
 
   selection:
     'How often teammates choose to sell this player, counting only games where ' +
-    'they had someone else they could have offered instead.',
+    'they had someone else they could have offered instead. The index compares ' +
+    'that to pure chance — what a random pick would produce given how many ' +
+    'teammates were eligible each time. 1.0x is exactly as often as chance, ' +
+    '2.0x is twice as often, below 1.0x is less than chance.',
 } as const;
