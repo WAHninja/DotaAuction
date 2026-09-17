@@ -5,8 +5,8 @@ import { useParams } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useStats } from '@/app/components/stats/StatsProvider';
 import { forPlayer, rankOf, leagueAverage, buildAvatarLookup } from '@/lib/stats/select';
-import { pct, formatStrength } from '@/lib/stats/format';
-import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH } from '@/lib/stats/constants';
+import { pct } from '@/lib/stats/format';
+import { MIN_GAMES_FOR_RATE } from '@/lib/stats/constants';
 import { GLOSSARY } from '@/lib/stats/glossary';
 import StatWithRank from '@/app/components/stats/ui/StatWithRank';
 import PlayerAvatar from '@/app/components/PlayerAvatar';
@@ -67,26 +67,23 @@ export default function PlayerStatsPage() {
 
   const ratingRank  = rankOf(players, p => p.username === username, p => p.rating);
   const winRateRank = rankOf(players, p => p.username === username, p => pct(p.gamesWon, p.gamesPlayed));
-  const valued = players.filter(
-    p => p.timesOffered >= MIN_OFFERS_FOR_STRENGTH && p.offerStrengthReceived !== null,
-  );
-  const marketRank = rankOf(valued, p => p.username === username, p => p.offerStrengthReceived ?? 0);
   const kdaRank     = dota ? rankOf(playerDotaStats, p => p.username === username, p => p.avgKda) : null;
 
-  const avgMarket = leagueAverage(valued, p => p.offerStrengthReceived ?? 0);
   const avgKda  = leagueAverage(playerDotaStats, p => p.avgKda);
 
   const hasRateSample   = core.gamesPlayed  >= MIN_GAMES_FOR_RATE;
-  const hasMarketSample = core.timesOffered >= MIN_OFFERS_FOR_STRENGTH;
 
   // Named for what the reader is waiting on, not for the component that hides
   // it, and derived from the same thresholds the panels apply.
   const formWins = core.recentForm.filter(r => r === 'W').length;
   const hasStreak = player.streak !== null && player.streak.longestStreak > 0;
 
+  // Market value dropped out of this list along with the header tile below —
+  // the Auction panel already says "needs N offers" on that exact figure, so
+  // a second, page-level notice about the same missing sample was saying the
+  // same thing twice in two different places.
   const locked = [
     core.gamesPlayed  >= MIN_GAMES_FOR_RATE        ? null : 'win rate',
-    core.timesOffered >= MIN_OFFERS_FOR_STRENGTH   ? null : 'market value',
   ].filter((x): x is string => x !== null);
 
   return (
@@ -126,6 +123,20 @@ export default function PlayerStatsPage() {
         )}
       </div>
 
+      {/* Market value and Times sold used to live here too, duplicating two
+          of the Auction panel's own tiles below — Market value byte-for-byte
+          (same figure, same rank, same league average), Times sold with the
+          same count but an inconsistent second line ("33 picked by choice",
+          which is this player's own selection count mislabelled as a league
+          average, not an actual average of anything). Removed rather than
+          fixed in place: the Auction panel is already the correct, single
+          home for both.
+
+          Match wins split by type has the same shape as Times sold — a raw
+          count that scales with how many matches someone's played, not a
+          rate — so neither gets a rank or league average either, the same
+          convention the Auction panel applies to Times sold for the same
+          reason. */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
         <StatWithRank
           label="Rating"
@@ -146,14 +157,6 @@ export default function PlayerStatsPage() {
           hintId="tip-winrate"
         />
         <StatWithRank
-          label="Market value"
-          value={hasMarketSample ? formatStrength(core.offerStrengthReceived) : '—'}
-          rank={hasMarketSample ? marketRank : null}
-          leagueAvg={avgMarket === null ? null : formatStrength(avgMarket)}
-          hint={GLOSSARY.marketValue}
-          hintId="tip-market"
-        />
-        <StatWithRank
           label="Avg KDA"
           value={dota ? dota.avgKda.toFixed(2) : '—'}
           rank={kdaRank}
@@ -162,13 +165,16 @@ export default function PlayerStatsPage() {
           hintId="tip-kda"
         />
         <StatWithRank
-          label="Times sold"
-          value={String(core.timesSold)}
-          hint={GLOSSARY.timesSold}
-          hintId="tip-sold"
-          // Raw offers received is a misleading companion figure now that
-          // Selection below distinguishes forced offers from real choices.
-          leagueAvg={`${core.selectionCount} picked by choice`}
+          label="Match won outright"
+          value={String(core.matchesWonOutright)}
+          hint={GLOSSARY.wonOutright}
+          hintId="tip-outright"
+        />
+        <StatWithRank
+          label="Match won by 100k gold"
+          value={String(core.matchesWonGold)}
+          hint={GLOSSARY.wonOnGold}
+          hintId="tip-gold"
         />
       </div>
 
