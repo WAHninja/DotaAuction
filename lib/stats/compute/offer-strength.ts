@@ -80,6 +80,18 @@ export type PlayerOfferStrength = {
    *  that were turned down. null when none of their offers were accepted. */
   madeAccepted: number | null;
   madeAcceptedCount: number;
+  /**
+   * How many offers targeting this player were accepted — i.e. how many times
+   * they were actually sold, as opposed to `receivedCount`, which includes
+   * offers that were turned down.
+   *
+   * Tracked here rather than in a second pass over `offers` in the route
+   * handler: every other accepted/total pair on this type already comes from
+   * this one loop, and a player's "times sold" is exactly that same shape
+   * from the other side of the same event. A separate counter risks drifting
+   * from this one the next time either loop's filtering changes.
+   */
+  receivedAcceptedCount: number;
 };
 
 /**
@@ -99,14 +111,14 @@ export function computeOfferStrength(
   gameIndex: Map<number, number>,
 ): Map<number, PlayerOfferStrength> {
   const acc = new Map<number, {
-    recv: number; recvN: number;
+    recv: number; recvN: number; recvAccN: number;
     made: number; madeN: number;
     madeAcc: number; madeAccN: number;
   }>();
 
   const bucket = (id: number) => {
     let b = acc.get(id);
-    if (!b) { b = { recv: 0, recvN: 0, made: 0, madeN: 0, madeAcc: 0, madeAccN: 0 }; acc.set(id, b); }
+    if (!b) { b = { recv: 0, recvN: 0, recvAccN: 0, made: 0, madeN: 0, madeAcc: 0, madeAccN: 0 }; acc.set(id, b); }
     return b;
   };
 
@@ -119,6 +131,7 @@ export function computeOfferStrength(
     const target = bucket(o.target_player_id);
     target.recv += strength;
     target.recvN += 1;
+    if (o.status === 'accepted') target.recvAccN += 1;
 
     // from_player_id is the seller: submit-offer validates the target as "a
     // winning teammate, not the caller", so an offer is always someone pricing
@@ -137,6 +150,7 @@ export function computeOfferStrength(
     out.set(id, {
       received:      b.recvN > 0 ? +(b.recv / b.recvN).toFixed(4) : null,
       receivedCount: b.recvN,
+      receivedAcceptedCount: b.recvAccN,
       made:          b.madeN > 0 ? +(b.made / b.madeN).toFixed(4) : null,
       madeCount:     b.madeN,
       madeAccepted:      b.madeAccN > 0 ? +(b.madeAcc / b.madeAccN).toFixed(4) : null,
