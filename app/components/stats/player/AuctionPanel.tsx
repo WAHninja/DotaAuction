@@ -8,7 +8,9 @@ import {
 } from '@/lib/stats/constants';
 import { pct, formatStrength } from '@/lib/stats/format';
 import { GLOSSARY } from '@/lib/stats/glossary';
+import { rankOf, leagueAverage, type Rank } from '@/lib/stats/select';
 import Tooltip from '@/app/components/stats/ui/Tooltip';
+import { ordinal } from '@/app/components/stats/ui/StatWithRank';
 
 /**
  * A player's whole auction standing, both sides of the market in one place.
@@ -29,8 +31,16 @@ import Tooltip from '@/app/components/stats/ui/Tooltip';
  * The gold-controlled selection breakdown that Selection used to show in full
  * moves to a one-line footnote — it is a caveat on the selection figure, not a
  * headline in its own right, and giving it two columns overstated it.
+ *
+ * Every rate figure here also carries its league rank and average, the same
+ * treatment YouCard and the player header already give market value — a bare
+ * "55%" says nothing about whether that's good, and the infrastructure for
+ * this (lib/stats/select's rankOf/leagueAverage) already existed and was just
+ * unused here. Times sold is the one exception: it's a raw count rather than
+ * a rate, so ranking it would mostly measure who's played the most, which is
+ * why the player header doesn't rank it either.
  */
-export default function AuctionPanel({ core }: { core: PlayerStats }) {
+export default function AuctionPanel({ core, players }: { core: PlayerStats; players: PlayerStats[] }) {
   const name = core.username;
 
   // Renders nothing for a player who has neither sold nor been sold — four
@@ -49,6 +59,36 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
   const goldGap =
     pct(core.selectionPoorCount, core.selectionPoorOpportunities) -
     pct(core.selectionRichCount, core.selectionRichOpportunities);
+
+  // ── League context for each rate figure ───────────────────────────────────
+  // Each is scoped to players who clear the same sample threshold the figure
+  // itself needs before it's shown — otherwise someone with one flattering
+  // offer could outrank a player with a genuine track record.
+
+  const strengthQualified = players.filter(
+    p => p.offersMade >= MIN_OFFERS_FOR_STRENGTH,
+  );
+  const marketQualified = strengthQualified.filter(p => p.offerStrengthReceived !== null);
+  const marketRank = rankOf(marketQualified, p => p.username === name, p => p.offerStrengthReceived ?? 0);
+  const marketAvg  = leagueAverage(marketQualified, p => p.offerStrengthReceived ?? 0);
+
+  const selectionQualified = players.filter(
+    p => p.selectionOpportunities >= MIN_SELECTION_OPPORTUNITIES,
+  );
+  const selectionRank = rankOf(selectionQualified, p => p.username === name, p => pct(p.selectionCount, p.selectionOpportunities));
+  const selectionAvg  = leagueAverage(selectionQualified, p => pct(p.selectionCount, p.selectionOpportunities));
+
+  const acceptQualified = strengthQualified;
+  const acceptRank = rankOf(acceptQualified, p => p.username === name, p => pct(p.offersAccepted, p.offersMade));
+  const acceptAvg  = leagueAverage(acceptQualified, p => pct(p.offersAccepted, p.offersMade));
+
+  const askingQualified = strengthQualified.filter(p => p.offerStrengthMade !== null);
+  const askingRank = rankOf(askingQualified, p => p.username === name, p => p.offerStrengthMade ?? 0);
+  const askingAvg  = leagueAverage(askingQualified, p => p.offerStrengthMade ?? 0);
+
+  const acceptedAtQualified = strengthQualified.filter(p => p.offerStrengthAccepted !== null);
+  const acceptedAtRank = rankOf(acceptedAtQualified, p => p.username === name, p => p.offerStrengthAccepted ?? 0);
+  const acceptedAtAvg  = leagueAverage(acceptedAtQualified, p => p.offerStrengthAccepted ?? 0);
 
   return (
     <section className="panel overflow-hidden">
@@ -70,6 +110,7 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
             label="Market value"
             value={hasStrengthSample ? formatStrength(core.offerStrengthReceived) : '—'}
             sub={hasStrengthSample ? 'how highly others price you' : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
+            context={hasStrengthSample ? contextLine(marketRank, marketAvg, formatStrength) : undefined}
             hint={GLOSSARY.marketValue}
             hintId="au-market"
           />
@@ -79,9 +120,10 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
             value={hasSelectionSample ? `${pct(core.selectionCount, core.selectionOpportunities)}%` : '—'}
             sub={
               hasSelectionSample
-                ? `${core.selectionCount} of ${core.selectionOpportunities} · chance ${pct(core.selectionExpected, core.selectionOpportunities)}%`
+                ? `${core.selectionCount} of ${core.selectionOpportunities} · ${indexText(core.selectionIndex)}`
                 : `needs ${MIN_SELECTION_OPPORTUNITIES} real choices`
             }
+            context={hasSelectionSample ? contextLine(selectionRank, selectionAvg, pctText) : undefined}
             hint={GLOSSARY.selection}
             hintId="au-selection"
           />
@@ -115,6 +157,10 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
             label="Offers accepted"
             value={core.offersMade > 0 ? `${pct(core.offersAccepted, core.offersMade)}%` : '—'}
             sub={core.offersMade > 0 ? `${core.offersAccepted} of ${core.offersMade}` : 'no offers made'}
+            // Ranked only once the sample clears the same bar market value and
+            // asking price need — below that, a rank off two or three offers
+            // would be noise dressed up as a league standing.
+            context={hasStrengthSample ? contextLine(acceptRank, acceptAvg, pctText) : undefined}
             hint={GLOSSARY.offerAcceptRate}
             hintId="au-accept"
           />
@@ -123,6 +169,7 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
             label="Asking price"
             value={hasStrengthSample ? formatStrength(core.offerStrengthMade) : '—'}
             sub={hasStrengthSample ? 'how high you price others' : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
+            context={hasStrengthSample ? contextLine(askingRank, askingAvg, formatStrength) : undefined}
             hint={GLOSSARY.askingPrice}
             hintId="au-asking"
           />
@@ -137,6 +184,11 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
             // The contrast is the whole point, so it is stated inline rather
             // than left for the reader to compute against the tile beside it.
             sub={acceptedContrast(core)}
+            context={
+              hasStrengthSample && core.offerStrengthAccepted !== null
+                ? contextLine(acceptedAtRank, acceptedAtAvg, formatStrength)
+                : undefined
+            }
             hint={GLOSSARY.acceptedAskingPrice}
             hintId="au-accepted"
           />
@@ -147,10 +199,14 @@ export default function AuctionPanel({ core }: { core: PlayerStats }) {
 }
 
 /** One labelled figure with an explanatory sub-line and a hover definition. */
-function Figure({ label, value, sub, hint, hintId }: {
+function Figure({ label, value, sub, context, hint, hintId }: {
   label: string;
   value: string;
   sub: string;
+  /** Pre-formatted "3rd of 12 · avg 48%" league-context line, omitted below
+   *  sample size. Separate from `sub`, which explains what the number means
+   *  rather than where it stands. */
+  context?: string;
   hint: string;
   hintId: string;
 }) {
@@ -168,8 +224,39 @@ function Figure({ label, value, sub, hint, hintId }: {
       </Tooltip>
       <p className="font-barlow text-xl font-bold text-dota-text tabular-nums mt-0.5">{value}</p>
       <p className="font-barlow text-[11px] text-dota-text-dim mt-0.5">{sub}</p>
+      {context && (
+        <p className="font-barlow text-[11px] text-dota-text-dim/70 tabular-nums">{context}</p>
+      )}
     </div>
   );
+}
+
+/**
+ * "3rd of 12 · avg 48%" — the same rank/average phrasing StatWithRank uses,
+ * for panels that need it alongside a sub-line StatWithRank has no room for.
+ * Either half is optional so a stat with a rank but no comparable average
+ * (or vice versa) still renders the half it has.
+ */
+function contextLine(rank: Rank | null, avg: number | null, formatAvg: (n: number) => string): string | undefined {
+  if (!rank && avg === null) return undefined;
+  const parts: string[] = [];
+  if (rank) parts.push(`${ordinal(rank.position)} of ${rank.outOf}`);
+  if (avg !== null) parts.push(`avg ${formatAvg(avg)}`);
+  return parts.join(' · ');
+}
+
+/** Formats a pct()-scale number (0–100) the way the panel's percentages read
+ *  elsewhere, for use as contextLine's formatAvg on rate figures that are
+ *  already percentages rather than offer-strength proportions. */
+function pctText(n: number): string {
+  return `${Math.round(n)}%`;
+}
+
+/** "1.4x expected" / "0.6x expected" — the selection index as a single
+ *  reader-facing ratio, replacing a raw "chance 41.2%" the reader had to
+ *  divide against the headline percentage themselves to interpret. */
+function indexText(index: number | null): string {
+  return index === null ? 'no chance baseline yet' : `${index.toFixed(2)}x expected`;
 }
 
 /**
