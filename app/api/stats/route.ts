@@ -103,6 +103,10 @@ type PlayerRow = {
   username: string;
   /** Matches (not games) this player has won outright. */
   matchesWon: number;
+  /** Of those, how many by being the last player left on their team. */
+  matchesWonOutright: number;
+  /** Of those, how many by reaching the 100,000 gold threshold instead. */
+  matchesWonGold: number;
   /** Matches they took part in — context for the wins figure. */
   matchesPlayed: number;
   /** Steam avatar URL, null when the account has no Steam profile linked.
@@ -712,10 +716,12 @@ async function buildStats(): Promise<StatsPayload> {
 
     const ratings = computeRatings(gamesResult.rows, { goldWeight, goldTimeline });
 
-    // entries(), not values(): the map key is the user id, which is the join
-    // key for offer strength and is not repeated inside the value.
-    // Match wins per player. matches.winner_id is the single player who took
-    // the match, so this is a straight tally rather than a team lookup.
+    // Match wins per player, split by how the match ended. matches.winner_id
+    // is the single player who took the match, so this is a straight tally
+    // rather than a team lookup — split into two maps rather than one because
+    // "won outright" (last player standing) and "won on gold" (100,000 gold
+    // threshold) are different achievements a reader wants to see apart, the
+    // same distinction the league-wide vitals strip already draws.
     //
     // Must be declared above the players map below, which reads it. It was
     // originally placed next to computeLeagueRecords further down, which put it
@@ -723,14 +729,25 @@ async function buildStats(): Promise<StatsPayload> {
     // ReferenceError that tsc cannot catch, because it has no way to know the
     // callback is invoked immediately rather than stored for later.
     const matchWins = new Map<number, number>();
+    const matchWinsOutright = new Map<number, number>();
+    const matchWinsGold = new Map<number, number>();
     for (const m of matchOutcomesResult.rows) {
       if (m.winner_id === null) continue;
       matchWins.set(m.winner_id, (matchWins.get(m.winner_id) ?? 0) + 1);
+      if (m.win_type === 'last_standing') {
+        matchWinsOutright.set(m.winner_id, (matchWinsOutright.get(m.winner_id) ?? 0) + 1);
+      } else if (m.win_type === 'gold_threshold') {
+        matchWinsGold.set(m.winner_id, (matchWinsGold.get(m.winner_id) ?? 0) + 1);
+      }
     }
 
     const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
+      // entries(), not values(): the map key is the user id, which is the join
+      // key for offer strength and is not repeated inside the value.
       username:          p.username,
       matchesWon:        matchWins.get(id) ?? 0,
+      matchesWonOutright: matchWinsOutright.get(id) ?? 0,
+      matchesWonGold:     matchWinsGold.get(id)     ?? 0,
       matchesPlayed:     p.matchesPlayed.size,
       steamAvatar:       p.steamAvatar,
       gamesPlayed:       p.gamesPlayed,
