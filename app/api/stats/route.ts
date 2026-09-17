@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
 import { cachedStats, rebuildStats } from '@/lib/stats-cache'
-import { buildGameIndex, computeOfferStrength } from '@/lib/stats/compute/offer-strength';
+import { computeOfferStrength, buildGameIndex } from '@/lib/stats/compute/offer-strength';
 import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
 import { computeSynergy } from '@/lib/stats/compute/synergy';
 import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
 import { computeLastStands } from '@/lib/stats/compute/last-stand';
+import { computeSaleImpact } from '@/lib/stats/compute/impact';
 import { computeLeagueRecords, type LeagueRecord } from '@/lib/stats/compute/records';
 import { computeRatings, STARTING_RATING } from '@/lib/stats/compute/rating';
 import { buildGoldTimeline } from '@/lib/stats/compute/gold-timeline';
@@ -145,6 +146,12 @@ type PlayerRow = {
   /** Selections against what chance alone would produce. 1.0 = as often as
    *  random, 2.0 = twice as often. null when never in a discretionary spot. */
   selectionIndex: number | null;
+  /** Sales followed by a decided next game — how many times this player was
+   *  traded mid-match and that trade's outcome is known. Excludes sales that
+   *  ended the match outright and sales whose next game hasn't finished. */
+  impactOpportunities: number;
+  /** How many of those the player's new team went on to win. */
+  impactWins: number;
   /** Last 10 results, oldest first — the rightmost entry is the latest game. */
   recentForm: FormResult[];
   /** Elo-style rating. Accounts for team size, so beating longer odds is worth
@@ -273,6 +280,7 @@ async function buildStats(): Promise<StatsPayload> {
       goldChangesResult,
       gamesResult,
       offersResult,
+      allGamesResult,
       winStreakResult,
       headToHeadResult,
       heroStatsResult,
@@ -381,6 +389,15 @@ async function buildStats(): Promise<StatsPayload> {
       }>(
         `SELECT game_id, from_player_id, target_player_id, offer_amount, status
          FROM offers`
+      ),
+
+      // 4b. Every game's id and match_id, regardless of status — for finding
+      // what game immediately followed a sale. computeSaleImpact needs true
+      // id-adjacency within a match, which an undecided game must be visible
+      // for even though it has no winner yet; the decided-only query above
+      // (3) would silently skip it and misidentify the sale's real successor.
+      db.query<{ id: number; match_id: number }>(
+        `SELECT id, match_id FROM games`
       ),
 
       // 7. Win streaks CTE
@@ -653,6 +670,11 @@ async function buildStats(): Promise<StatsPayload> {
     const gameIndex     = buildGameIndex(gamesResult.rows);
     const offerStrength = computeOfferStrength(offersResult.rows, gameIndex);
 
+    // Impact after being sold — how a player's new team does in the very next
+    // game after they're traded to it. See lib/stats/compute/impact for why
+    // this needs the unfiltered game list rather than gamesResult alone.
+    const saleImpact = computeSaleImpact(offersResult.rows, allGamesResult.rows, gamesResult.rows);
+
     // Selection rate — only counts offers where the offering team had a real
     // alternative. See lib/stats/compute/selection-rate.
 
@@ -730,6 +752,8 @@ async function buildStats(): Promise<StatsPayload> {
       selectionPoorOpportunities: selection.get(id)?.poorOpportunities ?? 0,
       selectionPoorCount:         selection.get(id)?.poorSelections    ?? 0,
       selectionIndex:         selection.get(id)?.index         ?? null,
+      impactOpportunities: saleImpact.get(id)?.opportunities ?? 0,
+      impactWins:          saleImpact.get(id)?.wins          ?? 0,
       recentForm:             recentForm.get(id) ?? [],
       lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
       lastStandWins:          lastStands.get(id)?.wins          ?? 0,
