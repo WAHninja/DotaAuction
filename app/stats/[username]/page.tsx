@@ -211,7 +211,7 @@ export default function PlayerStatsPage() {
         <LastStandPanel core={core} />
       </div>
 
-      <AuctionPanel core={core} />
+      <AuctionPanel core={core} players={players} />
 
       {/*
         Paired rather than stacked full width. Both are narrow-content panels —
