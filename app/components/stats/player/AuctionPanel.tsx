@@ -5,6 +5,7 @@ import type { PlayerStats } from '@/types';
 import {
   MIN_OFFERS_FOR_STRENGTH,
   MIN_SELECTION_OPPORTUNITIES,
+  MIN_SALES_FOR_IMPACT,
 } from '@/lib/stats/constants';
 import { pct, formatStrength } from '@/lib/stats/format';
 import { GLOSSARY } from '@/lib/stats/glossary';
@@ -90,6 +91,11 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
   const acceptedAtRank = rankOf(acceptedAtQualified, p => p.username === name, p => p.offerStrengthAccepted ?? 0);
   const acceptedAtAvg  = leagueAverage(acceptedAtQualified, p => p.offerStrengthAccepted ?? 0);
 
+  const hasImpactSample = core.impactOpportunities >= MIN_SALES_FOR_IMPACT;
+  const impactQualified = players.filter(p => p.impactOpportunities >= MIN_SALES_FOR_IMPACT);
+  const impactRank = rankOf(impactQualified, p => p.username === name, p => pct(p.impactWins, p.impactOpportunities));
+  const impactAvg  = leagueAverage(impactQualified, p => pct(p.impactWins, p.impactOpportunities));
+
   return (
     <section className="panel overflow-hidden">
       <div className="px-5 py-4 border-b border-dota-border flex items-center gap-3">
@@ -117,7 +123,9 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
           <Figure
             label="Market value"
             value={hasStrengthSample ? formatStrength(core.offerStrengthReceived) : '—'}
-            sub={hasStrengthSample ? 'how highly others price you' : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
+            // No "how highly others price you" here — the tooltip already
+            // covers it in more depth, so the sub-line just repeated it.
+            sub={hasStrengthSample ? undefined : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
             context={hasStrengthSample ? contextLine(marketRank, marketAvg, formatStrength) : undefined}
             hint={GLOSSARY.marketValue}
             hintId="au-market"
@@ -134,6 +142,19 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
             context={hasSelectionSample ? contextLine(selectionRank, selectionAvg, pctText) : undefined}
             hint={GLOSSARY.selection}
             hintId="au-selection"
+          />
+
+          <Figure
+            label="Impact after being sold"
+            value={hasImpactSample ? `${pct(core.impactWins, core.impactOpportunities)}%` : '—'}
+            sub={
+              hasImpactSample
+                ? `${core.impactWins} of ${core.impactOpportunities} next games won`
+                : `needs ${MIN_SALES_FOR_IMPACT} sales`
+            }
+            context={hasImpactSample ? contextLine(impactRank, impactAvg, pctText) : undefined}
+            hint={GLOSSARY.saleImpact}
+            hintId="au-impact"
           />
         </div>
 
@@ -168,7 +189,9 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
           <Figure
             label="Asking price"
             value={hasStrengthSample ? formatStrength(core.offerStrengthMade) : '—'}
-            sub={hasStrengthSample ? 'how high you price others' : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
+            // Same as Market value above — the tooltip already explains this,
+            // so the sub-line isn't needed once there's a sample to show.
+            sub={hasStrengthSample ? undefined : `needs ${MIN_OFFERS_FOR_STRENGTH} offers`}
             context={hasStrengthSample ? contextLine(askingRank, askingAvg, formatStrength) : undefined}
             hint={GLOSSARY.askingPrice}
             hintId="au-asking"
@@ -202,7 +225,10 @@ export default function AuctionPanel({ core, players }: { core: PlayerStats; pla
 function Figure({ label, value, sub, context, hint, hintId }: {
   label: string;
   value: string;
-  sub: string;
+  /** Explains what the number means. Omit once the tooltip already covers it
+   *  in more depth — repeating a short paraphrase right underneath just
+   *  restates the hover text instead of adding to it. */
+  sub?: string;
   /** Pre-formatted "3rd of 12 · avg 48%" league-context line, omitted below
    *  sample size. Separate from `sub`, which explains what the number means
    *  rather than where it stands. */
@@ -223,9 +249,11 @@ function Figure({ label, value, sub, context, hint, hintId }: {
         </span>
       </Tooltip>
       <p className="font-barlow text-xl font-bold text-dota-text tabular-nums mt-0.5">{value}</p>
-      <p className="font-barlow text-[11px] text-dota-text-dim mt-0.5">{sub}</p>
+      {sub && <p className="font-barlow text-[11px] text-dota-text-dim mt-0.5">{sub}</p>}
       {context && (
-        <p className="font-barlow text-[11px] text-dota-text-dim/70 tabular-nums">{context}</p>
+        <p className={`font-barlow text-[11px] text-dota-text-dim/70 tabular-nums ${sub ? '' : 'mt-0.5'}`}>
+          {context}
+        </p>
       )}
     </div>
   );
