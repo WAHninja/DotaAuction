@@ -138,7 +138,33 @@ export type RatingGameRow = {
   team_1_members: number[];
   team_a_members: number[];
   winning_team: 'team_1' | 'team_a' | null;
+  /**
+   * When the game was decided, not when its row was created. Null only for
+   * legacy games that predate this column. See the sort in replay() below.
+   */
+  finished_at: string | null;
 };
+
+/**
+ * Chronological order for a replay: by finished_at (when a game was actually
+ * decided), falling back to id for the legacy rows that predate that column.
+ *
+ * A game's id reflects creation order, not completion order. Because a game
+ * can sit unplayed for a long time waiting on who's available while a game
+ * created afterwards, in a different match, gets played and finishes first, id
+ * order and true chronological order can diverge across match boundaries. For
+ * a rating system the sequence *is* the computation, so replaying in creation
+ * order rather than decision order would credit and blame players for
+ * out-of-order events.
+ */
+function byFinishedAt(a: RatingGameRow, b: RatingGameRow): number {
+  const aTime = a.finished_at ? Date.parse(a.finished_at) : null;
+  const bTime = b.finished_at ? Date.parse(b.finished_at) : null;
+  if (aTime !== null && bTime !== null) return aTime - bTime;
+  if (aTime !== null) return 1;
+  if (bTime !== null) return -1;
+  return a.id - b.id;
+}
 
 export type RatingOptions = {
   /**
@@ -243,9 +269,10 @@ export function winProbability(
 /**
  * Rate every player by replaying finished games in order.
  *
- * Games are sorted by id here rather than trusting the caller's ordering: for a
- * rating system the sequence *is* the computation, and it should not depend on
- * an ORDER BY clause surviving a future edit.
+ * Games are sorted by finished_at here (see byFinishedAt above) rather than
+ * trusting the caller's ordering or the row's id: for a rating system the
+ * sequence *is* the computation, and it should not depend on an ORDER BY
+ * clause surviving a future edit, nor on id order matching decision order.
  *
  * Games with no recorded winner are skipped — there is no result to learn from,
  * and treating one as a draw would drag both sides toward each other for no
@@ -273,7 +300,7 @@ export function replay(
   const timeline   = opts.goldTimeline;
   const passes     = opts.passes ?? PASSES;
   const ordered = [...games]
-    .sort((a, b) => a.id - b.id)
+    .sort(byFinishedAt)
     .filter(g => g.winning_team !== null);
 
   let ratings = new Map<number, number>();
