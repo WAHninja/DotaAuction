@@ -252,8 +252,15 @@ export type Me = {
 
 export type PlayerStats = {
   username: string;
-  /** Matches won outright — the whole match, not individual games. */
+  /** Matches won, the whole match rather than individual games, by any
+   *  method — last player standing or reaching 100,000 gold. See
+   *  matchesWonOutright/matchesWonGold to split by which. */
   matchesWon: number;
+  /** Of matchesWon, how many by being the last player left on their team. */
+  matchesWonOutright: number;
+  /** Of matchesWon, how many by reaching the 100,000 gold threshold instead
+   *  of outlasting everyone. */
+  matchesWonGold: number;
   /** Matches taken part in, as context for the wins figure. */
   matchesPlayed: number;
   /** Steam avatar URL, null when no Steam profile is linked. Supplied by
