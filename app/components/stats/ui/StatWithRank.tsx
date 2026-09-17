@@ -72,8 +72,14 @@ export default function StatWithRank({
   );
 }
 
-/** 1 -> 1st, 2 -> 2nd, 3 -> 3rd, 4 -> 4th, 11/12/13 -> 11th/12th/13th. */
-function ordinal(n: number): string {
+/**
+ * 1 -> 1st, 2 -> 2nd, 3 -> 3rd, 4 -> 4th, 11/12/13 -> 11th/12th/13th.
+ *
+ * Exported so other panels that build their own rank/avg line — rather than
+ * using this whole component — still render ranks the same way everywhere
+ * they appear.
+ */
+export function ordinal(n: number): string {
   const rem100 = n % 100;
   if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
   switch (n % 10) {
