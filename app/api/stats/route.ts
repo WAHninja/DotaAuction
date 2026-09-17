@@ -590,12 +590,6 @@ async function buildStats(): Promise<StatsPayload> {
       matchesPlayed: Set<number>;
       gamesPlayed: number;
       gamesWon: number;
-      timesOffered: number;
-      timesSold: number;
-      offersMade: number;
-      offersAccepted: number;
-      totalOfferValueAsTarget: number;
-      offerCountAsTarget: number;
     }>();
 
     for (const user of usersResult.rows) {
@@ -605,12 +599,6 @@ async function buildStats(): Promise<StatsPayload> {
         matchesPlayed:           new Set<number>(),
         gamesPlayed:             0,
         gamesWon:                0,
-        timesOffered:            0,
-        timesSold:               0,
-        offersMade:              0,
-        offersAccepted:          0,
-        totalOfferValueAsTarget: 0,
-        offerCountAsTarget:      0,
       });
     }
 
@@ -639,24 +627,14 @@ async function buildStats(): Promise<StatsPayload> {
       }
     }
 
-    for (const offer of offersResult.rows) {
-      if (offer.from_player_id != null) {
-        const fromStats = playersMap.get(offer.from_player_id);
-        if (fromStats) {
-          fromStats.offersMade += 1;
-          if (offer.status === 'accepted') fromStats.offersAccepted += 1;
-        }
-      }
-      if (offer.target_player_id != null) {
-        const targetStats = playersMap.get(offer.target_player_id);
-        if (targetStats) {
-          targetStats.timesOffered            += 1;
-          targetStats.totalOfferValueAsTarget += offer.offer_amount || 0;
-          targetStats.offerCountAsTarget      += 1;
-          if (offer.status === 'accepted') targetStats.timesSold += 1;
-        }
-      }
-    }
+    // Offer-derived counts — times offered/sold, offers made/accepted — used
+    // to live in a second loop over offersResult here, tallied independently
+    // of offerStrength below even though both walk the same rows to answer
+    // the same question ("how many of this player's offers were accepted?").
+    // Two counters for one fact is exactly the kind of thing that quietly
+    // drifts apart the next time either loop's filtering changes, so those
+    // counts are now read straight off offerStrength's own tallies instead
+    // (see the `players` map below) and this loop is gone.
 
     const heroTopKillsMap = new Map<string, { kills: number; username: string }>(
       heroTopKillsResult.rows.map(r => [r.hero, { kills: Number(r.kills), username: r.username }])
@@ -735,10 +713,12 @@ async function buildStats(): Promise<StatsPayload> {
       steamAvatar:       p.steamAvatar,
       gamesPlayed:       p.gamesPlayed,
       gamesWon:          p.gamesWon,
-      timesSold:         p.timesSold,
-      timesOffered:      p.timesOffered,
-      offersMade:        p.offersMade,
-      offersAccepted:    p.offersAccepted,
+      // Derived from offerStrength's own counters rather than a second tally
+      // over the same offer rows — see the comment where that loop used to be.
+      timesSold:         offerStrength.get(id)?.receivedAcceptedCount ?? 0,
+      timesOffered:      offerStrength.get(id)?.receivedCount         ?? 0,
+      offersMade:        offerStrength.get(id)?.madeCount             ?? 0,
+      offersAccepted:    offerStrength.get(id)?.madeAcceptedCount     ?? 0,
       offerStrengthReceived: offerStrength.get(id)?.received     ?? null,
       offerStrengthMade:     offerStrength.get(id)?.made         ?? null,
       offerStrengthAccepted: offerStrength.get(id)?.madeAccepted ?? null,
