@@ -40,9 +40,20 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
 
         {/* ── Card ─────────────────────────────────────────────────────────────
-             The crest artwork carries the coin logo now, so the old standalone
-             logo block that used to sit above the panel is gone. ────────────── */}
-        <div className="frame-ornate p-4">
+             frame-ornate gives the four corner brackets + gold edge; the
+             crest badge (this card's one hero flourish) carries the coin
+             logo, so there's no separate logo block above the card. ─────── */}
+        <div className="frame-ornate p-4 mt-10">
+          <span className="fo-corner fo-corner--tl" aria-hidden="true" />
+          <span className="fo-corner fo-corner--tr" aria-hidden="true" />
+          <span className="fo-corner fo-corner--bl" aria-hidden="true" />
+          <span className="fo-corner fo-corner--br" aria-hidden="true" />
+
+          <div className="frame-crest" aria-hidden="true">
+            <span className="frame-crest__burst" />
+            <img src="/Gold_symbol.webp" alt="" />
+          </div>
+
           <h1 className="font-barlow text-2xl font-bold text-dota-gold tracking-wide text-center mb-1">
             Sign In
           </h1>
