@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -48,20 +47,30 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-full py-12 px-4">
+    <div className="flex items-center justify-center min-h-full py-12 px-4 auth-ambient">
       <div className="w-full max-w-sm">
 
-        {/* ── Logo ─────────────────────────────────────────────────────────── */}
-        <div className="flex flex-col items-center mb-8 gap-3">
-          <Image src="/logo.png" alt="Defence of the Auctions" width={80} height={27} />
-          <h1 className="font-cinzel text-2xl font-bold text-dota-gold tracking-wide">
+        {/* ── Card ─────────────────────────────────────────────────────────────
+             Same frame-ornate treatment as /login — this and sign-in are the
+             two halves of one entrance, so they should read as the same
+             place rather than two different design systems. ─────────────── */}
+        <div className="frame-ornate pt-9 px-4 pb-4 mt-10">
+          <span className="fo-corner fo-corner--tl" aria-hidden="true" />
+          <span className="fo-corner fo-corner--tr" aria-hidden="true" />
+          <span className="fo-corner fo-corner--bl" aria-hidden="true" />
+          <span className="fo-corner fo-corner--br" aria-hidden="true" />
+
+          <div className="frame-crest" aria-hidden="true">
+            <span className="frame-crest__burst" />
+            <img src="/logo.png" alt="" />
+          </div>
+
+          <h1 className="font-barlow text-2xl font-bold text-dota-gold tracking-wide text-center mb-1">
             Create Account
           </h1>
-          <div className="divider-gold w-32" />
-        </div>
-
-        {/* ── Card ─────────────────────────────────────────────────────────── */}
-        <div className="panel p-8">
+          <p className="text-center text-sm text-dota-text-muted mb-5">
+            Join the auction and put your gold to work
+          </p>
           <form onSubmit={handleSubmit} className="space-y-5">
 
             <div className="space-y-1.5">

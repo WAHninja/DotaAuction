@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { broadcastEvent } from '@/lib/supabase-server';
+import { broadcastEventSafe } from '@/lib/supabase-server';
+import { offerRangeForGameIndex } from '@/lib/offer-range'
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 /* -----------------------------------------------------------------------
    Tier calculation
@@ -88,6 +90,14 @@ export async function POST(
   }
 
   const client = await db.connect();
+
+  // Whether the transaction has already been committed.
+  //
+  // The catch below used to roll back unconditionally, which meant any error
+  // raised *after* COMMIT issued a ROLLBACK against a transaction that no
+  // longer existed. Postgres warns and ignores it, so nothing was undone — but
+  // the request still returned 500 for work that had genuinely succeeded.
+  let committed = false;
 
   try {
     await client.query('BEGIN');
@@ -188,8 +198,11 @@ export async function POST(
     // Game 1:  min = 450,  max = 2500  (completedGames = 0)
     // Game 2:  min = 650,  max = 3000  (completedGames = 1)
     // Game N:  min = 450 + (N-1)*200,  max = 2500 + (N-1)*500
-    const minOfferAmount = 450 + completedGames * 200;
-    const maxOfferAmount = 2500 + completedGames * 500;
+    //
+    // The formula lives in lib/offer-range so the stats route can reconstruct
+    // the same range for historical offers. Keeping a second copy here would
+    // mean a change to the bounds silently corrupted every market-value figure.
+    const { min: minOfferAmount, max: maxOfferAmount } = offerRangeForGameIndex(completedGames);
 
     if (offer_amount < minOfferAmount || offer_amount > maxOfferAmount) {
       await client.query('ROLLBACK');
@@ -239,10 +252,12 @@ export async function POST(
     );
 
     await client.query('COMMIT');
+      committed = true;
+      invalidateStatsCache('offer submitted');
 
     const safeOffer = inserted[0];
 
-    await broadcastEvent(
+    await broadcastEventSafe(
       `match-${game.match_id}-offers`,
       'new-offer',
       safeOffer
@@ -251,7 +266,16 @@ export async function POST(
     return NextResponse.json({ ok: true, offer: safeOffer });
 
   } catch (err) {
-    await client.query('ROLLBACK');
+    // Only roll back work that is still open, and never let the rollback itself
+    // throw: if the connection dropped mid-transaction it will, and that would
+    // mask the original error with a misleading one.
+    if (!committed) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('[SUBMIT_OFFER_ERROR]_ROLLBACK_FAILED', rollbackErr);
+      }
+    }
     console.error('[SUBMIT_OFFER_ERROR]', err);
     return NextResponse.json({ error: 'Server error.' }, { status: 500 });
 

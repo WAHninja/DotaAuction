@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import db from '../../../lib/db';
 import { rateLimit, getIp } from '@/lib/rate-limit';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 // 5 registrations per hour per IP — generous enough for a friend setting up
 // their account, tight enough to prevent mass account creation.
@@ -55,6 +56,9 @@ export async function POST(req: Request) {
 
     const query = 'INSERT INTO users (username, pin, created_at) VALUES ($1, $2, NOW()) RETURNING id';
     const dbResult = await db.query(query, [cleanedUsername, hashedPin]);
+    // A new player belongs in the standings immediately, on zero games.
+    invalidateStatsCache('player registered');
+
     return NextResponse.json({ message: 'User registered successfully!', userId: dbResult.rows[0].id });
   } catch (error: any) {
     // Catch unique constraint violation on username (Postgres error code 23505)

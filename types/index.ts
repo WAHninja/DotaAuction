@@ -92,6 +92,12 @@ export type DashboardMatch = {
   team_a_usernames?: string[];
   team_1_usernames?: string[];
   games_count?: number;
+  /** When the match was created. Already selected by both dashboard queries —
+   *  it was simply never typed, so the cards could not show it. */
+  created_at?: string;
+  /** Status of the match's latest game. The one field that tells a player
+   *  whether anything is waiting on them. Ongoing matches only. */
+  status?: GameStatus;
 };
 
 export type MatchData = {
@@ -145,32 +151,222 @@ export type HistoryGame = {
 // Stats
 // ---------------------------------------------------------------------------
 
+/**
+ * The full /api/stats response, as the client sees it.
+ *
+ * The route has its own internal StatsPayload built from raw DB row types; this
+ * is the client-facing shape, composed of the display types already declared in
+ * this file. Declaring it here means every stats surface shares one definition
+ * instead of each re-listing the eight arrays with its own useState.
+ */
+export type StatsPayload = {
+  ratingModel:       RatingModel;
+  leagueTotals:      LeagueTotals;
+  leagueRecords:     LeagueRecords;
+  players:           PlayerStats[];
+  teammateSynergy:   TeammateSynergy[];
+  winStreaks:        WinStreak[];
+  headToHead:        HeadToHead[];
+  heroStats:         HeroStat[];
+  playerDotaStats:   PlayerDotaStat[];
+};
+
+/**
+ * League-wide totals — facts about the league rather than about any player.
+ *
+ * Counted from the matches and games tables directly. Summing per-player
+ * figures would count each game once per participant.
+ */
+export type LeagueTotals = {
+  matchesCompleted: number;
+  gamesPlayed: number;
+  /** Matches ended by last player standing. */
+  outrightWins: number;
+  /** Matches ended on the gold threshold. */
+  goldWins: number;
+};
+
+/**
+ * A single notable match, rather than an aggregate.
+ *
+ * `player` is null for records that belong to a match rather than a person —
+ * longest match has no owner. `detail` carries whatever secondary figure the
+ * record needs, currently the number of opponents beaten.
+ */
+export type LeagueRecord = {
+  matchId: number;
+  value: number;
+  player: string | null;
+  detail: number | null;
+};
+
+/** The league's notable extremes. Any may be null before enough has been played. */
+export type LeagueRecords = {
+  shortestMatch: LeagueRecord | null;
+  longestMatch: LeagueRecord | null;
+  /** Least gold held while winning outright — only last_standing wins qualify,
+   *  since a gold win is by definition at the threshold. */
+  leanestOutrightWin: LeagueRecord | null;
+  /** Fewest games taken to reach 100,000 gold. */
+  fastestGoldWin: LeagueRecord | null;
+  /** Most opponents beaten while alone on a team — best result per player,
+   *  highest first. One row each so a single prolific player cannot fill the
+   *  card with their own near-identical feats. */
+  biggestUnderdogWins: LeagueRecord[];
+};
+
+/** One point on a rating trajectory. */
+export type RatingPoint = {
+  gameId: number;
+  /** Rating immediately after this game. */
+  rating: number;
+  /** Movement caused by this game. */
+  delta: number;
+};
+
+/**
+ * How the rating model is configured, and how well it actually predicts.
+ *
+ * Surfaced rather than hidden because the rating makes a claim — that it knows
+ * roughly who should win — and that claim is checkable. Accuracy and log loss
+ * are measured on a blind chronological pass, so each game is predicted before
+ * its result is known.
+ */
+export type RatingModel = {
+  /** Fitted weight on gold advantage. 0 means gold did not improve prediction
+   *  and has been switched off. */
+  goldWeight: number;
+  accuracy: number;
+  /** Mean negative log likelihood. 0.693 is a coin flip. */
+  logLoss: number;
+  logLossWithoutGold: number;
+  gamesScored: number;
+};
+
+/** The signed-in user, as returned by /api/me under the `user` key. */
+export type Me = {
+  id:           number;
+  username:     string;
+  steam_avatar?: string | null;
+};
+
 export type PlayerStats = {
   username: string;
+  /** Matches won, the whole match rather than individual games, by any
+   *  method — last player standing or reaching 100,000 gold. See
+   *  matchesWonOutright/matchesWonGold to split by which. */
+  matchesWon: number;
+  /** Of matchesWon, how many by being the last player left on their team. */
+  matchesWonOutright: number;
+  /** Of matchesWon, how many by reaching the 100,000 gold threshold instead
+   *  of outlasting everyone. */
+  matchesWonGold: number;
+  /** Matches taken part in, as context for the wins figure. */
+  matchesPlayed: number;
+  /** Steam avatar URL, null when no Steam profile is linked. Supplied by
+   *  /api/stats so any stats surface can render a real portrait; PlayerAvatar
+   *  falls back to a username-hashed initial when this is null. */
+  steamAvatar: string | null;
+  /** Market value: mean position of offers *received* within the range
+   *  permitted at the time, 0–1 — how expensively teammates price this player
+   *  when selling them. Comparable across matches of any length, unlike a raw
+   *  offer amount. null when this player has never been offered. */
+  offerStrengthReceived: number | null;
+  /** Asking price: mean position of offers this player *sent*, 0–1 — how
+   *  expensively they price their own teammates. The sender of an offer is the
+   *  seller, never a buyer. null when they have never sent one. */
+  offerStrengthMade: number | null;
+  /** Mean position of this player's own offers that were accepted, 0–1 — the
+   *  price the team actually backed, versus offerStrengthMade which includes
+   *  offers that were turned down. null when none of their offers have been
+   *  accepted. */
+  offerStrengthAccepted: number | null;
+  /** Discretionary offers where this player was an available target — their
+   *  team had three or more members, so the offerer had a real choice. Offers
+   *  from two-player teams are excluded: with one legal target they record a
+   *  rule being followed, not a judgement. */
+  selectionOpportunities: number;
+  /** How many of those offers named them. */
+  selectionCount: number;
+  /** How many selections chance alone would have produced, given the team sizes
+   *  involved. The baseline the actual count should be read against: on a
+   *  three-player side the offerer picks between two teammates, so half is
+   *  unremarkable; on a five-player side a quarter is. */
+  selectionExpected: number;
+  /**
+   * The same opportunities split by whether this player was among the richer or
+   * poorer teammates who could have been offered.
+   *
+   * Controls for the confound in the headline figure. Selling a rich player
+   * hands their bank to the opposition, so being passed over may mean "too
+   * expensive to give away" rather than "not rated". If the rate holds across
+   * both buckets the headline means what it says; if it collapses when they are
+   * the expensive option, gold is doing the explaining.
+   */
+  selectionRichOpportunities: number;
+  selectionRichCount: number;
+  selectionPoorOpportunities: number;
+  selectionPoorCount: number;
+  /** Selections against what chance alone would produce. 1.0 = picked as often
+   *  as random choice, 2.0 = twice as often. null when never in a
+   *  discretionary situation, which is distinct from never being picked. */
+  selectionIndex: number | null;
+  /** Sales followed by a decided next game — how many times this player was
+   *  traded mid-match and the outcome of that trade is known. Excludes sales
+   *  that ended the match outright (no next game exists) and sales whose next
+   *  game hasn't finished yet. */
+  impactOpportunities: number;
+  /** How many of those `impactOpportunities` the player's new team — the team
+   *  that just bought them — went on to win. The first real test of what a
+   *  trade was worth. */
+  impactWins: number;
+  /** Last 10 results, oldest first, so the rightmost entry is the most recent
+   *  game. Raw results rather than a recent win rate: the shape matters, and a
+   *  percentage over ten games would imply precision the sample cannot carry. */
+  recentForm: ('W' | 'L')[];
+  /** Elo-style rating, starting at 1500. Built on team strength rather than a
+   *  team average, so being outnumbered is priced in: beating longer odds is
+   *  worth more, losing against them costs less. */
+  rating: number;
+  /** Games the rating is built from. */
+  ratedGames: number;
+  /** Rating deviation — roughly a one-sigma band. A player at 1500 ±180 and one
+   *  at 1500 ±55 are not making the same claim. */
+  ratingRd: number;
+  /** Still settling, so the rating should not be read closely. Driven by
+   *  deviation rather than a games count, so a long absence makes an
+   *  established player provisional again. */
+  ratingProvisional: boolean;
+  /**
+   * Rating after each of this player's most recent games, oldest first.
+   *
+   * Real history, not a reconstruction: the replay is a single chronological
+   * pass, so every point is the rating that player actually held at that
+   * moment, calculated without knowledge of anything that came after.
+   *
+   * Capped to the most recent games to keep the payload small — the dashboard
+   * fetches this payload and displays none of it. The first entry is therefore
+   * not necessarily their first ever game; `ratedGames` holds the true total,
+   * and the chart uses it to label the axis with real game numbers.
+   */
+  ratingHistory: RatingPoint[];
+  /** Games entered as the only player on their side. A single-player win ends
+   *  the match immediately, so these are the only games that can be won
+   *  outright — and the hardest, since being alone means being outnumbered. */
+  lastStandOpportunities: number;
+  /** How many of those they converted into an outright match win. */
+  lastStandWins: number;
+  /** Mean opposing team size across those games. null when never in that
+   *  position. Context for the conversion rate: alone against two is not the
+   *  same proposition as alone against five. */
+  lastStandAvgOpponents: number | null;
   gamesPlayed: number;
   gamesWon: number;
   timesOffered: number;
   timesSold: number;
   offersMade: number;
   offersAccepted: number;
-  averageOfferValue: number;
-  netGold: number;
 };
-
-export type TeamCombo = {
-  combo: string;
-  wins: number;
-  gamesPlayed: number;
-  winRate: number;
-};
-
-export type SortKey =
-  | 'username'
-  | 'gamesWinRate'
-  | 'offerAcceptRate'
-  | 'averageOfferValue'
-  | 'timesOffered'
-  | 'timesSold';
 
 export type AcquisitionImpact = {
   username: string;
@@ -185,6 +381,24 @@ export type WinStreak = {
   matchId: number;
 };
 
+/**
+ * A pair of players and how they fare on the same side — the companion to
+ * HeadToHead, which records them on opposite sides.
+ *
+ * Stored with an arbitrary A/B orientation, but unlike head-to-head the outcome
+ * is shared, so there is no per-side win column to disambiguate.
+ */
+export type TeammateSynergy = {
+  playerAId: number;
+  playerA: string;
+  playerBId: number;
+  playerB: string;
+  gamesTogether: number;
+  winsTogether: number;
+  /** Percentage to one decimal, computed server-side. */
+  winRate: number;
+};
+
 export type HeadToHead = {
   playerAId: number;
   playerA: string;
@@ -196,13 +410,6 @@ export type HeadToHead = {
 };
 
 // Win type breakdown for a player across all their match wins
-export type WinTypeStats = {
-  username: string;
-  lastStandingWins: number;
-  goldThresholdWins: number;
-  totalWins: number;
-};
-
 /**
  * Aggregated stats for a single hero across all games in dota_game_stats.
  * winRate is null when picks < MIN_PICKS_FOR_RATE (3) to avoid misleading

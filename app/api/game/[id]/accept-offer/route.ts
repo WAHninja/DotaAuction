@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
-import { broadcastEvent } from '@/lib/supabase-server';
+import { broadcastEventSafe } from '@/lib/supabase-server';
 import { checkGoldThresholdWin } from '@/lib/gold-win';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 export async function POST(
   req: NextRequest,
@@ -34,6 +35,14 @@ export async function POST(
   }
 
   const client = await db.connect();
+
+  // Whether the transaction has already been committed.
+  //
+  // The catch below used to roll back unconditionally, which meant any error
+  // raised *after* COMMIT issued a ROLLBACK against a transaction that no
+  // longer existed. Postgres warns and ignores it, so nothing was undone — but
+  // the request still returned 500 for work that had genuinely succeeded.
+  let committed = false;
 
   try {
     await client.query('BEGIN');
@@ -204,8 +213,10 @@ export async function POST(
       );
 
       await client.query('COMMIT');
+      committed = true;
+      invalidateStatsCache('offer accepted');
 
-      await broadcastEvent(
+      await broadcastEventSafe(
         `match-${game.match_id}-offers`,
         'offer-accepted',
         {
@@ -215,7 +226,7 @@ export async function POST(
         }
       );
 
-      await broadcastEvent(
+      await broadcastEventSafe(
         `match-${game.match_id}`,
         'game-winner-selected',
         {
@@ -236,9 +247,11 @@ export async function POST(
     );
 
     await client.query('COMMIT');
+      committed = true;
+      invalidateStatsCache('offer accepted');
 
     // ---- Notify clients (outside transaction) ------------------------------
-    await broadcastEvent(
+    await broadcastEventSafe(
       `match-${game.match_id}-offers`,
       'offer-accepted',
       {
@@ -251,7 +264,16 @@ export async function POST(
     return NextResponse.json({ ok: true });
 
   } catch (err) {
-    await client.query('ROLLBACK');
+    // Only roll back work that is still open, and never let the rollback itself
+    // throw: if the connection dropped mid-transaction it will, and that would
+    // mask the original error with a misleading one.
+    if (!committed) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('[ACCEPT_OFFER_ERROR]_ROLLBACK_FAILED', rollbackErr);
+      }
+    }
     console.error('[ACCEPT_OFFER_ERROR]', err);
     return NextResponse.json({ error: 'Server error.' }, { status: 500 });
 

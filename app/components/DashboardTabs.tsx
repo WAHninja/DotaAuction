@@ -2,20 +2,19 @@
 
 import { useContext, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, PlayCircle, Swords, Trophy } from 'lucide-react';
 import { UserContext } from '@/app/context/UserContext';
 
-const StatsTab = dynamic(() => import('./StatsTab'), { ssr: false });
 
-import type { DashboardMatch as Match } from '@/types';
+import type { DashboardMatch as Match, GameStatus } from '@/types';
 
 // =============================================================================
 // Types
 // =============================================================================
 
-type Tab = 'ongoing' | 'completed' | 'stats';
+// 'stats' retired — stats now live at /stats, reachable from the header nav.
+type Tab = 'ongoing' | 'completed';
 
 type DashboardTabsProps = {
   ongoingMatches: Match[];
@@ -29,7 +28,6 @@ type DashboardTabsProps = {
 const TAB_LABELS: Record<Tab, string> = {
   ongoing:   'Ongoing',
   completed: 'Completed',
-  stats:     'Stats',
 };
 
 // =============================================================================
@@ -130,6 +128,31 @@ function TeamRoster({
 }
 
 // ── MatchCard ─────────────────────────────────────────────────────────────────
+/** "12 Jun" — enough to place a match without crowding the card. */
+function shortDate(iso?: string): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+/**
+ * How the latest game is progressing.
+ *
+ * This is the card's most useful line and it was previously not shown at all,
+ * despite `g.status` being selected by the dashboard query. "Auction open" is
+ * the state where a player has something to do; without it the dashboard lists
+ * matches but never says which one is waiting on you.
+ */
+function statusLabel(status?: GameStatus): { text: string; tone: string } | null {
+  switch (status) {
+    case 'auction pending':
+      return { text: 'Auction open', tone: 'text-dota-gold' };
+    case 'in progress':
+      return { text: 'Game in progress', tone: 'text-dota-radiant-light' };
+    default:
+      return null;
+  }
+}
+
 function MatchCard({
   match,
   isCompleted,
@@ -137,19 +160,33 @@ function MatchCard({
   match: Match;
   isCompleted: boolean;
 }) {
+  const played = shortDate(match.created_at);
+  const status = isCompleted ? null : statusLabel(match.status);
   return (
     <div className={`panel p-4 flex flex-col gap-3 hover:border-dota-border-bright transition-colors ${
       !isCompleted ? 'border-dota-gold/30' : ''
     }`}>
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-0.5">
-          <p className="font-barlow font-bold text-dota-text tracking-wide">
+          <p className="font-barlow font-bold text-dota-text tracking-wide flex items-center gap-2">
             Match #{match.id}
+            {played && (
+              <span className="font-normal text-xs text-dota-text-dim tabular-nums">
+                {played}
+              </span>
+            )}
           </p>
           {isCompleted ? (
             <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-gold">
               <CheckCircle className="w-3.5 h-3.5" />
               Winner: {match.winner_username || 'Not recorded'}
+              {/* How it ended, which the card already had in win_type and never
+                  used. Outright and gold are very different stories. */}
+              {match.win_type && (
+                <span className="text-dota-text-dim font-normal">
+                  · {match.win_type === 'gold_threshold' ? 'on gold' : 'outright'}
+                </span>
+              )}
             </span>
           ) : (
             <span className="flex items-center gap-1.5 font-barlow text-xs text-dota-text-muted">
@@ -158,6 +195,9 @@ function MatchCard({
                 ? <span>Game <strong className="text-dota-text">#{match.games_count}</strong></span>
                 : <span className="text-dota-text-dim">—</span>
               }
+              {status && (
+                <span className={`font-semibold ${status.tone}`}>· {status.text}</span>
+              )}
             </span>
           )}
         </div>
@@ -269,7 +309,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   const router = useRouter();
   const { user } = useContext(UserContext);
 
-  const [activeTab, setActiveTab]           = useState<Tab>('stats');
+  const [activeTab, setActiveTab]           = useState<Tab>('ongoing');
   const [ongoingVisible, setOngoingVisible] = useState(6);
   const [completedVisible, setCompletedVisible] = useState(6);
   const [myMatchesOnly, setMyMatchesOnly]   = useState(true);
@@ -302,10 +342,11 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
   // ── Tab switching ────────────────────────────────────────────────────────────
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    if (tab !== 'stats') router.refresh();
+    router.refresh();
   };
 
-  const showFilter = activeTab === 'ongoing' || activeTab === 'completed';
+  // Both remaining tabs are match lists, so the filter always applies.
+  const showFilter = true;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -313,7 +354,7 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
 
       {/* Tab bar — toggle lives here so it doesn't add a separate row */}
       <div className="relative flex justify-center gap-3">
-        {(['stats', 'ongoing', 'completed'] as const).map(tab => (
+        {(['ongoing', 'completed'] as const).map(tab => (
           <TabButton
             key={tab}
             tab={tab}
@@ -329,7 +370,6 @@ export default function DashboardTabs({ ongoingMatches, completedMatches }: Dash
       <div className="divider" />
 
       {/* Tab content */}
-      {activeTab === 'stats' && <StatsTab />}
       {activeTab === 'ongoing' && (
         <MatchGrid
           matches={filteredOngoing}

@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server'
 import db from '@/lib/db'
 import { getSession } from '@/app/session'
+import { cachedStats, rebuildStats } from '@/lib/stats-cache'
+import { computeOfferStrength, buildGameIndex } from '@/lib/stats/compute/offer-strength';
+import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
+import { computeSynergy } from '@/lib/stats/compute/synergy';
+import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
+import { computeLastStands } from '@/lib/stats/compute/last-stand';
+import { computeSaleImpact } from '@/lib/stats/compute/impact';
+import { computeLeagueRecords, type LeagueRecord } from '@/lib/stats/compute/records';
+import { computeRatings, STARTING_RATING } from '@/lib/stats/compute/rating';
+import { buildGoldTimeline } from '@/lib/stats/compute/gold-timeline';
+import { evaluateModel } from '@/lib/stats/compute/rating-eval';
+import { MIN_PICKS_FOR_RATE } from '@/lib/stats/constants';
 
 // ---------------------------------------------------------------------------
 // Module-level cache
@@ -11,49 +23,167 @@ import { getSession } from '@/app/session'
 // simultaneously.
 // ---------------------------------------------------------------------------
 
-const MIN_PICKS_FOR_RATE = 3;
+// MIN_PICKS_FOR_RATE now comes from lib/stats/constants — it was declared
+// here as well, so raising one copy would have silently disagreed with the
+// client and shown a hero rate the table then hid, or vice versa.
 
 type StatsPayload = {
+  ratingModel: RatingModelRow;
+  leagueTotals: LeagueTotalsRow;
+  leagueRecords: LeagueRecordsRow;
   players: PlayerRow[];
-  topWinningCombos: TeamComboRow[];
-  acquisitionImpact: AcquisitionRow[];
+  teammateSynergy: SynergyRow[];
   winStreaks: WinStreakRow[];
   headToHead: HeadToHeadRow[];
-  winTypeStats: WinTypeStatsRow[];
   heroStats: HeroStatRow[];
   playerDotaStats: PlayerDotaStatRow[];
 };
 
-type StatsCache = {
-  data: StatsPayload;
-  cachedAt: number;
+/**
+ * League-wide totals. Match-level rather than player-level: these describe the
+ * league itself and belong to nobody, which is why they are a single object
+ * rather than another per-player array.
+ *
+ * Counted from `matches`, not by summing player rows. Summing each player's
+ * gamesPlayed counts every game once per participant — a five-a-side game would
+ * register as ten — which is why the previous vitals strip could not show a
+ * games total honestly and omitted it.
+ */
+type LeagueTotalsRow = {
+  matchesCompleted: number;
+  gamesPlayed: number;
+  /** Matches ended by being the last player standing. */
+  outrightWins: number;
+  /** Matches ended by a player crossing the gold threshold. */
+  goldWins: number;
+};
+
+/** A pair of players and how they fare on the same side. */
+type SynergyRow = {
+  playerAId: number;
+  playerA: string;
+  playerBId: number;
+  playerB: string;
+  gamesTogether: number;
+  winsTogether: number;
+  /** Percentage to one decimal. Computed here so every consumer agrees. */
+  winRate: number;
+};
+
+/** A league record with its player resolved to a username for display. */
+type NamedRecordRow = {
+  matchId: number;
+  value: number;
+  player: string | null;
+  detail: number | null;
+};
+
+type LeagueRecordsRow = {
+  shortestMatch: NamedRecordRow | null;
+  longestMatch: NamedRecordRow | null;
+  leanestOutrightWin: NamedRecordRow | null;
+  fastestGoldWin: NamedRecordRow | null;
+  biggestUnderdogWins: NamedRecordRow[];
+};
+
+/** How the rating model is currently configured and how well it predicts. */
+type RatingModelRow = {
+  /** Fitted gold weight, 0 when gold did not earn its place. */
+  goldWeight: number;
+  /** Share of games where the model's favourite won, on a blind pass. */
+  accuracy: number;
+  /** Mean negative log likelihood. 0.693 is a coin flip; lower is better. */
+  logLoss: number;
+  /** The same figure with gold disabled, so the difference is visible. */
+  logLossWithoutGold: number;
+  gamesScored: number;
 };
 
 type PlayerRow = {
   username: string;
+  /** Matches (not games) this player has won outright. */
+  matchesWon: number;
+  /** Of those, how many by being the last player left on their team. */
+  matchesWonOutright: number;
+  /** Of those, how many by reaching the 100,000 gold threshold instead. */
+  matchesWonGold: number;
+  /** Matches they took part in — context for the wins figure. */
+  matchesPlayed: number;
+  /** Steam avatar URL, null when the account has no Steam profile linked.
+   *  Included so the standings table and player pages can show real portraits
+   *  rather than falling back to initials for everyone but the signed-in user. */
+  steamAvatar: string | null;
   gamesPlayed: number;
   gamesWon: number;
   timesSold: number;
   timesOffered: number;
   offersMade: number;
   offersAccepted: number;
-  averageOfferValue: number;
-  netGold: number;
+  /** Mean position of offers received within the range permitted at the time,
+   *  0–1. The market's valuation of this player, comparable across matches of
+   *  any length. null when never offered. */
+  offerStrengthReceived: number | null;
+  /** Mean position of offers this player sent, 0–1 — their asking price when
+   *  selling a teammate. Not a bid to acquire anyone: the sender of an offer is
+   *  always the seller. null when they have never sent one. */
+  offerStrengthMade: number | null;
+  /** Mean position of this player's own offers that were accepted, 0–1 — the
+   *  price the team actually backed, versus offerStrengthMade which includes
+   *  offers that were turned down. null when none of their offers have been
+   *  accepted. */
+  offerStrengthAccepted: number | null;
+  /** Discretionary offers where this player was an available target — that is,
+   *  their team had three or more members so a real choice existed. */
+  selectionOpportunities: number;
+  /** How many of those offers named them. */
+  selectionCount: number;
+  /** Opportunities and selections split by whether they were the richer or the
+   *  poorer option — the control for "too expensive to give away". */
+  selectionRichOpportunities: number;
+  selectionRichCount: number;
+  selectionPoorOpportunities: number;
+  selectionPoorCount: number;
+  /** How many selections chance alone would have produced, given the team
+   *  sizes involved. Lets the UI compare two percentages rather than present
+   *  an abstract ratio. */
+  selectionExpected: number;
+  /** Selections against what chance alone would produce. 1.0 = as often as
+   *  random, 2.0 = twice as often. null when never in a discretionary spot. */
+  selectionIndex: number | null;
+  /** Sales followed by a decided next game — how many times this player was
+   *  traded mid-match and that trade's outcome is known. Excludes sales that
+   *  ended the match outright and sales whose next game hasn't finished. */
+  impactOpportunities: number;
+  /** How many of those the player's new team went on to win. */
+  impactWins: number;
+  /** Last 10 results, oldest first — the rightmost entry is the latest game. */
+  recentForm: FormResult[];
+  /** Elo-style rating. Accounts for team size, so beating longer odds is worth
+   *  more. Everyone starts at STARTING_RATING. */
+  rating: number;
+  /** Games the rating is built from — how much to trust it. */
+  ratedGames: number;
+  /** Rating deviation: roughly a one-sigma band around the rating. Widens with
+   *  absence, narrows with informative games. */
+  ratingRd: number;
+  /** True while the rating is still settling. Driven by deviation, not a games
+   *  count, so a returning player is unproven again. */
+  ratingProvisional: boolean;
+  /** Rating after each game this player took part in, oldest first. */
+  ratingHistory: { gameId: number; rating: number; delta: number }[];
+  /** Games entered as the only player on their side — a chance to win the
+   *  whole match outright, since a single-player win ends it. */
+  lastStandOpportunities: number;
+  /** How many of those they converted. */
+  lastStandWins: number;
+  /** Mean opposing team size across those games — how outnumbered they were.
+   *  null when they have never been in that position. */
+  lastStandAvgOpponents: number | null;
+  /** Retained for now but no longer surfaced: a lifetime sum that grows with
+   *  games played, in a currency that resets every match. */
 };
 
-type TeamComboRow = {
-  combo: string;
-  wins: number;
-  gamesPlayed: number;
-  winRate: number;
-};
 
-type AcquisitionRow = {
-  username: string;
-  totalAcquisitions: number;
-  winsAfterAcquisition: number;
-  winRate: number;
-};
 
 type WinStreakRow = {
   username: string;
@@ -71,12 +201,7 @@ type HeadToHeadRow = {
   playerBWins: number;
 };
 
-type WinTypeStatsRow = {
-  username: string;
-  lastStandingWins: number;
-  goldThresholdWins: number;
-  totalWins: number;
-};
+
 
 type HeroStatRow = {
   hero: string;
@@ -102,8 +227,6 @@ type PlayerDotaStatRow = {
   topKillsHero: string | null;
 };
 
-const CACHE_TTL_MS = 60 * 1_000; // 60 seconds
-let statsCache: StatsCache | null = null;
 
 export async function GET() {
   const session = await getSession();
@@ -111,22 +234,59 @@ export async function GET() {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  // Serve from cache if still fresh
-  if (statsCache && Date.now() - statsCache.cachedAt < CACHE_TTL_MS) {
-    return NextResponse.json(statsCache.data);
+  const cached = cachedStats();
+  if (cached?.fresh) {
+    return NextResponse.json(cached.data);
   }
 
+  // Stale but present: serve it immediately and refresh behind the request.
+  // Stats describe finished games, so a reader seeing figures a minute old is
+  // no worse off than the TTL already allowed — and nobody waits on a rebuild
+  // that someone else's page load could have absorbed.
+  //
+  // The catch is required, not defensive: an unhandled rejection from a
+  // background promise takes the whole Node process down.
+  if (cached) {
+    void rebuildStats(buildStats).catch(err =>
+      console.error('[STATS_BACKGROUND_REBUILD]', err));
+    return NextResponse.json(cached.data);
+  }
+
+  // Nothing cached at all — the first caller after a deploy or restart has to
+  // wait, but only one of them does the work.
   try {
+    const data = await rebuildStats(buildStats);
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('[STATS_ERROR]', error);
+    return NextResponse.json(
+      { error: 'Failed to build stats' },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * Builds the whole payload from scratch.
+ *
+ * Extracted from the handler so the cache can hold the promise. It also makes
+ * the ordering of the fourteen interdependent computations below explicit: they
+ * now live in one function with a single return, rather than being interleaved
+ * with request handling where a binding could be declared after its use and
+ * only fail at runtime.
+ */
+async function buildStats(): Promise<StatsPayload> {
     const [
       usersResult,
       matchPlayersResult,
+      matchTotalsResult,
+      matchOutcomesResult,
+      goldChangesResult,
       gamesResult,
       offersResult,
-      netGoldResult,
-      acquisitionResult,
+      allGamesResult,
       winStreakResult,
       headToHeadResult,
-      winTypeResult,
       heroStatsResult,
       playerDotaStatsResult,
       heroTopKillsResult,
@@ -134,88 +294,115 @@ export async function GET() {
     ] = await Promise.all([
 
       // 1. All users — builds the base playersMap
-      db.query<{ id: number; username: string }>(
-        `SELECT id, username FROM users`
+      db.query<{ id: number; username: string; steam_avatar: string | null }>(
+        `SELECT id, username, steam_avatar FROM users`
       ),
 
       // 2. All match participation rows — for matchesPlayed count
-      db.query<{ match_id: number; user_id: number }>(
-        `SELECT match_id, user_id FROM match_players`
+      db.query<{ match_id: number; user_id: number; gold: number }>(
+        `SELECT match_id, user_id, gold FROM match_players`
       ),
 
-      // 3. All finished games — for win/loss counts and team combo tracking
+      // 2b. Match-level totals for the league vitals strip.
+      //
+      // COUNT() returns bigint, which node-postgres hands back as a string to
+      // avoid precision loss; ::int narrows to int4 so these arrive as numbers
+      // and do not need parsing at the call site.
       db.query<{
-        id: number;
-        team_1_members: number[];
-        team_a_members: number[];
-        winning_team: 'team_1' | 'team_a' | null;
+        matches_completed: number;
+        last_standing_wins: number;
+        gold_threshold_wins: number;
       }>(
-        `SELECT id, team_1_members, team_a_members, winning_team
-         FROM games
+        `SELECT
+           COUNT(*)::int                                          AS matches_completed,
+           COUNT(*) FILTER (WHERE win_type = 'last_standing')::int  AS last_standing_wins,
+           COUNT(*) FILTER (WHERE win_type = 'gold_threshold')::int AS gold_threshold_wins
+         FROM matches
          WHERE status = 'finished'`
       ),
 
-      // 4. All offers — for offer/sold counts and average bid value
+      // 2c. Per-match outcomes, for the league records. The aggregate above
+      // counts them; this needs the individual winner and win type.
       db.query<{
+        id: number;
+        winner_id: number | null;
+        win_type: 'last_standing' | 'gold_threshold' | null;
+      }>(
+        `SELECT id, winner_id, win_type FROM matches WHERE status = 'finished'`
+      ),
+
+      // 2d. Every gold movement, for reconstructing what each player held
+      // going into each game. No balance is stored per game, but every change
+      // is logged — wins, penalties and accepted trades alike.
+      db.query<{ game_id: number; player_id: number; gold_change: number }>(
+        // Decided games, matching the main games query. A game's gold is
+        // settled once it has a winner; waiting for 'finished' would leave the
+        // newest game of a live match without a reconstructed starting balance.
+        `SELECT gps.game_id, gps.player_id, gps.gold_change
+         FROM game_player_stats gps
+         JOIN games g ON g.id = gps.game_id
+         WHERE g.winning_team IS NOT NULL`
+      ),
+
+      // 3. All finished games — for win/loss counts and team combo tracking
+      // match_id is needed to work out each game's position within its match,
+      // which is what makes a historical offer amount interpretable.
+      //
+      // Decided games, not finished ones. A game's result is set the moment a
+      // winner is picked; it then sits in 'auction pending' while the winning
+      // team decides who to sell, only becoming 'finished' when that offer is
+      // accepted. Filtering on status = 'finished' therefore dropped the most
+      // recent game of every match with a live auction — which is why a player
+      // who had just lost still showed that loss missing from their form, and
+      // why game counts and rating history ran one game behind mid-session.
+      //
+      // Every consumer of these rows already skips a null winning_team and
+      // treats the rest as decided, so keying on the winner is both the correct
+      // condition and the one they were all assuming.
+      //
+      // finished_at is included alongside id: a game's id reflects when it was
+      // *created*, not when it was decided, and those can diverge across match
+      // boundaries. A game can sit unplayed for a long time — waiting on who's
+      // available — while a game created afterwards, in a different match, gets
+      // played and finished first. Any consumer that treats id order as
+      // chronological order (recent form, rating history) needs finished_at to
+      // sort by instead; id is kept only as the tiebreak for the legacy rows
+      // that predate this column.
+      db.query<{
+        id: number;
+        match_id: number;
+        team_1_members: number[];
+        team_a_members: number[];
+        winning_team: 'team_1' | 'team_a' | null;
+        finished_at: string | null;
+      }>(
+        `SELECT id, match_id, team_1_members, team_a_members, winning_team, finished_at
+         FROM games
+         WHERE winning_team IS NOT NULL`
+      ),
+
+      // 4. All offers — for offer/sold counts and offer strength
+      // game_id ties an offer to the game it was made in, and so to the offer
+      // range that applied at the time.
+      db.query<{
+        game_id: number;
         from_player_id: number;
         target_player_id: number;
         offer_amount: number;
         status: string;
       }>(
-        `SELECT from_player_id, target_player_id, offer_amount, status
+        `SELECT game_id, from_player_id, target_player_id, offer_amount, status
          FROM offers`
       ),
 
-      // 5. Net gold per player — sum of all gold_change entries
-      db.query<{ player_id: number; net_gold: string }>(
-        `SELECT player_id, SUM(gold_change) AS net_gold
-         FROM game_player_stats
-         GROUP BY player_id`
+      // 4b. Every game's id and match_id, regardless of status — for finding
+      // what game immediately followed a sale. computeSaleImpact needs true
+      // id-adjacency within a match, which an undecided game must be visible
+      // for even though it has no winner yet; the decided-only query above
+      // (3) would silently skip it and misidentify the sale's real successor.
+      db.query<{ id: number; match_id: number }>(
+        `SELECT id, match_id FROM games`
       ),
-
-      // 6. Acquisition impact CTE
-      db.query<{
-        username: string;
-        total_acquisitions: string;
-        wins_after_acquisition: string;
-        win_rate: string;
-      }>(`
-        WITH acquisition_stats AS (
-          SELECT
-            o.target_player_id,
-            u.username,
-            COUNT(*)                                                    AS total_acquisitions,
-            SUM(CASE
-              WHEN prev_game.team_1_members @> ARRAY[o.target_player_id]
-                   AND next_game.winning_team = 'team_a' THEN 1
-              WHEN prev_game.team_a_members @> ARRAY[o.target_player_id]
-                   AND next_game.winning_team = 'team_1' THEN 1
-              ELSE 0
-            END)                                                        AS wins_after_acquisition
-          FROM offers o
-          JOIN games prev_game ON prev_game.id = o.game_id
-          JOIN users u         ON u.id          = o.target_player_id
-          JOIN LATERAL (
-            SELECT *
-            FROM   games g2
-            WHERE  g2.match_id = prev_game.match_id
-              AND  g2.id       > prev_game.id
-              AND  g2.status   = 'finished'
-            ORDER BY g2.id ASC
-            LIMIT 1
-          ) next_game ON true
-          WHERE o.status = 'accepted'
-          GROUP BY o.target_player_id, u.username
-          HAVING COUNT(*) >= 2
-        )
-        SELECT
-          username,
-          total_acquisitions,
-          wins_after_acquisition,
-          ROUND(wins_after_acquisition::numeric / total_acquisitions * 100, 1) AS win_rate
-        FROM acquisition_stats
-        ORDER BY win_rate DESC, total_acquisitions DESC
-      `),
 
       // 7. Win streaks CTE
       db.query<{
@@ -243,7 +430,8 @@ export async function GET() {
           FROM match_players mp
           JOIN users u ON u.id       = mp.user_id
           JOIN games  g ON g.match_id = mp.match_id
-          WHERE g.status = 'finished'
+          -- Decided games, matching the main games query above.
+          WHERE g.winning_team IS NOT NULL
             AND (
               g.team_1_members @> ARRAY[mp.user_id]
               OR g.team_a_members @> ARRAY[mp.user_id]
@@ -317,26 +505,6 @@ export async function GET() {
         JOIN   users ub ON ub.id = player_b_id
         GROUP  BY player_a_id, ua.username, player_b_id, ub.username
         ORDER  BY total_games DESC
-      `),
-
-      // 9. Win type breakdown — how each player's match wins were achieved.
-      // Only players with at least one match win are included.
-      db.query<{
-        username: string;
-        last_standing_wins: string;
-        gold_threshold_wins: string;
-        total_wins: string;
-      }>(`
-        SELECT
-          u.username,
-          COUNT(*) FILTER (WHERE m.win_type = 'last_standing')  AS last_standing_wins,
-          COUNT(*) FILTER (WHERE m.win_type = 'gold_threshold') AS gold_threshold_wins,
-          COUNT(*)                                               AS total_wins
-        FROM matches m
-        JOIN users u ON u.id = m.winner_id
-        WHERE m.winner_id IS NOT NULL
-        GROUP BY u.id, u.username
-        ORDER BY total_wins DESC, u.username ASC
       `),
 
       // 10. Hero stats — aggregated from dota_game_stats, joined to games to
@@ -439,31 +607,19 @@ export async function GET() {
 
     const playersMap = new Map<number, {
       username: string;
+      steamAvatar: string | null;
       matchesPlayed: Set<number>;
       gamesPlayed: number;
       gamesWon: number;
-      timesOffered: number;
-      timesSold: number;
-      offersMade: number;
-      offersAccepted: number;
-      totalOfferValueAsTarget: number;
-      offerCountAsTarget: number;
-      netGold: number;
     }>();
 
     for (const user of usersResult.rows) {
       playersMap.set(user.id, {
         username:                user.username,
+        steamAvatar:             user.steam_avatar ?? null,
         matchesPlayed:           new Set<number>(),
         gamesPlayed:             0,
         gamesWon:                0,
-        timesOffered:            0,
-        timesSold:               0,
-        offersMade:              0,
-        offersAccepted:          0,
-        totalOfferValueAsTarget: 0,
-        offerCountAsTarget:      0,
-        netGold:                 0,
       });
     }
 
@@ -471,63 +627,35 @@ export async function GET() {
       playersMap.get(row.user_id)?.matchesPlayed.add(row.match_id);
     }
 
-    const teamComboWins  = new Map<string, number>();
-    const teamComboGames = new Map<string, number>();
-
     for (const game of gamesResult.rows) {
       const team1 = game.team_1_members || [];
       const teamA = game.team_a_members || [];
 
+      // Re-derived here now that the team-combination tracking that used to
+      // compute it alongside has been removed. Note this preserves the original
+      // behaviour for a game with no winner: winning_team === null falls to the
+      // teamA branch, so nobody on team_1 is credited — which is right, since
+      // an undecided game should award no wins at all.
       const winningTeam = game.winning_team === 'team_1' ? team1 : teamA;
-      const losingTeam  = game.winning_team === 'team_1' ? teamA : team1;
-
-      const winComboKey = winningTeam
-        .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
-        .sort()
-        .join(' + ');
-
-      teamComboWins.set(winComboKey,  (teamComboWins.get(winComboKey)  || 0) + 1);
-      teamComboGames.set(winComboKey, (teamComboGames.get(winComboKey) || 0) + 1);
-
-      const loseComboKey = losingTeam
-        .map((id: number) => playersMap.get(id)?.username || `Player#${id}`)
-        .sort()
-        .join(' + ');
-
-      if (!teamComboWins.has(loseComboKey)) teamComboWins.set(loseComboKey, 0);
-      teamComboGames.set(loseComboKey, (teamComboGames.get(loseComboKey) || 0) + 1);
 
       for (const playerId of new Set<number>([...team1, ...teamA])) {
         const stats = playersMap.get(playerId);
         if (!stats) continue;
         stats.gamesPlayed += 1;
-        if (winningTeam.includes(playerId)) stats.gamesWon += 1;
-      }
-    }
-
-    for (const offer of offersResult.rows) {
-      if (offer.from_player_id != null) {
-        const fromStats = playersMap.get(offer.from_player_id);
-        if (fromStats) {
-          fromStats.offersMade += 1;
-          if (offer.status === 'accepted') fromStats.offersAccepted += 1;
-        }
-      }
-      if (offer.target_player_id != null) {
-        const targetStats = playersMap.get(offer.target_player_id);
-        if (targetStats) {
-          targetStats.timesOffered            += 1;
-          targetStats.totalOfferValueAsTarget += offer.offer_amount || 0;
-          targetStats.offerCountAsTarget      += 1;
-          if (offer.status === 'accepted') targetStats.timesSold += 1;
+        if (game.winning_team !== null && winningTeam.includes(playerId)) {
+          stats.gamesWon += 1;
         }
       }
     }
 
-    for (const row of netGoldResult.rows) {
-      const stats = playersMap.get(row.player_id);
-      if (stats) stats.netGold = parseInt(row.net_gold, 10);
-    }
+    // Offer-derived counts — times offered/sold, offers made/accepted — used
+    // to live in a second loop over offersResult here, tallied independently
+    // of offerStrength below even though both walk the same rows to answer
+    // the same question ("how many of this player's offers were accepted?").
+    // Two counters for one fact is exactly the kind of thing that quietly
+    // drifts apart the next time either loop's filtering changes, so those
+    // counts are now read straight off offerStrength's own tallies instead
+    // (see the `players` map below) and this loop is gone.
 
     const heroTopKillsMap = new Map<string, { kills: number; username: string }>(
       heroTopKillsResult.rows.map(r => [r.hero, { kills: Number(r.kills), username: r.username }])
@@ -541,35 +669,117 @@ export async function GET() {
     // Build response payload
     // -------------------------------------------------------------------------
 
-    const players: PlayerRow[] = Array.from(playersMap.values()).map(p => ({
+    // Offer strength — see lib/stats/compute/offer-strength for why raw offer
+    // amounts are not comparable between matches.
+    const gameIndex     = buildGameIndex(gamesResult.rows);
+    const offerStrength = computeOfferStrength(offersResult.rows, gameIndex);
+
+    // Impact after being sold — how a player's new team does in the very next
+    // game after they're traded to it. See lib/stats/compute/impact for why
+    // this needs the unfiltered game list rather than gamesResult alone.
+    const saleImpact = computeSaleImpact(offersResult.rows, allGamesResult.rows, gamesResult.rows);
+
+    // Selection rate — only counts offers where the offering team had a real
+    // alternative. See lib/stats/compute/selection-rate.
+
+
+    // Teammate synergy — pairs on the same side. Uses the finished-game rows
+    // already fetched, so no extra query.
+    const synergyPairs = computeSynergy(gamesResult.rows);
+
+    // Recent form — the first time-aware figure in the payload.
+    const recentForm = computeRecentForm(gamesResult.rows);
+
+    // Last stands — games entered alone, which are the only games that can end
+    // a match outright. See lib/stats/compute/last-stand.
+    const lastStands = computeLastStands(gamesResult.rows);
+
+    // Ratings — replays every finished game in order. See
+    // lib/stats/compute/rating for the team-strength model.
+    //
+    // The gold weight is fitted rather than chosen: evaluateModel scores the
+    // model at a range of weights on a single blind pass and reports which
+    // predicts best. If gold does not measurably beat the no-gold control the
+    // term is switched off, so it has to earn its place on every rebuild.
+    const goldTimeline  = buildGoldTimeline(gamesResult.rows, goldChangesResult.rows);
+
+    // Selection rate, with each opportunity bucketed by whether the player was
+    // the expensive or the cheap option at that moment. See the module header
+    // for why a bare selection rate cannot be interpreted without it.
+    const selection = computeSelectionRate(
+      gamesResult.rows,
+      offersResult.rows,
+      goldTimeline,
+    );
+    const modelEval     = evaluateModel(gamesResult.rows, goldTimeline);
+    const goldWeight    = modelEval.goldHelps ? modelEval.best.goldWeight : 0;
+
+    const ratings = computeRatings(gamesResult.rows, { goldWeight, goldTimeline });
+
+    // Match wins per player, split by how the match ended. matches.winner_id
+    // is the single player who took the match, so this is a straight tally
+    // rather than a team lookup — split into two maps rather than one because
+    // "won outright" (last player standing) and "won on gold" (100,000 gold
+    // threshold) are different achievements a reader wants to see apart, the
+    // same distinction the league-wide vitals strip already draws.
+    //
+    // Must be declared above the players map below, which reads it. It was
+    // originally placed next to computeLeagueRecords further down, which put it
+    // in the temporal dead zone at the moment the map callback ran — a runtime
+    // ReferenceError that tsc cannot catch, because it has no way to know the
+    // callback is invoked immediately rather than stored for later.
+    const matchWins = new Map<number, number>();
+    const matchWinsOutright = new Map<number, number>();
+    const matchWinsGold = new Map<number, number>();
+    for (const m of matchOutcomesResult.rows) {
+      if (m.winner_id === null) continue;
+      matchWins.set(m.winner_id, (matchWins.get(m.winner_id) ?? 0) + 1);
+      if (m.win_type === 'last_standing') {
+        matchWinsOutright.set(m.winner_id, (matchWinsOutright.get(m.winner_id) ?? 0) + 1);
+      } else if (m.win_type === 'gold_threshold') {
+        matchWinsGold.set(m.winner_id, (matchWinsGold.get(m.winner_id) ?? 0) + 1);
+      }
+    }
+
+    const players: PlayerRow[] = Array.from(playersMap.entries()).map(([id, p]) => ({
+      // entries(), not values(): the map key is the user id, which is the join
+      // key for offer strength and is not repeated inside the value.
       username:          p.username,
+      matchesWon:        matchWins.get(id) ?? 0,
+      matchesWonOutright: matchWinsOutright.get(id) ?? 0,
+      matchesWonGold:     matchWinsGold.get(id)     ?? 0,
+      matchesPlayed:     p.matchesPlayed.size,
+      steamAvatar:       p.steamAvatar,
       gamesPlayed:       p.gamesPlayed,
       gamesWon:          p.gamesWon,
-      timesSold:         p.timesSold,
-      timesOffered:      p.timesOffered,
-      offersMade:        p.offersMade,
-      offersAccepted:    p.offersAccepted,
-      averageOfferValue:
-        p.offerCountAsTarget > 0
-          ? +(p.totalOfferValueAsTarget / p.offerCountAsTarget).toFixed(1)
-          : 0,
-      netGold: p.netGold,
-    }));
-
-    const topWinningCombos: TeamComboRow[] = Array.from(teamComboWins.entries())
-      .map(([combo, wins]) => {
-        const gamesPlayed = teamComboGames.get(combo) || 0;
-        const winRate     = gamesPlayed > 0 ? +(wins / gamesPlayed * 100).toFixed(1) : 0;
-        return { combo, wins, gamesPlayed, winRate };
-      })
-      .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
-      .slice(0, 10);
-
-    const acquisitionImpact: AcquisitionRow[] = acquisitionResult.rows.map(r => ({
-      username:             r.username,
-      totalAcquisitions:    Number(r.total_acquisitions),
-      winsAfterAcquisition: Number(r.wins_after_acquisition),
-      winRate:              Number(r.win_rate),
+      // Derived from offerStrength's own counters rather than a second tally
+      // over the same offer rows — see the comment where that loop used to be.
+      timesSold:         offerStrength.get(id)?.receivedAcceptedCount ?? 0,
+      timesOffered:      offerStrength.get(id)?.receivedCount         ?? 0,
+      offersMade:        offerStrength.get(id)?.madeCount             ?? 0,
+      offersAccepted:    offerStrength.get(id)?.madeAcceptedCount     ?? 0,
+      offerStrengthReceived: offerStrength.get(id)?.received     ?? null,
+      offerStrengthMade:     offerStrength.get(id)?.made         ?? null,
+      offerStrengthAccepted: offerStrength.get(id)?.madeAccepted ?? null,
+      selectionOpportunities: selection.get(id)?.opportunities ?? 0,
+      selectionCount:         selection.get(id)?.selections    ?? 0,
+      selectionExpected:      selection.get(id)?.expected      ?? 0,
+      selectionRichOpportunities: selection.get(id)?.richOpportunities ?? 0,
+      selectionRichCount:         selection.get(id)?.richSelections    ?? 0,
+      selectionPoorOpportunities: selection.get(id)?.poorOpportunities ?? 0,
+      selectionPoorCount:         selection.get(id)?.poorSelections    ?? 0,
+      selectionIndex:         selection.get(id)?.index         ?? null,
+      impactOpportunities: saleImpact.get(id)?.opportunities ?? 0,
+      impactWins:          saleImpact.get(id)?.wins          ?? 0,
+      recentForm:             recentForm.get(id) ?? [],
+      lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
+      lastStandWins:          lastStands.get(id)?.wins          ?? 0,
+      lastStandAvgOpponents:  lastStands.get(id)?.avgOpponents  ?? null,
+      rating:                 ratings.get(id)?.rating ?? STARTING_RATING,
+      ratedGames:             ratings.get(id)?.games  ?? 0,
+      ratingRd:               ratings.get(id)?.rd     ?? 350,
+      ratingProvisional:      ratings.get(id)?.provisional ?? true,
+      ratingHistory:          ratings.get(id)?.history ?? [],
     }));
 
     const winStreaks: WinStreakRow[] = winStreakResult.rows.map(r => ({
@@ -588,15 +798,6 @@ export async function GET() {
       playerBWins: Number(r.player_b_wins),
     }));
 
-    const winTypeStats: WinTypeStatsRow[] = winTypeResult.rows.map(r => ({
-      username:          r.username,
-      lastStandingWins:  Number(r.last_standing_wins),
-      goldThresholdWins: Number(r.gold_threshold_wins),
-      totalWins:         Number(r.total_wins),
-    }));
-
-    // Hero stats — winRate is null below MIN_PICKS_FOR_RATE to avoid
-    // misleading small-sample percentages (e.g. 1/1 = "100%").
     const heroStats: HeroStatRow[] = heroStatsResult.rows.map(r => {
       const picks   = Number(r.picks);
       const wins    = Number(r.wins);
@@ -629,27 +830,85 @@ export async function GET() {
       };
     });
 
+    // gamesPlayed comes from the finished-games rows already fetched for
+    // win/loss counting, so it costs nothing extra and is a true game count
+    // rather than a per-participant sum.
+    const totals = matchTotalsResult.rows[0];
+    const leagueTotals: LeagueTotalsRow = {
+      matchesCompleted: totals?.matches_completed ?? 0,
+      gamesPlayed:      gamesResult.rows.length,
+      outrightWins:     totals?.last_standing_wins ?? 0,
+      goldWins:         totals?.gold_threshold_wins ?? 0,
+    };
+
+    // Names are attached here rather than inside the computation so that stays
+    // a pure function of ids. Pairs referencing a deleted user are dropped.
+    const teammateSynergy: SynergyRow[] = synergyPairs.flatMap(p => {
+      const a = playersMap.get(p.playerAId);
+      const b = playersMap.get(p.playerBId);
+      if (!a || !b) return [];
+      return [{
+        playerAId:     p.playerAId,
+        playerA:       a.username,
+        playerBId:     p.playerBId,
+        playerB:       b.username,
+        gamesTogether: p.gamesTogether,
+        winsTogether:  p.winsTogether,
+        winRate:       p.gamesTogether > 0
+          ? +((p.winsTogether / p.gamesTogether) * 100).toFixed(1)
+          : 0,
+      }];
+    });
+
+    const records = computeLeagueRecords(
+      matchOutcomesResult.rows,
+      gamesResult.rows,
+      matchPlayersResult.rows,
+    );
+
+    // Names are attached here rather than in the computation, keeping that a
+    // pure function of ids.
+    const nameRecord = (r: LeagueRecord | null): NamedRecordRow | null =>
+      r === null ? null : {
+        matchId: r.matchId,
+        value:   r.value,
+        player:  r.playerId === null
+          ? null
+          : playersMap.get(r.playerId)?.username ?? null,
+        detail:  r.detail,
+      };
+
+    const leagueRecords: LeagueRecordsRow = {
+      shortestMatch:      nameRecord(records.shortestMatch),
+      longestMatch:       nameRecord(records.longestMatch),
+      leanestOutrightWin: nameRecord(records.leanestOutrightWin),
+      fastestGoldWin:     nameRecord(records.fastestGoldWin),
+      biggestUnderdogWins:  records.biggestUnderdogWins
+        .map(nameRecord)
+        .filter((r): r is NamedRecordRow => r !== null),
+    };
+
+    const ratingModel: RatingModelRow = {
+      goldWeight,
+      accuracy:           modelEval.best.accuracy,
+      logLoss:            modelEval.best.logLoss,
+      logLossWithoutGold: modelEval.withoutGold.logLoss,
+      gamesScored:        modelEval.best.gamesScored,
+    };
+
     const data: StatsPayload = {
+      ratingModel,
+      leagueTotals,
+      leagueRecords,
       players,
-      topWinningCombos,
-      acquisitionImpact,
+      teammateSynergy,
       winStreaks,
       headToHead,
-      winTypeStats,
       heroStats,
       playerDotaStats,
     };
 
-    // Store in cache
-    statsCache = { data, cachedAt: Date.now() };
-
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error('[STATS_ERROR]', error);
-    return NextResponse.json(
-      { error: 'Failed to build stats' },
-      { status: 500 }
-    );
-  }
+    // Caching is the caller's job now — rebuild() stores the result so the
+    // cache is written exactly once per rebuild rather than per request.
+    return data;
 }

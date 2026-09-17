@@ -45,3 +45,30 @@ export async function broadcastEvent(
     );
   }
 }
+
+/**
+ * Broadcast without letting a failure fail the caller.
+ *
+ * Use this for anything sent after a COMMIT. A broadcast is a courtesy — it
+ * tells other browsers to refresh — whereas the transaction it follows has
+ * already changed the world. Letting the courtesy throw meant a Supabase blip
+ * turned a completed trade into a 500, the caller's catch rolled back a
+ * transaction that no longer existed, and the user was told their accepted
+ * offer had failed. Retrying then produced "offer already accepted", so the UI
+ * disagreed with the database until a refresh.
+ *
+ * The consequence of swallowing it is that other clients miss a live update and
+ * see the change on their next load. That is a far smaller problem than telling
+ * someone their trade failed when it succeeded.
+ */
+export async function broadcastEventSafe(
+  channel: string,
+  event: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  try {
+    await broadcastEvent(channel, event, payload);
+  } catch (err) {
+    console.error(`[BROADCAST_FAILED] ${channel}/${event}`, err);
+  }
+}

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -37,20 +36,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-full py-12 px-4">
+    <div className="flex items-center justify-center min-h-full py-12 px-4 auth-ambient">
       <div className="w-full max-w-sm">
 
-        {/* ── Logo ─────────────────────────────────────────────────────────── */}
-        <div className="flex flex-col items-center mb-8 gap-3">
-          <Image src="/logo.png" alt="Defence of the Auctions" width={80} height={27} />
-          <h1 className="font-cinzel text-2xl font-bold text-dota-gold tracking-wide">
+        {/* ── Card ─────────────────────────────────────────────────────────────
+             frame-ornate gives the four corner brackets + gold edge; the
+             crest badge (this card's one hero flourish) carries the coin
+             logo, so there's no separate logo block above the card. ─────── */}
+        <div className="frame-ornate pt-9 px-4 pb-4 mt-10">
+          <span className="fo-corner fo-corner--tl" aria-hidden="true" />
+          <span className="fo-corner fo-corner--tr" aria-hidden="true" />
+          <span className="fo-corner fo-corner--bl" aria-hidden="true" />
+          <span className="fo-corner fo-corner--br" aria-hidden="true" />
+
+          <div className="frame-crest" aria-hidden="true">
+            <span className="frame-crest__burst" />
+            <img src="/logo.png" alt="" />
+          </div>
+
+          <h1 className="font-barlow text-2xl font-bold text-dota-gold tracking-wide text-center mb-1">
             Sign In
           </h1>
-          <div className="divider-gold w-32" />
-        </div>
-
-        {/* ── Card ─────────────────────────────────────────────────────────── */}
-        <div className="panel p-8">
+          <p className="text-center text-sm text-dota-text-muted mb-5">
+            Enter your credentials to continue
+          </p>
           <form onSubmit={handleLogin} className="space-y-5">
 
             <div className="space-y-1.5">

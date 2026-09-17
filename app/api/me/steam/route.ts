@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
@@ -96,6 +97,9 @@ export async function POST(req: NextRequest) {
     [BigInt(cleaned), profile.avatarFull, session.userId]
   );
 
+  // Avatars are served from the stats payload throughout the app.
+  invalidateStatsCache('steam profile linked');
+
   return NextResponse.json({ ok: true, profile });
 }
 
@@ -104,5 +108,6 @@ export async function DELETE() {
   if (!session?.userId) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
 
   await db.query('UPDATE users SET steam_id = NULL, steam_avatar = NULL WHERE id = $1', [session.userId]);
+  invalidateStatsCache('steam profile unlinked');
   return NextResponse.json({ ok: true });
 }

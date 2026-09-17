@@ -53,10 +53,14 @@ const AUTH_BG_GRADIENT =
 
 // Radiant (green, bottom-left) vs Dire (red, bottom-right) corner tension,
 // with a faint gold crown at the top — mirrors the in-game map orientation.
-const MATCH_BG_GRADIENT = [
-  `radial-gradient(ellipse 70% 55% at 0%   100%, rgba(${COLOR.radiant}, 0.14) 0%, transparent 65%)`,
-  `radial-gradient(ellipse 70% 55% at 100% 100%, rgba(${COLOR.dire},    0.14) 0%, transparent 65%)`,
-  `radial-gradient(ellipse 50% 30% at 50% 0%,    rgba(${COLOR.gold},    0.04) 0%, transparent 60%)`,
+//
+// These now sit ON TOP of the shared background image rather than on flat
+// dota-base, so the alphas are raised (0.14 -> 0.20): a tint that reads clearly
+// against near-black gets lost against a mid-tone photograph.
+const MATCH_GLOW_GRADIENT = [
+  `radial-gradient(ellipse 70% 55% at 0%   100%, rgba(${COLOR.radiant}, 0.20) 0%, transparent 65%)`,
+  `radial-gradient(ellipse 70% 55% at 100% 100%, rgba(${COLOR.dire},    0.20) 0%, transparent 65%)`,
+  `radial-gradient(ellipse 50% 30% at 50% 0%,    rgba(${COLOR.gold},    0.06) 0%, transparent 60%)`,
 ].join(', ');
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -78,18 +82,7 @@ export default function PageBackground() {
     );
   }
 
-  // ── Match background ───────────────────────────────────────────────────────
-  if (isMatchPage) {
-    return (
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 z-[-1] pointer-events-none"
-        style={{ backgroundImage: MATCH_BG_GRADIENT }}
-      />
-    );
-  }
-
-  // ── Default background (dashboard, profile, changelog, …) ──────────────────
+  // ── Shared image background (dashboard, match, profile, changelog, …) ──────
   //
   // Single positioned container — the Next.js Image and the darkening overlay
   // share one stacking context at z-[-1]. The previous version used two
@@ -120,11 +113,41 @@ export default function PageBackground() {
         className="object-cover object-center"
       />
       {/*
-        bg-dota-base/55 uses the Tailwind design token rather than the raw
-        rgba(13, 17, 23, 0.55) that the previous version hardcoded. If
-        dota-base changes in tailwind.config.js this overlay updates automatically.
+        Darkening overlay. Lowered from /55 to /40 to let more of the artwork
+        through. Uses the Tailwind design token rather than a hardcoded rgba so
+        it tracks dota-base if that changes in tailwind.config.js.
+
+        Body copy sits on .panel surfaces which have their own opaque metal
+        fill, so contrast is unaffected; only bare-on-background text (page
+        headings) touches this layer. /40 keeps that comfortably above 7:1.
       */}
-      <div className="absolute inset-0 bg-dota-base/55" />
+      <div className="absolute inset-0 bg-dota-base/40" />
+
+      {/*
+        Inner vignette. globals.css already paints one on body::before, but that
+        pseudo-element and this container are both at z-index -1, so tree order
+        wins and this container covers it. Re-applying it here keeps the edges
+        weighted while the centre stays bright — which is what lets the overlay
+        above run as light as /40 without the page feeling flat.
+      */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.45) 100%)',
+        }}
+      />
+
+      {/*
+        Match pages keep their Radiant/Dire identity — the corner glows are now
+        a layer over the shared image instead of a separate background.
+      */}
+      {isMatchPage && (
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: MATCH_GLOW_GRADIENT }}
+        />
+      )}
     </div>
   );
 }

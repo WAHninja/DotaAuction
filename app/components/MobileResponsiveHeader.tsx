@@ -10,7 +10,8 @@ import {
   useState,
 } from 'react';
 import { usePathname }  from 'next/navigation';
-import { Menu, X, ScrollText, User, LayoutDashboard, PenLine, ChevronDown } from 'lucide-react';
+import type { ElementType } from 'react';
+import { Menu, X, ScrollText, User, LayoutDashboard, ChevronDown, BarChart3 } from 'lucide-react';
 import { UserContext }          from '@/app/context/UserContext';
 import LogoutButton             from './LogoutButton';
 import PlayerAvatar             from './PlayerAvatar';
@@ -52,6 +53,44 @@ const DROPDOWN_ITEM_ACTIVE =
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/**
+ * Every navigation destination, declared once.
+ *
+ * This header renders its navigation three times — desktop bar, account
+ * dropdown, mobile drawer — and each used to carry its own hand-written copy of
+ * every link. A new destination meant three edits, and missing one produced a
+ * link that existed on desktop but not mobile, or vice versa. Adding Stats hit
+ * exactly that.
+ *
+ * `placement` decides which of the three a link appears in: primary links sit
+ * in the desktop bar, account links in the dropdown, and the mobile drawer
+ * shows both because it has no such distinction.
+ *
+ * Two links are deliberately not here. The signed-out drawer offers Dashboard
+ * alone, and the small-screen changelog shortcut is an icon with a badge rather
+ * than a labelled destination — both are one-offs that a shared list would only
+ * make harder to read.
+ */
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ElementType;
+  /** Desktop bar, or behind the avatar menu. The drawer shows both. */
+  placement: 'primary' | 'account';
+  /** Marks the item that carries the unseen-changelog indicator. */
+  showsUnseenBadge?: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, placement: 'primary' },
+  { href: '/stats',     label: 'Stats',     icon: BarChart3,       placement: 'primary' },
+  { href: '/profile',   label: 'Profile',   icon: User,            placement: 'account' },
+  { href: '/changelog', label: 'Changelog', icon: ScrollText,      placement: 'account', showsUnseenBadge: true },
+];
+
+const PRIMARY_ITEMS = NAV_ITEMS.filter(i => i.placement === 'primary');
+const ACCOUNT_ITEMS = NAV_ITEMS.filter(i => i.placement === 'account');
 
 function navLink(href: string, pathname: string, exact = true): string {
   const isActive = exact ? pathname === href : pathname.startsWith(href);
@@ -115,7 +154,7 @@ function AccentBar({ pathname }: { pathname: string }) {
 type NavUser = { username: string; steam_avatar?: string | null } | null;
 
 // =============================================================================
-// DesktopPrimaryLinks — Dashboard + Whiteboard
+// DesktopPrimaryLinks — Dashboard + Stats
 // =============================================================================
 
 type DesktopPrimaryLinksProps = {
@@ -125,21 +164,16 @@ type DesktopPrimaryLinksProps = {
 function DesktopPrimaryLinks({ pathname }: DesktopPrimaryLinksProps) {
   return (
     <>
-      <Link
-        href="/dashboard"
-        className={`${navLink('/dashboard', pathname)} flex items-center gap-1.5`}
-      >
-        <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
-        Dashboard
-      </Link>
-
-      <Link
-        href="/whiteboard"
-        className={`${navLink('/whiteboard', pathname)} flex items-center gap-1.5`}
-      >
-        <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-        Draw
-      </Link>
+      {PRIMARY_ITEMS.map(({ href, label, icon: Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          className={`${navLink(href, pathname)} flex items-center gap-1.5`}
+        >
+          <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+          {label}
+        </Link>
+      ))}
     </>
   );
 }
@@ -247,31 +281,24 @@ function UserMenuDropdown({ user, hasUnseen, pathname }: UserMenuDropdownProps) 
             <p className="font-barlow font-bold text-dota-gold truncate">{user.username}</p>
           </div>
 
-          <Link
-            href="/profile"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className={dropdownItemClass('/profile', pathname)}
-          >
-            <User className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            Profile
-          </Link>
-
-          <Link
-            href="/changelog"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className={dropdownItemClass('/changelog', pathname)}
-          >
-            <ScrollText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            Changelog
-            {hasUnseen && (
-              <span className="ml-auto flex items-center gap-1 font-barlow text-xs font-bold text-dota-gold">
-                <span className="w-1.5 h-1.5 rounded-full bg-dota-gold" aria-hidden="true" />
-                New
-              </span>
-            )}
-          </Link>
+          {ACCOUNT_ITEMS.map(({ href, label, icon: Icon, showsUnseenBadge }) => (
+            <Link
+              key={href}
+              href={href}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={dropdownItemClass(href, pathname)}
+            >
+              <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              {label}
+              {showsUnseenBadge && hasUnseen && (
+                <span className="ml-auto flex items-center gap-1 font-barlow text-xs font-bold text-dota-gold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-dota-gold" aria-hidden="true" />
+                  New
+                </span>
+              )}
+            </Link>
+          ))}
 
           <div className="mt-1 pt-1 border-t border-dota-border">
             <LogoutButton
@@ -385,50 +412,29 @@ function MobileDrawer({ isOpen, onClose, user, hasUnseen, pathname }: MobileDraw
 
           {user ? (
             <>
-              <Link
-                href="/dashboard"
-                onClick={onClose}
-                className={mobileNavLink('/dashboard', pathname)}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
-                Dashboard
-              </Link>
-
-              <Link
-                href="/whiteboard"
-                onClick={onClose}
-                className={mobileNavLink('/whiteboard', pathname)}
-              >
-                <PenLine className="w-3.5 h-3.5" aria-hidden="true" />
-                Draw
-              </Link>
-
-              <Link
-                href="/profile"
-                onClick={onClose}
-                className={mobileNavLink('/profile', pathname)}
-              >
-                <User className="w-3.5 h-3.5" aria-hidden="true" />
-                Profile
-              </Link>
-
-              <Link
-                href="/changelog"
-                onClick={onClose}
-                className={mobileNavLink('/changelog', pathname)}
-              >
-                <ScrollText className="w-3.5 h-3.5" aria-hidden="true" />
-                Changelog
-                {hasUnseen && (
-                  <span
-                    aria-label="New changelog entries"
-                    className="ml-auto flex items-center gap-1 font-barlow text-xs font-bold text-dota-gold"
-                  >
-                    <VisualBadgeDot className="w-1.5 h-1.5" />
-                    New
-                  </span>
-                )}
-              </Link>
+              {/* The drawer shows every destination — it has no bar/menu split
+                  to honour, so primary and account links sit together in the
+                  order NAV_ITEMS declares them. */}
+              {NAV_ITEMS.map(({ href, label, icon: Icon, showsUnseenBadge }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClose}
+                  className={mobileNavLink(href, pathname)}
+                >
+                  <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+                  {label}
+                  {showsUnseenBadge && hasUnseen && (
+                    <span
+                      aria-label="New changelog entries"
+                      className="ml-auto flex items-center gap-1 font-barlow text-xs font-bold text-dota-gold"
+                    >
+                      <VisualBadgeDot className="w-1.5 h-1.5" />
+                      New
+                    </span>
+                  )}
+                </Link>
+              ))}
 
               <div className="mt-2 pt-2 border-t border-dota-border">
                 <LogoutButton

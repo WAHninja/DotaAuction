@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSession } from '@/app/session';
+import { invalidateStatsCache } from '@/lib/stats-cache'
 
 // ── PATCH /api/me/username ────────────────────────────────────────────────────
 // Body: { username: string }
@@ -42,6 +43,10 @@ export async function PATCH(req: NextRequest) {
     'UPDATE users SET username = $1 WHERE id = $2',
     [cleaned, session.userId]
   );
+
+  // Username is the join key for every relational stat — head-to-head,
+  // synergy, records — so a rename makes the whole cached payload wrong.
+  invalidateStatsCache('username changed');
 
   return NextResponse.json({ ok: true, username: cleaned });
 }
