@@ -5,7 +5,7 @@ import { ChevronDown as SelectChevron } from 'lucide-react';
 import type { StatsPayload } from '@/types';
 import { forPlayer, headToHeadFor } from '@/lib/stats/select';
 import { Info } from 'lucide-react';
-import { pct, kdaColour, formatStrength } from '@/lib/stats/format';
+import { pct, formatStrength } from '@/lib/stats/format';
 import { GLOSSARY } from '@/lib/stats/glossary';
 import Tooltip from '@/app/components/stats/ui/Tooltip';
 import { MIN_GAMES_FOR_RATE, MIN_OFFERS_FOR_STRENGTH, MIN_SALES_FOR_IMPACT } from '@/lib/stats/constants';
@@ -34,8 +34,6 @@ type Metric = {
   value: (p: ReturnType<typeof forPlayer>) => string | null;
   /** Numeric for the winner comparison. null means "not comparable". */
   compare: (p: ReturnType<typeof forPlayer>) => number | null;
-  /** Colour class for the value, keyed off the raw number. */
-  tone?: (n: number) => string;
 };
 
 /**
@@ -89,9 +87,15 @@ const METRICS: Metric[] = [
   {
     label: 'Avg KDA',
     hint: GLOSSARY.avgKda, hintId: 'cmp-kda',
+    // No tone override here (there used to be one, tiering the colour off the
+    // raw KDA value regardless of the other side's number) — every other row
+    // in this comparison is gold-for-whoever's-higher, and KDA read as
+    // inconsistent sitting next to them with its own independent colour
+    // scale. kdaColour is still the right call on the player page, where a
+    // KDA is shown alone with nothing to be "higher than" — just not here,
+    // where the whole point of the row is A vs B.
     value:   p => (p.dota ? p.dota.avgKda.toFixed(2) : null),
     compare: p => p.dota?.avgKda ?? null,
-    tone:    n => kdaColour(n),
   },
   {
     label: 'Impact after being sold',
@@ -207,7 +211,7 @@ export default function ComparePicker({ payload, subject }: {
                 <div key={m.label} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-2.5">
                   <span className={`font-barlow text-right tabular-nums font-semibold ${
                     leftWins ? 'text-dota-gold' : 'text-dota-text-muted'
-                  } ${lv && m.tone && ln !== null ? m.tone(ln) : ''}`}>
+                  }`}>
                     {lv ?? '—'}
                   </span>
                   <Tooltip id={m.hintId} content={m.hint}>
@@ -222,7 +226,7 @@ export default function ComparePicker({ payload, subject }: {
                   </Tooltip>
                   <span className={`font-barlow tabular-nums font-semibold ${
                     rightWins ? 'text-dota-gold' : 'text-dota-text-muted'
-                  } ${rv && m.tone && rn !== null ? m.tone(rn) : ''}`}>
+                  }`}>
                     {rv ?? '—'}
                   </span>
                 </div>
