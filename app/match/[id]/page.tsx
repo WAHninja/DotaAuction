@@ -1,470 +1,121 @@
-'use client';
+import { getSession } from '@/app/session';
+import db from '@/lib/db';
+import { redirect } from 'next/navigation';
+import CreateMatchForm from '@/app/components/CreateMatchForm';
+import DashboardTabs from '@/app/components/DashboardTabs';
+import GameRulesCard from '@/app/components/GameRulesCard';
+import HallOfFame from '@/app/components/HallOfFame';
 
-import { useEffect, useState, useContext, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
-import { UserContext } from '@/app/context/UserContext';
-import { useJitsi, getLoserRoom, MAIN_ROOM, getTeam1DraftRoom, getTeamADraftRoom } from '@/app/context/JitsiContext';
-import SelectGameWinnerForm from '@/app/components/SelectGameWinnerForm';
-import MatchHeader from '@/app/components/MatchHeader';
-import TeamCard from '@/app/components/TeamCard';
-import WinnerBanner from '@/app/components/WinnerBanner';
-import AuctionHouse from '@/app/components/AuctionHouse';
-import { useGameWinnerListener } from '@/app/hooks/useGameWinnerListener';
-import { useAuctionListener } from '@/app/hooks/useAuctionListener';
-import { useGameReportedListener } from '@/app/hooks/useGameReportedListener';
-import GameHistory from '@/app/components/GameHistory';
-import { usePhaseListener } from '@/app/hooks/usePhaseListener';
-import type { MatchData, Offer, HistoryGame, OfferAcceptedPayload, NewOfferPayload, OfferSelectingPayload, ViewerState, Player, Game } from '@/types';
-import PageLoading from '@/app/components/PageLoading';
+export default async function DashboardPage() {
+  const session = await getSession();
+  if (!session) redirect('/login');
+
+  try {
+    const [
+      ongoingRes,
+      completedRes,
+    ] = await Promise.all([
+
+      // ── Ongoing matches ──────────────────────────────────────────────────
+      // games_count replaces the /api/match/[id]/games-played endpoint.
+      // COUNT(*) includes all games for the match (finished + current in-progress),
+      // which matches the old endpoint's behaviour exactly.
+      db.query(`
+        SELECT
+          m.id AS match_id,
+          m.created_at,
+          g.id AS game_id,
+          g.status,
+          (
+            SELECT COUNT(*)::int
+            FROM games g2
+            WHERE g2.match_id = m.id
+          ) AS games_count,
+          (
+            SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
+            FROM UNNEST(g.team_a_members) AS uid
+            JOIN users u2 ON u2.id = uid
+          ) AS team_a_usernames,
+          (
+            SELECT ARRAY_AGG(u3.username ORDER BY u3.username)
+            FROM UNNEST(g.team_1_members) AS uid
+            JOIN users u3 ON u3.id = uid
+          ) AS team_1_usernames
+        FROM matches m
+        JOIN LATERAL (
+          SELECT * FROM games g
+          WHERE g.match_id = m.id
+          ORDER BY g.id DESC
+          LIMIT 1
+        ) g ON true
+        WHERE m.winner_id IS NULL
+        ORDER BY m.created_at DESC
+      `),
+
+      // ── Completed matches ────────────────────────────────────────────────
+      db.query(`
+        SELECT
+          m.id AS match_id,
+          m.created_at,
+          m.winner_id,
+          u_winner.username AS winner_username,
+          g.id AS game_id,
+          (
+            SELECT ARRAY_AGG(u2.username ORDER BY u2.username)
+            FROM UNNEST(g.team_a_members) AS uid
+            JOIN users u2 ON u2.id = uid
+          ) AS team_a_usernames,
+          (
+            SELECT ARRAY_AGG(u3.username ORDER BY u3.username)
+            FROM UNNEST(g.team_1_members) AS uid
+            JOIN users u3 ON u3.id = uid
+          ) AS team_1_usernames
+        FROM matches m
+        JOIN users u_winner ON u_winner.id = m.winner_id
+        JOIN LATERAL (
+          SELECT * FROM games g
+          WHERE g.match_id = m.id
+          ORDER BY g.id DESC
+          LIMIT 1
+        ) g ON true
+        WHERE m.winner_id IS NOT NULL
+        ORDER BY m.created_at DESC
+      `),
+
+    ]);
+
+    // ── Normalise match rows ───────────────────────────────────────────────
+    const ongoingMatches   = ongoingRes.rows.map(m => ({ ...m, id: m.match_id }));
+    const completedMatches = completedRes.rows.map(m => ({ ...m, id: m.match_id }));
+
+    // ── Shape Hall of Fame records (arrays of up to 3) ─────────────────────
 
 
-// ---------------------------------------------------------------------------
-// Stat computation helpers
-// ---------------------------------------------------------------------------
-
-function computeRecord(
-  username: string | undefined,
-  history: HistoryGame[]
-): { wins: number; losses: number } | undefined {
-  if (!username) return undefined;
-
-  let wins = 0;
-  let losses = 0;
-
-  for (const game of history) {
-    if (game.status !== 'finished') continue;
-    if (!game.winningTeam) continue;
-
-    const inTeam1 = game.team1Members.includes(username);
-    const inTeamA = game.teamAMembers.includes(username);
-
-    if (!inTeam1 && !inTeamA) continue;
-
-    const playerWon =
-      (game.winningTeam === 'team_1' && inTeam1) ||
-      (game.winningTeam === 'team_a' && inTeamA);
-
-    if (playerWon) wins++;
-    else losses++;
-  }
-
-  return { wins, losses };
-}
-
-function computeTimesTraded(
-  username: string | undefined,
-  history: HistoryGame[]
-): number {
-  if (!username) return 0;
-
-  let count = 0;
-  for (const game of history) {
-    for (const offer of game.offers) {
-      if (offer.status === 'accepted' && offer.targetUsername === username) {
-        count++;
-      }
-    }
-  }
-  return count;
-}
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
-
-export default function MatchPage() {
-  const { id } = useParams();
-  const matchId = Array.isArray(id) ? id[0] : id;
-  const router = useRouter();
-  const { user } = useContext(UserContext);
-
-  const { hasJoined, switchRoom } = useJitsi();
-  
-  const DRAFT_PHASE = 4;
-
-    const [data, setData] = useState<MatchData | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<HistoryGame[]>([]);
-
-  // ── Silent "leaning towards" signals from losing-team members ─────────────
-  // userId -> offerId. Populated from realtime broadcasts, reset each time
-  // the auction game changes.
-  const [selections, setSelections] = useState<Record<number, number | null>>({});
-
-  // ── Frozen snapshot of the just-resolved auction ───────────────────────────
-  // Kept around for a short window after acceptance so the outcome (accepted
-  // vs rejected, revealed amount) stays visible even after data.latestGame has
-  // already moved on to the next game.
-  const [resolvedAuction, setResolvedAuction] = useState<{
-    game: Game;
-    offers: Offer[];
-    completedGames: number;
-  } | null>(null);
-  const resolvedAuctionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearResolvedAuctionTimer = useCallback(() => {
-    if (resolvedAuctionTimeoutRef.current) {
-      clearTimeout(resolvedAuctionTimeoutRef.current);
-      resolvedAuctionTimeoutRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => () => clearResolvedAuctionTimer(), [clearResolvedAuctionTimer]);
-
-  // New auction, new game — clear any leftover selection signals.
-  useEffect(() => {
-    setSelections({});
-  }, [data?.latestGame?.id]);
-
-  // ---- Protect route -------------------------------------------------------
-  const { loading: authLoading } = useContext(UserContext);
-  useEffect(() => {
-    if (!authLoading && user === null) router.push('/');
-  }, [authLoading, user, router]);
-
-  // ---- Data fetchers -------------------------------------------------------
-  const fetchMatchData = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}`);
-      if (!res.ok) throw new Error('Failed to fetch match data');
-      setData(await res.json());
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }, [matchId]);
-
-  const fetchOffers = useCallback(async (gameId: number) => {
-    try {
-      const res = await fetch(`/api/game/offers?id=${gameId}`);
-      if (!res.ok) throw new Error('Failed to fetch offers');
-      const json = await res.json();
-      setOffers(json.offers || []);
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
-
-  const fetchGameHistory = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/match/${matchId}/history`);
-      if (!res.ok) throw new Error('Failed to fetch game history');
-      const json = await res.json();
-      setHistory(json.history || []);
-    } catch (err) {
-      console.error('Failed to fetch game history:', err);
-    }
-  }, [matchId]);
-
-  // ---- Realtime state updaters ---------------------------------------------
-  const handleNewOffer = useCallback((offer: NewOfferPayload) => {
-    setOffers(prev =>
-      prev.some(o => o.id === offer.id)
-        ? prev
-        : [...prev, { ...offer, offer_amount: null }]
-    );
-  }, []);
-
-    const handleOfferAccepted = useCallback(async (_payload: OfferAcceptedPayload) => {
-    // Snapshot which game this auction belonged to before the upcoming
-    // refetches move data.latestGame on to the next game.
-    const resolvingGame = data?.latestGame;
-    const resolvingCompletedGames = data ? data.games.length - 1 : 0;
-
-    // Re-pull the offers for this game from the server instead of trusting
-    // only the realtime payload merged into local state. The GET endpoint's
-    // CASE WHEN only hides amounts for status = 'pending' — once an offer is
-    // accepted/rejected it reveals the real amount to any match participant,
-    // regardless of team. Fetching it directly guarantees every client
-    // (winning team, losing team, spectators) ends up with the exact same
-    // data, rather than depending on each client's local `offers` snapshot
-    // having stayed in sync with the broadcast.
-    let finalOffers = offers;
-    if (resolvingGame) {
-      try {
-        const res = await fetch(`/api/game/offers?id=${resolvingGame.id}`);
-        if (res.ok) {
-          const json = await res.json();
-          finalOffers = json.offers || offers;
-        }
-      } catch (err) {
-        console.error('Failed to refresh offers after acceptance:', err);
-      }
-    }
-
-    setOffers(finalOffers);
-
-    // Snapshot the resolved auction before the imminent refetch moves
-    // data.latestGame on to the next game.
-    if (resolvingGame) {
-      clearResolvedAuctionTimer();
-      setResolvedAuction({
-        game: resolvingGame,
-        offers: finalOffers,
-        completedGames: resolvingCompletedGames,
-      });
-      resolvedAuctionTimeoutRef.current = setTimeout(() => {
-        setResolvedAuction(null);
-        resolvedAuctionTimeoutRef.current = null;
-      }, 20_000);
-    }
-
-    Promise.all([fetchMatchData(), fetchGameHistory()]);
-  }, [data, offers, fetchMatchData, fetchGameHistory, clearResolvedAuctionTimer]);
-
-  const handleOfferSelecting = useCallback((payload: OfferSelectingPayload) => {
-    setSelections(prev => ({ ...prev, [payload.userId]: payload.offerId }));
-  }, []);
-  const handleGameReported = useCallback(() => {
-    Promise.all([fetchMatchData(), fetchGameHistory()]);
-  }, [fetchMatchData, fetchGameHistory]);
-
-  const handlePhaseChanged = useCallback(() => {
-  // Re-fetch so latestGame.phase is current; the Jitsi effect below then
-  // re-runs automatically via its dependency on latestGame.phase.
-    fetchMatchData();
-  }, [fetchMatchData]);
-
-  // ---- Initial load --------------------------------------------------------
-  useEffect(() => {
-    if (!user) return;
-    Promise.all([fetchMatchData(), fetchGameHistory()]);
-  }, [matchId, user, fetchMatchData, fetchGameHistory]);
-
-  useEffect(() => {
-    if (data?.latestGame?.status === 'auction pending') {
-      fetchOffers(data.latestGame.id);
-    }
-  }, [data, fetchOffers]);
-
-  // ---- Realtime listeners --------------------------------------------------
-  const handleWinnerSelected = useCallback(() => {
-    Promise.all([fetchMatchData(), fetchGameHistory()]);
-  }, [fetchMatchData, fetchGameHistory]);
-
-  useGameWinnerListener(matchId, handleWinnerSelected);
-  useGameReportedListener(matchId, handleGameReported);
-  usePhaseListener(matchId, handlePhaseChanged);
-  const { sendSelection } = useAuctionListener(
-    matchId,
-    data?.latestGame?.id ?? null,
-    handleNewOffer,
-    handleOfferAccepted,
-    handleOfferSelecting,
-  );
-
-  // ---- Jitsi room switching ------------------------------------------------
-  useEffect(() => {
-    if (!hasJoined || !data?.latestGame || !user) return;
-
-    const game = data.latestGame;
-
-  // ── Draft phase: both teams go to private channels ───────────────────
-    if (Number(game.phase) === DRAFT_PHASE) {
-      if (game.team_1_members.includes(user.id)) {
-        switchRoom(getTeam1DraftRoom(game.id));
-        return;
-      }
-      if (game.team_a_members.includes(user.id)) {
-        switchRoom(getTeamADraftRoom(game.id));
-        return;
-      }
-    // Spectator during draft — stays in main room
-      switchRoom(MAIN_ROOM);
-      return;
-    }
-
-  // ── Auction phase: losing team goes to the loser lounge ─────────────
-    if (game.status === 'auction pending' && game.winning_team) {
-      const losingMembers =
-        game.winning_team === 'team_1'
-          ? game.team_a_members
-          : game.team_1_members;
-
-      if (losingMembers.includes(user.id)) {
-        switchRoom(getLoserRoom(game.id));
-        return;
-      }
-    }
-
-    switchRoom(MAIN_ROOM);
-  }, [
-    hasJoined,
-    data?.latestGame?.id,
-    data?.latestGame?.status,
-    data?.latestGame?.winning_team,
-    data?.latestGame?.phase,
-    user?.id,
-    switchRoom,
-  ]);
-
-  // Return to main room when leaving the match page
-  useEffect(() => {
-    return () => {
-      switchRoom(MAIN_ROOM);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ---- Render guards -------------------------------------------------------
-  // Both states now render the app's shared loading window rather than two
-  // bespoke spinners that differed in size, colour and wording from each other
-  // and from the route-transition one.
-  if (!user && authLoading) {
-    return <PageLoading message="Redirecting…" />;
-  }
-
-  if (loading) {
-    return <PageLoading message="Loading match…" />;
-  }
-
-  if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="panel p-8 flex flex-col items-center gap-4 max-w-sm text-center border-dota-dire/40">
-          <AlertCircle className="w-10 h-10 text-dota-dire-light" />
-          <p className="font-cinzel text-lg font-bold text-dota-text">Something went wrong</p>
-          <p className="font-barlow text-sm text-dota-text-muted">{error}</p>
-          <button
-            onClick={() => { setError(null); setLoading(true); fetchMatchData(); }}
-            className="btn-secondary"
-          >
-            Try again
-          </button>
+      <div className="relative min-h-screen animate-fadeIn">
+        <div className="relative z-10 space-y-6 text-white">
+
+          {/* ── Zone 1: Create Match + Rules (equal columns) ─────────────── */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CreateMatchForm currentUserId={session.userId} />
+            <GameRulesCard />
+          </section>
+
+          {/* ── Zone 2: Hall of Fame (full-width 4-card strip) ───────────── */}
+          <HallOfFame />
+
+          {/* ── Zone 3: Match tabs ────────────────────────────────────────── */}
+          <DashboardTabs
+            ongoingMatches={ongoingMatches}
+            completedMatches={completedMatches}
+          />
+
         </div>
       </div>
     );
+
+  } catch (error) {
+    console.error('Dashboard load error:', error);
+    redirect('/login');
   }
-
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="panel p-8 flex flex-col items-center gap-3 max-w-sm text-center">
-          <p className="font-cinzel text-lg font-bold text-dota-text">Match not found</p>
-          <p className="font-barlow text-sm text-dota-text-muted">This match may have been removed or the link is invalid.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { match, latestGame, players, currentUserId } = data;
-  const team1: number[] = latestGame?.team_1_members || [];
-  const teamA: number[] = latestGame?.team_a_members || [];
-  const getPlayer = (playerId: number) => players.find((p) => p.id === playerId);
-
-  const isAuction    = latestGame?.status === 'auction pending';
-  const isInProgress = latestGame?.status === 'in progress';
-  const isFinished   = latestGame?.status === 'finished';
-
-  const winnerName = match.winner_id
-    ? players.find((p) => p.id === match.winner_id)?.username
-    : undefined;
-
-  const isParticipant = players.some(p => p.id === currentUserId);
-  const viewerState: ViewerState =
-    !isParticipant                    ? 'spectator' :
-    currentUserId === match.winner_id ? 'winner'    :
-                                        'loser';
-
-  const viewerUsername = players.find(p => p.id === currentUserId)?.username;
-
-  const winnerRecord      = computeRecord(winnerName, history);
-  const viewerRecord      = viewerState === 'loser'
-    ? computeRecord(viewerUsername, history)
-    : undefined;
-  const winnerTimesTraded = computeTimesTraded(winnerName, history);
-
-  const isPlayer = (p: Player | undefined): p is Player => p !== undefined;
-
-  return (
-    <>
-      {latestGame && (
-        <MatchHeader
-          matchId={matchId}
-          latestGame={latestGame}
-        />
-      )}
-
-      {isFinished && match.winner_id && (
-        <WinnerBanner
-          winnerName={winnerName}
-          viewerState={viewerState}
-          winType={match.win_type}
-          totalGames={history.length}
-          matchCreatedAt={match.created_at}
-          matchFinishedAt={history.length > 0 ? history[history.length - 1].finishedAt : null}
-          winnerRecord={winnerRecord}
-          viewerRecord={viewerRecord}
-          winnerTimesTraded={winnerTimesTraded}
-        />
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <TeamCard
-          name="Team 1"
-          logo="/Team1.png"
-          players={team1.map(getPlayer).filter(isPlayer)}
-          teamId="team1"
-          faction="radiant"
-          currentUserId={currentUserId}
-          matchFinished={isFinished}
-        />
-        <TeamCard
-          name="Team A"
-          logo="/TeamA.png"
-          players={teamA.map(getPlayer).filter(isPlayer)}
-          teamId="teamA"
-          faction="dire"
-          currentUserId={currentUserId}
-          matchFinished={isFinished}
-        />
-      </div>
-
-      {isInProgress && (
-        <SelectGameWinnerForm gameId={latestGame.id} show />
-      )}
-
-            {isAuction && latestGame.winning_team && (
-        <AuctionHouse
-          latestGame={latestGame}
-          players={players}
-          currentUserId={currentUserId}
-          offers={offers}
-          completedGames={data.games.length - 1}
-          onOfferSubmitted={handleNewOffer}
-          onOfferAccepted={() => {
-            Promise.all([fetchMatchData(), fetchGameHistory()]);
-          }}
-          selections={selections}
-          onSelectOffer={(offerId) => {
-            setSelections(prev => ({ ...prev, [currentUserId]: offerId }));
-            sendSelection({ userId: currentUserId, offerId });
-          }}
-        />
-      )}
-
-      {!isAuction && resolvedAuction && (
-        <AuctionHouse
-          latestGame={resolvedAuction.game}
-          players={players}
-          currentUserId={currentUserId}
-          offers={resolvedAuction.offers}
-          completedGames={resolvedAuction.completedGames}
-          onOfferSubmitted={() => {}}
-          onOfferAccepted={() => {}}
-          finalized
-        />
-      )}
-
-      <GameHistory
-        history={history}
-        players={players}
-        matchFinished={isFinished}
-      />
-    </>
-  );
 }
