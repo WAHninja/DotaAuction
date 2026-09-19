@@ -87,7 +87,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
             <footer className="border-t border-dota-border py-4 px-6 text-center">
               <p className="font-barlow text-sm text-dota-text-dim tracking-wide">
-                © 2025 Defence of the Auctions
+                © 2026 Defence of the Auctions
               </p>
             </footer>
           </OnlineUsersProvider>
