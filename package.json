@@ -19,7 +19,6 @@
     "framer-motion": "latest",
     "react-icons": "latest",
     "@supabase/supabase-js": "^2.39.0",
-    "jose": "latest",
     "express": "^4.18.2",
     "ws": "^8.7.0",
     "react-confetti": "^6.1.0",
