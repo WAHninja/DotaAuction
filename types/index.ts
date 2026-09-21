@@ -224,6 +224,16 @@ export type RatingPoint = {
   delta: number;
 };
 
+/** Last-stand opportunities and wins at one particular opposing team size. */
+export type LastStandBreakdownRow = {
+  /** Size of the opposing team in these games. */
+  opponents: number;
+  /** How many last stands were faced at this opponent count. */
+  opportunities: number;
+  /** How many of those were won. */
+  wins: number;
+};
+
 /**
  * How the rating model is configured, and how well it actually predicts.
  *
@@ -356,10 +366,11 @@ export type PlayerStats = {
   lastStandOpportunities: number;
   /** How many of those they converted into an outright match win. */
   lastStandWins: number;
-  /** Mean opposing team size across those games. null when never in that
-   *  position. Context for the conversion rate: alone against two is not the
-   *  same proposition as alone against five. */
-  lastStandAvgOpponents: number | null;
+  /** Opportunities and wins split out by opposing team size, ascending —
+   *  e.g. "1 of 3 vs 3 opponents, 0 of 2 vs 4 opponents". Alone against two
+   *  is not the same proposition as alone against five, so this stays split
+   *  rather than collapsed into a single average. */
+  lastStandBreakdown: LastStandBreakdownRow[];
   gamesPlayed: number;
   gamesWon: number;
   timesOffered: number;
