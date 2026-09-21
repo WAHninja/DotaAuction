@@ -18,7 +18,7 @@ import { pct } from '@/lib/stats/format';
  * "2 of 5" is meaningful at a sample size where "40%" is not.
  */
 export default function LastStandPanel({ core }: { core: PlayerStats }) {
-  const { lastStandOpportunities, lastStandWins, lastStandAvgOpponents } = core;
+  const { lastStandOpportunities, lastStandWins, lastStandBreakdown } = core;
 
   // Never having been alone is ordinary rather than notable, so the panel is
   // omitted entirely instead of announcing its own absence. See the page-level
@@ -66,17 +66,28 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
             )}
           </div>
 
-          {lastStandAvgOpponents !== null && (
+          </div>
+
+          {lastStandBreakdown.length > 0 && (
             <div>
-              <p className="stat-label">Typically facing</p>
-              <p className="font-barlow text-lg font-bold text-dota-text tabular-nums">
-                {lastStandAvgOpponents}
-                <span className="text-dota-text-dim text-xs font-normal"> opponents</span>
-              </p>
+              <p className="stat-label mb-1.5">By opponents faced</p>
+              <ul className="space-y-1">
+                {lastStandBreakdown.map(row => (
+                  <li
+                    key={row.opponents}
+                    className="font-barlow text-sm tabular-nums"
+                  >
+                    <span className="font-bold text-dota-text">
+                      {row.wins} of {row.opportunities}
+                    </span>
+                    <span className="text-dota-text-muted">
+                      {' '}vs {row.opponents} opponent{row.opponents === 1 ? '' : 's'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
-
-          </div>
 
           {lastStandWins > 0 && (
             <p className="font-barlow text-sm text-dota-gold">
