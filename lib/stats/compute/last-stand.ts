@@ -17,7 +17,10 @@
  * Opponent counts are tracked alongside because the difficulty is not constant.
  * Alone against two is a different proposition from alone against five, and
  * without that context a conversion rate invites comparisons between players
- * who faced very different odds.
+ * who faced very different odds. Rather than flattening this into a single
+ * average, it's broken down per opponent count (e.g. "1 of 3 vs 3 opponents,
+ * 0 of 2 vs 4 opponents") — an average obscures exactly the variation in
+ * difficulty it exists to explain.
  */
 
 export type LastStandGameRow = {
@@ -26,20 +29,28 @@ export type LastStandGameRow = {
   winning_team: 'team_1' | 'team_a' | null;
 };
 
+export type LastStandBreakdownRow = {
+  /** Size of the opposing team in these games. */
+  opponents: number;
+  /** How many last stands were faced at this opponent count. */
+  opportunities: number;
+  /** How many of those were won. */
+  wins: number;
+};
+
 export type PlayerLastStand = {
   /** Games entered alone on their side. */
   opportunities: number;
   /** How many of those they won, each of which ended the match. */
   wins: number;
-  /** Mean size of the opposing team across those games, to one decimal.
-   *  null when there were no opportunities. */
-  avgOpponents: number | null;
+  /** Opportunities and wins split out by opposing team size, ascending. */
+  byOpponents: LastStandBreakdownRow[];
 };
 
 export function computeLastStands(
   games: LastStandGameRow[],
 ): Map<number, PlayerLastStand> {
-  const acc = new Map<number, { opps: number; wins: number; opponents: number }>();
+  const acc = new Map<number, Map<number, { opps: number; wins: number }>>();
 
   for (const game of games) {
     const team1 = game.team_1_members ?? [];
@@ -57,11 +68,15 @@ export function computeLastStands(
       if (side.length !== 1) continue;
 
       const player = side[0];
-      let entry = acc.get(player);
-      if (!entry) { entry = { opps: 0, wins: 0, opponents: 0 }; acc.set(player, entry); }
+      const opponentCount = opposition.length;
+
+      let byOpponentCount = acc.get(player);
+      if (!byOpponentCount) { byOpponentCount = new Map(); acc.set(player, byOpponentCount); }
+
+      let entry = byOpponentCount.get(opponentCount);
+      if (!entry) { entry = { opps: 0, wins: 0 }; byOpponentCount.set(opponentCount, entry); }
 
       entry.opps += 1;
-      entry.opponents += opposition.length;
 
       // An undecided game still counts as an opportunity faced but never as a
       // win. Excluding it entirely would quietly flatter anyone whose solo
@@ -71,11 +86,15 @@ export function computeLastStands(
   }
 
   const out = new Map<number, PlayerLastStand>();
-  for (const [id, e] of acc) {
+  for (const [id, byOpponentCount] of acc) {
+    const byOpponents = Array.from(byOpponentCount.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([opponents, e]) => ({ opponents, opportunities: e.opps, wins: e.wins }));
+
     out.set(id, {
-      opportunities: e.opps,
-      wins:          e.wins,
-      avgOpponents:  e.opps > 0 ? +(e.opponents / e.opps).toFixed(1) : null,
+      opportunities: byOpponents.reduce((sum, r) => sum + r.opportunities, 0),
+      wins:          byOpponents.reduce((sum, r) => sum + r.wins, 0),
+      byOpponents,
     });
   }
   return out;
