@@ -66,8 +66,6 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
             )}
           </div>
 
-          </div>
-
           {lastStandBreakdown.length > 0 && (
             <div>
               <p className="stat-label mb-1.5">By opponents faced</p>
@@ -75,7 +73,7 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
                 {lastStandBreakdown.map(row => (
                   <li
                     key={row.opponents}
-                    className="font-barlow text-sm tabular-nums"
+                    className="font-barlow text-sm tabular-nums whitespace-nowrap"
                   >
                     <span className="font-bold text-dota-text">
                       {row.wins} of {row.opportunities}
@@ -88,6 +86,8 @@ export default function LastStandPanel({ core }: { core: PlayerStats }) {
               </ul>
             </div>
           )}
+
+          </div>
 
           {lastStandWins > 0 && (
             <p className="font-barlow text-sm text-dota-gold">
