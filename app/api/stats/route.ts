@@ -6,7 +6,7 @@ import { computeOfferStrength, buildGameIndex } from '@/lib/stats/compute/offer-
 import { computeSelectionRate } from '@/lib/stats/compute/selection-rate';
 import { computeSynergy } from '@/lib/stats/compute/synergy';
 import { computeRecentForm, type FormResult } from '@/lib/stats/compute/form';
-import { computeLastStands } from '@/lib/stats/compute/last-stand';
+import { computeLastStands, type LastStandBreakdownRow } from '@/lib/stats/compute/last-stand';
 import { computeSaleImpact } from '@/lib/stats/compute/impact';
 import { computeLeagueRecords, type LeagueRecord } from '@/lib/stats/compute/records';
 import { computeRatings, STARTING_RATING } from '@/lib/stats/compute/rating';
@@ -176,9 +176,8 @@ type PlayerRow = {
   lastStandOpportunities: number;
   /** How many of those they converted. */
   lastStandWins: number;
-  /** Mean opposing team size across those games — how outnumbered they were.
-   *  null when they have never been in that position. */
-  lastStandAvgOpponents: number | null;
+  /** Opportunities and wins split out by opposing team size, ascending. */
+  lastStandBreakdown: LastStandBreakdownRow[];
   /** Retained for now but no longer surfaced: a lifetime sum that grows with
    *  games played, in a currency that resets every match. */
 };
@@ -774,7 +773,7 @@ async function buildStats(): Promise<StatsPayload> {
       recentForm:             recentForm.get(id) ?? [],
       lastStandOpportunities: lastStands.get(id)?.opportunities ?? 0,
       lastStandWins:          lastStands.get(id)?.wins          ?? 0,
-      lastStandAvgOpponents:  lastStands.get(id)?.avgOpponents  ?? null,
+      lastStandBreakdown:     lastStands.get(id)?.byOpponents   ?? [],
       rating:                 ratings.get(id)?.rating ?? STARTING_RATING,
       ratedGames:             ratings.get(id)?.games  ?? 0,
       ratingRd:               ratings.get(id)?.rd     ?? 350,
